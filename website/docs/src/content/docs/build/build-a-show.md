@@ -1,0 +1,125 @@
+---
+title: "Build a show"
+description: "Tonight's band, laid out by your own house rules, as a plan you can read before anything goes near the desk."
+sidebar: 
+  order: 1
+---
+
+<!-- Generated from docs/user/build-a-show.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+Tonight's band, laid out by your own house rules, as a plan you can read
+before anything goes near the desk.
+
+**Before you start**, once per laptop:
+
+- `atoo init` makes `~/Documents/Atoo` with a starter house
+  conventions file and a preset library, and points Atoo at them
+  ([First run](/getting-started/install/#first-run-atoo-init)).
+- A build needs a model: a Claude API key, or a local model through
+  Ollama ([Choosing the model](/getting-started/configuration/#choosing-the-model)).
+
+## 1. Make the show
+
+1. Run `atoo ui`. The browser opens on **Build**.
+2. Next to **Show bundle**, press **New show…**.
+3. Type a name under **New show folder**, say `friday-club`, and press
+   **Create show**.
+
+The bar reads **Show bundle: friday-club/**. That folder holds all of
+this show's files ([Show bundles](/build/show-bundles/)).
+
+## 2. Check your house rules: 01 Conventions
+
+**Build** is four tiles, one per file and then the plan. On a show that
+is ready, they look like this:
+
+![Build's four tiles: Conventions, Input list and Instructions LOADED, Plan CURRENT](../../../assets/img/build-tiles.png)
+
+The tile reads **LOADED** with your house file's path, tagged **HOUSE**.
+It is the same file for every show, so leave it alone unless the change
+is true of every show you do. To read or edit it, click the tile.
+[Writing conventions](/build/conventions/) says what goes in it.
+
+## 3. Say what is plugged in: 02 Input list
+
+Either:
+
+- press **Change file** on the tile and choose the band's CSV. It is
+  copied into the show as `input.csv`, and the bar says so; or
+- click the tile, press **+ Add row**, and type each input.
+
+Each row is one thing plugged in: **Name**, **Category**, **Type**,
+**Model**, **Phantom**, **Preset**, **Notes** and **Patch** (the socket,
+such as `AES50-A 1`). Name, Category and Type are required: until they
+are filled in they read *required* and are outlined. Leave **Patch** blank and the build chooses a
+socket and tells you which. A socket the desk does not have is refused as
+you type it. Press **Save**.
+
+The tile now reads **LOADED** and counts the rows: *20 input rows*.
+[Writing an input list](/build/input-lists/) covers the columns and stereo
+pairs.
+
+## 4. Tonight's exceptions: 03 Instructions (optional)
+
+Anything true of this show only: *"MON5 and MON6 are stereo in-ear
+mixes"*, *"no reverb on the speech mics"*. Press **New file** on the tile,
+type, and press **Save**. Where these and your house rules disagree, the
+instructions win. Without a file, the house rules apply in full.
+
+## 5. Build the plan: 04 Plan
+
+1. Click the **04 Plan** tile.
+2. Under **Console model**, choose your desk: **WING Compact**,
+   **WING (full-size console)** or **WING Rack**.
+3. **Run the critic pass** is ticked: a second model reads the plan
+   against your conventions and reports where it disagrees. Untick it
+   to skip that call.
+4. Press **Build plan**.
+
+The step shows what the model is doing while it works, with a clock and a
+**Stop** button. A build takes a few minutes. When it lands, the tile
+reads **PLAN CURRENT**, and the step shows the plan as tables: one row
+per input (channel, patch, phantom, DCAs, mute groups), then the busses
+and the outputs. Press **▸** on any row for its high-pass, sends, colour
+and the reason for each value.
+
+![Step 04's channel table for a 19-channel band](../../../assets/img/build-plan-channels.png)
+
+## 6. Read the findings
+
+The **Findings** panel down the right starts with a verdict: **Ready to
+apply** or **Blocked**, and how many things there are to check. Below it,
+each finding is one line: the strip, named as the desk names it (`CH 23
+Crowd`), and what is wrong. Click a line for the explanation, the fix and
+a link to the row it is about.
+
+- **ERROR**: the plan cannot be written as it stands, and the verdict
+  reads **Blocked**. Fix the file the finding points at and build again.
+- **WARNING**, under **To check**: it can be written, but look first.
+- **Advice**: the critic's disagreements, a second model's opinion. Read
+  them, but they never block an apply.
+- **INFO**, folded under **▸ Choices**: choices the plan made that your
+  files did not state, each saying what it was decided from. If one is
+  not what you meant, say so in your conventions or instructions.
+  **▸ Build details** holds notes on how the build read the model's
+  draft, and on what your conventions and presets put into the plan as
+  asked (the preset values it carries, what the Category table filled
+  in); you can leave it closed.
+
+[Reading findings](/build/reading-findings/) explains the codes and verdicts.
+
+## When you change a file
+
+Save an edit to any of the three files and the **04 Plan** tile reads
+**STALE**, listing which file changed. Press **Rebuild plan**.
+
+## When it does not work
+
+- **Build plan does nothing but say** *Choose the console model first --
+  a build refuses to guess it.* Choose one under **Console model**.
+- **BUILD FAILED, with** `build.failed` **in the Findings panel** saying
+  *a build needs a model: the default is Claude, which needs an API key
+  in ANTHROPIC_API_KEY*. Set up a model
+  ([Choosing the model](/getting-started/configuration/#choosing-the-model)), restart
+  `atoo ui`, and build again.
+
+Next: [Apply it to the desk](/apply/apply-to-desk/).

@@ -1,0 +1,412 @@
+---
+title: "Writing an input list"
+description: "The CSV that says what is plugged into the desk for one show."
+sidebar: 
+  order: 2
+---
+
+<!-- Generated from docs/user/input-lists.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+The CSV that says what is plugged into the desk for one show.
+
+It is the only file that changes every week. Your
+[conventions](/build/conventions/) say how you build a show; the input list
+says what is on stage tonight.
+
+Every example on this page runs from the top of a Atoo checkout,
+on the touring band's list frozen under
+`docs/user/demo/touringband/`.
+
+A **socket** is the physical connector on the desk (`LCL 3`,
+`AES50-A 12`, `USB 47`); a **patch** is the connection between a channel
+or bus and a socket. So the list's `patch` column says where each source
+is patched, and what goes in it is a socket.
+
+## The columns
+
+```bash
+head -6 docs/user/demo/touringband/input.csv
+```
+
+```
+socket,name,category,type,model,phantom,notes
+AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,
+AES50-A 2,Snare,drums,Mic,,FALSE,
+AES50-A 3,Tom1,drums,Mic,,FALSE,
+AES50-A 4,HH,drums,Mic,,FALSE,
+AES50-A 5,FLOOR,drums,Mic,,FALSE,
+```
+
+| Column | Required | What it is |
+|---|---|---|
+| `order` | no | The **band's own** number for this input. It does not set the desk channel. `-` **skips** the row. See [The `order` column](#the-order-column-band-numbers-and-skipping-a-row). |
+| `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`. A column headed `socket`, like the one above, is read the same. Blank is legitimate. See [The `patch` column](#the-patch-column). |
+| `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". |
+| `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
+| `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary: Atoo never hardcodes what a type implies, it is there for your conventions to match against. |
+| `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
+| `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. Each half of a stereo pair ("OH L"/"OH R") gets its own row's value, so a pair of one condenser and one dynamic gets 48V on the condenser only. A stereo source on a single row gets its value on both sockets, with a note saying so. |
+| `preset` | no | A preset from your [preset library](/build/presets/) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
+| `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
+
+**Column order does not matter**: every column is read by its header.
+Atoo writes `order` first when there is one, then `patch`, because
+it is what you check against the stage box, and `notes` last.
+
+## One row per physical input
+
+Every input socket on a WING is mono. So a row is one mono source, and a
+**stereo source is two rows**:
+
+```
+AES50-A 15,Keys L,keys,DI,,FALSE,
+AES50-A 16,Keys R,keys,DI,,FALSE,
+```
+
+Whether those two become one linked stereo strip or two mono ones is
+decided later, from your conventions and from the names. That is why the
+names matter: *"if two sequential inputs are marked L/R, patch as one
+stereo channel"* is a rule that can only match what you wrote in `name`.
+
+The two rows need not state a socket. When they do not, the build pairs
+them on the next free odd-even pair.
+
+**A channel that is yours rather than the band's** (a talkback mic, an
+ambient pair) does not need a row: ask for it in words, with its socket.
+See [Channels that are not on the input list](/build/extra-strips/).
+
+**A row you want left out of the build** takes `-` in its `order` cell
+([below](#the-order-column-band-numbers-and-skipping-a-row)). Every other
+row is built unless something you wrote says to leave it out: the row's
+`notes` (*"not patched for this event"*), the conventions or the show's
+instructions. The build checks the model quoted you word for word, and
+`verify` warns about the row, quoting you
+(`reconcile.deliberately-unassigned`).
+
+## Two columns you may not have
+
+A file carrying either is **refused, not ignored** — the file would
+otherwise load, the column would have no effect, and the plan would
+quietly contradict the sheet.
+
+**No channel numbers** (`channel`, `channel_number` or `ch`). Which strip
+a source lands on is computed from your conventions; that is most of what
+Atoo is for.
+
+```bash
+sed '1s/^socket,/ch,socket,/; 2,$s/^/1,/' docs/user/demo/touringband/input.csv > /tmp/with-ch.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
+```
+
+```
+couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- conventions compute channel assignment; the input list must not specify one
+```
+
+**No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is
+a decision, not a property of an input — and it is a decision your
+conventions already make, usually with an exception attached ("overheads
+stay mono, they get separate processing"). Stating it per row puts the
+answer in the one place that cannot see the rule.
+
+## The `patch` column
+
+**A column headed `socket` is read as `patch`**, so a list headed either
+way loads the same. A new list Atoo writes is headed `patch`; saving
+an existing file keeps whichever header it already has.
+
+A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups
+Atoo recognises:
+
+| Written | What it is |
+|---|---|
+| `LCL` | the console's own local XLR inputs |
+| `AES50-A` `AES50-B` `AES50-C` | the AES50 stage-box ports — **spelled out**; a bare `A 1` is refused |
+| `SC` | StageConnect |
+| `USB` | the USB interface |
+| `CRD` | the expansion **card** bay |
+| `MOD` | the AoIP **module** bay — a different slot from the card |
+| `AUX` | the 1/4" aux jacks |
+| `USR` | user signals and user patches (see [below](#when-the-cabling-cannot-give-you-an-adjacent-pair)) |
+| `AES` | AES/EBU |
+| `PLAY` | the player |
+
+The long forms parse too — `Local 3`, `Card 1`, `Module 2`, `User 25`,
+`StageConnect 4` — and case and hyphens are not significant, so
+`aes50-a 12` and `AES50-A 12` are the same socket.
+
+Two spellings that look reasonable and are refused on purpose:
+
+- **"SD card" is not `CRD`.** `CRD` is the expansion card bay. The SD card
+  is WING LIVE's storage, which is not an input group at all. What a
+  WING LIVE card *plays back* does arrive on `CRD`, but only when WING
+  LIVE is the card fitted — which is exactly what the words "SD card" do
+  not say.
+- **"Dante" is not a group.** Dante is sold both as an expansion card
+  (`CRD`) and as an internal module (`MOD`), so the word does not say
+  which bay it means. Write `CRD n` or `MOD n`.
+
+Anything unrecognised is reported, never guessed at:
+
+```bash
+sed 's/^AES50-A 8,TRAX/Dante 3,TRAX/' docs/user/demo/touringband/input.csv > /tmp/dante.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/dante.csv
+```
+
+```
+  [warning] input list[TRAX]: patch 'Dante 3' could not be read as '<group> <number>' -- the plan's patch for this row could not be checked against it  (patch.unparsable-stated-socket)
+```
+
+### `CRD` and `MOD` are bays, and a bay can be empty
+
+Both are slots that a card may or may not be fitted into. A plan that
+patches a channel from an empty bay is refused by `apply` against a desk
+that has nothing in that slot, rather than written into a channel that
+would hear nothing — see
+[What a full apply changes](/apply/what-apply-changes/#expansion-bays-crd-and-mod).
+
+### Leaving the patch blank
+
+Legitimate, and common early in the week when the cabling is not settled.
+A row with no patch gets a socket chosen for it during the build, and the
+plan records the difference: `"stated": true` is where *you* said the
+cable is, `false` is where Atoo put it. `atoo build --pretty`
+prints the second kind as `Patch: A 1 (auto)`, and `apply` says it again
+as it writes -- once, naming the strips, since the warning is the same
+for each (the journal keeps one line per strip). From an apply of a
+23-channel show:
+
+```
+  - ch 1-23 (23 channels): patch socket was not stated in the input list and was assigned during generation -- verify before trusting this write
+```
+
+Which is the whole point of the distinction: a socket you stated can be
+checked against the stage box, and one that was chosen for you has to be.
+
+## The `order` column: band numbers, and skipping a row
+
+Optional, and first when it is there. A cell holds one of three things:
+
+| In the cell | Means |
+|---|---|
+| a number, `1` and up | the band's own number for this input — usually the split from their IEM rack, or how they patch their stage box |
+| `-` | **skip**: the row stays in the file, and the next build leaves it out |
+| nothing | an ordinary row with no band number |
+
+Anything else is refused, naming the row.
+
+**The number does not set the desk channel.** Which strip a source lands
+on is still your conventions' to compute. The number goes to the model
+with its row, as data, so your instructions can use it — *"Patch the
+inputs according to the band's channel order numbers."* Without such a
+sentence it changes nothing.
+
+**A skipped row is left out of the build entirely.** It is not sent to
+the model, nothing is built for it, and `verify` does not count it as a
+missing input. The build says once, at INFO, which rows it left out
+(`input-list.skipped`). That is what makes it useful for a festival
+list: keep every band's full list, and switch rows off and on between
+sets rather than deleting and retyping them.
+
+Here is the touring band's list with an `order` column, and its TRAX row
+skipped:
+
+```bash
+python3 - <<'EOF'
+import csv, io, pathlib
+rows = list(csv.DictReader(pathlib.Path("docs/user/demo/touringband/input.csv").read_text().splitlines()))
+for n, row in enumerate(rows, 1):
+    row["order"] = "-" if row["name"] == "TRAX" else str(n)
+out = io.StringIO()
+w = csv.DictWriter(out, fieldnames=["order"] + [c for c in rows[0] if c != "order"])
+w.writeheader(); w.writerows(rows)
+pathlib.Path("/tmp/festival.csv").write_text(out.getvalue())
+EOF
+
+head -3 /tmp/festival.csv
+grep TRAX /tmp/festival.csv
+```
+
+```
+order,socket,name,category,type,model,phantom,notes
+1,AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,
+2,AES50-A 2,Snare,drums,Mic,,FALSE,
+-,AES50-A 8,TRAX,tracks,Line,,FALSE,
+```
+
+The plan was built before TRAX was skipped, so it still has a TRAX
+channel. `verify` says so as a warning (the desk would work, with a
+strip nobody plugs into; the notes are left out here with `grep`):
+
+```bash
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/festival.csv | grep -v '^  \[info\]'
+```
+
+```
+0 error(s), 1 warning(s), 15 note(s)
+
+  [warning] channels[TRAX]: source 'TRAX' is skipped on the input list ('-' in its order cell), but this plan builds a channel for it -- it was built before the row was skipped  (reconcile.skipped-source)
+
+
+APPLICABLE: warnings only.
+```
+
+A rebuild leaves it out, and the skipped row is not reported missing.
+
+A cell that is neither a number, `-`, nor empty stops the list from
+loading:
+
+```bash
+sed 's/^-,/x,/' /tmp/festival.csv > /tmp/bad-order.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/bad-order.csv
+```
+
+```
+couldn't read input list '/tmp/bad-order.csv': row 21: column 'order' must be the band's input number (1, 2, ...), '-' to skip the row, or blank -- got 'x'
+```
+
+A skipped row is still checked like any other — switching it back on
+should never turn up an error nobody saw — with one exception: it may
+share its name with a row that is on, so two bands' `Kick` rows can sit
+in one list with one of them skipped. A list with **every** row skipped
+has nothing to build, and is refused.
+
+In the browser, Build step 02's **Order** cell has a **Skip** box: tick
+it and the cell reads `-` and the row dims; untick it and the number
+comes back.
+
+## The `preset` column
+
+Optional. A value names a preset in your
+[preset library](/build/presets/), matched as a name in your conventions is
+([how forgiving that is](/build/presets/#naming-one-and-how-forgiving-the-match-is)),
+so `kick in` finds **Kick In**. Like a stated patch, **the list wins**
+over the conventions, and the build says so at INFO when it replaces a
+different preset. A name the library has not got is a `preset.unknown`
+warning, and the strip is built without it.
+
+Of a stereo pair's two rows, one naming the preset is enough. If they
+name different ones, the **first** row's wins (the row the channel is
+named from), and `verify` warns `preset.input-list-pair-disagrees`.
+
+`verify` warns when a channel's preset is not the one its row states
+(`preset.contradicts-input-list`): a warning, not an error, because the
+desk works either way. Here is the Kick row given a preset, checked
+against a plan built before the list said so (the notes are left out
+with `grep`):
+
+```bash
+python3 - <<'EOF'
+import csv, io, pathlib
+rows = list(csv.DictReader(pathlib.Path("docs/user/demo/touringband/input.csv").read_text().splitlines()))
+rows[0]["preset"] = "kick in"
+out = io.StringIO()
+w = csv.DictWriter(out, fieldnames=list(rows[1].keys()) + ["preset"])
+w.writeheader(); w.writerows(rows)
+pathlib.Path("/tmp/with-preset.csv").write_text(out.getvalue())
+EOF
+
+head -2 /tmp/with-preset.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-preset.csv --presets starter/presets | grep -v '^  \[info\]'
+```
+
+```
+socket,name,category,type,model,phantom,notes,preset
+AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,,kick in
+0 error(s), 1 warning(s), 15 note(s)
+
+  [warning] channels[Kick].processing.preset: plan names no preset, but the input list's preset column states 'kick in' for 'Kick' -- the list wins over the conventions, so this plan was edited by hand or built before the list said so  (preset.contradicts-input-list)
+
+
+APPLICABLE: warnings only.
+```
+
+A rebuild puts the starter preset **Kick In** on the Kick channel. In
+the browser, Build step 02's **Preset** column offers your library's
+names.
+
+## A stereo pair needs two adjacent sockets, odd first
+
+`LCL 15`+`LCL 16`, never `LCL 7`+`LCL 12` and never `LCL 2`+`LCL 3`.
+
+This is the desk's routing hardware, not a Atoo rule: a WING forms a
+stereo pair only from consecutive `[odd, even]` sockets. It is a
+constraint on the **cabling**, so it is cheapest to fix while writing the
+list. `verify` refuses a plan that patches a pair the other way round:
+
+```bash
+python3 - <<'EOF'
+import json, pathlib
+plan = json.loads(pathlib.Path("docs/user/demo/touringband/plan.json").read_text())
+for c in plan["channels"]:
+    if c["name"] == "Keys L":
+        c["patch"]["sockets"] = [16, 17]   # the pair as cabled: even first
+    if c["name"] == "OH":
+        c["patch"]["sockets"] = [21]       # OH moves off 17 to make room
+pathlib.Path("/tmp/even-first.plan.json").write_text(json.dumps(plan, indent=1))
+csv_text = pathlib.Path("docs/user/demo/touringband/input.csv").read_text()
+csv_text = csv_text.replace("AES50-A 17,OH", "AES50-A 21,OH")
+csv_text = csv_text.replace("AES50-A 15,Keys L", "AES50-A 16,Keys L")
+csv_text = csv_text.replace("AES50-A 16,Keys R", "AES50-A 17,Keys R")
+pathlib.Path("/tmp/even-first.csv").write_text(csv_text)
+EOF
+
+atoo verify --plan /tmp/even-first.plan.json --input /tmp/even-first.csv
+```
+
+```
+1 error(s), 0 warning(s), 15 note(s)
+
+  [error] channels[Keys L].patch: A 16+17 cannot be a stereo pair -- the pair starts on 16, an even socket (a pair always starts on an odd one). The console's routing hardware forms a stereo pair only from consecutive [odd, even] sockets, so this patch cannot be made as written  (patch.stereo-pair-not-odd-even)
+  ...
+BLOCKED: do not apply.
+```
+
+Exit code 2. Better here than at soundcheck: move one cable, or use `USR`
+below.
+
+## When the cabling cannot give you an adjacent pair
+
+The two halves land on different stage boxes. Or they are two playback
+tracks 32 apart on one card. The desk's own way round this is a **user
+signal** or **user patch**: two consecutive slots of its `USR` group,
+each pointed at any source you like, then patched as an ordinary pair.
+
+A plan states those slots in a top-level `user_sources` section, and
+`verify` checks them — including the odd-first rule, which is not
+bypassed anywhere.
+
+**`apply` does not write them yet.** For now the `USR` slots are set up
+on the console by hand, and `verify` says so once per plan rather than
+letting a section it ignores look like one it honoured. The shape is in
+`docs/developer/artifact-formats.md`'s
+`user_sources` section.
+
+## Checking a list before the desk exists
+
+There is no `atoo check-input-list`; the input list is checked
+wherever it is used. The two useful moments:
+
+- **`atoo build`** reads it first, so a malformed file stops the run
+  before a model call is spent.
+- **`atoo verify --plan p.json --input list.csv`** reconciles a
+  built plan against it: every input became a channel, no channel was
+  invented ([unless you asked for it](/build/extra-strips/)), phantom power
+  is safe for the microphones named, every
+  stated socket matches what the plan patched, and every stated preset
+  is the one the plan names. Without `--input`, `verify`
+  says out loud that it checked none of that
+  (`reconcile.not-checked`) rather than passing quietly.
+- **`atoo ui`**, Build step 02, shows the list as an editable
+  table. Save rewrites only the rows you changed and will not write over
+  an edit made in another program since the page read the file. Name,
+  Category and Type are required; Save asks once before writing a list
+  that will not load. Rows can be added, and moved by dragging or with
+  Alt+↑ / Alt+↓. See [Build a show](/build/build-a-show/).
+
+## See also
+
+- [Writing conventions](/build/conventions/) — the other half, and the file
+  that decides what happens to these rows
+- [Command-line quickstart](/getting-started/quickstart/) — an input list through to a proven desk
+- [Show bundles](/build/show-bundles/) — where `input.csv` lives for one show
+- `docs/developer/artifact-formats.md` —
+  the normative format, including `user_sources`
