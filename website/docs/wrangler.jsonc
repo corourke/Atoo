@@ -1,0 +1,18 @@
+{
+  // Static site deployed via Cloudflare Workers (Workers Builds), the same way
+  // as GigWrangler's docs. `npm run build` (Astro → ./dist), then
+  // `wrangler deploy` / `wrangler versions upload` serve ./dist as static
+  // assets: there is no Worker script (`main`), just files.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atoo-docs",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths serve Starlight's generated 404 page.
+    "not_found_handling": "404-page"
+  }
+  // Custom domain: add `docs.atoo.app` in the dashboard
+  // (Worker → Settings → Domains & Routes → Add → Custom domain), or declare it
+  // here instead:
+  //   "routes": [{ "pattern": "docs.atoo.app", "custom_domain": true }]
+}
