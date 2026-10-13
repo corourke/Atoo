@@ -1,0 +1,22 @@
+{
+  "watch_conditions": [
+    {
+      "id": "crowd-mic-never-muted",
+      "description": "Crowd Mic must never be muted",
+      "channel": "Crowd Mic",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error"
+    },
+    {
+      "id": "crowd-mic-fader-capped",
+      "description": "Crowd Mic fader must never exceed -10 dB",
+      "channel": "Crowd Mic",
+      "field": "fader_db",
+      "operator": "<=",
+      "value": -10.0,
+      "severity": "warning"
+    }
+  ]
+}

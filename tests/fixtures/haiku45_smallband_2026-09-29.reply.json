@@ -1,0 +1,654 @@
+{
+  "channels": [
+    {
+      "input": "Kick",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Red"
+    },
+    {
+      "input": "Snare",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Red"
+    },
+    {
+      "input": "HiHat",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Red"
+    },
+    {
+      "input": "OH L",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Red"
+    },
+    {
+      "input": "OH R",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Red"
+    },
+    {
+      "input": "Bass",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Band"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "color": "Blue"
+    },
+    {
+      "input": "Elec Gtr",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "color": "Magenta"
+    },
+    {
+      "input": "Keyboard",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "color": "Cyan",
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "input": "Lead Vox",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "color": "Green"
+    },
+    {
+      "input": "BG Vox 1",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20,
+        "trim_db": 0
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "color": "Green"
+    }
+  ],
+  "category_colors": [
+    {
+      "category": "drums",
+      "color": "Red"
+    },
+    {
+      "category": "bass",
+      "color": "Blue"
+    },
+    {
+      "category": "guitars",
+      "color": "Magenta"
+    },
+    {
+      "category": "keyboards",
+      "color": "Cyan"
+    },
+    {
+      "category": "strings",
+      "color": "Orange"
+    },
+    {
+      "category": "horns",
+      "color": "Orange"
+    },
+    {
+      "category": "vocals",
+      "color": "Green"
+    },
+    {
+      "category": "misc",
+      "color": "Yellow"
+    }
+  ],
+  "busses": [
+    {
+      "name": "MON1",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 1",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            1
+          ]
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R",
+            "Bass",
+            "Elec Gtr",
+            "Keyboard",
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "muted": false
+        }
+      ]
+    },
+    {
+      "name": "MON2",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 2",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            2
+          ]
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R",
+            "Bass",
+            "Elec Gtr",
+            "Keyboard",
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "muted": false
+        }
+      ]
+    },
+    {
+      "name": "MON3",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 3",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            3
+          ]
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R",
+            "Bass",
+            "Elec Gtr",
+            "Keyboard",
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "muted": false
+        }
+      ]
+    },
+    {
+      "name": "MON4",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 4",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            4
+          ]
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R",
+            "Bass",
+            "Elec Gtr",
+            "Keyboard",
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "muted": false
+        }
+      ]
+    },
+    {
+      "name": "Drums",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "Drums Comp",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": -6,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "HiHat",
+            "OH L",
+            "OH R"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "Vocals",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "Keys",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Keyboard"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "VOX Reverb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "VOX Delay",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Lead Vox",
+            "BG Vox 1"
+          ],
+          "mode": "post",
+          "level_db": 0
+        }
+      ]
+    },
+    {
+      "name": "Snare Verb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Snare"
+          ],
+          "mode": "pre",
+          "level_db": -10
+        }
+      ]
+    },
+    {
+      "name": "INST Reverb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "sends": [
+        {
+          "from": [
+            "Bass",
+            "Elec Gtr",
+            "Keyboard"
+          ],
+          "mode": "post",
+          "level_db": -144
+        }
+      ]
+    }
+  ],
+  "dcas": [
+    {
+      "name": "Drums"
+    },
+    {
+      "name": "Guitars"
+    },
+    {
+      "name": "Keys"
+    },
+    {
+      "name": "Vocals"
+    },
+    {
+      "name": "Tracks"
+    },
+    {
+      "name": "Band"
+    },
+    {
+      "name": "FX"
+    }
+  ],
+  "mute_groups": [
+    {
+      "name": "Band"
+    },
+    {
+      "name": "Vocals"
+    },
+    {
+      "name": "FX"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Main 1",
+      "kind": "main"
+    },
+    {
+      "name": "Matrix 1",
+      "kind": "matrix",
+      "fed_by": {
+        "type": "main",
+        "index": 1
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7,
+          8
+        ]
+      },
+      "mono": false
+    }
+  ],
+  "notes": [
+    {
+      "text": "Drums Comp bus: compressor model 'No Stressor', threshold -20dB, attack 20ms, release 50ms",
+      "source": "model"
+    },
+    {
+      "text": "Playback (misc/line input) patched to AES50-A 21+22 per input list; no high-pass filter; routed to Main 1",
+      "source": "model"
+    },
+    {
+      "text": "OH L and OH R kept as separate mono channels per convention (not paired), allowing individual panning and processing",
+      "source": "model"
+    }
+  ]
+}

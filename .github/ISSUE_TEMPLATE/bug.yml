@@ -1,0 +1,63 @@
+name: Bug
+description: Something went wrong -- a command, a screen, or a write to the desk.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. The more of this you can fill in, the faster it gets fixed.
+        A question rather than a fault goes in Discussions.
+  - type: dropdown
+    id: desk
+    attributes:
+      label: Desk
+      options:
+        - WING Compact
+        - WING (full-size)
+        - WING Rack
+        - No desk (the Demo, or no console connected)
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Desk firmware
+      description: "`atoo ping` prints it as the last field of its `Console:` line, for example `3.1-0`."
+  - type: input
+    id: install
+    attributes:
+      label: Laptop and install
+      description: "Operating system, and how you installed: pipx, or a checkout (and its commit, `git rev-parse --short HEAD`)."
+      placeholder: "macOS 15, pipx, installed 2026-10-01"
+    validations:
+      required: true
+  - type: textarea
+    id: step
+    attributes:
+      label: What you ran
+      description: The command you typed, or the screen and button in the browser.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: The output or the message on screen, copied as text if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Journal or verify output
+      description: |
+        For a write to the desk (apply, patch, amend, undo): attach the newest file from
+        `journals/` in the show's folder -- drag it into this box.
+        For a plan that looks wrong: the output of `atoo verify --show <folder>`.
+        Remove anything private first; a journal holds channel names and the desk's address.

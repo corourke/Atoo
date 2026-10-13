@@ -1,0 +1,12 @@
+{
+  "_source": "archive/examples/console-runs/2026-09-23-2107/ (A18, full-size WING, firmware 3.1-0-g9f314617). The A18 first-pass plan (the read plan of that date, without the insert/FX/talkback addresses added later, with the wing-full panel's sockets) rebuilds to the run's own totals: 5,816 first-pass addresses, /bus/15/main/1/on at 5,510 and /io/out/LCL/8/in at 5,800 exactly as its progress lines say, 85 second-pass addresses, 5,893 saved. The only planned addresses absent from its --dump-state capture are these eight. Frozen here so no test reads examples/.",
+  "console_model": "wing-full",
+  "unanswered": [
+    "/io/in/AUX/1/vph", "/io/in/AUX/2/vph", "/io/in/AUX/3/vph", "/io/in/AUX/4/vph",
+    "/io/in/AUX/5/vph", "/io/in/AUX/6/vph", "/io/in/AUX/7/vph", "/io/in/AUX/8/vph"
+  ],
+  "answered_vph": [
+    "/io/in/LCL/1/vph", "/io/in/LCL/2/vph", "/io/in/LCL/3/vph", "/io/in/LCL/4/vph",
+    "/io/in/LCL/5/vph", "/io/in/LCL/6/vph", "/io/in/LCL/7/vph", "/io/in/LCL/8/vph"
+  ]
+}

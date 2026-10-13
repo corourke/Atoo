@@ -1,0 +1,2699 @@
+/* Palette tuned to sit next to WING-Edit (the console manufacturer's own
+   editor app) on the same screen without cloning it -- true
+   near-black rather than a blue-tinted "dev tool" dark mode, a warm
+   brass/amber accent instead of the previous UI-blue, sharp/minimally
+   rounded modules instead of pill shapes, and bold uppercase labels. The
+   ask was "coexist nicely, not match or contrast," not a pixel skin --
+   nothing here reads live from Wing-Edit or reproduces its assets. */
+:root {
+  color-scheme: dark light;
+  --bg: #0c0c0e;
+  --bg-panel: #19191c;
+  --bg-row: #141416;
+  --bg-row-alt: #1c1c1f;
+  --border: #303034;
+  --text: #e8e9ec;
+  --text-dim: #9a9aa1;
+  --accent: #c9982e;
+  --accent-ink: #1a1400;
+  /* The light-on-dark chip WING-Edit uses for its fader dB readouts --
+     reused here for the rule-id column so the table reads like a console
+     module's own numeric fields, not a web app's. */
+  --readout-bg: #d8d8d8;
+  --readout-fg: #17171a;
+
+  --danger-bg: #4a1220;
+  --danger-fg: #ff6b81;
+  --error-bg: #4a2312;
+  --error-fg: #ff9b5c;
+  --warning-bg: #4a3d12;
+  --warning-fg: #ffd75c;
+  --info-bg: #12304a;
+  --info-fg: #7ec4ff;
+  /* The findings dock's "Ready to apply". */
+  --ready-bg: #123a24;
+  --ready-fg: #6fdc9a;
+  /* Nora's UI system (mockups/ui-audit/README.md §3): a stronger edge, and
+     the no-hue ink of a locked control. */
+  --border-strong: #46464c;
+  --text-off: #66666d;
+  --alarm-solid: #e0344d;
+  --alarm-ink: #ffffff;
+  --caution-solid: #f0bd2e;
+  --caution-ink: #1a1400;
+}
+
+/* Light tokens, under three rules (the maintainer, 2026-09-25: a toggle to see
+   both variants). The OS preference picks, unless the topbar's theme
+   toggle set <html data-theme="light|dark">, which wins either way. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f5f7;
+    --bg-panel: #ffffff;
+    --bg-row: #ffffff;
+    --bg-row-alt: #f7f8fa;
+    --border: #dde0e6;
+    --text: #1c1f26;
+    --text-dim: #5b6270;
+    --accent: #8a6416;
+    --accent-ink: #fffaf0;
+    --readout-bg: #1c1f26;
+    --readout-fg: #f4f5f7;
+
+    --danger-bg: #fde3e8;
+    --danger-fg: #a1112f;
+    --error-bg: #fde8db;
+    --error-fg: #a14a0a;
+    --warning-bg: #fdf3d8;
+    --warning-fg: #8a6a00;
+    --info-bg: #dcedff;
+    --info-fg: #10538f;
+    --ready-bg: #dcf5e6;
+    --ready-fg: #17663a;
+    /* Nora's UI system (mockups/ui-audit/README.md §3): a stronger edge, and
+       the no-hue ink of a locked control. */
+    --border-strong: #c3c7cf;
+    --text-off: #a3a8b2;
+    --alarm-solid: #c8102e;
+    --alarm-ink: #ffffff;
+    --caution-solid: #f2b705;
+    --caution-ink: #1c1400;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f5f7;
+  --bg-panel: #ffffff;
+  --bg-row: #ffffff;
+  --bg-row-alt: #f7f8fa;
+  --border: #dde0e6;
+  --text: #1c1f26;
+  --text-dim: #5b6270;
+  --accent: #8a6416;
+  --accent-ink: #fffaf0;
+  --readout-bg: #1c1f26;
+  --readout-fg: #f4f5f7;
+
+  --danger-bg: #fde3e8;
+  --danger-fg: #a1112f;
+  --error-bg: #fde8db;
+  --error-fg: #a14a0a;
+  --warning-bg: #fdf3d8;
+  --warning-fg: #8a6a00;
+  --info-bg: #dcedff;
+  --info-fg: #10538f;
+  --ready-bg: #dcf5e6;
+  --ready-fg: #17663a;
+  /* Nora's UI system (mockups/ui-audit/README.md §3): a stronger edge, and
+     the no-hue ink of a locked control. */
+  --border-strong: #c3c7cf;
+  --text-off: #a3a8b2;
+  --alarm-solid: #c8102e;
+  --alarm-ink: #ffffff;
+  --caution-solid: #f2b705;
+  --caution-ink: #1c1400;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding-inline: max(16px, env(safe-area-inset-left));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 18px;
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 13px;
+  flex: none;
+}
+
+.brand h1 { font-size: 17px; margin: 0; }
+.tagline { margin: 2px 0 0; color: var(--text-dim); font-size: 12px; }
+
+.pill {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pill-idle { background: var(--bg-panel); color: var(--text-dim); border: 1px solid var(--border); }
+.pill-watching { background: var(--info-bg); color: var(--info-fg); }
+.pill-error { background: var(--danger-bg); color: var(--danger-fg); }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+.field-narrow { flex: 0 1 110px; min-width: 90px; }
+.field-buttons { flex: 0 0 auto; }
+
+select, input[type="text"], input[type="number"] {
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 100%;
+}
+select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---- The console Watch reads: the bundle bar's, named there only -------
+   Until 2026-09-24 this form had its own IP and port boxes; then a
+   read-only copy of the bar's address; since an earlier change not even that. The line under the row
+   (#console-origin) says in words which console Start will watch. */
+.console-origin {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.console-origin code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-row-alt);
+  border: 1px solid var(--border);
+}
+.console-origin strong { color: var(--text); }
+
+.btn {
+  border: none;
+  border-radius: 4px;
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+.btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); margin-left: 8px; }
+.btn-secondary:disabled { opacity: 0.4; cursor: default; }
+
+.panel-message {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--danger-fg);
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.count-pill {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+.count-pill .count-num { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.count-error.has-count { background: var(--error-bg); color: var(--error-fg); border-color: transparent; }
+.count-warning.has-count { background: var(--warning-bg); color: var(--warning-fg); border-color: transparent; }
+/* An Info pill is blue whenever the desk has an info, even
+   when every one is hidden by its own box ("0 Info (3 hidden)") -- the
+   Suppressed list below shows them blue too. Error and Warning stay
+   neutral at zero shown: their colour means trouble on screen now. The
+   struck-through .is-suppressed state below still wins. */
+.count-info:is(.has-count, .has-hidden) { background: var(--info-bg); color: var(--info-fg); border-color: transparent; }
+
+.summary-meta { margin-left: auto; color: var(--text-dim); font-size: 12px; }
+
+.baseline-note {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info-fg);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* The coverage caveat is a warning about the READING, not a
+   finding about the desk -- same panel as the baseline note so it cannot
+   be mistaken for an alert row, warning-coloured rule so it is not
+   mistaken for decoration either. */
+.coverage-note { border-left-color: var(--warning-fg); }
+
+.table-wrap {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+table { width: 100%; border-collapse: collapse; }
+
+th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-size: 13px;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(odd) { background: var(--bg-row-alt); }
+
+.col-sev { width: 100px; }
+.col-rule { width: 90px; }
+.col-cat { width: 110px; color: var(--text-dim); }
+.col-since { width: 90px; color: var(--text-dim); white-space: nowrap; }
+
+/* A small light-on-dark chip, the same idea as WING-Edit's own fader
+   dB readouts (a pale rectangle standing out against the dark strip) --
+   reused here so the rule ID reads as a console module's numeric field
+   rather than a plain table cell. */
+.col-rule code {
+  display: inline-block;
+  background: var(--readout-bg);
+  color: var(--readout-fg);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.sev-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sev-error { background: var(--error-bg); color: var(--error-fg); }
+.sev-warning { background: var(--warning-bg); color: var(--warning-fg); }
+.sev-info { background: var(--info-bg); color: var(--info-fg); }
+
+.finding-title { font-weight: 600; }
+.finding-detail { color: var(--text-dim); }
+/* A built-in finding folded under the engineer's own
+   condition for the same fault -- named, quieter, under the detail. */
+.finding-also {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  opacity: 0.85;
+}
+.finding-also code { font-size: 11px; }
+
+/* Notes about the watch itself, a status line under the
+   Watch header rather than rows in the alert table. */
+.watch-notes {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.watch-notes-line { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.watch-note strong { color: var(--text); font-weight: 600; }
+.watch-note .sev-badge { padding: 1px 6px; font-size: 10px; }
+.watch-notes-more summary { cursor: pointer; width: max-content; }
+.watch-notes-more ul { margin: 4px 0 0; padding-left: 18px; }
+.watch-notes-more code { font-size: 11px; }
+
+tr.row-new { animation: flash-new 1.6s ease-out; }
+@keyframes flash-new {
+  from { background: var(--accent); }
+  to { background: transparent; }
+}
+
+/* A clearing row fades and closes up together, so no blank
+   row holds its space (watch.js clearRow wraps each cell's contents). */
+.cell-collapse { overflow: hidden; transition: max-height 0.35s ease, opacity 0.35s ease; }
+tr.row-clearing .cell-collapse { opacity: 0; }
+tr.row-clearing td {
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+  transition: padding 0.35s ease, border-color 0.35s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell-collapse, tr.row-clearing td { transition: none; }
+}
+
+/* No reading for several intervals while watching. */
+#last-updated.is-stale {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  font-weight: 600;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .col-cat, .col-since { display: none; }
+}
+
+/* ---- Watch-conditions panel (FR-6.5) -- an editable table in
+   the shell's Watch mode, directly below the connect panel. Reuses .table-wrap/
+   table/th/td above rather than a parallel set of rules; only the bits
+   an editable (vs. read-only) table needs are added here. */
+
+#wc-table th, #wc-table td { padding: 8px 10px; }
+#wc-table td input[type="text"], #wc-table td input[type="number"] { min-width: 90px; }
+#wc-table td input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+/* An earlier change added `mute_group`, the longest field name in the select --
+   without a floor the column shrinks to the widest CELL rather than the
+   widest OPTION and clips it to "mute_". */
+#wc-table td select.wc-field { min-width: 118px; }
+.wc-add-row { margin-top: 12px; }
+/* A cell the server's check refused (a malformed target, a
+   value the field cannot take, a field the target's kind does not have),
+   with the reason under it, before Save. */
+#wc-table .is-invalid { border-color: var(--danger-fg); outline: 1px solid var(--danger-fg); }
+#wc-table .wc-cell-error.is-note { color: var(--info-fg); }
+#wc-table .wc-cell-error {
+  color: var(--danger-fg);
+  font-size: 12px;
+  line-height: 1.3;
+  margin-top: 4px;
+  max-width: 260px;
+  white-space: normal;
+}
+
+/* ---- Setup page: a read-only plan viewer, additive only --
+   nothing above this point is touched by these rules. `.sev-ok` extends
+   the severity-badge family above with a fourth, "ran clean" color. */
+
+
+.page-nav { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Both an <a> (the Watch/Setup pages link to each other) and a <button>
+   (the shell's three modes switch in place and navigate nowhere). The
+   reset keeps the two indistinguishable on screen -- a control that
+   changes the page without loading one is still a button. */
+.page-nav-link {
+  appearance: none;
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.page-nav-link:hover { color: var(--text); border-color: var(--border); }
+.page-nav-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The theme toggle: Auto (follow the OS) -> Light -> Dark. */
+.theme-toggle { margin-left: 8px; font-size: 11px; opacity: 0.8; }
+.theme-toggle:hover { opacity: 1; }
+.page-nav-active { color: var(--accent); border-color: var(--border); background: var(--bg-panel); }
+
+.setup-empty {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.setup-empty code {
+  background: var(--readout-bg);
+  color: var(--readout-fg);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font: 12px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.plan-source { margin: 10px 0 0; font-size: 12px; color: var(--text-dim); }
+
+#meta-panel h2:first-child { margin-top: 0; }
+
+.setup-dim { color: var(--text-dim); font-size: 13px; margin: 0; }
+.setup-ok { color: var(--info-fg); font-size: 13px; margin: 4px 0; }
+
+.setup-status-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+
+/* Step 04 and Apply's pre-flight list no findings of their
+   own -- the dock is the one place -- only this line counting them. */
+.findings-summary {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 13px; color: var(--text); margin: 10px 0;
+}
+.findings-summary .findings-summary-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--accent);
+}
+.findings-summary .findings-summary-link:hover { text-decoration: underline; }
+
+.setup-tag { color: var(--text-dim); font-weight: 400; font-size: 12px; }
+
+/* ---- Step 04's tables (mockup version H's combined Input+Plan table,
+   `.ct`; busses and outputs as `.ct.ct-compact`). Ported from
+   mockups/build-page/version-h.html; every colour is a token, so both
+   themes follow. */
+.plan-table-section { margin-top: 18px; }
+.ct-wrap { overflow-x: auto; margin-top: 10px; background: var(--bg-row); }
+.ct { width: 100%; border-collapse: collapse; }
+.ct th, .ct td {
+  text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border);
+  font-size: 12.5px; vertical-align: middle;
+}
+.ct thead th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-dim); white-space: nowrap; background: var(--bg-panel);
+}
+.ct tbody tr { background: var(--bg-row); }
+.ct tbody tr.alt { background: var(--bg-row-alt); }
+.ct th.grp-th.grp-plan {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--bg-panel)), var(--bg-panel));
+}
+.ct th.col-expand, .ct td.col-expand {
+  width: 38px; min-width: 38px; text-align: center; padding-inline: 3px;
+  background: var(--bg-row);
+}
+.ct thead th.col-expand { background: var(--bg-panel); z-index: 2; }
+.ct tbody tr.alt td.col-expand { background: var(--bg-row-alt); }
+.ct td.cell-input input[type="text"] {
+  width: 100%; min-width: 64px; box-sizing: border-box; padding: 3px 5px; font-size: 12px;
+  background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); border-radius: 3px;
+}
+.ct td.cell-input input[type="text"]:focus { border-color: var(--accent); outline: none; }
+.ct td.col-notes input[type="text"] { min-width: 120px; }
+.ct td.col-phantom { text-align: center; }
+.ct td.col-remove { width: 32px; text-align: center; }
+.ct tr.row-invalid td { background: var(--warning-bg); }
+.ct td.ct-name { font-weight: 700; white-space: nowrap; }
+.ct td.cell-plan { white-space: nowrap; }
+.ct td.cell-input:not(.cell-input-extra) input[type="text"] { min-width: 120px; }
+.ct-strip-name { color: var(--text-dim); font-size: 11.5px; margin-left: 6px; }
+.ct-unassigned {
+  display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-dim); border: 1px dashed var(--border); border-radius: 3px; padding: 0 5px;
+}
+.ch-num {
+  display: inline-block; font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--readout-bg); color: var(--readout-fg); border-radius: 3px; padding: 1px 5px;
+}
+.grp-toggle {
+  display: inline-flex; align-items: center; gap: 6px; background: none; border: none;
+  color: inherit; font: inherit; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; cursor: pointer; padding: 3px 2px;
+}
+.grp-toggle .chevron { display: inline-flex; color: var(--text-dim); transition: transform 0.15s ease; }
+.grp-toggle[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+.grp-toggle:hover { color: var(--text); }
+.grp-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grp-count { color: var(--text-dim); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.ct.ct--input-slim th.subhead-input-extra,
+.ct.ct--input-slim td.cell-input-extra { display: none; }
+.ct.ct--plan-collapsed th.subhead-plan, .ct.ct--plan-collapsed td.cell-plan { display: none; }
+.subhead-plan-collapsed-note, .cell-plan-collapsed-note { display: none; }
+.ct.ct--plan-collapsed .subhead-plan-collapsed-note,
+.ct.ct--plan-collapsed .cell-plan-collapsed-note { display: table-cell; color: var(--text-dim); font-style: italic; }
+/* The per-row disclosure triangle: twice the size it was, with no border
+   (the maintainer, 2026-09-28). Still a button, so still in the tab order, and
+   the focus ring below is its only outline. */
+.row-expand-btn {
+  display: inline-flex; align-items: center; justify-content: center; background: none;
+  border: none; color: var(--accent); border-radius: 4px;
+  width: 32px; height: 32px; cursor: pointer; font-family: inherit; padding: 0;
+  font-size: 22px; line-height: 1;
+}
+.row-expand-btn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.row-expand-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row-expand-btn .chevron { display: inline-flex; transition: transform 0.15s ease; }
+.row-expand-btn[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+.ct tr.row-detail td { padding: 0; }
+.row-detail-inner {
+  padding: 12px 14px 14px 34px; background: var(--bg-row); border-top: 1px dashed var(--border);
+  display: flex; flex-wrap: wrap; gap: 18px;
+}
+.row-detail-inner .setup-kv { grid-template-columns: 100px 1fr; flex: 1 1 280px; align-content: start; font-size: 12.5px; }
+.row-detail-inner .setup-provenance { flex: 1 1 260px; margin-top: 0; }
+.row-detail-inner code { font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+tr.jump-flash { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* The desk number that heads every row of step 04's three tables
+   ("3", "Aux 3", "B3", "M1", "MX1"). Hollow and dashed -- plainly no
+   colour, never mistakable for the desk's Grey or White -- until the
+   plan states a colour for the object; then the colour rules below
+   paint it the desk's colour, with its text picked for contrast. The
+   background is the desk's colour in both themes, so the text choice is
+   theme-free; the border keeps White on light and Navy on dark visible. */
+.num-chip {
+  min-width: 2.2em; text-align: center; font-weight: 700;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+}
+.num-chip:not([data-colour]) {
+  background: transparent; color: var(--text); border: 1px dashed var(--text-dim);
+}
+.num-chip-sub { opacity: 0.55; font-weight: 400; }
+.ct td.col-num { width: 1%; white-space: nowrap; }
+.ct td.cell-plan .ct-strip-name { margin-left: 4px; }
+/* Under step 04's Name cell: the name the plan gives the strip, when it
+   is not the input's own (the Strip column's one job, 2026-09-28). */
+.ct-desk-name { display: block; margin-top: 2px; font-size: 11px; color: var(--accent); white-space: nowrap; }
+/* A colour the desk actually has, by its own name (console_facts.
+   COLOUR_NAMES, in index order; the names are the desk's own since A24,
+   2026-09-28) -- approximations of the WING's eighteen, for a chip and
+   for a number chip's background. `color` is the text on a number chip:
+   whichever of #fff and #111 contrasts more with that background (WCAG;
+   every pair is 4.8:1 or better). */
+.colour-chip {
+  display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.5); vertical-align: -1px;
+}
+.colour-chip[data-colour="navy"], .num-chip[data-colour="navy"], .desk-strip-name[data-colour="navy"] { background: #22347a; color: #ffffff; }
+.colour-chip[data-colour="blue"], .num-chip[data-colour="blue"], .desk-strip-name[data-colour="blue"] { background: #2f6fd0; color: #ffffff; }
+.colour-chip[data-colour="violet"], .num-chip[data-colour="violet"], .desk-strip-name[data-colour="violet"] { background: #7b55d6; color: #ffffff; }
+.colour-chip[data-colour="turquoise"], .num-chip[data-colour="turquoise"], .desk-strip-name[data-colour="turquoise"] { background: #1fb5a8; color: #111111; }
+.colour-chip[data-colour="green"], .num-chip[data-colour="green"], .desk-strip-name[data-colour="green"] { background: #37934b; color: #111111; }
+.colour-chip[data-colour="lime"], .num-chip[data-colour="lime"], .desk-strip-name[data-colour="lime"] { background: #8cc63f; color: #111111; }
+.colour-chip[data-colour="yellow"], .num-chip[data-colour="yellow"], .desk-strip-name[data-colour="yellow"] { background: #d3b41f; color: #111111; }
+.colour-chip[data-colour="rust"], .num-chip[data-colour="rust"], .desk-strip-name[data-colour="rust"] { background: #a4502a; color: #ffffff; }
+.colour-chip[data-colour="red"], .num-chip[data-colour="red"], .desk-strip-name[data-colour="red"] { background: #d0342c; color: #ffffff; }
+.colour-chip[data-colour="salmon"], .num-chip[data-colour="salmon"], .desk-strip-name[data-colour="salmon"] { background: #f0806e; color: #111111; }
+.colour-chip[data-colour="pink"], .num-chip[data-colour="pink"], .desk-strip-name[data-colour="pink"] { background: #e0559f; color: #111111; }
+/* The retired names still accepted as aliases (console_facts.COLOUR_ALIASES):
+   a plan written with them shows the desk colour they now map to. */
+.colour-chip[data-colour="crimson"], .num-chip[data-colour="crimson"], .desk-strip-name[data-colour="crimson"] { background: #d0342c; color: #ffffff; }
+.colour-chip[data-colour="magenta"], .num-chip[data-colour="magenta"], .desk-strip-name[data-colour="magenta"] { background: #e0559f; color: #111111; }
+.colour-chip[data-colour="purple"], .num-chip[data-colour="purple"], .desk-strip-name[data-colour="purple"] { background: #7a2e8e; color: #ffffff; }
+.colour-chip[data-colour="amber"], .num-chip[data-colour="amber"], .desk-strip-name[data-colour="amber"] { background: #f0a020; color: #111111; }
+.colour-chip[data-colour="cyan"], .num-chip[data-colour="cyan"], .desk-strip-name[data-colour="cyan"] { background: #24a2b8; color: #111111; }
+.colour-chip[data-colour="orange"], .num-chip[data-colour="orange"], .desk-strip-name[data-colour="orange"] { background: #e8691c; color: #111111; }
+.colour-chip[data-colour="mint"], .num-chip[data-colour="mint"], .desk-strip-name[data-colour="mint"] { background: #7fd6b0; color: #111111; }
+.colour-chip[data-colour="grey"], .num-chip[data-colour="grey"], .desk-strip-name[data-colour="grey"] { background: #8a8a8a; color: #111111; }
+.colour-chip[data-colour="white"], .num-chip[data-colour="white"], .desk-strip-name[data-colour="white"] { background: #f2f2f2; color: #111111; }
+.colour-unknown {
+  background: repeating-linear-gradient(45deg, transparent, transparent 2px, var(--warning-fg) 2px, var(--warning-fg) 4px);
+}
+.plan-input-toolbar .panel-toolbar { flex-wrap: wrap; margin: 6px 0; }
+.plan-input-mode { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; flex: 1 1 320px; }
+
+.setup-kv { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
+.setup-kv dt { color: var(--text-dim); }
+.setup-kv dd { margin: 0; }
+
+.setup-provenance { margin-top: 10px; }
+.setup-provenance summary {
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.setup-provenance .setup-kv { margin-top: 8px; }
+.setup-provenance-line { font-size: 12px; color: var(--text-dim); margin: 6px 0 0; }
+
+.setup-notes { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-dim); }
+
+/* docs/developer/build-lessons-2026-09-27.md, part C: each role's kept
+   thinking-summary lines, collapsed under the same disclosure look as
+   .setup-provenance -- a batch-review aid, not something a build needs
+   open to run. */
+.setup-buildlog { margin-top: 14px; }
+.setup-buildlog-role { margin-top: 10px; }
+.setup-buildlog-role h4 { font-size: 12px; margin: 0 0 4px; color: var(--text); }
+.setup-buildlog-notes {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px; font-size: 12.5px;
+}
+.setup-buildlog-notes li { display: flex; gap: 8px; }
+.setup-buildlog-notes .setup-dim { flex: 0 0 auto; min-width: 42px; }
+
+@media (max-width: 640px) {
+  .setup-kv { grid-template-columns: 80px 1fr; }
+}
+
+/* ======================================================================
+   THE SHELL (/app) -- mockups/build-page/version-h.html, phase 1.
+
+   Ported from version H rather than reinvented: the class names, the
+   spacing and the tile/badge/dock vocabulary below are the mockup's, so a
+   later phase can lift H's markup for a Build step or an Apply panel
+   straight across and have it land looking the way it was drawn.
+
+   The palette is NOT ported -- it is already here. H and this file share
+   the same #54 brass tokens (:root, above) because H was drawn against
+   them. Two differences from the mockup as drawn, both deliberate:
+
+   * H was drawn with a FOURTH severity above `error`, and its own colour
+     pair and badge class. That rung was dropped from
+     `atoo.diagnostics.Severity` on 2026-09-23 -- nothing in this
+     codebase ever emitted one -- so the shell defines no such severity,
+     and the one place H used that colour for something else (a failed
+     ping) takes the existing `--danger-*` pair instead. The severity
+     ladder here is error / warning / info and nothing more;
+     tests/test_webui.py asserts that over the served file.
+   * H's findings dock lives inside its Build page. Here it is shared by
+     all three modes, because a finding raised in Build is the reason you
+     would not press Apply.
+   ====================================================================== */
+
+:root {
+  /* How far down the sticky dock has to start: the topbar plus the
+     bundle bar. Build's pipeline tiles are sticky as well (phase 2), but
+     they are sticky INSIDE the scrolling mode panel rather than against
+     the page, so they do not add to this. */
+  --sticky-h: 132px;
+}
+
+/* `hidden` means hidden, on this page, whatever a class says about
+   `display`. The browser's own `[hidden] { display: none }` loses to any
+   class rule that sets `display`, which is how `.tile-stale { display:
+   flex }` put a "this file changed on disk" banner on screen at first
+   paint -- for a file that had not changed. Scoped to the shell: it was
+   written while this stylesheet was still shared with the old Watch page
+   and `/setup`, which had their own hand-rolled workarounds for the same
+   trap (the Watch form's old `.console-fields[hidden]`). Both pages are gone, and the shell is the only page left. */
+body.shell [hidden] { display: none !important; }
+
+body.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-inline: max(12px, env(safe-area-inset-left));
+}
+body.shell .topbar { max-width: 1280px; width: 100%; margin: 0 auto; padding-block: 12px; }
+
+.app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 12px;
+}
+.shell-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+.layout-main { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+.mode-panel { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+.mode-panel.is-active { display: flex; }
+.mode-panel[hidden] { display: none !important; }
+
+
+/* ---- The bundle bar -------------------------------------------------- */
+
+.bundle-chrome {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  flex: none;
+  padding: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bundle-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.bundle-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.bundle-bar-name {
+  font: 12px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--readout-bg);
+  color: var(--readout-fg);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+/* Nothing open yet: still a readout, but visibly not a value. */
+.bundle-bar-name.is-empty {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  font-style: italic;
+}
+.bundle-bar-spacer { flex: 1 1 auto; }
+.bundle-bar-sep { width: 1px; align-self: stretch; background: var(--text-dim); opacity: 0.5; margin: 0 6px; }
+.bundle-bar .btn-secondary, .dock-header .btn-secondary { margin-left: 0; }
+
+.bundle-bar-edit {
+  display: none;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.bundle-bar-edit.is-open { display: flex; }
+.bundle-bar-edit .field { flex: 0 1 320px; }
+/* Address or Demo: the choice sits in the same editor as the
+   address it replaces, and Demo greys the address and port out. */
+.bundle-bar-edit .field.console-kind { flex: 0 0 auto; }
+.console-kind-opts { display: flex; gap: 12px; padding: 8px 0; }
+.console-kind-opt {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap;
+}
+.console-kind-opt input { width: auto; margin: 0; }
+.bundle-bar-edit input:disabled { opacity: 0.45; }
+
+.pipe-file-hint {
+  font: 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text-dim);
+  background: transparent;
+}
+/* A faint chip under each link-button, so two of them side by side
+   ("CHANGE FILE  NEW FILE") read as two buttons, not one phrase
+   (the maintainer, 2026-09-25). Tinted from the accent so it works in both
+   themes. */
+.pipe-change-btn {
+  appearance: none;
+  font: inherit;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: none;
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 1px 5px;
+  flex: none;
+  white-space: nowrap;
+}
+.pipe-change-btn:hover { text-decoration: underline; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.pipe-change-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---- State badges (H's vocabulary, reused by every later phase) ------- */
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.state-badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.state-loaded  { background: var(--info-bg); color: var(--info-fg); }
+.state-missing { background: var(--error-bg); color: var(--error-fg); }
+.state-stale   { background: var(--warning-bg); color: var(--warning-fg); }
+.state-notset  { background: var(--bg-row); color: var(--text-dim); border: 1px solid var(--border); }
+.state-drafted {
+  background: var(--bg-row);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+/* "Not part of this show" -- the house conventions file, which lives
+   outside the bundle on purpose (#81 point 5). Phase 2 uses it. */
+.house-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-row-alt);
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ---- The console readout and Ping ------------------------------------ */
+.console-readout { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-dim); }
+.console-source { font-size: 10.5px; color: var(--text-dim); }
+/* An address typed into the bar says so as loudly as one from the
+   environment does (the rule, turned round). */
+.console-source.is-set-here { color: var(--accent); font-weight: 600; }
+.ping-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.ping-pill.is-ok { background: var(--info-bg); color: var(--info-fg); border-color: transparent; }
+.ping-pill.is-bad { background: var(--danger-bg); color: var(--danger-fg); border-color: transparent; }
+
+/* ---- Small buttons and the icon button the dock collapses with -------- */
+.btn-sm { padding: 4px 9px; font-size: 10.5px; }
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px dashed var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text-dim); }
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+}
+.btn-icon-muted:hover { color: var(--text); border-color: var(--text-dim); }
+
+/* ---- The findings dock ----------------------------------------------- */
+.dock-col {
+  flex: 0 0 300px;
+  position: sticky;
+  /* The dock's top meets the tiles' top. The tiles sit 8px
+     into the shell body (.pipeline-wrap's 2px and .pipeline-nav's 6px of
+     padding), so the dock starts 8px down as well; and its sticky offset
+     is 8px, not the topbar's height, which held it lower than its own
+     place on the page before anything had scrolled. */
+  margin-top: 8px;
+  top: 8px;
+  align-self: stretch;
+  height: calc(100vh - var(--sticky-h) - 28px);
+  height: calc(100dvh - var(--sticky-h) - 28px);
+  max-height: 100%;
+  min-height: 0;
+}
+.dock-col.is-collapsed { flex: 0 0 40px; }
+.dock-tab {
+  display: none;
+  width: 40px;
+  height: 100%;
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 14px 0;
+  font-family: inherit;
+}
+.dock-col.is-collapsed .dock-tab { display: flex; }
+.dock-col.is-collapsed .findings-dock { display: none; }
+.dock-tab:hover { color: var(--text); border-color: var(--text-dim); }
+.dock-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.dock-tab-count, .dock-title-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+.findings-dock {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dock-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex: none; }
+.dock-title { font-size: 13px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+.dock-subtitle { margin: 2px 0 0; font-size: 11px; color: var(--text-dim); }
+.dock-header-spacer { flex: 1 1 auto; }
+.dock-body { flex: 1 1 auto; overflow-y: auto; padding: 10px 12px 12px; min-height: 0; }
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  background: var(--bg-row-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.readout {
+  display: inline-block;
+  background: var(--readout-bg);
+  color: var(--readout-fg);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font: 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+.fkey { font-weight: 700; }
+.dock-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+/* An earlier change (mockups/findings-dock/, approved 2026-10-11): one line per
+   finding, the rest behind a click. */
+.dock-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 0 0 0 7px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 3px;
+  min-width: 0;
+}
+.dock-item[data-sev="error"] { border-left-color: var(--error-fg); }
+.dock-item[data-sev="warning"] { border-left-color: var(--warning-fg); }
+.dock-item[data-sev="info"] { border-left-color: var(--info-fg); }
+/* The critic's advice: same severity, but an opinion, not a fact -- a
+   dashed rule instead of a solid one. */
+.dock-item.is-advice { border-left-style: dashed; }
+.dock-item-check { flex: none; margin: 7px 0 0; width: 14px; height: 14px; accent-color: var(--accent); }
+.dock-row { flex: 1 1 auto; min-width: 0; }
+.dock-row > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: flex-start; gap: 7px;
+  padding: 5px 7px 5px 0; min-width: 0;
+}
+.dock-row > summary::-webkit-details-marker { display: none; }
+.dock-row > summary .chevron { flex: none; margin-top: 1px; color: var(--text-dim); font-size: 11px; transition: transform 0.15s ease; }
+.dock-row[open] > summary .chevron { transform: rotate(90deg); }
+.dock-line {
+  flex: 1 1 auto; min-width: 0; font-size: 12px; line-height: 1.35; color: var(--text);
+  overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.dock-row[open] .dock-line { display: block; -webkit-line-clamp: unset; }
+.dock-where { font: 700 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.dock-item-body { padding: 0 9px 8px 0; display: flex; flex-direction: column; gap: 5px; }
+.dock-item-text { margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-dim); overflow-wrap: anywhere; }
+/* The two halves of a Diagnostic that an earlier change exists to keep apart:
+   what the engineer can change, and what is ours to fix. */
+.dock-item-fix { margin: 0; font-size: 11.5px; color: var(--text); }
+.dock-item-limitation { margin: 0; font-size: 11.5px; color: var(--warning-fg); }
+.dock-members { margin: 0; padding-left: 16px; font-size: 11.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+.dock-members b { color: var(--text); font: 700 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.dock-member.jump-flash { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dock-item-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dock-code { font-size: 9.5px; opacity: 0.85; }
+.dock-src { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+.dock-item-links { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.dock-jump { font-size: 11px; font-weight: 700; color: var(--accent); text-decoration: none; }
+.dock-jump:hover { text-decoration: underline; }
+.dock-item.is-resolved { opacity: 0.62; }
+.dock-item.is-resolved .dock-line { text-decoration: line-through; text-decoration-color: var(--text-dim); }
+.dock-item.is-resolved .dock-jump { display: none; }
+/* The verdict: Ready to apply / Blocked, and three counts. */
+.dock-verdict {
+  border: 1px solid var(--border); border-left: 3px solid var(--ready-fg); border-radius: 4px;
+  background: var(--bg-row); padding: 8px 10px; margin-bottom: 12px;
+}
+.dock-verdict[data-state="blocked"] { border-left-color: var(--error-fg); }
+.dock-verdict-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dock-verdict-sub { font-size: 11px; color: var(--text-dim); }
+.dock-verdict-lines { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; line-height: 1.6; }
+.dock-verdict-lines b { font-variant-numeric: tabular-nums; display: inline-block; min-width: 18px; }
+.dock-verdict-stale { margin: 6px 0 0; padding-top: 6px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
+.dock-verdict-stale .dock-item-links { display: inline-flex; }
+.sev-ready { background: var(--ready-bg); color: var(--ready-fg); }
+.dock-section { margin-bottom: 12px; }
+.dock-head {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin: 0 0 6px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim);
+}
+.dock-head-note { font-size: 10.5px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-dim); }
+.dock-count { font: 700 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--warning-fg); }
+.dock-head-advice .dock-count { color: var(--text); }
+.dock-count-info { color: var(--info-fg); }
+.dock-count-dim { color: var(--text-dim); }
+/* Choices and Build details: closed folds. */
+.dock-fold { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+.dock-fold > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-dim); padding: 2px 0 6px;
+}
+.dock-fold > summary::-webkit-details-marker { display: none; }
+.dock-fold > summary .chevron { display: inline-flex; transition: transform 0.15s ease; }
+.dock-fold[open] > summary .chevron { transform: rotate(90deg); }
+.dock-details > summary { opacity: 0.8; }
+.dock-fold[hidden], .dock-section[hidden], .dock-verdict[hidden] { display: none; }
+/* Step 04's Plan notes: the [repair] notes under the same closed fold. */
+.dock-empty-note { font-size: 12px; color: var(--text-dim); font-style: italic; padding: 6px 2px; margin: 0; }
+.dock-resolved { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.dock-resolved > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dock-resolved > summary::-webkit-details-marker { display: none; }
+.dock-resolved > summary .chevron { display: inline-flex; transition: transform 0.15s ease; }
+.dock-resolved[open] > summary .chevron { transform: rotate(90deg); }
+.dock-resolved .dock-list { margin-top: 10px; }
+.dock-resolved-hint { font-size: 11px; color: var(--text-dim); margin: 8px 0 0; }
+
+/* Where a jump link landed you, briefly, so the eye can find it. */
+.jump-flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.panel-message-error { color: var(--danger-fg); }
+/* Watch's file row: a copy, a New file or a Save is news, not
+   a refusal, so it does not read red. */
+#wc-message.is-ok { color: var(--ok-fg, var(--info-fg)); }
+
+/* ---- Build steps 01-03 (version H, phase 2) ---------------------------
+   The pipeline tiles, the step panels behind them, and the two Markdown
+   readers. Every selector below is NEW -- nothing here restyles anything
+   `/` (the Watch page, then) or `/setup` (the plan viewer) served, which
+   was checked by rendering both from that branch and from `main` and
+   comparing. `styles.css` was one file across three pages, so an
+   additive-only rule was the whole discipline.
+
+   H's markup lands on these class names unchanged; two of its rules are
+   not ported and both are noted where they would have gone. */
+
+.pipeline-wrap {
+  position: sticky; top: 0; z-index: 30; background: var(--bg);
+  padding: 2px 0 0; border-bottom: 1px solid var(--border); flex: none;
+}
+.pipeline-nav {
+  display: flex; align-items: stretch; gap: 6px; padding: 6px 0 8px;
+  overflow-x: auto; flex-wrap: nowrap;
+}
+.pipe-stop {
+  appearance: none; font: inherit; flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;
+  color: inherit; text-align: left; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px 8px;
+  cursor: pointer; position: relative;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pipe-stop:hover { border-color: var(--text-dim); }
+.pipe-stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pipe-stop-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pipe-num {
+  font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text-dim); flex: none;
+}
+.pipe-label {
+  font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; flex: 1 1 auto; min-width: 0;
+}
+.pipe-stop-top .state-badge { flex: none; align-self: center; }
+/* An earlier change (the maintainer, 2026-10-01): "move buttons down so they don't
+   shorten the file paths". A tile is three rows -- number, name and
+   state; the path, the whole width of the tile; then the buttons, with
+   the tile's own readouts (what the status line under the tiles used to
+   carry) pushed to the right of them. */
+.pipe-stop-actions {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; row-gap: 3px;
+  min-width: 0; margin-top: auto;
+}
+/* Step 01's row is the full one (House, Change file, New file); a tighter
+   House tag keeps it on one line at a laptop's width. */
+.pipe-stop-actions .house-tag { padding: 1px 4px; }
+/* Pushes the readouts right; its negative margin takes back the gap it
+   would otherwise cost, which on step 01 was the width of "New file". */
+.pipe-stop-spacer { flex: 1 1 0; margin-left: -4px; }
+/* On a tile the path is one line that truncates, never two that wrap: the
+   tiles are a row and one that grew a line would push the other three out
+   of alignment. The whole path is on the element's title. */
+.pipe-stop > .pipe-file-hint {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.pipe-stat { font-size: 11px; color: var(--text-dim); white-space: nowrap; flex: none; }
+.pipe-stat strong { color: var(--text); font-weight: 600; }
+.pipe-stat-findings { color: var(--text-dim); }
+.pipe-stop.has-error .pipe-stat-findings { color: var(--error-fg); }
+/* What a tile still needs, said on the tile -- a to-do, not
+   a finding. At most two lines; the whole text is on its title. */
+.pipe-stop > .pipe-todo {
+  margin: 2px 0 0; font-size: 11px; line-height: 1.35; color: var(--text-dim);
+  font-style: italic; min-width: 0; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.pipe-stop .state-badge { flex: none; }
+/* The status line's separator came along with the plan badge (setup.js
+   still toggles it), but on a tile the gap does its job. */
+.pipe-stop-actions .sep { display: none; }
+.pipe-stop-actions .readout.pipe-stat {
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%; flex: 0 1 auto; min-width: 0;
+}
+.pipe-rebuild-btn { flex: none; }
+/* The tile's own path and "Change file" are quieter than the bundle bar's:
+   the folder was chosen once, up there, and these are derived from it. */
+#build-steps .pipe-change-btn { opacity: 0.55; font-size: 9.5px; }
+#build-steps .pipe-change-btn:hover,
+#build-steps .pipe-change-btn:focus-visible { opacity: 1; }
+.pipe-stop[aria-selected="true"] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--bg-panel)), var(--bg-panel));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.pipe-stop[aria-selected="true"]:hover { border-color: var(--accent); }
+.pipe-stop[aria-selected="true"]::after {
+  content: ""; position: absolute; left: 8px; right: 8px; bottom: 0;
+  height: 3px; background: var(--accent); border-radius: 2px 2px 0 0;
+}
+/* A tile whose file produced an error. The badge still says what H's
+   vocabulary says -- the file did load -- and this is what makes the
+   trouble visible without leaving the pipeline. */
+.pipe-stop.has-error { border-color: var(--error-fg); }
+.pipe-stop.has-error[aria-selected="true"] { border-color: var(--error-fg); }
+
+/* 04 Plan: a real tab with an honest panel, but nothing to load yet. */
+.pipe-stop-todo .pipe-label, .pipe-stop-todo .pipe-num { opacity: 0.75; }
+.pipe-arrow {
+  display: flex; align-items: center; justify-content: center;
+  flex: none; width: 14px; color: var(--text-dim); font-size: 13px;
+}
+
+/* The tiles, and the "?" beside them that holds what the status line's
+   sentence of instructions said. */
+.pipeline-row { display: flex; align-items: center; gap: 6px; }
+.pipeline-row .pipeline-nav { flex: 1 1 auto; min-width: 0; }
+.pipeline-help { flex: none; }
+
+/* ---- Pop-up help ----------------------------------------
+   Build's blocks of instructions, opened on demand: a small "?" and the
+   same text in a popover. shell.js places the popover (position: fixed,
+   from the button's rectangle -- the tiles row and the step panels both
+   clip what overflows them) and closes it on Escape or a click outside. */
+.help-pop { display: inline-flex; align-items: center; vertical-align: middle; }
+.help-btn {
+  appearance: none; font: 700 10.5px/1 system-ui, sans-serif;
+  width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-dim); background: transparent;
+  border: 1px solid var(--border); cursor: pointer; flex: none;
+}
+.help-btn:hover, .help-btn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+.help-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.help-popover {
+  position: fixed; z-index: 200; display: block; box-sizing: border-box;
+  max-width: calc(100vw - 16px); padding: 10px 12px;
+  font-size: 12px; font-weight: 400; line-height: 1.5; letter-spacing: normal;
+  text-transform: none; text-align: left; white-space: normal;
+  color: var(--text); background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.help-popover code {
+  font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--bg-row-alt); padding: 0 3px; border-radius: 2px;
+}
+.run-build-actions { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Step 04's live build readout (GET /api/build/status's `progress`). The
+   bar is indeterminate on purpose: a model call has no knowable end, and
+   a percentage would be a guess dressed as a measurement. It moves while
+   the build runs and stops when it doesn't. */
+.run-progress { margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.run-progress-bar {
+  position: relative; height: 4px; border-radius: 2px; overflow: hidden;
+  background: var(--bg-row-alt); border: 1px solid var(--border);
+}
+.run-progress-bar > span {
+  position: absolute; top: 0; bottom: 0; width: 30%; left: -30%;
+  background: var(--accent); border-radius: 2px;
+  animation: run-progress-sweep 1.6s ease-in-out infinite;
+}
+.run-progress-bar.is-stopped > span { animation: none; left: 0; width: 100%; opacity: 0.35; }
+@keyframes run-progress-sweep {
+  from { left: -30%; }
+  to { left: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-progress-bar > span { animation-duration: 4s; }
+}
+.run-progress-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+.run-progress-stage { color: var(--text-dim); }
+.run-progress-note { margin: 0; font-size: 11.5px; color: var(--text-dim); }
+.run-progress-calls {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px;
+}
+.run-progress-calls li {
+  border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px;
+  color: var(--text-dim); background: var(--bg-row-alt);
+}
+.run-progress-calls li.is-active { border-color: var(--accent); color: var(--text); }
+.run-progress-calls li.is-failed { border-color: var(--error-fg); color: var(--error-fg); }
+.run-progress-calls li.is-stopped { border-style: dashed; }
+
+/* A stopped build: a plain statement, not an error. */
+.run-stopped {
+  margin: 0 0 10px; padding: 6px 10px; font-size: 12.5px;
+  border: 1px solid var(--border); border-left: 3px solid var(--text-dim);
+  border-radius: 3px; background: var(--bg-row-alt); color: var(--text);
+}
+
+/* What the model is writing, read from the partial JSON. */
+.run-live {
+  display: flex; flex-direction: column; gap: 4px; font-size: 12px;
+  border-top: 1px solid var(--border); padding-top: 6px;
+}
+.run-live p { margin: 0; }
+/* Always exactly two lines tall, whatever it holds (or
+   nothing), so the step does not jump as the message changes. */
+.run-live-last { height: calc(2 * 1.4em); line-height: 1.4; overflow: hidden; }
+.run-live-last p {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-clamp: 2; overflow: hidden;
+}
+.run-live-thinking { color: var(--text-dim); font-style: italic; overflow-wrap: anywhere; }
+.run-live-now { color: var(--text); overflow-wrap: anywhere; }
+.run-live-written .run-live-sections { margin-top: 4px; }
+.run-live-now strong { font-weight: 600; }
+.run-live-sections { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.run-live-sections li { color: var(--text-dim); overflow-wrap: anywhere; }
+.run-live-sections li .run-live-section { color: var(--text); font-weight: 600; }
+.run-live-sections li.is-current .run-live-section { color: var(--accent); }
+.run-live-raw summary { cursor: pointer; color: var(--text-dim); font-size: 11.5px; }
+.run-live-raw pre {
+  margin: 4px 0 0; max-height: 180px; overflow: auto; white-space: pre-wrap;
+  overflow-wrap: anywhere; font-size: 11px; padding: 6px;
+  background: var(--bg-row); border: 1px solid var(--border); border-radius: 3px;
+}
+
+.build-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin-top: 12px; }
+.step-panel { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: hidden; }
+.step-panel.is-active { display: flex; }
+.step-panel[hidden] { display: none !important; }
+.step-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 8px; }
+
+.stage-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; flex: none; }
+.stage-title { font-size: 14px; font-weight: 700; margin: 0; }
+.stage-kind {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-dim);
+}
+
+.panel-toolbar { display: flex; align-items: center; gap: 8px; margin: 10px 0 8px; flex-wrap: wrap; }
+.panel-toolbar-spacer { flex: 1 1 auto; }
+.panel-toolbar-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim);
+}
+.panel-note { font-size: 11.5px; color: var(--text-dim); margin: 8px 0 0; line-height: 1.5; }
+.panel-note code, .house-conv-strip-note code, .stack-list code, .step-footer-note code {
+  background: var(--readout-bg); color: var(--readout-fg); border-radius: 3px; padding: 1px 5px;
+  font: 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.step-empty { font-size: 12px; color: var(--text-dim); font-style: italic; margin: 8px 0 0; }
+
+/* ---- a disclosure card (Apply's Advanced, Patch's read, the Example) --- */
+.conv-card { background: var(--bg-row); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.conv-card > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center;
+  gap: 8px; padding: 7px 10px; user-select: none;
+}
+.conv-card > summary::-webkit-details-marker { display: none; }
+.conv-card > summary .chevron {
+  flex: none; color: var(--text-dim); transition: transform 0.15s ease; display: inline-flex;
+}
+.conv-card[open] > summary .chevron { transform: rotate(90deg); }
+.conv-heading {
+  font: 11.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--accent); font-weight: 700; flex: none;
+}
+.conv-summary-text {
+  color: var(--text-dim); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; flex: 1 1 auto; min-width: 0;
+}
+.conv-card-body { padding: 0 10px 8px; }
+/* `<!-- ... -->` in step 03's "View house file": shown as written, and
+   visibly not read by the build (conventions_text.py strips it before any
+   model sees the file). Dim and italic, never hidden: a view that drops
+   part of the file is not the file. */
+.md-comment { color: var(--text-dim); font-style: italic; opacity: 0.7; }
+.conv-source-pre {
+  background: var(--bg-row); border: 1px solid var(--border); border-radius: 4px; padding: 10px;
+  font: 11.5px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text); white-space: pre-wrap; overflow-x: auto; max-height: 380px; overflow-y: auto;
+  margin: 0;
+}
+
+/* ---- the house file strip, and the conventions stack ------------------ */
+.house-conv-panel { padding: 10px 12px; }
+.house-conv-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.house-conv-strip-main {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1 1 auto;
+  min-width: 0; font-size: 12px; color: var(--text-dim); line-height: 1.5;
+}
+.house-conv-strip-label { font-weight: 700; color: var(--text); }
+.house-conv-strip-file {
+  font: 11.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--readout-bg); color: var(--readout-fg); padding: 1px 6px; border-radius: 3px;
+}
+#house-conv-source { margin-top: 10px; }
+
+.stack-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.stack-list li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--text-dim); }
+.stack-list .stack-num {
+  font: 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--accent); font-weight: 700;
+}
+/* The file changed on disk after the page read it. Not applied on its
+   own: what you are reading stays until you say so. */
+.tile-stale {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 8px 12px; border-radius: 4px;
+  background: var(--warning-bg); color: var(--warning-fg);
+  border: 1px solid color-mix(in srgb, var(--warning-fg) 35%, transparent);
+  font-size: 12px; font-weight: 600;
+}
+.tile-stale .btn-secondary { color: var(--warning-fg); border-color: currentColor; margin-left: 0; }
+
+/* Step 01's New file: what it wrote, and what it did or did not write to
+   ~/.atoo.config. Info-coloured -- a report of something done, not a
+   warning about the file on screen. */
+.tile-note {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 8px 12px; border-radius: 4px;
+  background: var(--info-bg); color: var(--info-fg);
+  border: 1px solid color-mix(in srgb, var(--info-fg) 35%, transparent);
+  font-size: 12px;
+}
+.tile-note .btn-secondary { color: var(--info-fg); border-color: currentColor; margin-left: 0; }
+
+.step-empty-action { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+.step-footer {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);
+}
+.step-footer-spacer { flex: 1 1 auto; }
+.step-footer-note { font-size: 11.5px; color: var(--text-dim); flex: 1 1 200px; line-height: 1.5; }
+.step-footer .btn-secondary { margin-left: 0; }
+
+/* ---- the input list, read-only --------------------------------------- */
+.socket-chip {
+  display: inline-block; background: var(--readout-bg); color: var(--readout-fg);
+  border-radius: 3px; padding: 2px 6px; white-space: nowrap;
+  font: 10.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.it { width: 100%; border-collapse: collapse; }
+.it th, .it td {
+  text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border);
+  font-size: 12.5px; vertical-align: middle;
+}
+.it thead th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-dim); white-space: nowrap; background: var(--bg-panel);
+}
+.it td.col-phantom { text-align: center; font-weight: 700; color: var(--warning-fg); }
+.it td.col-notes { color: var(--text-dim); }
+#input-table-wrap { max-height: 60vh; overflow: auto; }
+
+/* ---- editing the three files ------------------- */
+/* Steps 01 and 03: the whole file in one editor (the maintainer, 2026-09-28: no
+   sections view), in the monospace a source file is read in. */
+.source-editor {
+  width: 100%; min-height: 280px; padding: 10px; box-sizing: border-box; display: block;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font: 11.5px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  resize: vertical; tab-size: 4;
+}
+.source-editor:focus { border-color: var(--accent); outline: none; }
+.source-editor[readonly] { color: var(--text-dim); }
+/* The example beside the editor: a suggestion, never written on its own. */
+.source-example { margin-top: 8px; }
+.source-example-text { max-height: 320px; }
+.source-example-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+/* The warning while the house file has unsaved changes: warning colours,
+   and it stays up until they are saved or discarded. */
+.house-edit-warning {
+  display: flex; gap: 8px; margin: 0 0 10px; padding: 8px 12px; border-radius: 4px;
+  background: var(--warning-bg); color: var(--warning-fg); font-size: 12px; line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--warning-fg) 35%, transparent);
+}
+/* What a Save did, or why it did not. */
+.save-note {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px;
+  padding: 8px 12px; border-radius: 4px; font-size: 12px; line-height: 1.5;
+  background: var(--info-bg); color: var(--info-fg);
+  border: 1px solid color-mix(in srgb, var(--info-fg) 35%, transparent);
+}
+.save-note.is-ok { background: var(--ok-bg, var(--info-bg)); color: var(--ok-fg, var(--info-fg)); }
+.save-note.is-warn { background: var(--warning-bg); color: var(--warning-fg); }
+.save-note.is-error { background: var(--danger-bg); color: var(--danger-fg); }
+.save-note .btn-secondary { color: inherit; border-color: currentColor; margin-left: 0; }
+/* Step 02's table is the editor. */
+.it td input[type="text"] {
+  width: 100%; min-width: 60px; box-sizing: border-box; padding: 3px 5px; font-size: 12px;
+  background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); border-radius: 3px;
+}
+.it td input[type="text"]:focus { border-color: var(--accent); outline: none; }
+.it td input.socket-input { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; min-width: 90px; }
+.it td.col-remove { width: 1%; text-align: center; }
+/* Step 02's Notes cell: an icon, hollow for no note and filled for one,
+   whose tooltip is the note (the maintainer, 2026-09-28). It opens #note-dialog. */
+.it td.col-notes { width: 1%; text-align: center; }
+.note-btn { color: var(--text-dim); }
+.note-btn:hover { color: var(--text); border-color: var(--text-dim); }
+.note-btn.has-note { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.note-btn .note-lines { stroke: var(--bg-panel); }
+.note-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note-dialog {
+  width: min(520px, calc(100vw - 32px)); padding: 16px 18px;
+  background: var(--bg-panel); color: var(--text);
+  border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+.note-dialog::backdrop { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.note-dialog-form { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.note-dialog-title { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+.note-dialog textarea {
+  width: 100%; box-sizing: border-box; min-height: 8em; resize: vertical;
+  padding: 8px; font: 13px/1.45 inherit; font-family: inherit;
+  background: var(--bg-row); color: var(--text); border: 1px solid var(--border); border-radius: 3px;
+}
+.note-dialog textarea:focus { border-color: var(--accent); outline: none; }
+.note-dialog-hint { margin: 0; font-size: 12px; color: var(--text-dim); }
+.note-dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.it tr.row-invalid td { background: var(--warning-bg); }
+/* An empty Name, Category or Type -- the cells a row cannot
+   load without -- outlined, with "required" as its placeholder. */
+.it td input.is-required-empty { border-color: var(--warning-fg); }
+.it td input.is-required-empty::placeholder { color: var(--warning-fg); opacity: 0.8; }
+/* Step 02's Order cell, Skip box, row moves and insert (FR-1.1). A
+   skipped row is dimmed: still in input.csv, out of the next build. */
+.it td.col-order { width: 1%; white-space: nowrap; padding-left: 3px; padding-right: 3px; }
+.it td input.order-input { width: 2.8em; min-width: 2.8em; text-align: center; }
+.skip-toggle {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: 3px;
+  font-size: 10.5px; color: var(--text-dim); cursor: pointer; vertical-align: middle;
+}
+.skip-toggle input { margin: 0; }
+.it tr.row-skipped td, .ct tr.row-skipped td { opacity: 0.45; }
+.it tr.row-skipped td.col-order, .it tr.row-skipped td.col-move { opacity: 1; }
+.it tr.row-skipped td [data-col="name"] { text-decoration: line-through; }
+.it td.col-move { width: 1%; white-space: nowrap; padding-left: 2px; padding-right: 2px; }
+.drag-handle { cursor: grab; color: var(--text-dim); padding: 0 2px; user-select: none; vertical-align: middle; }
+.move-stack { display: inline-flex; flex-direction: column; gap: 1px; vertical-align: middle; }
+.move-btn { font-size: 7px; width: 18px; height: 12px; padding: 0; border-radius: 2px; }
+.it tr.row-dragging td { background: var(--info-bg); }
+.it td.col-remove { white-space: nowrap; padding-left: 3px; padding-right: 3px; }
+.it td.col-remove .btn-icon { width: 22px; height: 22px; }
+.insert-row-btn { margin-right: 3px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+/* The plan is older than its inputs: which file, and Rebuild. */
+.plan-stale-reason {
+  display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+  padding: 8px 12px; border-radius: 4px; font-size: 12px; line-height: 1.5;
+  background: var(--warning-bg); color: var(--warning-fg);
+  border: 1px solid color-mix(in srgb, var(--warning-fg) 35%, transparent);
+}
+.plan-stale-reason.is-unknown { background: var(--info-bg); color: var(--info-fg);
+  border-color: color-mix(in srgb, var(--info-fg) 35%, transparent); }
+.plan-stale-text { flex: 1 1 320px; min-width: 0; }
+.plan-stale-text ul { margin: 4px 0 0; padding-left: 18px; }
+
+@media (max-width: 900px) {
+  .build-body { overflow: auto; }
+  .step-panel.is-active { display: block; overflow: visible; }
+  .step-scroll { overflow: visible; }
+  .pipe-arrow { display: none; }
+}
+@media (max-width: 640px) {
+  .pipeline-wrap { position: static; }
+  .pipeline-nav { flex-wrap: wrap; }
+  .pipe-stop { flex: 1 1 calc(50% - 6px); min-width: 0; }
+}
+
+@media (max-width: 900px) {
+  /* Narrow: the dock stops being a column and becomes a band above the
+     mode, because a 300px sidebar next to a 320px page is neither. */
+  .shell-body { flex-direction: column; }
+  .dock-col { order: -1; width: 100%; flex: 1 1 auto; position: static; height: auto; max-height: 48vh; }
+  .dock-col.is-collapsed { flex: 1 1 auto; max-height: none; }
+  .dock-tab { width: 100%; height: auto; min-height: 0; flex-direction: row; padding: 10px 14px; }
+  .dock-tab-label { writing-mode: horizontal-tb; transform: none; }
+  .findings-dock { max-height: 48vh; }
+}
+
+/* ---- Apply (version H phase 4) ---------------------------
+   Additive only. Nothing above this point is touched, and none of these
+   selectors appeared on the old Watch page at `/` -- it rendered byte for
+   byte as it did, which was checked by fetching both and diffing. The palette is the
+   one already defined at the top of this file; no new tokens. */
+
+.apply-shell {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 14px 0 32px; max-width: 900px; width: 100%;
+}
+
+.apply-mode-switch {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-row);
+}
+.apply-mode-switch-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  font-weight: 700; color: var(--text-dim);
+}
+.apply-mode-switch-hint { font-size: 11.5px; color: var(--text-dim); flex: 1 1 260px; }
+.seg-btn {
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--bg-panel); color: var(--text);
+}
+.seg-btn.is-active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.apply-advanced-body { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+.apply-advanced-body .field { flex: none; }
+.apply-advanced-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; }
+.apply-advanced-note { font-size: 11.5px; color: var(--text-dim); }
+.apply-warn-caption { display: block; margin-top: 4px; font-size: 11.5px; color: var(--warning-fg); line-height: 1.4; }
+#apply-disabled-reason { margin-top: 0; }
+#apply-disabled-reason:not(.is-bypass) { color: var(--text-dim); }
+
+/* The one arming control in Atoo, drawn as its own block so it
+   cannot be mistaken for one more advanced option. */
+.apply-arm-block {
+  background: var(--bg-row); border: 1px solid var(--border); border-radius: 4px;
+  padding: 10px 12px; margin: 12px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.apply-arm-checkbox {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.apply-arm-checkbox input { width: 16px; height: 16px; accent-color: var(--danger-fg); }
+
+.apply-run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.apply-run-note { font-size: 11.5px; color: var(--text-dim); flex: 1 1 240px; }
+.btn-danger { background: var(--danger-fg); color: var(--accent-ink); }
+.btn-danger:disabled { opacity: 0.4; }
+
+.apply-summary-line {
+  font-size: 13px; font-weight: 700; margin: 0 0 10px;
+  white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.apply-summary-line.is-bad { color: var(--danger-fg); }
+
+.apply-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.apply-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 3px; background: var(--bg-row);
+}
+.apply-chip-key {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-weight: 700; color: var(--text-dim);
+}
+.apply-chip.is-bad { background: var(--danger-bg); color: var(--danger-fg); border-color: transparent; }
+.apply-chip.is-warn { background: var(--warning-bg); color: var(--warning-fg); border-color: transparent; }
+
+.apply-warnings-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-dim); font-weight: 700;
+}
+
+/* Mismatch and unreadable are expanded and coloured; everything else is
+   counted and folded away behind `.apply-journal-group`. */
+.apply-journal-flagged { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.apply-record {
+  border: 1px solid var(--border); border-left: 3px solid var(--border);
+  border-radius: 3px; padding: 8px 10px; background: var(--bg-row);
+}
+.apply-record.is-mismatch { border-left-color: var(--danger-fg); background: var(--danger-bg); }
+.apply-record.is-unreadable { border-left-color: var(--warning-fg); background: var(--warning-bg); }
+.apply-record-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.apply-record-addr { font: 11.5px ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
+.apply-record-desc { color: var(--text-dim); font-size: 11.5px; }
+.apply-record-vals { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+.apply-record-key { color: var(--text-dim); margin-right: 4px; }
+
+.apply-journal-groups { display: flex; flex-direction: column; gap: 8px; }
+.apply-journal-group > summary {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-row); font-size: 12.5px; list-style: none;
+}
+.apply-journal-group > summary::-webkit-details-marker { display: none; }
+.apply-journal-group > summary .chevron { display: inline-flex; color: var(--text-dim); transition: transform 0.15s ease; }
+.apply-journal-group[open] > summary .chevron { transform: rotate(90deg); }
+.apply-journal-group[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.apply-journal-group-body {
+  border: 1px solid var(--border); border-top: none; border-radius: 0 0 4px 4px;
+  max-height: 50vh; overflow: auto;
+}
+.apply-journal-group-body .apply-record {
+  border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent;
+}
+.apply-journal-group-body .apply-record:last-child { border-bottom: none; }
+
+#apply-run-log { max-height: 40vh; }
+
+/* ---- Watch (version H phase 6) ---------------------------
+   The old Watch page's markup, moved into the shell's Watch panel with
+   its classes unchanged, so every rule it used (.panel, .summary,
+   .count-pill, #alert-table, #wc-table, .pill, ...) is still the rule
+   above. What is new is only what the move itself needs: a column to lay
+   the moved sections out in, the connection pill sitting in the panel
+   header instead of the old page's top bar, and the Source column. */
+
+.watch-shell {
+  display: flex; flex-direction: column;
+  padding: 14px 0 32px; width: 100%;
+}
+.watch-shell .stage-head { align-items: center; }
+.watch-shell .stage-head #conn-pill { margin-left: auto; }
+
+/* The watch-conditions file: a bundle file, shown the way a
+   Build tile shows its file -- the path as a readout, Change file and New
+   file beside it -- under a section title like every other panel's. */
+.wc-file-row { flex-wrap: wrap; gap: 8px; }
+.wc-file {
+  font: 12px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.wc-file.is-empty { color: var(--text-dim); font-style: italic; }
+
+/* Source: Drafted / Yours (the `source` key). A drafted tag is a
+   button -- pressing it accepts the condition as proposed -- so it has to
+   look pressable without looking like a second Save. */
+#wc-table td.wc-source { white-space: nowrap; }
+.wc-source-drafted { cursor: pointer; font-family: inherit; }
+.wc-source-drafted:hover { border-color: var(--accent); }
+.wc-source-drafted:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#wc-drafted-note .state-badge { margin-right: 6px; vertical-align: 1px; }
+
+/* The old page gave this table 1100px to itself. In the shell it shares
+   the row with the findings dock, and table-layout auto starved Severity
+   down to "wa" and pushed Remove out of the panel. H's answer, ported: a
+   width floor, and the wrap scrolls sideways rather than the columns
+   collapsing. */
+#wc-table-wrap { overflow-x: auto; }
+#wc-table { min-width: 900px; }
+#wc-table .wc-remove:hover { color: var(--danger-fg); border-color: var(--danger-fg); }
+#wc-table td select.wc-severity { min-width: 96px; }
+#wc-table td select.wc-operator { min-width: 64px; }
+
+/* ---- Amend, inside Apply ---------------------------------
+   The occupancy grid draws FOUR states and never three: `.is-unknown` is
+   hatched and dashed so an unread strip cannot be mistaken for a free
+   one at a glance -- an unread strip is not a safe strip (OPTIONS-H). */
+.link-btn {
+  background: none; border: none; padding: 0; font: inherit; color: var(--accent);
+  text-decoration: underline; cursor: pointer;
+}
+.amend-when { color: var(--text); }
+.amend-stage-title {
+  display: flex; align-items: center; gap: 8px; margin: 18px 0 8px;
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.amend-stage-num {
+  display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 700; border-radius: 2px;
+}
+.amend-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 11.5px; color: var(--text-dim); margin-bottom: 8px; }
+.amend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 4px; }
+.strip-cell {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 22px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 2px;
+  font: 10.5px ui-monospace, Menlo, Consolas, monospace; color: var(--text); background: var(--bg-row);
+}
+.amend-grid .strip-cell { min-height: 40px; }
+.strip-cell .strip-name { font-size: 9.5px; color: var(--text-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.strip-cell.is-ours { background: var(--bg-row-alt); border-color: var(--accent); }
+.strip-cell.is-theirs { background: var(--danger-bg); color: var(--danger-fg); border-color: var(--danger-fg); }
+.strip-cell.is-free { background: transparent; border-style: solid; color: var(--text-dim); }
+.strip-cell.is-unknown {
+  color: var(--warning-fg); border: 1px dashed var(--warning-fg);
+  background: repeating-linear-gradient(45deg, var(--warning-bg) 0 4px, transparent 4px 8px);
+}
+.strip-cell.is-new { outline: 2px solid var(--info-fg); outline-offset: -2px; color: var(--info-fg); font-weight: 700; }
+.strip-cell.is-released { outline: 2px dashed var(--warning-fg); outline-offset: -2px; }
+.amend-strip-notes { margin: 8px 0; padding-left: 18px; font-size: 12px; }
+.amend-strip-notes li.is-theirs { color: var(--danger-fg); }
+.amend-strip-notes li.is-unknown { color: var(--warning-fg); }
+.amend-changes { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.amend-change {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 6px 10px;
+  border-left: 3px solid var(--border); background: var(--bg-row); font-size: 12.5px;
+}
+.amend-change-kind {
+  flex: none; min-width: 128px; font: 700 10.5px ui-monospace, Menlo, Consolas, monospace;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.amend-change.kind-added { border-left-color: var(--info-fg); }
+.amend-change.kind-added .amend-change-kind { color: var(--info-fg); }
+.amend-change.kind-released { border-left-color: var(--warning-fg); background: var(--warning-bg); }
+.amend-change.kind-released .amend-change-kind { color: var(--warning-fg); }
+.amend-change.kind-removed .amend-change-kind,
+.amend-change.kind-modified .amend-change-kind { color: var(--text-dim); }
+.amend-change.kind-renumbered, .amend-change.kind-unplaceable { border-left-color: var(--danger-fg); background: var(--danger-bg); }
+.amend-change.kind-renumbered .amend-change-kind,
+.amend-change.kind-unplaceable .amend-change-kind { color: var(--danger-fg); }
+.amend-change-note { color: var(--text-dim); font-size: 11.5px; flex-basis: 100%; }
+.amend-infos { margin: 0 0 10px; padding-left: 18px; font-size: 11.5px; color: var(--info-fg); }
+.amend-infos li.is-warning { color: var(--warning-fg); font-weight: 600; }
+.amend-preflight { margin: 0 0 10px; }
+.amend-preflight-line { font-size: 12px; margin: 4px 0; }
+.amend-preflight-line.is-bad { color: var(--danger-fg); font-weight: 600; }
+.amend-preflight-refusal { margin: 6px 0; padding: 8px 10px; white-space: pre-wrap; font: 11.5px ui-monospace, Menlo, Consolas, monospace; color: var(--danger-fg); background: var(--danger-bg); border-left: 3px solid var(--danger-fg); }
+.amend-preflight-notes { margin: 4px 0 0; padding-left: 18px; font-size: 11.5px; }
+.amend-preflight-notes li.is-info { color: var(--info-fg); }
+.amend-preflight-notes li.is-warning { color: var(--warning-fg); }
+.amend-preflight-notes li.is-error { color: var(--danger-fg); }
+.amend-change.kind-edited { border-left-color: var(--accent, var(--warning-fg)); }
+.amend-edits { margin: 0 0 10px; }
+.amend-edits ul { margin: 6px 0 0; padding-left: 18px; font: 11.5px ui-monospace, Menlo, Consolas, monospace; }
+.amend-edits li.is-live { color: var(--danger-fg); font-weight: 700; }
+.promote-panel { margin-top: 10px; border-top: 1px solid var(--border, #ccc); padding-top: 8px; }
+.promote-panel pre { white-space: pre-wrap; }
+.amend-releases { margin: 0 0 10px; }
+.amend-releases ul { margin: 6px 0 0; padding-left: 18px; font: 11.5px ui-monospace, Menlo, Consolas, monospace; color: var(--warning-fg); }
+.amend-targets-line { font-size: 13px; font-weight: 600; margin: 10px 0; }
+.amend-withheld-groups { display: flex; flex-wrap: wrap; gap: 4px; }
+.amend-withheld-groups .apply-chip { margin: 0; }
+.journal-stack-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.journal-stack-table th { text-align: left; color: var(--text-dim); font-weight: 600; font-size: 10.5px; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.journal-stack-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.journal-stack-table tr.is-undone td { color: var(--text-dim); text-decoration: line-through; }
+.journal-stack-table tr.is-top td { background: var(--bg-row-alt); }
+/* Written to a different desk than the bar's: left alone by Undo. */
+.journal-stack-table tr.is-other-desk td { color: var(--text-dim); font-style: italic; }
+.journal-stack-table td.journal-desk-cell { font-size: 11px; white-space: nowrap; }
+
+/* ---- Apply as four steps (mockups/apply-flow/, round two) --
+   Full build and Patch share four numbered boxes with one heading style:
+   1 What will be written, 2 Preview, 3 Arm and write, 4 History. A box's
+   number is accent while it is the next thing to do, green once done, and
+   the rest of a box that is waiting on an earlier one is dimmed. */
+.apply-step { position: relative; }
+.apply-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.apply-step-num {
+  flex: none; width: 22px; height: 22px; border-radius: 11px; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+  background: var(--border); color: var(--text);
+}
+.apply-step.is-current .apply-step-num { background: var(--accent); color: var(--accent-ink); }
+.apply-step.is-done .apply-step-num { background: var(--ready-bg); color: var(--ready-fg); }
+.apply-step-title { font-size: 15px; font-weight: 700; margin: 0; }
+.apply-step-state { margin-left: auto; font-size: 11.5px; color: var(--text-dim); text-align: right; }
+.apply-step.is-done .apply-step-state { color: var(--ready-fg); }
+.apply-step.is-waiting > :not(.apply-step-head) { opacity: 0.55; }
+.apply-step.is-waiting .apply-step-head { opacity: 0.7; }
+.apply-step-line { margin: 4px 0; font-size: 13px; }
+.apply-dim { color: var(--text-dim); font-size: 12.5px; }
+.apply-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0; font-size: 13px; }
+.apply-facts b { font-variant-numeric: tabular-nums; }
+.apply-facts:empty { display: none; }
+.apply-preflight-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.apply-preflight-line .findings-summary { margin: 0; }
+.apply-recheck { font-size: 12px; margin-left: 4px; }
+.apply-help {
+  display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+  border-radius: 9px; border: 1px solid var(--border); background: none; color: var(--text-dim);
+  font: 700 11px/1 inherit; cursor: pointer; padding: 0;
+}
+.apply-help:hover, .apply-help:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+.apply-info { margin: 6px 0 0; font-size: 12px; color: var(--info-fg); }
+.apply-info[hidden] { display: none; }
+#patch-change-text { width: 100%; min-height: 60px; margin-top: 6px; font: inherit; background: var(--bg-row);
+  color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 8px; resize: vertical; }
+#amend-rebuilt { width: 100%; margin-top: 6px; }
+.patch-source-switch { margin: 6px 0 2px; padding: 0; border: none; background: none; }
+
+details.apply-options { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; font-size: 13px; }
+details.apply-options > summary { cursor: pointer; color: var(--text-dim); list-style: none; }
+details.apply-options > summary::-webkit-details-marker { display: none; }
+details.apply-options > summary::before { content: "\25B8  "; }
+details.apply-options[open] > summary::before { content: "\25BE  "; }
+details.apply-options > summary strong { color: var(--text); font-weight: 600; }
+.apply-option { margin: 8px 0 0 16px; }
+.apply-option > label { display: inline-flex; align-items: center; gap: 6px; }
+.apply-option-sub { margin: 6px 0 0 24px; }
+.apply-option-sub[hidden] { display: none; }
+.apply-option-sub input {
+  font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; width: 260px; max-width: 100%;
+  background: var(--bg-row); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px;
+}
+.apply-option-hint { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-dim); }
+
+.apply-stale { margin: 6px 0 0; font-size: 12.5px; color: var(--warning-fg); }
+.apply-stale[hidden] { display: none; }
+.apply-progress-line { display: inline-block; margin: 8px 0 0; font-size: 11.5px; padding: 1px 6px; }
+.apply-progress-line[hidden] { display: none; }
+#apply-review { margin-top: 10px; }
+#apply-review[hidden] { display: none; }
+.apply-sub-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim);
+  margin: 14px 0 6px;
+}
+.apply-arm-row { gap: 12px; }
+.apply-arm-row .apply-arm-checkbox span { font-weight: 600; }
+.apply-locked { margin: 6px 0 0; font-size: 12.5px; color: var(--text-dim); }
+.apply-locked strong { color: var(--text); }
+.apply-locked.is-bypass { color: var(--warning-fg); }
+.apply-locked[hidden] { display: none; }
+.apply-write-result { margin-top: 12px; padding: 10px 12px; border-radius: 4px; background: var(--ready-bg); }
+.apply-write-result[hidden] { display: none; }
+.apply-write-line { margin: 0; font-size: 15px; font-weight: 700; color: var(--ready-fg); }
+.apply-write-sub { margin: 2px 0 0; font-size: 13px; color: var(--ready-fg); }
+.apply-write-result.is-bad { background: var(--danger-bg); }
+.apply-write-result.is-bad .apply-write-line, .apply-write-result.is-bad .apply-write-sub { color: var(--danger-fg); }
+.apply-undo-row { margin-top: 10px; }
+.apply-log, .apply-journal { margin-top: 10px; font-size: 12.5px; }
+.apply-log[hidden], .apply-journal[hidden] { display: none; }
+.apply-log > summary, .apply-journal > summary {
+  cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.apply-journal > summary { color: var(--accent); }
+.apply-log-hint { font-size: 11px; }
+.apply-journal > .apply-summary-line { margin-top: 8px; }
+.journal-stack-table tr.is-fresh td { background: var(--ready-bg); }
+
+/* The desk, as scribble strips (desk_view.py). A scribble strip is the
+   desk's own LCD, so its body stays dark in both themes; the name band is
+   the strip's WING colour (the palette above, by the desk's own colour
+   names) and its number sits in a badge, as the WING draws it. */
+.desk-view {
+  --strip-body: #222225; --strip-free: #161618; --badge: #3a3a3e; --badge-fg: #d0d0d4;
+  margin-top: 6px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .desk-view {
+    --strip-body: #2a2a2e; --strip-free: #e9eaee; --badge: #4a4a4f; --badge-fg: #e8e8ea;
+  }
+}
+:root[data-theme="light"] .desk-view {
+  --strip-body: #2a2a2e; --strip-free: #e9eaee; --badge: #4a4a4f; --badge-fg: #e8e8ea;
+}
+.desk-section-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim);
+  margin: 10px 0 4px; display: flex; gap: 8px; align-items: baseline;
+}
+.desk-section-title .desk-count { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.desk-strips { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 3px; }
+.desk-strip {
+  background: var(--strip-body); border-radius: 3px; overflow: hidden; height: 46px; position: relative;
+  border: 2px solid transparent;
+}
+.desk-strip-name {
+  height: 20px; font-size: 11.5px; line-height: 20px; text-align: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; padding: 0 3px; color: #e8e8ea; font-weight: 500;
+}
+.desk-strip-no {
+  position: absolute; left: 5px; bottom: 4px; background: var(--badge); color: var(--badge-fg);
+  font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 2px; font-variant-numeric: tabular-nums;
+}
+.desk-strip.is-free { background: var(--strip-free); border: 1px dashed var(--border); }
+.desk-strip.is-free .desk-strip-name { color: var(--text-dim); font-weight: 400; }
+.desk-strip.is-free .desk-strip-no { background: none; color: var(--text-dim); }
+.desk-strip.is-unused { opacity: 0.45; }
+.desk-strip.is-unknown {
+  border: 1px dashed var(--warning-fg);
+  background: repeating-linear-gradient(45deg, var(--warning-bg) 0 4px, var(--strip-free) 4px 8px);
+}
+.desk-strip.is-unknown .desk-strip-name { color: var(--warning-fg); }
+.desk-strip.is-new { border-color: var(--ready-fg); box-shadow: 0 0 0 1px var(--ready-fg); }
+.desk-strip.is-edit { border-color: var(--info-fg); }
+.desk-strip.is-changes { border-color: var(--info-fg); }
+.desk-strip.is-released { border: 2px dashed var(--warning-fg); }
+.desk-legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--text-dim); flex-wrap: wrap; margin-top: 8px; }
+.desk-legend:empty { display: none; }
+.desk-legend span::before {
+  content: ""; display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px;
+  vertical-align: -1px; background: #2a2a2e; box-sizing: border-box;
+}
+.desk-legend .l-free::before { background: var(--bg-row); border: 1px dashed var(--text-dim); }
+.desk-legend .l-unused::before { opacity: 0.45; }
+.desk-legend .l-new::before { border: 2px solid var(--ready-fg); }
+.desk-legend .l-edit::before, .desk-legend .l-changes::before { border: 2px solid var(--info-fg); }
+.desk-legend .l-unknown::before { border: 1px dashed var(--warning-fg); background: var(--warning-bg); }
+.desk-legend .l-released::before { border: 2px dashed var(--warning-fg); }
+
+/* Popups: the Demo show, pre-flight verify, unused sockets. */
+.sp-popup-scrim {
+  position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: flex-start; justify-content: center; padding: 90px 16px 16px;
+}
+.sp-popup-scrim[hidden] { display: none; }
+.sp-popup {
+  width: min(460px, 100%); max-height: calc(100vh - 120px); overflow: auto;
+  background: var(--bg-panel); color: var(--text); border: 1px solid var(--accent); border-radius: 6px;
+  padding: 18px 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.sp-popup[hidden] { display: none; }
+.sp-popup h3 { margin: 0 0 8px; font-size: 16px; }
+.sp-popup p { margin: 6px 0; font-size: 13.5px; line-height: 1.5; }
+.sp-popup ul { margin: 8px 0 12px; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.sp-popup-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+@media (max-width: 600px) {
+  .desk-strips { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+  .apply-step-state { flex-basis: 100%; margin-left: 32px; text-align: left; }
+  .apply-step-head { flex-wrap: wrap; }
+  .journal-stack-table { display: block; overflow-x: auto; }
+}
+
+/* ---- The stale-page banner (shell.html, shell.js) ----------------------
+   The server behind this page was restarted, or has another show bundle
+   open. Sticky and in the danger colours so it cannot scroll out of
+   sight; while it is up every control that writes or runs is dimmed and
+   takes no pointer (a capture-phase listener in shell.js also swallows a
+   keyboard "click"), whatever the mode's own code later sets `disabled`
+   to. Text fields stay readable, so a half-typed value can be copied
+   before the reload. */
+.stale-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto 8px;
+  padding: 10px 14px;
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  border: 2px solid var(--danger-fg);
+  font-size: 13px;
+}
+.stale-banner-text { flex: 1 1 320px; min-width: 0; }
+.stale-banner-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+body.is-stale-page #bundle-chrome :is(button, select, input[type="checkbox"], input[type="radio"]):not([data-stale-ok]),
+body.is-stale-page .layout-main :is(button, select, input[type="checkbox"], input[type="radio"]):not([data-stale-ok]) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ---- The file browser ---------------------------------------
+   One modal for every "which file?" on the page. Drawn with the page's own
+   tokens -- the panel, the rows, the brass accent for the highlighted row --
+   so it reads as part of Atoo, not as a borrowed OS dialog. */
+body.has-modal { overflow: hidden; }
+.fb-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 16px 16px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.fb-backdrop[hidden] { display: none; }
+.fb-dialog {
+  width: min(760px, 100%); max-height: 88vh;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 18px;
+  background: var(--bg-panel); color: var(--text);
+  border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+.fb-head { display: flex; align-items: center; gap: 10px; }
+.fb-title { flex: 1 1 auto; margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+.fb-note { margin: 0; font-size: 12.5px; color: var(--text-dim); }
+.fb-pathrow { display: flex; align-items: center; gap: 6px; }
+.fb-pathrow input { flex: 1 1 auto; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; padding: 6px 8px; }
+.fb-pathrow .btn-secondary { margin-left: 0; }
+.fb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 12px; min-height: 18px; }
+.fb-crumb {
+  background: none; border: none; padding: 1px 4px; border-radius: 3px;
+  color: var(--text-dim); font: inherit; cursor: pointer;
+}
+.fb-crumb:hover, .fb-crumb:focus-visible { color: var(--text); background: var(--bg-row-alt); }
+.fb-crumb:last-child { color: var(--text); font-weight: 700; }
+.fb-crumb-sep { color: var(--text-dim); }
+.fb-list-wrap {
+  flex: 1 1 auto; min-height: 180px; max-height: 44vh; overflow: auto;
+  border: 1px solid var(--border); background: var(--bg-row);
+}
+.fb-list { list-style: none; margin: 0; padding: 0; outline: none; }
+.fb-list:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fb-row {
+  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto auto; align-items: center;
+  column-gap: 10px; padding: 5px 10px; cursor: default; font-size: 13px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  user-select: none;
+}
+.fb-row:nth-child(even) { background: var(--bg-row-alt); }
+.fb-row:hover { background: color-mix(in srgb, var(--accent) 10%, var(--bg-row)); }
+.fb-row.is-highlighted { background: var(--accent); color: var(--accent-ink); }
+.fb-row.is-highlighted .fb-size, .fb-row.is-highlighted .fb-time { color: inherit; }
+.fb-row.is-disabled { opacity: 0.5; }
+.fb-icon { color: var(--text-dim); text-align: center; }
+.fb-row.is-highlighted .fb-icon { color: inherit; }
+.fb-dir .fb-name { font-weight: 600; }
+.fb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-size, .fb-time { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fb-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--text-dim);
+}
+.fb-tag-bundle { background: var(--info-bg); color: var(--info-fg); border-color: transparent; }
+.fb-row.is-highlighted .fb-tag { color: inherit; border-color: currentColor; background: transparent; }
+.fb-empty { margin: 0; padding: 18px 12px; font-size: 13px; color: var(--text-dim); }
+.fb-empty.is-error { color: var(--danger-fg); }
+.fb-listfoot { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text-dim); }
+.fb-listfoot .check-field, .fb-check-row { display: inline-flex; align-items: center; gap: 5px; }
+.fb-listfoot .check-field[hidden] { display: none; }
+.fb-spacer { flex: 1 1 auto; }
+.fb-newfolder { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
+.fb-newfolder[hidden], .fb-name-row[hidden], .fb-check-row[hidden] { display: none; }
+.fb-newfolder .field { flex: 1 1 240px; }
+.fb-name-row input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.fb-check-row { font-size: 12.5px; }
+.fb-check-note { margin: -4px 0 0 22px; font-size: 11.5px; color: var(--text-dim); }
+.fb-ask {
+  padding: 10px 12px; border: 1px solid var(--warning-fg);
+  background: var(--warning-bg); color: var(--warning-fg);
+}
+.fb-ask-text { margin: 0 0 8px; font-size: 13px; }
+.fb-ask-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-ask-buttons .btn-secondary { margin-left: 0; color: inherit; border-color: currentColor; }
+.fb-backdrop.is-asking .fb-list-wrap, .fb-backdrop.is-asking .fb-foot .btn-primary { opacity: 0.5; pointer-events: none; }
+.fb-dialog .panel-message { margin: 0; }
+.fb-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px dashed var(--border); }
+.fb-selection { flex: 1 1 200px; min-width: 0; font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+.fb-backdrop.is-busy .fb-dialog { cursor: progress; }
+@media (max-width: 560px) {
+  .fb-row { grid-template-columns: 16px minmax(0, 1fr) auto; }
+  .fb-time { display: none; }
+}
+.fb-tags { display: inline-flex; gap: 4px; }
+.fb-dialog > .field, .fb-dialog > .check-field, .fb-dialog > p, .fb-dialog > div:not(.fb-list-wrap) { flex: none; }
+.fb-dialog > .field { min-width: 0; }
+
+/* ---- Patch: a typed change --------------------------------
+   The Amend screen became the Patch screen: a text box for the change, a
+   switch for the rebuilt-plan route (what `atoo amend` does), the
+   model call's progress, and the change's short name over the review. */
+.patch-source-switch { margin: 0 0 10px; padding: 6px 10px; }
+#patch-change-text {
+  background: var(--bg-row); border: 1px solid var(--border); color: var(--text);
+  border-radius: 4px; padding: 8px 10px; font-size: 14px; width: 100%;
+  font-family: inherit; resize: vertical; min-height: 72px;
+}
+#patch-change-text:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.patch-change-head { margin: 14px 0 4px; }
+.patch-change-head .apply-summary-line { margin: 0 0 4px; }
+.patch-change-text {
+  margin: 0; padding: 6px 10px; border-left: 3px solid var(--accent);
+  background: var(--bg-row); color: var(--text); font-size: 13px; white-space: pre-wrap;
+}
+.journal-change-name { font-weight: 700; color: var(--text); }
+.journal-change-text { display: block; font-size: 11.5px; color: var(--text-dim); font-style: italic; }
+.journal-change-summary { display: block; font-size: 11px; color: var(--text-dim); }
+
+/* ---- Step 04, the maintainer's testing 2026-09-28 ----------------------------- */
+/* A stereo channel: ST beside the first row's chip, "↳ ST" beside its
+   partner's, and one bracket down the left edge of both rows, so the two
+   input rows read as one strip. */
+.st-badge {
+  display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 3px;
+  font: 700 10px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0.04em;
+  background: var(--info-bg); color: var(--info-fg);
+  border: 1px solid color-mix(in srgb, var(--info-fg) 45%, transparent);
+  vertical-align: middle;
+}
+.st-badge-partner { background: transparent; opacity: 0.85; }
+.ct tbody tr.row-stereo td.col-num,
+.ct tbody tr.row-pair td.col-num { box-shadow: inset 3px 0 0 var(--info-fg); }
+.ct tbody tr.row-stereo td { border-bottom-color: transparent; }
+.ct-pair-note { font-style: italic; }
+/* The plan's Phantom column: 48V as apply writes it. */
+.ct td.col-plan-phantom, .ct th.col-plan-phantom { text-align: center; }
+.phantom-badge {
+  display: inline-block; padding: 0 5px; border-radius: 3px;
+  font: 700 10px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--warning-bg); color: var(--warning-fg);
+}
+/* The Findings column: E red, W amber, I outlined and quiet. */
+.ct td.col-findings { white-space: nowrap; width: 1%; }
+.fbadge {
+  display: inline-flex; align-items: baseline; gap: 2px; margin-right: 3px; padding: 0 5px;
+  border-radius: 3px; border: 1px solid transparent; cursor: pointer;
+  font: 700 10.5px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.fbadge .fbadge-n { font-weight: 400; }
+.fbadge-error { background: var(--danger-bg); color: var(--danger-fg); }
+.fbadge-warning { background: var(--warning-bg); color: var(--warning-fg); }
+.fbadge-info {
+  background: transparent; color: var(--info-fg);
+  border-color: color-mix(in srgb, var(--info-fg) 45%, transparent);
+}
+.fbadge:hover { filter: brightness(1.15); }
+.fbadge:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dock-item.jump-flash {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+/* Step 04's Notes: step 02's icon. */
+.ct td.col-notes { text-align: center; }
+.ct-note-detail { vertical-align: middle; margin-right: 4px; }
+.ct-note-text { white-space: pre-wrap; }
+/* Step 02's Patch: a badge like step 04's patch chips, edited in place. */
+.patch-badge {
+  display: inline-block; background: var(--readout-bg); color: var(--readout-fg);
+  border: 1px solid transparent; border-radius: 3px; padding: 2px 7px; white-space: nowrap;
+  cursor: pointer; font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.patch-badge:hover { border-color: var(--accent); }
+.patch-badge:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.patch-badge.is-empty {
+  background: transparent; color: var(--text-dim); border: 1px dashed var(--border);
+  font-family: inherit; font-size: 11px;
+}
+.patch-badge.is-empty:hover { color: var(--text); border-color: var(--text-dim); }
+.patch-editor { display: inline-flex; align-items: center; gap: 4px; }
+.it td .patch-editor input.patch-edit-input { width: 120px; min-width: 90px; }
+.it td input.patch-edit-input.is-invalid { border-color: var(--danger-fg); }
+.patch-edit-ok { padding: 1px 6px; }
+.patch-edit-error {
+  display: block; margin-top: 3px; font-size: 11px; color: var(--danger-fg);
+  white-space: normal; max-width: 260px;
+}
+/* The build's terminal log, folded (#run-log-fold). */
+.run-log-fold { margin-top: 6px; }
+.run-log-fold[open] > summary { margin-bottom: 2px; }
+
+/* ---- The demo show -------------------------------------------
+   The packaged demo show is read-only. The bar says "read-only", a notice
+   under it says what that means, and every control that would write is
+   dimmed and inert -- the same treatment as a stale page, for the same
+   kind of reason. The list must match shell.js's DEMO_LOCKED; the server
+   refuses every one of these writes regardless. */
+.state-readonly { background: var(--warning-bg); color: var(--warning-fg); }
+/* The Demo show is said by a chip in the bar that opens a
+   popup (`#demo-popup`), not by a notice under it. */
+.demo-chip {
+  font: inherit; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 2px 7px; border-radius: 3px; border: none;
+  background: var(--warning-bg); color: var(--warning-fg); cursor: pointer;
+}
+.demo-chip[hidden] { display: none; }
+.demo-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.no-show-notice {
+  margin: 0; padding: 6px 12px; font-size: 12px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.no-show-notice[hidden] { display: none; }
+body.is-demo-show :is(#change-conventions, #new-conventions, #change-input-list,
+  #change-instructions, #new-instructions, #instr-create-btn, #conv-save-btn, #instr-save-btn,
+  #conv-example-insert, #instr-example-insert, #conv-replace-default, #input-save-btn,
+  #input-add-row, #input-table button, #plan-input-save-btn, #plan-browse-btn, #run-build-btn, #plan-rebuild-btn,
+  #status-rebuild-btn, #apply-arm-checkbox, #apply-run-btn,
+  #undo-preview-btn, #undo-run-btn, #promote-confirm-btn, #wc-change-btn, #wc-new-btn,
+  #wc-save-btn, #wc-add-btn, #wc-table button) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* The tables stay legible: their cells are inert, not dimmed. */
+body.is-demo-show :is(#input-table input, #input-table select, #wc-table input,
+  #wc-table select) {
+  pointer-events: none;
+}
+
+/* ---- Watch layout (mockups/watch-layout/, look B) ---------
+   The maintainer, 2026-10-11: while a watch runs, the alert table comes first,
+   right after a one-row header, and everything else folds to one line
+   below it. The desk's state is read from how the screen LOOKS, not
+   from a label: the rows carry it, tinted and barred in their severity's
+   colour ("B, with no thin colored border (keep the thicker colored
+   bars), and the flash option off by default"). `body[data-watch-worst]`
+   (none / info / warning / error, or idle / starting / stale) is set by
+   watch.js for the stale state and for anything else that keys off it. */
+
+.watch-shell .panel { margin-bottom: 12px; }
+.watch-head { padding: 8px 14px; }
+/* The whole header on one line at laptop widths (1280px and
+   up) -- at 1280 the "Watching <address>" pill used to wrap onto a
+   second row. Tighter gaps and padding, the same type scale. */
+.watch-head .watch-head-row { margin: 0; align-items: center; gap: 8px; flex-wrap: wrap; }
+.watch-head .stage-title { font-size: 16px; margin-right: 2px; }
+.watch-interval {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-dim);
+}
+.watch-interval input {
+  width: 52px; padding: 5px 6px; font-size: 13px; border-radius: 4px;
+  background: var(--bg-row); color: var(--text); border: 1px solid var(--border);
+}
+.watch-head .btn { padding: 7px 12px; font-size: 11px; }
+.watch-head .btn-secondary { margin-left: 0; }
+.watch-flash-toggle {
+  padding: 6px 8px; border-radius: 4px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.watch-flash-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.watch-head-spacer { flex: 1 1 auto; }
+.watch-head .summary { margin: 0; gap: 6px; }
+.watch-head .count-pill { padding: 6px 8px; }
+.watch-head #conn-pill { padding: 6px 8px; }
+/* "Updated 7s ago" -> "Updated 12s ago" used to change the
+   label's width every second and push the count pills sideways. Digits
+   are tabular and the box is as wide as the longest everyday text
+   ("Updated just now", and the stale "No reading for 45s" too); the
+   stale state's padding is always there, so turning stale only adds its
+   colour. Past a minute stale, "No reading for 1m 5s" may still grow. */
+.watch-head #last-updated {
+  font-size: 12px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  box-sizing: border-box; min-width: 10em; padding: 3px 6px; border-radius: 4px;
+}
+.watch-head #last-updated.is-stale { color: var(--warning-fg); }
+.coverage-line {
+  margin: 8px 0 0; font-size: 12.5px; font-weight: 600; color: var(--warning-fg);
+}
+.coverage-line::before { content: "\26A0  "; }
+
+/* The rows: the strip and the claim in larger type; severity carried by
+   a thick bar down the left edge and a tint across the row. */
+#alert-table td { font-size: 14px; padding: 10px 14px; vertical-align: middle; }
+#alert-table .col-rule code { white-space: nowrap; }
+#alert-table tbody tr td:first-child { box-shadow: inset 8px 0 0 var(--sev-bar, transparent); padding-left: 22px; }
+#alert-table tr.sev-row-error {
+  --sev-bar: var(--alarm-solid);
+  background: color-mix(in srgb, var(--alarm-solid) 16%, var(--bg-panel));
+}
+#alert-table tr.sev-row-warning {
+  --sev-bar: var(--caution-solid);
+  background: color-mix(in srgb, var(--caution-solid) 11%, var(--bg-panel));
+}
+#alert-table tr.sev-row-info { --sev-bar: color-mix(in srgb, var(--info-fg) 45%, transparent); }
+#alert-table .sev-badge { font-size: 12px; padding: 4px 10px; }
+#alert-table .sev-error { background: var(--alarm-solid); color: var(--alarm-ink); }
+#alert-table .sev-warning { background: var(--caution-solid); color: var(--caution-ink); }
+#alert-table .col-sev { width: 128px; }
+#alert-table .col-where { width: 220px; }
+.row-where { font-size: 17px; font-weight: 700; white-space: nowrap; }
+.row-claim { display: block; font-size: 17px; font-weight: 600; line-height: 1.35; }
+.row-why { display: block; margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--text-dim); }
+#alert-table .col-rule { width: 210px; }
+.row-cat { display: block; margin-top: 4px; font-size: 11px; color: var(--text-dim); }
+#alert-table .col-since { width: 90px; }
+/* The maintainer, 2026-10-12: "Put a 2 pixel space between the findings on the
+   watch page so there is a small separator between them." A 2px rule in
+   the page background under each finding row (not the header); the
+   severity bar and tint stop at it, so the rows read as separate. */
+#alert-table tbody td { border-bottom: 2px solid var(--bg); }
+#alert-table tbody tr:last-child td { border-bottom: none; }
+
+/* Each row's Suppress box -- the Build dock's checkbox, in
+   the severity cell beside the badge, so the bar and tint are untouched. */
+#alert-table .col-sev { white-space: nowrap; }
+.watch-row-check {
+  width: 14px; height: 14px; margin: 0 10px 0 0; vertical-align: middle;
+  accent-color: var(--accent); cursor: pointer;
+}
+
+/* The Warning and Info counts are buttons: a click hides
+   every row of that severity. Suppressed, the pill is struck through and
+   dashed, so nobody forgets that rows are hidden. */
+button.count-pill { cursor: pointer; font-family: inherit; line-height: inherit; }
+button.count-pill:hover { border-color: var(--text-dim); }
+button.count-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.count-pill .count-hidden { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.count-pill.is-suppressed {
+  text-decoration: line-through; text-decoration-thickness: 2px;
+  background: transparent; color: var(--text-dim); border: 1px dashed var(--text-dim);
+}
+.count-pill.is-suppressed .count-hidden { text-decoration: none; display: inline-block; margin-left: 2px; }
+
+/* The Suppressed fold below the table: one line per finding, its box
+   ticked; untick to bring the row back. */
+.watch-suppressed-list { list-style: none; margin: 0; padding: 0; }
+.watch-suppressed-item {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 8px; border-left: 4px solid var(--border); margin-bottom: 2px;
+  background: var(--bg-row); font-size: 13px; color: var(--text-dim);
+}
+.watch-suppressed-item[data-sev="error"] { border-left-color: var(--alarm-solid); }
+.watch-suppressed-item[data-sev="warning"] { border-left-color: var(--caution-solid); }
+.watch-suppressed-item[data-sev="info"] { border-left-color: color-mix(in srgb, var(--info-fg) 45%, transparent); }
+.watch-suppressed-item .watch-row-check { margin-right: 2px; }
+.watch-suppressed-item b { color: var(--text); }
+.watch-suppressed-item code { margin-left: auto; font-size: 11px; }
+.watch-suppressed .stage-title span { font-weight: 400; color: var(--text-dim); }
+
+/* Info rows are notes: quieter type, so a screen of them still reads calm. */
+#alert-table tr.sev-row-info :is(.row-where, .row-claim) { font-size: 15px; font-weight: 600; color: var(--text-dim); }
+/* The row stays calm, but its INFO tag is the same blue as
+   everywhere else (.sev-info, as in the Suppressed list) -- it was drawn
+   grey and outlined here, and read as a different kind of thing. */
+
+/* A new alert row lights up once (brightness, so its own severity colour
+   carries it), rather than the accent wash. */
+#alert-table tr.row-new:is(.sev-row-error, .sev-row-warning) { animation-name: flash-new-sev; }
+@keyframes flash-new-sev { from { filter: brightness(2.2) saturate(1.4); } to { filter: none; } }
+
+/* Nothing wrong: the empty line is calm, not a celebration. */
+body[data-watch-worst="none"] .watch-table-wrap .empty-state { color: var(--ready-fg); }
+
+/* A watch that has gone quiet must not look calm: the table greys out. */
+body[data-watch-worst="stale"] .watch-table-wrap { opacity: .5; filter: grayscale(.8); }
+
+/* Flash on new (off by default): one short full-screen flash in the new
+   finding's colour. Fixed to the viewport, and drawn only while the Watch
+   panel is shown (it lives inside it). */
+.watch-flash { position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: 0; }
+.watch-flash.is-flashing { animation: watch-flash .42s ease-out 1; }
+@keyframes watch-flash { 0% { opacity: 0; } 18% { opacity: .55; } 100% { opacity: 0; } }
+.watch-flash[data-sev="error"] { background: var(--alarm-solid); }
+.watch-flash[data-sev="warning"] { background: var(--caution-solid); }
+@media (prefers-reduced-motion: reduce) {
+  /* No flash: a steady edge glow in the finding's colour for a few
+     seconds, switched on and off without animating. */
+  .watch-flash.is-flashing { animation: none; opacity: 1; background: none !important; }
+  .watch-flash.is-flashing[data-sev="error"] { box-shadow: inset 0 0 0 10px var(--alarm-solid), inset 0 0 60px var(--alarm-solid); }
+  .watch-flash.is-flashing[data-sev="warning"] { box-shadow: inset 0 0 0 10px var(--caution-solid), inset 0 0 60px var(--caution-solid); }
+  #alert-table tr.row-new { animation: none; }
+}
+
+/* The folds: one line each until opened. */
+.watch-fold > summary { list-style: none; cursor: pointer; margin: 0; align-items: center; flex-wrap: nowrap; }
+.watch-fold > summary::-webkit-details-marker { display: none; }
+.watch-fold > summary::before { content: "\25B8"; color: var(--text-dim); }
+.watch-fold[open] > summary::before { content: "\25BE"; }
+.watch-fold[open] > summary { margin-bottom: 8px; }
+.watch-fold:not([open]) { padding-block: 10px; }
+.watch-fold-line {
+  min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: var(--text-dim);
+}
+.watch-fold-line .sev-badge { padding: 1px 6px; font-size: 10px; margin-right: 4px; }
+.watch-fold-hint {
+  margin-left: auto; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--accent);
+}
+.watch-fold[open] .watch-fold-hint { display: none; }
+#watch-about .console-origin { margin-top: 0; }
+#watch-about .baseline-note { margin: 10px 0 0; }
+
+@media (max-width: 760px) {
+  /* Narrow screens: the fixed column widths let go, and the frame
+     scrolls sideways as a last resort, since .table-wrap's
+     overflow: hidden would otherwise clip the last columns out of
+     reach. */
+  .watch-table-wrap { overflow-x: auto; }
+  #alert-table :is(.col-sev, .col-rule, .col-since) { width: auto; }
+  #alert-table td { padding: 10px; }
+  #alert-table tbody tr td:first-child { padding-left: 16px; }
+  #alert-table .col-where { width: auto; }
+  .row-where { white-space: normal; }
+  /* The Suppress box stacks over the badge rather than widening the row. */
+  #alert-table .col-sev { white-space: normal; }
+  #alert-table .watch-row-check { display: block; margin: 0 0 6px; }
+  .watch-head-spacer { display: none; }
+}
+@media (max-width: 640px) {
+  /* Phone width: Since already goes (the generic table rule above);
+     Rule goes too, since the strip and the claim are what a phone is
+     for. */
+  #alert-table .col-rule { display: none; }
+}
+
+/* ---- Build: blocks and sections --------------------------
+   docs/developer/ui-style.md (Nora's UI system), built on the Build page
+   first and named with the guide's target classes (§11): a block is
+   `.block-head` (h2 + `.notation`) over a `.panel.box`; a section is
+   `.section` > `.section-head` (h3, then `.push` on the right); a fold is
+   `details.fold` with the header as its summary, and the quietest fold is
+   `details.fold-details`; tags are `.sev` and `.state`. Type 16 / 14 /
+   13 / 12 / 11, nothing under 11px; one meaning per colour; the 4px grid
+   (24px between blocks, 8px header to box, 16px inside a box and between
+   sections). The block and type rules below are scoped to what the Build
+   page draws, so Apply and Watch keep their look until their own change. */
+.block-head {
+  display: flex; align-items: baseline; gap: 8px 12px; flex-wrap: wrap;
+  margin: 24px 0 8px;
+}
+.step-scroll > .block-head:first-child,
+.step-scroll > [hidden]:first-child + .block-head,
+.step-scroll > [hidden]:first-child + [hidden] + .block-head { margin-top: 0; }
+.block-head h2 { font-size: 16px; font-weight: 700; color: var(--text); margin: 0; }
+.notation {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.notation code {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-transform: none; letter-spacing: 0; color: var(--text-dim); background: none; padding: 0;
+}
+.block-head .help-pop { align-self: center; }
+.panel.box { margin: 0 0 24px; padding: 16px; }
+.panel.box + .block-head { margin-top: 0; }
+/* A section: the grey caps label, its state or counts on the right, a
+   1px solid rule between two sections. */
+.section-head {
+  display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 8px;
+}
+.section-head h3 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-dim); margin: 0;
+}
+.section-head .push { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.section + .section:not([hidden]),
+.section[hidden] + .section:not([hidden]) { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; }
+.section:first-child { border-top: 0 !important; margin-top: 0 !important; padding-top: 0 !important; }
+/* A fold: its summary is its normal header, with a chevron. */
+details.fold > summary { list-style: none; cursor: pointer; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "\25B8"; color: var(--text-dim); font-size: 11px; transition: transform 0.15s ease; }
+details.fold[open] > summary::before { transform: rotate(90deg); }
+details.fold:not([open]) > summary { margin-bottom: 0; }
+details.fold > summary:hover h3 { color: var(--text); }
+/* The quietest fold: the word Details in meta type, no more prominent
+   than what it hides (the maintainer, 2026-10-13). */
+details.fold-details { margin-top: 8px; font-size: 12px; }
+details.fold-details > summary { cursor: pointer; list-style: none; color: var(--text-dim); }
+details.fold-details > summary::-webkit-details-marker { display: none; }
+details.fold-details > summary::before { content: "\25B8  "; }
+details.fold-details[open] > summary::before { content: "\25BE  "; }
+details.fold-details > summary:hover { color: var(--text); }
+details.fold-details .setup-notes { font-size: 13px; }
+.body-line { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+.body-line code, .chg-basis code { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.meta { color: var(--text-dim); font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+/* A label inside a fold: the 11px caps label (§2). */
+.sub-label {
+  margin: 12px 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-dim);
+}
+.sub-label .meta { font-size: 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; font-size: 14px; }
+.facts b { font-variant-numeric: tabular-nums; }
+.facts .meta { font-size: 13px; }
+.empty { margin: 0; padding: 12px 0; font-size: 13px; color: var(--text-dim); }
+.empty code { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.findings-line { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.findings-line .findings-summary { margin: 0; font-size: 13px; color: var(--text-dim); }
+.sev-ok { background: var(--ready-bg); color: var(--ready-fg); }
+/* Error has one red; the orange `--error-*` is retired (§1). */
+.sev.sev-error { background: var(--danger-bg); color: var(--danger-fg); }
+/* Tags (§6): severity, the word always; state, a dot and a word. */
+.sev {
+  display: inline-flex; align-items: center; justify-content: center; height: 20px; padding: 0 8px;
+  border-radius: 3px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; white-space: nowrap;
+}
+.state {
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+  background: var(--bg-row); color: var(--text-dim); border: 1px solid var(--border);
+}
+.state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.state.is-ok { background: var(--ready-bg); color: var(--ready-fg); border-color: transparent; }
+.state.is-warn { background: var(--warning-bg); color: var(--warning-fg); border-color: transparent; }
+.state.is-err { background: var(--danger-bg); color: var(--danger-fg); border-color: transparent; }
+.state.is-live::before { animation: state-live 1.6s ease-in-out infinite; }
+@keyframes state-live { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .state.is-live::before { animation: none; } }
+.state[hidden], .sev[hidden] { display: none; }
+/* Locked (§4): no hue, a dashed edge, and the reason in words. */
+.lock-reason { font-size: 12px; color: var(--text-dim); }
+.lock-reason::before { content: "Locked: "; font-weight: 700; color: var(--text); }
+.lock-reason[hidden] { display: none; }
+/* A build in progress, inside Options. */
+.run-in-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.run-in-box .run-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+#sec-output .plan-stale-reason { margin: 0 0 8px; font-size: 13px; }
+/* Changed since the last build. */
+.chg-list { list-style: none; margin: 0; padding: 0; }
+.chg-list li {
+  display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: start;
+  padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px;
+}
+.chg-list li:first-child { border-top: 0; }
+.chg-list a { color: var(--text); font-weight: 700; text-decoration: none; }
+.chg-list a:hover, .chg-list a:focus-visible { color: var(--accent); text-decoration: underline; }
+.chg-list .meta { font-size: 13px; }
+.chg-basis { margin: 8px 0 0; font-size: 12px; color: var(--text-dim); }
+/* The rows a rebuild changed, in the tables: a state tag by the number
+   (`.state`, `.is-warn` when nobody asked for it, neutral when the edit
+   did), and a yellow left edge on the unasked ones. */
+.col-num .chg-state { margin-left: 4px; height: 18px; vertical-align: middle; }
+.ct tr.row-unasked > td:first-child { box-shadow: inset 3px 0 0 var(--warning-fg); }
+/* A table fills its box, edge to edge (§3). */
+.plan-table-section.panel.box { padding: 0; margin-top: 0; overflow: hidden; }
+.plan-table-section.panel.box .ct-wrap { margin-top: 0; }
+.plan-table-section.panel.box .plan-input-toolbar { padding: 12px 16px 0; }
+.plan-table-section.panel.box .plan-input-toolbar .panel-toolbar { margin: 0 0 12px; }
+.house-conv-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.house-conv-line .house-conv-strip-origin { font-size: 13px; color: var(--text-dim); }
+.panel.box.house-conv-panel .house-conv-strip { align-items: flex-start; }
+.panel.box.house-conv-panel .stack-list { margin: 0; flex: 1 1 auto; min-width: 0; }
+
+/* The type floor and the button kinds, on the Build page only. */
+.build-body .btn-sm, #build-steps .btn-sm, #build-steps .help-btn, #status-rebuild-btn,
+#build-steps .state-badge, .build-body .state-badge,
+#build-steps .house-tag,
+.build-body .ct thead th, .build-body .it thead th,
+.build-body .ct-unassigned, .build-body .grp-toggle,
+.build-body .skip-toggle,
+#build-steps .pipe-file-hint, #build-steps .pipe-change-btn,
+.build-body .stack-list .stack-num,
+.build-body .st-badge, .build-body .phantom-badge, .build-body .fbadge { font-size: 11px; }
+.build-body .socket-chip, .build-body .readout,
+.build-body .panel-note code, .build-body .stack-list code, .build-body .step-footer-note code { font-size: 12px; }
+.build-body .panel-note, .build-body .step-footer-note { font-size: 12px; }
+.build-body .step-empty { font-size: 13px; font-style: normal; }
+.build-body .ct td { font-size: 13px; }
+/* Green is "good": a file that loaded, a plan that is current (§5). */
+#build-steps .state-loaded, .build-body .state-loaded { background: var(--ready-bg); color: var(--ready-fg); }
+/* One locked look for every kind: no hue, a dashed edge. Opacity is
+   never the signal (§4). */
+.build-body .btn:disabled {
+  opacity: 1; background: transparent; color: var(--text-off);
+  border: 1px dashed var(--border-strong); cursor: not-allowed;
+}
+.build-body .btn-secondary { border-color: var(--border-strong); }
+/* The Demo show's locked controls, on Build: the one locked look, not a
+   dimmed colour (§4). Build plan says why beside it (#run-build-lock). */
+body.is-demo-show .build-body :is(#run-build-btn, #plan-rebuild-btn, #plan-input-save-btn,
+  #input-save-btn, #input-add-row, #conv-save-btn, #instr-save-btn, #instr-create-btn,
+  #conv-example-insert, #instr-example-insert, #conv-replace-default) {
+  opacity: 1; background: transparent; color: var(--text-off);
+  border: 1px dashed var(--border-strong);
+}
+/* Focus: the brass ring on everything Build's blocks make pressable (§4). */
+details.fold > summary:focus-visible, details.fold-details > summary:focus-visible,
+.chg-list a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A step's footer is divided from its content by a solid rule, as
+   sections are (§3: "not a dashed rule"). */
+.build-body .step-footer { border-top-style: solid; margin-top: 16px; padding-top: 12px; }
+.build-body .step-footer-note { font-size: 12px; }
+.build-body .plan-step-footer { margin-bottom: 24px; }

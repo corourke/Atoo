@@ -1,0 +1,62 @@
+name: Desk test report
+description: You ran it against your own WING. Good results are wanted as much as bad ones.
+labels: ["desk test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you -- the tool has been run on one WING Compact, so every other desk teaches us something.
+        Read-only first: `ping`, `audit` and `watch` never write. Write to a desk only when it is
+        not doing a show, and save your show on the desk before you do.
+  - type: dropdown
+    id: desk
+    attributes:
+      label: Desk
+      options:
+        - WING Compact
+        - WING (full-size)
+        - WING Rack
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Desk firmware
+      description: "`atoo ping` prints it as the last field of its `Console:` line, for example `3.1-0`."
+    validations:
+      required: true
+  - type: input
+    id: install
+    attributes:
+      label: Laptop and install
+      placeholder: "macOS 15, pipx, installed 2026-10-01"
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: What you ran
+      options:
+        - label: The Demo show, no desk
+        - label: "Read-only on the desk: `ping`, `audit`, `watch`"
+        - label: "A write: `apply` (or patch, amend), its readback, then `undo`"
+  - type: textarea
+    id: readback
+    attributes:
+      label: The readback summary
+      description: "For a write, the `APPLIED:` line and any `MISMATCH` lines that `apply` prints after reading the desk back, copied as text."
+      render: text
+  - type: textarea
+    id: missed
+    attributes:
+      label: Anything that did not land, or looked wrong
+      description: Settings the readback named, things on the desk that differ from the plan, findings that made no sense.
+  - type: textarea
+    id: else
+    attributes:
+      label: Anything else
+      description: What went well counts too.
+  - type: checkboxes
+    id: credit
+    attributes:
+      label: Credit
+      options:
+        - label: You may thank me by name in the release notes.

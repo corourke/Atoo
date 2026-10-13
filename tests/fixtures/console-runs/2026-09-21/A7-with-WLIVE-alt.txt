@@ -1,0 +1,6 @@
+/ch/1/in/conn/altgrp -> OscReply(address='/ch/1/in/conn/altgrp', typetag='s', args=['CRD'], raw=b'/ch/1/in/conn/altgrp\x00\x00\x00\x00,s\x00\x00CRD\x00')
+/ch/1/in/conn/altin -> OscReply(address='/ch/1/in/conn/altgrp', typetag='s', args=['CRD'], raw=b'/ch/1/in/conn/altgrp\x00\x00\x00\x00,s\x00\x00CRD\x00')
+/ch/1/in/conn/alt -> OscReply(address='/ch/1/in/conn/altin', typetag='sfi', args=['1', 0.0, 0], raw=b'/ch/1/in/conn/altin\x00,sfi\x00\x00\x00\x001\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+/ch/1/in/set/altsrc -> OscReply(address='/ch/1/in/set/altsrc', typetag='sfi', args=['1', 1.0, 1], raw=b'/ch/1/in/set/altsrc\x00,sfi\x00\x00\x00\x001\x00\x00\x00?\x80\x00\x00\x00\x00\x00\x01')
+/$ctl/$stat/altsrc -> None
+/cfg/altsrc -> None

@@ -1,0 +1,39 @@
+socket,name,category,type,model,phantom,notes
+LCL 1,Kick,drums,Mic,,TRUE,
+LCL 2,Snare,drums,Mic,,FALSE,
+,HiHat,drums,Mic,,FALSE,not patched for this event
+LCL 4,Tom1,drums,Mic,,FALSE,
+LCL 5,Tom2,drums,Mic,,FALSE,
+LCL 6,Tom3,drums,Mic,,FALSE,
+,Tom4,drums,Mic,,FALSE,not patched for this event
+LCL 3,OH L,drums,Mic,,TRUE,
+,OH R,drums,Mic,,FALSE,not patched for this event
+,Pads,drums,Instrument,,FALSE,not patched for this event
+,PERC 1,drums,Mic,,FALSE,not patched for this event
+,PERC2,drums,Mic,,FALSE,not patched for this event
+LCL 8,BassDI,bass,DI,,FALSE,
+,BassMic,bass,Mic,,FALSE,not patched for this event
+LCL 13,EG 1,guitars,Instrument,,FALSE,
+LCL 14,EG 2,guitars,Instrument,,FALSE,
+LCL 12,AC Guit 1,guitars,Instrument,,FALSE,
+,AC GUIT 2,guitars,Instrument,,FALSE,not patched for this event
+LCL 15,Keys 1,keys,Instrument,,FALSE,
+,Keys 2,keys,Instrument,,FALSE,not patched for this event
+,Horns 1,horns,Instrument,,FALSE,not patched for this event
+,Horns 2,horns,Instrument,,FALSE,not patched for this event
+,Strings 1,strings,Instrument,,FALSE,not patched for this event
+,Strings 2,strings,Instrument,,FALSE,not patched for this event
+LCL 9,VOX 1,vocals,Mic,,FALSE,
+LCL 10,VOX 2,vocals,Mic,,FALSE,
+LCL 11,VOX 3,vocals,Mic,,FALSE,
+LCL 7,VOX 4,vocals,Mic,,FALSE,
+,VOX 5,vocals,Mic,,FALSE,not patched for this event
+LCL 20,HOST,host,Mic,,FALSE,
+USB 1,T DRUMS,tracks,Line,,FALSE,multitrack playback return
+USB 2,T Bass,tracks,Line,,FALSE,multitrack playback return
+USB 3,T Keys,tracks,Line,,FALSE,multitrack playback return
+USB 4,T Elec Guit,tracks,Line,,FALSE,multitrack playback return
+USB 5,T Ac Guit,tracks,Line,,FALSE,multitrack playback return
+USB 6,T Strings,tracks,Line,,FALSE,multitrack playback return
+USB 7,T VOX/FX,tracks,Line,,FALSE,multitrack playback return
+USB 8,T Click/Guide,tracks,Line,,FALSE,multitrack playback return

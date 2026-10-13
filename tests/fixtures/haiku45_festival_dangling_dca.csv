@@ -1,0 +1,4 @@
+patch,name,category,type,model,phantom,notes
+LCL 1,Kick,drums,Mic,Beta 91A,TRUE,
+LCL 7,BassDI,bass,DI,,FALSE,
+LCL 12,VOX 1,vocals,Mic,,FALSE,

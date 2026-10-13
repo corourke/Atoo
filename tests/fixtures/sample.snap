@@ -1,0 +1,39 @@
+{
+  "ae_data": {
+    "ch": {
+      "1": {
+        "name": "Kick",
+        "in": {"conn": {"grp": "A", "in": 1}},
+        "flt": {"lcf": 80.0, "lc": 1},
+        "fdr": -3.0,
+        "mute": 0,
+        "tags": "#D1 #M1",
+        "send": {
+          "1": {"on": 1, "lvl": 0.0, "mode": "POST"},
+          "2": {"on": 1, "lvl": -3.0, "mode": "PRE"}
+        }
+      },
+      "2": {
+        "config": {"name": "Snare"},
+        "in": {"conn": {"grp": "A", "in": 2}},
+        "flt": {"lcf": 100.0, "lc": 1},
+        "fdr": -6.0,
+        "mute": 0,
+        "tags": "#D1",
+        "send": {
+          "1": {"on": 1, "lvl": -2.0, "mode": "POST"}
+        }
+      }
+    },
+    "bus": {
+      "1": {"name": "Drums"},
+      "2": {"name": "Monitor 1"}
+    },
+    "dca": {
+      "1": {"name": "Drums"}
+    },
+    "mgrp": {
+      "1": {"name": "Drums"}
+    }
+  }
+}

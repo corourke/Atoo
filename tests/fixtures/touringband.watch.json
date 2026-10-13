@@ -1,0 +1,246 @@
+{
+  "watch_conditions": [
+    {
+      "id": "Kick",
+      "description": "Kick",
+      "channel": "Kick",
+      "field": "muted",
+      "operator": "==",
+      "value": true,
+      "severity": "warning"
+    },
+    {
+      "id": "f-vox-1-unmuted",
+      "description": "Front vocal 1 must stay open \u2014 a lead vocal going silent mid-song is the kind of thing nobody notices until the singer does.",
+      "channel": "F VOX 1",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "f-vox-2-unmuted",
+      "description": "Front vocal 2 must stay open for the same reason as F VOX 1.",
+      "channel": "F VOX 2",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "mld-vox-unmuted",
+      "description": "MLD VOX must stay open \u2014 this show runs six vocal mics and instructions call out muting as the thing worth watching.",
+      "channel": "MLD VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "kbd-vox-unmuted",
+      "description": "Keyboard player's vocal mic must stay open; an instrumentalist's vox channel is easy to bump while working the DI muted-start channels nearby.",
+      "channel": "KBD VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "gtr-vox-unmuted",
+      "description": "Guitarist's vocal mic must stay open.",
+      "channel": "GTR VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "drm-vox-unmuted",
+      "description": "Drummer's vocal mic must stay open.",
+      "channel": "DRM VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "main-fader-floor",
+      "description": "Main must not drop below -10dB \u2014 that's the whole PA quietly riding down, and instructions call this out explicitly.",
+      "channel": "Main",
+      "field": "fader_db",
+      "operator": ">=",
+      "value": -10,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "vocals-bus-upper",
+      "description": "Vocals bus should stay within 5dB of unity \u2014 a stray push above that shifts the whole vocal balance without anyone touching a channel.",
+      "channel": "Vocals",
+      "field": "fader_db",
+      "operator": "<=",
+      "value": 5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "vocals-bus-lower",
+      "description": "Vocals bus should stay within 5dB of unity \u2014 a stray pull below that buries every singer in the mix at once.",
+      "channel": "Vocals",
+      "field": "fader_db",
+      "operator": ">=",
+      "value": -5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "fvox1-unmuted",
+      "description": "Lead vocal (F VOX 1) must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "F VOX 1",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "mldvox-unmuted",
+      "description": "MLD VOX must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "MLD VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "fvox2-unmuted",
+      "description": "F VOX 2 must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "F VOX 2",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "kbdvox-unmuted",
+      "description": "Keyboard player's vocal mic must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "KBD VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "gtrvox-unmuted",
+      "description": "Guitarist's vocal mic must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "GTR VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "drmvox-unmuted",
+      "description": "Drummer's vocal mic must stay live \u2014 vocals category is flagged tonight as never-mute",
+      "channel": "DRM VOX",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "vocals-bus-not-too-hot",
+      "description": "Vocals mix bus should stay within 5dB of unity \u2014 a stray push here throws the whole vocal balance",
+      "channel": "Vocals",
+      "field": "fader_db",
+      "operator": "<=",
+      "value": 5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "vocals-bus-not-too-low",
+      "description": "Vocals mix bus should stay within 5dB of unity \u2014 a stray pull here buries every vocal at once",
+      "channel": "Vocals",
+      "field": "fader_db",
+      "operator": ">=",
+      "value": -5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "drums-bus-not-too-hot",
+      "description": "Drums mix bus should stay within 5dB of unity \u2014 a stray push here overwhelms the mix (note: Drums Comp is intentionally at -6dB and excluded from this check)",
+      "channel": "Drums",
+      "field": "fader_db",
+      "operator": "<=",
+      "value": 5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "vocals-not-muted",
+      "description": "No vocal channel should be muted during the show",
+      "channel": "F VOX 1",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error",
+      "source": "drafted"
+    },
+    {
+      "id": "mix-bus-drift",
+      "description": "Mix and FX bus faders must stay within \u00b15dB of unity",
+      "channel": "Drums",
+      "field": "fader_db",
+      "operator": "<=",
+      "value": 5,
+      "severity": "warning",
+      "source": "drafted"
+    },
+    {
+      "id": "monitor-bus-soundcheck",
+      "description": "Monitor bus faders must stay at floor until soundcheck ends",
+      "channel": "MON1",
+      "field": "fader_db",
+      "operator": "==",
+      "value": -144,
+      "severity": "warning",
+      "source": "drafted"
+    }
+  ],
+  "drafted": [
+    "drm-vox-unmuted",
+    "drmvox-unmuted",
+    "drums-bus-not-too-hot",
+    "f-vox-1-unmuted",
+    "f-vox-2-unmuted",
+    "fvox1-unmuted",
+    "fvox2-unmuted",
+    "gtr-vox-unmuted",
+    "gtrvox-unmuted",
+    "kbd-vox-unmuted",
+    "kbdvox-unmuted",
+    "main-fader-floor",
+    "mix-bus-drift",
+    "mld-vox-unmuted",
+    "mldvox-unmuted",
+    "monitor-bus-soundcheck",
+    "vocals-bus-lower",
+    "vocals-bus-not-too-hot",
+    "vocals-bus-not-too-low",
+    "vocals-bus-upper",
+    "vocals-not-muted"
+  ]
+}

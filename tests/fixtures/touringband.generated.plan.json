@@ -1,0 +1,1370 @@
+{
+  "channels": [
+    {
+      "channel": 1,
+      "bank": "ch",
+      "name": "Kick",
+      "source": {
+        "input": "Kick",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          1
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'Patch order: drums first'; 'Within drums: kick, snare, tom 1, hi-hat, floor, overhead' puts kick first",
+        "patch": "Input list socket column: 'AES50-A 1'",
+        "dca": "DCAs: 'Drums: all drums-category channels'",
+        "bus_sends": "Busses: Drums (post, unity); Monitor 1/3/5 (pre, unity, all categories)",
+        "processing": "Processing: 'Drums get a high-pass at 80Hz'"
+      }
+    },
+    {
+      "channel": 2,
+      "bank": "ch",
+      "name": "Snare",
+      "source": {
+        "input": "Snare",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          2
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: within-drums order, snare second",
+        "patch": "Input list: 'AES50-A 2'",
+        "dca": "DCAs: Drums",
+        "bus_sends": "Busses: Drums; Monitor 1/3/5",
+        "processing": "Processing: drums high-pass 80Hz"
+      }
+    },
+    {
+      "channel": 3,
+      "bank": "ch",
+      "name": "Tom1",
+      "source": {
+        "input": "Tom1",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          3
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: within-drums order, 'tom 1' third",
+        "patch": "Input list: 'AES50-A 3'",
+        "dca": "DCAs: Drums",
+        "bus_sends": "Busses: Drums; Monitor 1/3/5",
+        "processing": "Processing: drums high-pass 80Hz"
+      }
+    },
+    {
+      "channel": 4,
+      "bank": "ch",
+      "name": "HH",
+      "source": {
+        "input": "HH",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          4
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: within-drums order, 'hi-hat' fourth; HH is the input list's name for it",
+        "patch": "Input list: 'AES50-A 4'",
+        "dca": "DCAs: Drums",
+        "bus_sends": "Busses: Drums; Monitor 1/3/5",
+        "processing": "Processing: drums high-pass 80Hz"
+      }
+    },
+    {
+      "channel": 5,
+      "bank": "ch",
+      "name": "FLOOR",
+      "source": {
+        "input": "FLOOR",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          5
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: within-drums order, 'floor' fifth",
+        "patch": "Input list: 'AES50-A 5'",
+        "dca": "DCAs: Drums",
+        "bus_sends": "Busses: Drums; Monitor 1/3/5",
+        "processing": "Processing: drums high-pass 80Hz"
+      }
+    },
+    {
+      "channel": 6,
+      "bank": "ch",
+      "name": "OH",
+      "source": {
+        "input": "OH",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          17
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Drums",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: within-drums order, 'overhead' sixth. One mono overhead, not a pair -- the input list has one OH row with stereo=FALSE",
+        "patch": "Input list: 'AES50-A 17'. Note this is out of sequence with the other drum sockets; the input list says where the cable is and the conventions do not override it",
+        "dca": "DCAs: Drums",
+        "bus_sends": "Busses: Drums; Monitor 1/3/5",
+        "processing": "Processing: drums high-pass 80Hz"
+      }
+    },
+    {
+      "channel": 7,
+      "bank": "ch",
+      "name": "BassDI",
+      "source": {
+        "input": "BassDI",
+        "type": "DI",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          6
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Bass"
+      ],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then bass' -- second category in patch order",
+        "patch": "Input list: 'AES50-A 6'",
+        "dca": "DCAs: 'Bass: all bass-category channels'",
+        "bus_sends": "Busses: Monitor 1/3/5 only. There is no Bass bus in the conventions -- only Drums, Vocals and Horns have one",
+        "processing": "Processing: 'Bass channels get a high-pass at 40Hz'"
+      }
+    },
+    {
+      "channel": 8,
+      "bank": "ch",
+      "name": "EG 1",
+      "source": {
+        "input": "EG 1",
+        "type": "Instrument",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          7
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then guitars' -- third in patch order",
+        "patch": "Input list: 'AES50-A 7'",
+        "dca": "DCAs: Guitars",
+        "bus_sends": "Busses: Monitor 1/3/5 only (no Guitars bus)",
+        "processing": "Processing: 'Guitars channels get a high-pass at 80Hz'"
+      }
+    },
+    {
+      "channel": 9,
+      "bank": "ch",
+      "name": "Keys",
+      "source": {
+        "input": "Keys",
+        "type": "Instrument",
+        "model": "",
+        "stereo": true,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          15,
+          16
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": null,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then keys' -- fourth. Channels: 'Stereo-paired inputs become one stereo channel', and the input list marks Keys stereo=TRUE",
+        "patch": "Input list: 'AES50-A 15'. Every input is mono, so a stereo channel consumes two sockets: A 15 and A 16. A 16 is not listed separately on the input list, which is consistent with one stereo row meaning two jacks",
+        "dca": "DCAs: Keys",
+        "bus_sends": "Busses: Monitor 1/3/5 only (no Keys bus)",
+        "processing": "Processing states no high-pass for keys -- left unset rather than guessed"
+      }
+    },
+    {
+      "channel": 10,
+      "bank": "ch",
+      "name": "T.Sax SM57",
+      "source": {
+        "input": "T.Sax SM57",
+        "type": "Mic",
+        "model": "SM57",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          18
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 100,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Horns",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then horns' -- fifth in patch order",
+        "patch": "Input list: 'AES50-A 18'",
+        "dca": "No DCA. The DCAs section lists Drums, Bass, Guitars, Keys, Vocals and Tracks -- horns is deliberately absent, and the file's own preamble confirms that was true of the source show",
+        "bus_sends": "Busses: 'Horns: horns channels route to bus post-fader at unity'; plus Monitor 1/3/5",
+        "processing": "Processing: 'Horns channels get a high-pass at 100Hz'"
+      }
+    },
+    {
+      "channel": 11,
+      "bank": "ch",
+      "name": "T.Bone SM57",
+      "source": {
+        "input": "T.Bone SM57",
+        "type": "Mic",
+        "model": "SM57",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          19
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 100,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Horns",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: horns, second",
+        "patch": "Input list: 'AES50-A 19'",
+        "dca": "No horns DCA in the conventions",
+        "bus_sends": "Busses: Horns; Monitor 1/3/5",
+        "processing": "Processing: horns high-pass 100Hz"
+      }
+    },
+    {
+      "channel": 12,
+      "bank": "ch",
+      "name": "Trumpet SM57",
+      "source": {
+        "input": "Trumpet SM57",
+        "type": "Mic",
+        "model": "SM57",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          20
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 100,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [
+        "Inst",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Horns",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: horns, third",
+        "patch": "Input list: 'AES50-A 20'",
+        "dca": "No horns DCA in the conventions",
+        "bus_sends": "Busses: Horns; Monitor 1/3/5",
+        "processing": "Processing: horns high-pass 100Hz"
+      }
+    },
+    {
+      "channel": 13,
+      "bank": "ch",
+      "name": "F VOX 1",
+      "source": {
+        "input": "F VOX 1",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          9
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then vocals' -- sixth in patch order; input list order within vocals",
+        "patch": "Input list: 'AES50-A 9'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals (post, unity); Reverb Send ('vocals channels route to bus post-fader' -- no level stated, left unset per rule 4); Monitor 1/3/5",
+        "processing": "Processing: 'Vocals get a high-pass at 120Hz'"
+      }
+    },
+    {
+      "channel": 14,
+      "bank": "ch",
+      "name": "MLD VOX",
+      "source": {
+        "input": "MLD VOX",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          10
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: vocals, second",
+        "patch": "Input list: 'AES50-A 10'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals; Reverb Send (level unstated); Monitor 1/3/5",
+        "processing": "Processing: vocals high-pass 120Hz"
+      }
+    },
+    {
+      "channel": 15,
+      "bank": "ch",
+      "name": "F VOX 2",
+      "source": {
+        "input": "F VOX 2",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          11
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: vocals, third",
+        "patch": "Input list: 'AES50-A 11'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals; Reverb Send (level unstated); Monitor 1/3/5",
+        "processing": "Processing: vocals high-pass 120Hz"
+      }
+    },
+    {
+      "channel": 16,
+      "bank": "ch",
+      "name": "KBD VOX",
+      "source": {
+        "input": "KBD VOX",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          12
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: vocals, fourth",
+        "patch": "Input list: 'AES50-A 12'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals; Reverb Send (level unstated); Monitor 1/3/5",
+        "processing": "Processing: vocals high-pass 120Hz"
+      }
+    },
+    {
+      "channel": 17,
+      "bank": "ch",
+      "name": "GTR VOX",
+      "source": {
+        "input": "GTR VOX",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          13
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: vocals, fifth",
+        "patch": "Input list: 'AES50-A 13'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals; Reverb Send (level unstated); Monitor 1/3/5",
+        "processing": "Processing: vocals high-pass 120Hz"
+      }
+    },
+    {
+      "channel": 18,
+      "bank": "ch",
+      "name": "DRM VOX",
+      "source": {
+        "input": "DRM VOX",
+        "type": "Mic",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          14
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "All Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Reverb Send",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: vocals, sixth",
+        "patch": "Input list: 'AES50-A 14'",
+        "dca": "DCAs: Vocals",
+        "bus_sends": "Busses: Vocals; Reverb Send (level unstated); Monitor 1/3/5",
+        "processing": "Processing: vocals high-pass 120Hz"
+      }
+    },
+    {
+      "channel": 19,
+      "bank": "ch",
+      "name": "TRAX",
+      "source": {
+        "input": "TRAX",
+        "type": "Line",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          8
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": null,
+        "preset": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [
+        "Tracks"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Monitor 1",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 3",
+          "mode": "pre",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Monitor 5",
+          "mode": "pre",
+          "level_db": 0.0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Inputs: 'then tracks' -- last in patch order. Kept on a regular channel rather than an aux strip: domain knowledge puts the band's own backing tracks on regular channels because they are part of the band's sound, and reserves aux strips for external feeds",
+        "patch": "Input list: 'AES50-A 8'",
+        "dca": "DCAs: 'Tracks: all tracks-category channels'",
+        "bus_sends": "Busses: Monitor 1/3/5 (the monitor rule lists tracks channels explicitly). No Tracks bus exists",
+        "processing": "Processing states no high-pass for tracks -- left unset"
+      }
+    }
+  ],
+  "dcas": {
+    "Drums": {},
+    "Bass": {},
+    "Guitars": {},
+    "Keys": {},
+    "Vocals": {},
+    "Tracks": {}
+  },
+  "mute_groups": {
+    "Drums": {},
+    "Vocals": {},
+    "Inst": {},
+    "Tracks": {},
+    "All Band": {}
+  },
+  "busses": {
+    "Drums": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      }
+    },
+    "Vocals": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      }
+    },
+    "Horns": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      }
+    },
+    "Monitor 1": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 1",
+        "socket": {
+          "group": "A",
+          "sockets": [
+            41
+          ]
+        }
+      },
+      "mono": true
+    },
+    "Monitor 3": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 3",
+        "socket": {
+          "group": "A",
+          "sockets": [
+            43
+          ]
+        }
+      },
+      "mono": true
+    },
+    "Monitor 5": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Monitor 5",
+        "socket": {
+          "group": "A",
+          "sockets": [
+            45
+          ]
+        }
+      },
+      "mono": true
+    },
+    "Reverb Send": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Outboard reverb send",
+        "socket": {
+          "group": "A",
+          "sockets": [
+            25
+          ]
+        }
+      },
+      "mono": true
+    }
+  },
+  "outputs": {
+    "Main": {
+      "socket": {
+        "group": "USB",
+        "sockets": [
+          47,
+          48
+        ]
+      },
+      "description": "full mix, EQ set for a recordable sound"
+    },
+    "Matrix": {
+      "socket": null,
+      "description": "fed from Main, EQ corrects the room"
+    }
+  },
+  "unassigned_inputs": [],
+  "notes": [
+    {
+      "text": "Matrix has no physical output socket. The conventions say 'Matrix: fed from Main, EQ corrects the room' but never say where the matrix goes. I did not invent one. This needs answering before the plan can be applied.",
+      "source": "model"
+    },
+    {
+      "text": "'Matrix: fed from Main' is a routing instruction the plan format cannot express -- there is no field for what feeds a matrix. Recorded here so it is not lost.",
+      "source": "model"
+    },
+    {
+      "text": "Main's EQ ('set for a recordable sound') and Matrix's EQ ('corrects the room') are both stated as intent with no values. The format has no EQ fields and I would be inventing the values anyway.",
+      "source": "model"
+    },
+    {
+      "text": "The conventions file's own preamble says the real show's Main fans out to three destinations at once (USB, a card slot, and a recorder). The format holds one socket per output, so I recorded the USB pair the '## Output' section states and am flagging the other two as lost.",
+      "source": "model"
+    },
+    {
+      "text": "Two watch conditions are stated ('Alert if any vocals-category channel is muted', 'Alert if the Main fader moves below -10dB'). The plan format has no place for them.",
+      "source": "model"
+    },
+    {
+      "text": "Reverb Send level: the conventions say vocals route to it post-fader but state no level, so level_db is null on all six vocal sends. A reverb send level is a sound-check decision; unity would have been a guess.",
+      "source": "model"
+    },
+    {
+      "text": "No channel is routed directly to Main. The conventions route channels to busses and busses to Main, and never state a direct channel-to-Main route. On most real shows most channels do feed Main directly, so this is worth confirming -- but the conventions as written do not say it.",
+      "source": "model"
+    },
+    {
+      "text": "No starting fader positions or mute states are stated anywhere, so fader_db and muted are null throughout.",
+      "source": "model"
+    },
+    {
+      "text": "OH is patched to AES50-A 17, out of sequence with the other five drum inputs on A 1-5. That is what the input list says, so that is where it is patched.",
+      "source": "model"
+    },
+    {
+      "text": "Horns channels have no DCA. The DCAs section lists six DCAs and horns is not among them; the file's preamble confirms this was true of the source show and is deliberate.",
+      "source": "model"
+    }
+  ]
+}

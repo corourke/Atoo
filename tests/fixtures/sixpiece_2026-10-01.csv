@@ -1,0 +1,25 @@
+"patch","name","category","type","model","phantom","preset","notes"
+"","Kick","drums","Mic","Beta 91A","TRUE","Kick B91A","Lena (drums);"
+,Snare,drums,Mic,Audix i5,FALSE,Snare i5,
+,Hi-hat,drums,Mic,SM57,FALSE,Hi Hat,
+,Rack tom 1,drums,Mic,e604,FALSE,H.Tom e604,
+,Rack tom 2,drums,Mic,e604,FALSE,M.Tom e604,
+,Floor tom 1,drums,Mic,d4,FALSE,Fl.Tom e604,
+,Floor tom 2,drums,Mic,d6,FALSE,Fl.Tom e604,
+,OH L,drums,Mic,CS2,TRUE,O.Head SM81,
+,OH R,drums,Mic,CS2,TRUE,O.Head SM81,
+,Sample Pad,drums,DI,,FALSE,Synth,Lena; DI at the kit
+,Bass,bass,DI,,FALSE,Bass GTR,Marisol; list says DI and/or mic -- DI row; plot shows DI on bass amp
+,EG SR,guitars,DI,,FALSE,E.GTR Gen,Electric Guitar - SR (shortened); Tess; DI (Helix Left); plot: 2-output DI elec/acous
+,EG SL,guitars,DI,,FALSE,E.GTR Gen,Electric Guitar - SL (shortened); Nora; DI (Helix Right)
+,AG SR,guitars,DI,,FALSE,A.GTR DI,Acoustic Guitar - SR (shortened); Tess; mono DI
+,Keys L,keys,DI,,FALSE,Keys,Ruth; stereo DI
+,Keys R,keys,DI,,FALSE,Keys,Ruth; stereo DI
+,DSR Vox,vocals,Mic,Beta 58,FALSE,Vocal Beta58,Tess BG vox; boom; SixPiece provides
+,DSC Lead Vox,vocals,Wireless,,FALSE,Vocal Beta58,Elena lead vox (Mic 1); wireless mic; straight stand; SixPiece provides
+,DSL Vox,vocals,Mic,Beta 58,FALSE,Vocal Beta58,Nora BG vox; stand not stated in list (plot: boom); SixPiece provides
+,USR Vox,vocals,Mic,Beta 58,FALSE,Vocal Beta58,Marisol BG vox; boom; SixPiece provides
+,USL Vox,vocals,Mic,Beta 58,FALSE,Vocal Beta58,Ruth BG vox; boom; SixPiece provides
+,USC Vox,vocals,Mic,Beta 58,FALSE,Vocal Beta58,Lena BG vox; boom; SixPiece provides
+,DSC Vox,vocals,Mic,,FALSE,Vocal Gen,"Elena ""telephone"" mic (Mic 2); boom; SixPiece provides; phantom not stated"
+"","Ambient/EKIT","misc","Mic","","FALSE","","AMBIENT MIC or Electronic Drum Kit"

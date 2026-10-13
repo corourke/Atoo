@@ -1,0 +1,3642 @@
+{
+  "channels": [
+    {
+      "channel": 1,
+      "bank": "ch",
+      "name": "Kick",
+      "color": "Red",
+      "source": {
+        "input": "Kick",
+        "type": "Mic",
+        "model": "Beta 91A",
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          1
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Conventions Channels: drum order kick,snare,hihat,rack toms,floor tom,overheads,perc",
+        "patch": "next free LCL socket in channel order (LCL 1): the reply chose the group, code the number; reply: Inputs: no socket given -> local inputs 1-24 in channel order",
+        "processing": "Processing: 'highpass at 40Hz on drums'; 'gain to 20dB, Trim to 0dB'",
+        "dca": "DCAs: Drums DCA=all drums category",
+        "mute_group": "Mute Groups: Band=all band instruments",
+        "main_routes": "Busses: Drums mix bus carries this to Main, so no direct route",
+        "fader": "Processing: 'Leave all faders all the way down'",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 2,
+      "bank": "ch",
+      "name": "Snare",
+      "color": "Red",
+      "source": {
+        "input": "Snare",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          2
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Snare Verb",
+          "mode": "pre",
+          "level_db": -10
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Drum order: snare second",
+        "patch": "next free LCL socket in channel order (LCL 2): the reply chose the group, code the number; reply: Inputs: overflow rule, LCL next free",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Reaches Main via Drums/Drums Comp bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'; Snare Verb: Busses: 'Snare Verb -- Snare channels. Sends from channels at -10db, PRE fader.'"
+      }
+    },
+    {
+      "channel": 3,
+      "bank": "ch",
+      "name": "HiHat",
+      "color": "Red",
+      "source": {
+        "input": "HiHat",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          3
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Drum order: hi hat third",
+        "patch": "next free LCL socket in channel order (LCL 3): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored per instructions",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 4,
+      "bank": "ch",
+      "name": "Tom1",
+      "color": "Red",
+      "source": {
+        "input": "Tom1",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          4
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Rack tom, lower number, comes before floor tom",
+        "patch": "next free LCL socket in channel order (LCL 4): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 5,
+      "bank": "ch",
+      "name": "Tom2",
+      "color": "Red",
+      "source": {
+        "input": "Tom2",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          5
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Rack tom",
+        "patch": "next free LCL socket in channel order (LCL 5): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 6,
+      "bank": "ch",
+      "name": "Tom3",
+      "color": "Red",
+      "source": {
+        "input": "Tom3",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          6
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Rack tom",
+        "patch": "next free LCL socket in channel order (LCL 6): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 7,
+      "bank": "ch",
+      "name": "Tom4",
+      "color": "Red",
+      "source": {
+        "input": "Tom4",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Highest-numbered tom = floor tom, comes after rack toms",
+        "patch": "next free LCL socket in channel order (LCL 7): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 8,
+      "bank": "ch",
+      "name": "OH L",
+      "color": "Red",
+      "source": {
+        "input": "OH L",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          8
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Overheads next in drum order; kept mono per convention exception",
+        "patch": "next free LCL socket in channel order (LCL 8): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 9,
+      "bank": "ch",
+      "name": "OH R",
+      "color": "Red",
+      "source": {
+        "input": "OH R",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          9
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Conventions: 'If you see L/R in overhead names, do NOT patch as stereo pair, keep separate mono for separate processing'",
+        "patch": "next free LCL socket in channel order (LCL 9): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 10,
+      "bank": "ch",
+      "name": "Pads",
+      "color": "Red",
+      "source": {
+        "input": "Pads",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          10
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Other percussion after overheads, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 10): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 11,
+      "bank": "ch",
+      "name": "PERC 1",
+      "color": "Red",
+      "source": {
+        "input": "PERC 1",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          11
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Other percussion, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 11): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 12,
+      "bank": "ch",
+      "name": "PERC2",
+      "color": "Red",
+      "source": {
+        "input": "PERC2",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          12
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Other percussion, last of drums category",
+        "patch": "next free LCL socket in channel order (LCL 12): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Drums HPF 40Hz; gain 20/trim 0",
+        "dca": "Drums DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Drums bus",
+        "fader": "All faders down",
+        "color": "category map: drums -> Red",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Drums: Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix bus sends are POST at unity.; Drums Comp: Busses: 'Drums Comp: ...A duplicate of the Drums bus'"
+      }
+    },
+    {
+      "channel": 13,
+      "bank": "ch",
+      "name": "BassDI",
+      "color": "Blue",
+      "source": {
+        "input": "BassDI",
+        "type": "DI",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          13
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Band"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Bass follows drums per patch order",
+        "patch": "next free LCL socket in channel order (LCL 13): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Processing: 'band instruments...80Hz is fine'; gain 20/trim 0",
+        "dca": "DCAs: Band = other instruments not in a dedicated DCA (no Bass DCA listed)",
+        "mute_group": "Band mute group",
+        "main_routes": "No bass mix bus created; sent straight to Main per default rule",
+        "fader": "All faders down",
+        "color": "category map: bass -> Blue",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 14,
+      "bank": "ch",
+      "name": "BassMic",
+      "color": "Blue",
+      "source": {
+        "input": "BassMic",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          14
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Band"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Bass, second row",
+        "patch": "next free LCL socket in channel order (LCL 14): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Band-instrument HPF 80Hz; gain 20/trim 0",
+        "dca": "Band DCA (no dedicated Bass DCA)",
+        "mute_group": "Band mute group",
+        "main_routes": "No bass bus, straight to Main",
+        "fader": "All faders down",
+        "color": "category map: bass -> Blue",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 15,
+      "bank": "ch",
+      "name": "EG 1",
+      "color": "Magenta",
+      "source": {
+        "input": "EG 1",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          15
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Guitars after bass",
+        "patch": "next free LCL socket in channel order (LCL 15): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Processing: 'Guitars channels get a high-pass at 80Hz'; gain 20/trim 0",
+        "dca": "DCAs: Guitars = all guitars-category channels",
+        "mute_group": "Band mute group",
+        "main_routes": "No guitars mix bus, straight to Main",
+        "fader": "All faders down",
+        "color": "category map: guitars -> Magenta",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 16,
+      "bank": "ch",
+      "name": "EG 2",
+      "color": "Magenta",
+      "source": {
+        "input": "EG 2",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          16
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Guitars, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 16): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Guitars HPF 80Hz; gain 20/trim 0",
+        "dca": "Guitars DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Straight to Main",
+        "fader": "All faders down",
+        "color": "category map: guitars -> Magenta",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 17,
+      "bank": "ch",
+      "name": "AC Guit 1",
+      "color": "Magenta",
+      "source": {
+        "input": "AC Guit 1",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          17
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Guitars, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 17): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Guitars HPF 80Hz; gain 20/trim 0",
+        "dca": "Guitars DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Straight to Main",
+        "fader": "All faders down",
+        "color": "category map: guitars -> Magenta",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 18,
+      "bank": "ch",
+      "name": "AC GUIT 2",
+      "color": "Magenta",
+      "source": {
+        "input": "AC GUIT 2",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          18
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Guitars, not L/R named -> mono, no stereo pairing",
+        "patch": "next free LCL socket in channel order (LCL 18): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Guitars HPF 80Hz; gain 20/trim 0",
+        "dca": "Guitars DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Straight to Main",
+        "fader": "All faders down",
+        "color": "category map: guitars -> Magenta",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 19,
+      "bank": "ch",
+      "name": "Keys 1",
+      "color": "Cyan",
+      "source": {
+        "input": "Keys 1",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          19
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Keys",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Keyboards after guitars",
+        "patch": "next free LCL socket in channel order (LCL 19): the reply chose the group, code the number; reply: LCL next free",
+        "processing": "Band-instrument HPF 80Hz (no specific keys HPF stated); gain 20/trim 0",
+        "dca": "DCAs: Keys = all keys-category channels",
+        "mute_group": "Band mute group",
+        "main_routes": "Multiple keyboards -> Keys mix bus feeds Main, no direct route",
+        "fader": "All faders down",
+        "color": "category map: keys -> Cyan",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Keys: Busses: 'If there are multiple keyboards, create a Keys bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 20,
+      "bank": "ch",
+      "name": "Keys 2",
+      "color": "Cyan",
+      "source": {
+        "input": "Keys 2",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          20
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Keys",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Keyboards, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 20): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Band-instrument HPF 80Hz; gain 20/trim 0",
+        "dca": "Keys DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Keys bus",
+        "fader": "All faders down",
+        "color": "category map: keys -> Cyan",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Keys: Busses: 'If there are multiple keyboards, create a Keys bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 21,
+      "bank": "ch",
+      "name": "Horns 1",
+      "color": "Orange",
+      "source": {
+        "input": "Horns 1",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          21
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 100,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Horns"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Horns",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Strings/brass step; horns before strings per input-list order",
+        "patch": "next free LCL socket in channel order (LCL 21): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Processing: 'Horns channels get a high-pass at 100Hz'; gain 20/trim 0",
+        "dca": "DCAs: Horns = all horns-category channels",
+        "mute_group": "Band mute group",
+        "main_routes": "Multiple horns -> Horns mix bus feeds Main",
+        "fader": "All faders down",
+        "color": "category map: horns -> Orange",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Horns: Busses: 'If there are multiple horns, create a Horns bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 22,
+      "bank": "ch",
+      "name": "Horns 2",
+      "color": "Orange",
+      "source": {
+        "input": "Horns 2",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          22
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 100,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Horns"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Horns",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Horns, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 22): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Horns HPF 100Hz; gain 20/trim 0",
+        "dca": "Horns DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Horns bus",
+        "fader": "All faders down",
+        "color": "category map: horns -> Orange",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Horns: Busses: 'If there are multiple horns, create a Horns bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 23,
+      "bank": "ch",
+      "name": "Strings 1",
+      "color": "Orange",
+      "source": {
+        "input": "Strings 1",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          23
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Strings"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Strings",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Strings after horns per input-list order",
+        "patch": "next free LCL socket in channel order (LCL 23): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Band-instrument default HPF 80Hz (no specific strings HPF stated); gain 20/trim 0",
+        "dca": "DCAs: Strings = all strings-category channels",
+        "mute_group": "Band mute group",
+        "main_routes": "Multiple strings -> Strings mix bus feeds Main",
+        "fader": "All faders down",
+        "color": "category map: strings -> Orange",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Strings: Busses: 'If there are multiple strings, create a Strings bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 24,
+      "bank": "ch",
+      "name": "Strings 2",
+      "color": "Orange",
+      "source": {
+        "input": "Strings 2",
+        "type": "Instrument",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          24
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Strings"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Strings",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Strings, input-list order",
+        "patch": "next free LCL socket in channel order (LCL 24): the reply chose the group, code the number; reply: LCL next free; 'not patched' comment ignored",
+        "processing": "Band-instrument HPF 80Hz; gain 20/trim 0",
+        "dca": "Strings DCA",
+        "mute_group": "Band mute group",
+        "main_routes": "Via Strings bus",
+        "fader": "All faders down",
+        "color": "category map: strings -> Orange",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Strings: Busses: 'If there are multiple strings, create a Strings bus.'; INST Reverb: Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels to this buss all the way down, POST fader.' Vocals, drums, tracks and speech excluded."
+      }
+    },
+    {
+      "channel": 25,
+      "bank": "ch",
+      "name": "VOX 1",
+      "color": "Green",
+      "source": {
+        "input": "VOX 1",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          1
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Vocals after strings/brass step",
+        "patch": "next free A socket in channel order (AES50-A 1): the reply chose the group, code the number; reply: LCL 1-24 exhausted by prior channels, overflow to AES50-A from 1",
+        "processing": "Processing: 'Vocals...high-pass up at 120Hz'; gain 20/trim 0",
+        "dca": "DCAs: Vocals = all vocals-category channels",
+        "mute_group": "Mute Groups: Vocals = all singing vocal channels",
+        "main_routes": "Vocals mix bus feeds Main",
+        "fader": "All faders down",
+        "color": "category map: vocals -> Green",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Vocals: Busses: 'Vocals: include all vocal channels.'; VOX Reverb: Busses: 'VOX Reverb -- All vocal channels'; default FX send is POST at unity; VOX Delay: Busses: 'VOX Delay -- All vocal channels'; default FX send POST at unity"
+      }
+    },
+    {
+      "channel": 26,
+      "bank": "ch",
+      "name": "VOX 2",
+      "color": "Green",
+      "source": {
+        "input": "VOX 2",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          2
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Vocals, input-list order",
+        "patch": "next free A socket in channel order (AES50-A 2): the reply chose the group, code the number; reply: AES50-A overflow, next free",
+        "processing": "Vocals HPF 120Hz; gain 20/trim 0",
+        "dca": "Vocals DCA",
+        "mute_group": "Vocals mute group",
+        "main_routes": "Via Vocals bus",
+        "fader": "All faders down",
+        "color": "category map: vocals -> Green",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Vocals: Busses: 'Vocals: include all vocal channels.'; VOX Reverb: Busses: 'VOX Reverb -- All vocal channels'; default FX send is POST at unity; VOX Delay: Busses: 'VOX Delay -- All vocal channels'; default FX send POST at unity"
+      }
+    },
+    {
+      "channel": 27,
+      "bank": "ch",
+      "name": "VOX 3",
+      "color": "Green",
+      "source": {
+        "input": "VOX 3",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          3
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Vocals, input-list order",
+        "patch": "next free A socket in channel order (AES50-A 3): the reply chose the group, code the number; reply: AES50-A overflow, next free",
+        "processing": "Vocals HPF 120Hz; gain 20/trim 0",
+        "dca": "Vocals DCA",
+        "mute_group": "Vocals mute group",
+        "main_routes": "Via Vocals bus",
+        "fader": "All faders down",
+        "color": "category map: vocals -> Green",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Vocals: Busses: 'Vocals: include all vocal channels.'; VOX Reverb: Busses: 'VOX Reverb -- All vocal channels'; default FX send is POST at unity; VOX Delay: Busses: 'VOX Delay -- All vocal channels'; default FX send POST at unity"
+      }
+    },
+    {
+      "channel": 28,
+      "bank": "ch",
+      "name": "VOX 4",
+      "color": "Green",
+      "source": {
+        "input": "VOX 4",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          4
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Vocals, input-list order",
+        "patch": "next free A socket in channel order (AES50-A 4): the reply chose the group, code the number; reply: AES50-A overflow, next free",
+        "processing": "Vocals HPF 120Hz; gain 20/trim 0",
+        "dca": "Vocals DCA",
+        "mute_group": "Vocals mute group",
+        "main_routes": "Via Vocals bus",
+        "fader": "All faders down",
+        "color": "category map: vocals -> Green",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Vocals: Busses: 'Vocals: include all vocal channels.'; VOX Reverb: Busses: 'VOX Reverb -- All vocal channels'; default FX send is POST at unity; VOX Delay: Busses: 'VOX Delay -- All vocal channels'; default FX send POST at unity"
+      }
+    },
+    {
+      "channel": 29,
+      "bank": "ch",
+      "name": "VOX 5",
+      "color": "Green",
+      "source": {
+        "input": "VOX 5",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          5
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": null
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": null
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Vocals, input-list order",
+        "patch": "next free A socket in channel order (AES50-A 5): the reply chose the group, code the number; reply: AES50-A overflow, next free; 'not patched' comment ignored",
+        "processing": "Vocals HPF 120Hz; gain 20/trim 0",
+        "dca": "Vocals DCA",
+        "mute_group": "Vocals mute group",
+        "main_routes": "Via Vocals bus",
+        "fader": "All faders down",
+        "color": "category map: vocals -> Green",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1; Vocals: Busses: 'Vocals: include all vocal channels.'; VOX Reverb: Busses: 'VOX Reverb -- All vocal channels'; default FX send is POST at unity; VOX Delay: Busses: 'VOX Delay -- All vocal channels'; default FX send POST at unity"
+      }
+    },
+    {
+      "channel": 30,
+      "bank": "ch",
+      "name": "T DRUMS",
+      "color": "Yellow",
+      "source": {
+        "input": "T DRUMS",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          1
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks after vocals per patch order",
+        "patch": "next free USB socket in channel order (USB 1): the reply chose the group, code the number; reply: Instructions: 'All tracks channels will come from USB'",
+        "processing": "Processing: 'Tracks...no high-pass'; Trim 0 applies to every channel per domain knowledge",
+        "dca": "DCAs: Tracks = all tracks-category channels",
+        "mute_group": "Processing: 'Tracks...no Band mute group'; not vocal/speech either",
+        "main_routes": "Ordinary backing track, no rule against Main; default 'send all channels to Main unless in a mix bus'",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 31,
+      "bank": "ch",
+      "name": "T Bass",
+      "color": "Yellow",
+      "source": {
+        "input": "T Bass",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          2
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 2): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 32,
+      "bank": "ch",
+      "name": "T Keys",
+      "color": "Yellow",
+      "source": {
+        "input": "T Keys",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          3
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 3): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 33,
+      "bank": "ch",
+      "name": "T Elec Guit",
+      "color": "Yellow",
+      "source": {
+        "input": "T Elec Guit",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          4
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 4): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 34,
+      "bank": "ch",
+      "name": "T Ac Guit",
+      "color": "Yellow",
+      "source": {
+        "input": "T Ac Guit",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          5
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 5): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 35,
+      "bank": "ch",
+      "name": "T Strings",
+      "color": "Yellow",
+      "source": {
+        "input": "T Strings",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          6
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 6): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 36,
+      "bank": "ch",
+      "name": "T VOX/FX",
+      "color": "Yellow",
+      "source": {
+        "input": "T VOX/FX",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          7
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Tracks, input-list order",
+        "patch": "next free USB socket in channel order (USB 7): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Default routes to Main",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 37,
+      "bank": "ch",
+      "name": "T Click/Guide",
+      "color": "Yellow",
+      "source": {
+        "input": "T Click/Guide",
+        "type": "Line",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "USB",
+        "sockets": [
+          8
+        ],
+        "stated": false
+      },
+      "processing": {
+        "trim_db": 0,
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Tracks"
+      ],
+      "mute_group": [],
+      "bus_sends": [
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Tracks, last of the multitrack returns",
+        "patch": "next free USB socket in channel order (USB 8): the reply chose the group, code the number; reply: Instructions: tracks from USB",
+        "processing": "No HPF for tracks; trim 0",
+        "dca": "Tracks DCA",
+        "mute_group": "No Band mute group for tracks",
+        "main_routes": "Domain knowledge: click/guide tracks must never reach the main mix, only monitor busses",
+        "fader": "All faders down",
+        "color": "category map: tracks -> Yellow",
+        "bus_sends": "MON1: Busses: 'Every channel except speech sends to every monitor bus. Leave those sends all the way down, mute off, mode is PRE fader.'; MON2: Busses: same monitor-send rule as MON1; MON3: Busses: same monitor-send rule as MON1; MON4: Busses: same monitor-send rule as MON1"
+      }
+    },
+    {
+      "channel": 38,
+      "bank": "ch",
+      "name": "HOST",
+      "color": "Purple",
+      "source": {
+        "input": "HOST",
+        "type": "Mic",
+        "model": null,
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          6
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "trim_db": 0,
+        "gain_db": 20,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Speech"
+      ],
+      "mute_group": [
+        "Speech"
+      ],
+      "bus_sends": [],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Speech last in patch order ('then speakers')",
+        "patch": "next free A socket in channel order (AES50-A 6): the reply chose the group, code the number; reply: AES50-A overflow, next free",
+        "processing": "Processing: 'Speech channels get a high-pass at 120Hz, like vocals'; gain 20/trim 0",
+        "dca": "DCAs: Speech = Hosts, MCs, Podium, etc.",
+        "mute_group": "Mute Groups: Speech = all speech channels",
+        "main_routes": "Not in any mix bus, straight to Main",
+        "fader": "All faders down",
+        "color": "category map: speech -> Purple"
+      }
+    }
+  ],
+  "dcas": {
+    "Drums": {
+      "index": 1
+    },
+    "Guitars": {
+      "index": 2
+    },
+    "Keys": {
+      "index": 3
+    },
+    "Vocals": {
+      "index": 4
+    },
+    "Tracks": {
+      "index": 5
+    },
+    "Strings": {
+      "index": 6
+    },
+    "Horns": {
+      "index": 7
+    },
+    "Band": {
+      "index": 8
+    },
+    "Speech": {
+      "index": 9
+    },
+    "FX": {
+      "index": 10
+    }
+  },
+  "mute_groups": {
+    "Band": {
+      "index": 1
+    },
+    "Vocals": {
+      "index": 2
+    },
+    "Speech": {
+      "index": 3
+    },
+    "FX": {
+      "index": 4
+    }
+  },
+  "busses": {
+    "MON1": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON1",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            1
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": -144
+      },
+      "provenance": "Busses: 'four monitor busses named MON1 thru MON4, MONO...Patch output to local XLR outputs 1 through 4'",
+      "index": 1
+    },
+    "MON2": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON2",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            2
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": -144
+      },
+      "provenance": "Busses: MON2 mono, local XLR output 2",
+      "index": 2
+    },
+    "MON3": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON3",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            3
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": -144
+      },
+      "provenance": "Busses: MON3 mono, local XLR output 3",
+      "index": 3
+    },
+    "MON4": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON4",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            4
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": -144
+      },
+      "provenance": "Busses: MON4 mono, local XLR output 4",
+      "index": 4
+    },
+    "Drums": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: Mix Busses are stereo, patched to Main mix POST fader at unity",
+      "index": 5
+    },
+    "Drums Comp": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": -6
+      },
+      "provenance": "Busses: 'Compressed drums...Leave the fader pulled down 6dB'; compressor settings noted in top-level notes",
+      "index": 6
+    },
+    "Vocals": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: Mix bus, stereo, Main at unity POST",
+      "index": 7
+    },
+    "Keys": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: Mix bus, stereo, Main at unity POST",
+      "index": 8
+    },
+    "Horns": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: Mix bus, stereo, Main at unity POST",
+      "index": 9
+    },
+    "Strings": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [],
+      "mute_group": [],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: Mix bus, stereo, Main at unity POST",
+      "index": 10
+    },
+    "VOX Reverb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: FX bus, stereo, sent to Main at unity POST",
+      "index": 11
+    },
+    "VOX Delay": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: FX bus, stereo, sent to Main at unity POST",
+      "index": 12
+    },
+    "Snare Verb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: FX bus, stereo, sent to Main at unity POST",
+      "index": 13
+    },
+    "INST Reverb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "fader": {
+        "fader_db": 0
+      },
+      "provenance": "Busses: FX bus, stereo, sent to Main at unity POST",
+      "index": 14
+    }
+  },
+  "outputs": {
+    "Main 1": {
+      "kind": "main",
+      "patch": null,
+      "provenance": "Outputs: 'Main has no physical output of its own; it only feeds Matrix 1.'",
+      "index": 1,
+      "inferred": [
+        {
+          "field": "index",
+          "basis": "its name, 'Main 1', states slot 1",
+          "by": "fallback"
+        }
+      ]
+    },
+    "Matrix 1": {
+      "kind": "matrix",
+      "fed_by": {
+        "type": "main",
+        "index": 1
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7,
+          8
+        ],
+        "stated": true
+      },
+      "provenance": "Outputs: 'Matrix 1 takes its feed from Main. Patch output to internal XLRs 7 and 8.'",
+      "index": 1,
+      "inferred": [
+        {
+          "field": "index",
+          "basis": "its name, 'Matrix 1', states slot 1",
+          "by": "fallback"
+        }
+      ]
+    }
+  },
+  "notes": [
+    {
+      "text": "Conventions colour map uses 'Keyboards' and 'Strings/Brass' but the input list categories are 'keys', 'horns' and 'strings'; mapped Keyboards->keys (Cyan) and Strings/Brass->horns & strings (both Orange).",
+      "source": "model"
+    },
+    {
+      "text": "Drums Comp bus: compressor is 'No Stressor' at -20dB threshold, 20ms attack, 50ms release, per conventions; no compressor field exists in this plan format so it is recorded here.",
+      "source": "model"
+    },
+    {
+      "text": "T Click/Guide is excluded from Main routing per domain knowledge on click/guide tracks ('these tracks must never be routed to the main mix, only to monitor busses'); it still receives the standard monitor-bus sends like every other non-speech channel.",
+      "source": "model"
+    },
+    {
+      "text": "All input-list rows marked 'not patched for this event' were assigned normal channels and patches per this show's instructions ('Ignore all comments in the input list that say not patched for this event').",
+      "source": "model"
+    }
+  ],
+  "unassigned_inputs": [],
+  "meta": {
+    "generated_at": "2026-09-29T03:05:24+00:00",
+    "console_model": "wing-compact",
+    "conventions_stack": [
+      {
+        "path": "/home/user/show/examples/conventions.md",
+        "role": "conventions",
+        "source": "/home/user/.atoo.config",
+        "absolute_path": "/home/user/show/examples/conventions.md",
+        "bundle_relative_path": "../../../../dev/atoo/examples/conventions.md",
+        "sha256": "25ab20d063a7daa341d515ee3ce33f116d30d7c00a5cc2e01c6cd83d5e41c179"
+      },
+      {
+        "path": "examples/festival/instructions.md",
+        "role": "instructions",
+        "source": "show bundle examples/festival",
+        "absolute_path": "/home/user/show/examples/festival/instructions.md",
+        "bundle_relative_path": "instructions.md",
+        "sha256": "8e4aee84a5c7f357045cebabf49488c565169895c29d847e4171d7fe0142bf7d"
+      }
+    ],
+    "input_list": {
+      "path": "examples/festival/input.csv",
+      "absolute_path": "/home/user/show/examples/festival/input.csv",
+      "bundle_relative_path": "input.csv",
+      "sha256": "601b50dbbd9f4628dad34e103f11a9c7a2028eb634b0508eab0af59b6269eb83"
+    },
+    "verify_at_generation": {
+      "skipped": false,
+      "ok": true,
+      "error_count": 0,
+      "warning_count": 0,
+      "note_count": 2,
+      "summary": "OK"
+    },
+    "critic_findings": [
+      {
+        "severity": "error",
+        "code": "critic.omission",
+        "message": "Drums Comp bus has no send level specified from any drum channel; conventions require mix bus sends at unity POST fader, but all drum channels show null level_db for this bus.",
+        "where": "Drums Comp bus",
+        "category": "omission",
+        "source": "critic"
+      },
+      {
+        "severity": "error",
+        "code": "critic.omission",
+        "message": "Keys bus has no send level specified from Keys 1 and Keys 2 channels; conventions require mix bus sends at unity POST fader, but both show null level_db.",
+        "where": "Keys bus",
+        "category": "omission",
+        "source": "critic"
+      },
+      {
+        "severity": "error",
+        "code": "critic.omission",
+        "message": "Horns bus has no send level specified from Horns 1 and Horns 2 channels; conventions require mix bus sends at unity POST fader, but both show null level_db.",
+        "where": "Horns bus",
+        "category": "omission",
+        "source": "critic"
+      },
+      {
+        "severity": "error",
+        "code": "critic.omission",
+        "message": "Strings bus has no send level specified from Strings 1 and Strings 2 channels; conventions require mix bus sends at unity POST fader, but both show null level_db.",
+        "where": "Strings bus",
+        "category": "omission",
+        "source": "critic"
+      },
+      {
+        "severity": "error",
+        "code": "critic.omission",
+        "message": "Vocals bus has no send level specified from any vocal channel; conventions require mix bus sends at unity POST fader, but all vocal channels show null level_db.",
+        "where": "Vocals bus",
+        "category": "omission",
+        "source": "critic"
+      },
+      {
+        "severity": "warning",
+        "code": "critic.intent",
+        "message": "Three drum percussion channels are included in the plan despite being marked 'not patched for this event' in the input list; instructions say to ignore these comments, but this should be confirmed since the patch does include them.",
+        "where": "Pads, PERC 1, PERC2",
+        "category": "intent",
+        "source": "critic"
+      },
+      {
+        "severity": "warning",
+        "code": "critic.intent",
+        "message": "VOX 5 is included in the plan and assigned to Vocals DCA and mute group despite being marked 'not patched for this event' in the input list; instructions say to ignore these comments, but presence in the plan should be confirmed.",
+        "where": "VOX 5",
+        "category": "intent",
+        "source": "critic"
+      }
+    ],
+    "verify_findings": {
+      "errors": [],
+      "warnings": [],
+      "info": [
+        {
+          "severity": "info",
+          "code": "inferred.output-index",
+          "message": "Main index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Main 1', states slot 1",
+          "where": "outputs[Main 1]",
+          "source": "verify",
+          "fix": "if that is the wrong strip, number it in the conventions (\"Main 2\", \"Matrix 3\") and rebuild"
+        },
+        {
+          "severity": "info",
+          "code": "inferred.output-index",
+          "message": "Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1",
+          "where": "outputs[Matrix 1]",
+          "source": "verify",
+          "fix": "if that is the wrong strip, number it in the conventions (\"Main 2\", \"Matrix 3\") and rebuild"
+        }
+      ]
+    },
+    "build_findings": [
+      {
+        "severity": "info",
+        "code": "reply.channels-numbered",
+        "message": "channels numbered in the order the reply listed them: ch 1-38",
+        "where": "plan",
+        "source": "build"
+      },
+      {
+        "severity": "info",
+        "code": "reply.sockets-chosen",
+        "message": "LCL: the reply chose the group, code the next free socket in channel order -- Kick LCL 1, Snare LCL 2, HiHat LCL 3, Tom1 LCL 4, Tom2 LCL 5, Tom3 LCL 6, Tom4 LCL 7, OH L LCL 8, OH R LCL 9, Pads LCL 10, PERC 1 LCL 11, PERC2 LCL 12, BassDI LCL 13, BassMic LCL 14, EG 1 LCL 15, EG 2 LCL 16, AC Guit 1 LCL 17, AC GUIT 2 LCL 18, Keys 1 LCL 19, Keys 2 LCL 20, Horns 1 LCL 21, Horns 2 LCL 22, Strings 1 LCL 23, Strings 2 LCL 24",
+        "where": "plan",
+        "source": "build"
+      },
+      {
+        "severity": "info",
+        "code": "reply.sockets-chosen",
+        "message": "A: the reply chose the group, code the next free socket in channel order -- VOX 1 AES50-A 1, VOX 2 AES50-A 2, VOX 3 AES50-A 3, VOX 4 AES50-A 4, VOX 5 AES50-A 5, HOST AES50-A 6",
+        "where": "plan",
+        "source": "build"
+      },
+      {
+        "severity": "info",
+        "code": "reply.sockets-chosen",
+        "message": "USB: the reply chose the group, code the next free socket in channel order -- T DRUMS USB 1, T Bass USB 2, T Keys USB 3, T Elec Guit USB 4, T Ac Guit USB 5, T Strings USB 6, T VOX/FX USB 7, T Click/Guide USB 8",
+        "where": "plan",
+        "source": "build"
+      },
+      {
+        "severity": "info",
+        "code": "reply.colours-applied",
+        "message": "colour applied from the reply's category map by each input-list row's category: drums -> Red (12: Kick, Snare, HiHat, Tom1, Tom2, Tom3, Tom4, OH L, OH R, Pads, PERC 1, PERC2); bass -> Blue (2: BassDI, BassMic); guitars -> Magenta (4: EG 1, EG 2, AC Guit 1, AC GUIT 2); keys -> Cyan (2: Keys 1, Keys 2); horns -> Orange (2: Horns 1, Horns 2); strings -> Orange (2: Strings 1, Strings 2); vocals -> Green (5: VOX 1, VOX 2, VOX 3, VOX 4, VOX 5); tracks -> Yellow (8: T DRUMS, T Bass, T Keys, T Elec Guit, T Ac Guit, T Strings, T VOX/FX, T Click/Guide); speech -> Purple (1: HOST)",
+        "where": "plan",
+        "source": "build"
+      },
+      {
+        "severity": "info",
+        "code": "reply.sends-expanded",
+        "message": "each channel's bus_sends written from the busses' sender lists (206 sends): MON1 <- 37 of 38; MON2 <- 37 of 38; MON3 <- 37 of 38; MON4 <- 37 of 38; Drums <- 12 of 38; Drums Comp <- 12 of 38; Vocals <- 5 of 38; Keys <- 2 of 38; Horns <- 2 of 38; Strings <- 2 of 38; VOX Reverb <- 5 of 38; VOX Delay <- 5 of 38; Snare Verb <- 1 of 38; INST Reverb <- 12 of 38",
+        "where": "plan",
+        "source": "build"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "effort": {
+      "generator": "high",
+      "critic": null,
+      "watchlist": null
+    },
+    "models": {
+      "generator": "claude-sonnet-5",
+      "critic": "claude-haiku-4-5",
+      "watchlist": "claude-haiku-4-5"
+    },
+    "build_log_file": "builds/2026-09-29T03-05-24Z.json"
+  }
+}

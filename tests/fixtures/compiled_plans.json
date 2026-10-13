@@ -1,0 +1,1139 @@
+{
+  "smallband": {
+    "plan": {
+      "conventions_file": "smallband.md",
+      "input_list": "smallband.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Kick",
+          "source": {
+            "input": "Kick",
+            "type": "Mic",
+            "model": "Beta 52",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 80,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Drums"
+          ],
+          "mute_group": [],
+          "bus_sends": [
+            {
+              "bus": "Drums",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Drums Compressed",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Monitor 1",
+              "mode": "pre",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Drums",
+            "bus_sends": "Busses: Drums, Drums Compressed, Monitor 1",
+            "processing": "Processing: matched subject in conventions for 'Kick' / 'drums'"
+          }
+        },
+        {
+          "channel": 2,
+          "bank": "ch",
+          "name": "Snare",
+          "source": {
+            "input": "Snare",
+            "type": "Mic",
+            "model": "SM57",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              2
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 80,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Drums"
+          ],
+          "mute_group": [],
+          "bus_sends": [
+            {
+              "bus": "Drums",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Drums Compressed",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Monitor 1",
+              "mode": "pre",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Drums",
+            "bus_sends": "Busses: Drums, Drums Compressed, Monitor 1",
+            "processing": "Processing: matched subject in conventions for 'Snare' / 'drums'"
+          }
+        },
+        {
+          "channel": 3,
+          "bank": "ch",
+          "name": "Overheads",
+          "source": {
+            "input": "Overheads",
+            "type": "Mic",
+            "model": "SM81",
+            "stereo": false,
+            "phantom": true
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              3
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 80,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Drums"
+          ],
+          "mute_group": [],
+          "bus_sends": [
+            {
+              "bus": "Drums",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Drums Compressed",
+              "mode": "post",
+              "level_db": 0.0
+            },
+            {
+              "bus": "Monitor 1",
+              "mode": "pre",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Drums",
+            "bus_sends": "Busses: Drums, Drums Compressed, Monitor 1",
+            "processing": "Processing: matched subject in conventions for 'Overheads' / 'drums'"
+          }
+        },
+        {
+          "channel": 4,
+          "bank": "ch",
+          "name": "Bass",
+          "source": {
+            "input": "Bass",
+            "type": "DI",
+            "model": "Countryman",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              9
+            ],
+            "stated": true
+          },
+          "processing": {
+            "hpf_hz": 40,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Band"
+          ],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 2 (band)",
+            "patch": "Input list: stated socket 'LCL 9'",
+            "dca": "DCAs: Band",
+            "processing": "Processing: matched subject in conventions for 'Bass' / 'band'"
+          }
+        },
+        {
+          "channel": 5,
+          "bank": "ch",
+          "name": "Elec Gtr",
+          "source": {
+            "input": "Elec Gtr",
+            "type": "Instrument",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              4
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 40,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Band"
+          ],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 2 (band)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Band",
+            "processing": "Processing: matched subject in conventions for 'Elec Gtr' / 'band'"
+          }
+        },
+        {
+          "channel": 6,
+          "bank": "ch",
+          "name": "Keys",
+          "source": {
+            "input": "Keys",
+            "type": "Instrument",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              5
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 40,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Band"
+          ],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 2 (band)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Band",
+            "processing": "Processing: matched subject in conventions for 'Keys' / 'band'"
+          }
+        },
+        {
+          "channel": 7,
+          "bank": "ch",
+          "name": "Lead Vox",
+          "source": {
+            "input": "Lead Vox",
+            "type": "Mic",
+            "model": "SM58",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              6
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 100,
+            "preset": "Lead Vocal",
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Vocals"
+          ],
+          "mute_group": [
+            "Vocals"
+          ],
+          "bus_sends": [
+            {
+              "bus": "Vocals",
+              "mode": "post",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 3 (vocals)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Vocals",
+            "bus_sends": "Busses: Vocals",
+            "processing": "Processing: matched subject in conventions for 'Lead Vox' / 'vocals'"
+          }
+        },
+        {
+          "channel": 8,
+          "bank": "ch",
+          "name": "BGV 1",
+          "source": {
+            "input": "BGV 1",
+            "type": "Mic",
+            "model": "SM58",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              7
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 100,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [
+            "Vocals"
+          ],
+          "mute_group": [
+            "Vocals"
+          ],
+          "bus_sends": [
+            {
+              "bus": "Vocals",
+              "mode": "post",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 3 (vocals)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "dca": "DCAs: Vocals",
+            "bus_sends": "Busses: Vocals",
+            "processing": "Processing: matched subject in conventions for 'BGV 1' / 'vocals'"
+          }
+        },
+        {
+          "channel": 9,
+          "bank": "ch",
+          "name": "Playback",
+          "source": {
+            "input": "Playback",
+            "type": "Line",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "A",
+            "sockets": [
+              1
+            ],
+            "stated": true
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 4 (misc)",
+            "patch": "Input list: stated socket 'AES50-A 1'"
+          }
+        }
+      ],
+      "dcas": {
+        "Drums": {
+          "index": 1,
+          "description": "all drums-category channels",
+          "provenance": "DCAs: Drums"
+        },
+        "Band": {
+          "index": 2,
+          "description": "all band-category channels",
+          "provenance": "DCAs: Band"
+        },
+        "Vocals": {
+          "index": 3,
+          "description": "all vocals-category channels",
+          "provenance": "DCAs: Vocals"
+        },
+        "FX": {
+          "index": 4,
+          "description": "all effects busses",
+          "provenance": "DCAs: FX"
+        }
+      },
+      "mute_groups": {
+        "Vocals": {
+          "index": 1,
+          "description": "same membership as the Vocals DCA",
+          "provenance": "Mute Groups: Vocals"
+        }
+      },
+      "busses": {
+        "Drums": {
+          "index": 1,
+          "destination": {
+            "type": "main",
+            "index": 1
+          },
+          "destinations": [
+            {
+              "type": "main",
+              "index": 1
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "mono": null,
+          "description": "drums channels route to bus post-fader at unity, bus routes to main",
+          "provenance": "Busses: Drums"
+        },
+        "Drums Compressed": {
+          "index": 2,
+          "destination": {
+            "type": "main",
+            "index": 1
+          },
+          "destinations": [
+            {
+              "type": "main",
+              "index": 1
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "mono": null,
+          "description": "same as Drums, plus a compressor on the bus, -6dB",
+          "provenance": "Busses: Drums Compressed (same as Drums)"
+        },
+        "Vocals": {
+          "index": 3,
+          "destination": {
+            "type": "main",
+            "index": 1
+          },
+          "destinations": [
+            {
+              "type": "main",
+              "index": 1
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "mono": null,
+          "description": "vocals channels route to bus post-fader, bus routes to main",
+          "provenance": "Busses: Vocals"
+        },
+        "Monitor 1": {
+          "index": 4,
+          "destination": {
+            "type": "dedicated_output",
+            "label": "Drum wedge",
+            "socket": {
+              "group": "LCL",
+              "sockets": [
+                3,
+                4
+              ]
+            },
+            "sockets": [
+              {
+                "group": "LCL",
+                "sockets": [
+                  3,
+                  4
+                ]
+              }
+            ]
+          },
+          "destinations": [
+            {
+              "type": "dedicated_output",
+              "label": "Drum wedge",
+              "socket": {
+                "group": "LCL",
+                "sockets": [
+                  3,
+                  4
+                ]
+              },
+              "sockets": [
+                {
+                  "group": "LCL",
+                  "sockets": [
+                    3,
+                    4
+                  ]
+                }
+              ]
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "mono": null,
+          "description": "drums channels route to bus pre-fader at unity, bus routes to a dedicated output, named \"Drum wedge\", routed to Local outputs 3-4",
+          "provenance": "Busses: Monitor 1"
+        },
+        "FX": {
+          "index": 5,
+          "destination": null,
+          "destinations": [],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "mono": null,
+          "description": "effects busses route to main",
+          "provenance": "Busses: FX"
+        }
+      },
+      "outputs": {
+        "Main": {
+          "socket": {
+            "group": "LCL",
+            "sockets": [
+              1,
+              2
+            ]
+          },
+          "sockets": [
+            {
+              "group": "LCL",
+              "sockets": [
+                1,
+                2
+              ]
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "description": "full mix, routed to Local outputs 1-2, EQ set for a recordable sound",
+          "provenance": "Output: Main",
+          "kind": "main",
+          "index": 1
+        },
+        "Matrix": {
+          "socket": null,
+          "sockets": [],
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "description": "fed from Main, EQ corrects the room",
+          "provenance": "Output: Matrix",
+          "kind": "matrix",
+          "index": 1,
+          "fed_by": {
+            "type": "main",
+            "index": 1
+          }
+        }
+      }
+    },
+    "warnings": [
+      "channel 'Kick': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying",
+      "channel 'Snare': no socket stated -- auto-assigned LCL 2, verify against the real patch before applying",
+      "channel 'Overheads': no socket stated -- auto-assigned LCL 3, verify against the real patch before applying",
+      "channel 'Elec Gtr': no socket stated -- auto-assigned LCL 4, verify against the real patch before applying",
+      "channel 'Keys': no socket stated -- auto-assigned LCL 5, verify against the real patch before applying",
+      "channel 'Lead Vox': no socket stated -- auto-assigned LCL 6, verify against the real patch before applying",
+      "channel 'BGV 1': no socket stated -- auto-assigned LCL 7, verify against the real patch before applying",
+      "bus 'Vocals' send mode is 'post' but no level was stated -- defaulting to unity (0dB), not guessed at a different value",
+      "output 'Matrix' has no derivable physical output socket stated -- left unspecified in the plan",
+      "DCA 'FX' exists in conventions but its membership could not be derived from the description ('all effects busses') -- treated as empty, not guessed",
+      "bus 'FX' exists in conventions but its membership could not be derived from the description ('effects busses route to main') -- treated as empty, not guessed",
+      "processing rule never matched any channel (subject 'All other vocals-category' isn't any row's exact name or category): 'All other vocals-category channels use the \"BGV\" preset.'",
+      "CONVENTIONS ERROR -- '## Watch' is not a heading the templated grammar handles, so every line under it was dropped. Headings it reads: Busses, Channels, DCAs, Inputs, Mute Groups, Output, Processing",
+      "'## Inputs' -- not understood, so it had no effect on the plan: 'Within drums: kick, snare, overheads (stereo), other percussion.'",
+      "'## Channels' -- not understood, so it had no effect on the plan: 'Match inputs in patch order. Stereo-paired inputs become one stereo channel.'",
+      "'## Watch' -- not a section this parser handles at all, so the line had no effect: 'Alert if any vocals-category channel is muted.'",
+      "'## Watch' -- not a section this parser handles at all, so the line had no effect: 'Alert if the Main fader moves below -10dB.'"
+    ]
+  },
+  "usb_phantom": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "x.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "USB Return",
+          "source": {
+            "input": "USB Return",
+            "type": "Line",
+            "model": "",
+            "stereo": false,
+            "phantom": true
+          },
+          "patch": {
+            "group": "USB",
+            "sockets": [
+              1
+            ],
+            "stated": true
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (band)",
+            "patch": "Input list: stated socket 'USB 1'"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {},
+      "outputs": {}
+    },
+    "warnings": []
+  },
+  "bus_minus6": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "x.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Kick",
+          "source": {
+            "input": "Kick",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [
+            {
+              "bus": "Drums",
+              "mode": "post",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "bus_sends": "Busses: Drums"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {
+        "Drums": {
+          "index": 1,
+          "destination": {
+            "type": "main",
+            "index": 1
+          },
+          "destinations": [
+            {
+              "type": "main",
+              "index": 1
+            }
+          ],
+          "fader": {
+            "fader_db": -6.0,
+            "muted": null
+          },
+          "mono": null,
+          "description": "drums channels route to bus post-fader at unity, bus routes to main, starts at -6dB",
+          "provenance": "Busses: Drums"
+        }
+      },
+      "outputs": {}
+    },
+    "warnings": [
+      "channel 'Kick': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying"
+    ]
+  },
+  "starting_muted": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "x.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Kick",
+          "source": {
+            "input": "Kick",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": true
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [
+            {
+              "bus": "Drums",
+              "mode": "post",
+              "level_db": 0.0
+            }
+          ],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "bus_sends": "Busses: Drums",
+            "fader": "Processing: matched subject in conventions for 'Kick' / 'drums'"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {
+        "Drums": {
+          "index": 1,
+          "destination": {
+            "type": "main",
+            "index": 1
+          },
+          "destinations": [
+            {
+              "type": "main",
+              "index": 1
+            }
+          ],
+          "fader": {
+            "fader_db": null,
+            "muted": true
+          },
+          "mono": null,
+          "description": "drums channels route to bus post-fader at unity, bus routes to main, starts muted",
+          "provenance": "Busses: Drums"
+        }
+      },
+      "outputs": {}
+    },
+    "warnings": [
+      "channel 'Kick': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying"
+    ]
+  },
+  "neg_inf": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "x.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Kick",
+          "source": {
+            "input": "Kick",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": -144.0,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "fader": "Processing: matched subject in conventions for 'Kick' / 'drums'"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {},
+      "outputs": {}
+    },
+    "warnings": [
+      "channel 'Kick': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying"
+    ]
+  },
+  "host_main2": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "host.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Kick",
+          "source": {
+            "input": "Kick",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (drums)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying"
+          }
+        },
+        {
+          "channel": 2,
+          "bank": "ch",
+          "name": "HOST",
+          "source": {
+            "input": "HOST",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              2
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": null,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [
+            {
+              "index": 2
+            }
+          ],
+          "provenance": {
+            "channel": "Inputs: patch order position 2 (host)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "main_routes": "Processing: matched subject in conventions for 'HOST' / 'host'"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {},
+      "outputs": {}
+    },
+    "warnings": [
+      "channel 'Kick': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying",
+      "channel 'HOST': no socket stated -- auto-assigned LCL 2, verify against the real patch before applying",
+      "'## Channels' -- not understood, so it had no effect on the plan: 'n/a'"
+    ]
+  },
+  "aux": {
+    "plan": {
+      "conventions_file": "<string>",
+      "input_list": "x.csv",
+      "channels": [
+        {
+          "channel": 1,
+          "bank": "ch",
+          "name": "Stage Wedge",
+          "source": {
+            "input": "Stage Wedge",
+            "type": "Mic",
+            "model": "",
+            "stereo": false,
+            "phantom": false
+          },
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              1
+            ],
+            "stated": false
+          },
+          "processing": {
+            "hpf_hz": 100,
+            "preset": null,
+            "hi_cut_hz": null,
+            "tilt_db": null,
+            "trim_db": null,
+            "balance_db": null,
+            "invert": null,
+            "gain_db": null
+          },
+          "fader": {
+            "fader_db": null,
+            "muted": null
+          },
+          "dca": [],
+          "mute_group": [],
+          "bus_sends": [],
+          "main_routes": [],
+          "provenance": {
+            "channel": "Inputs: patch order position 1 (monitor)",
+            "patch": "Auto-assigned (no socket stated in the input list) -- verify before applying",
+            "processing": "Processing: matched subject in conventions for 'Stage Wedge' / 'monitor'"
+          }
+        }
+      ],
+      "dcas": {},
+      "mute_groups": {},
+      "busses": {},
+      "outputs": {}
+    },
+    "warnings": [
+      "channel 'Stage Wedge': no socket stated -- auto-assigned LCL 1, verify against the real patch before applying"
+    ]
+  }
+}

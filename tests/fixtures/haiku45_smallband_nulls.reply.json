@@ -1,0 +1,32 @@
+{
+  "outputs": {
+    "Main 1": {
+      "kind": "main",
+      "destination": null,
+      "fed_by": null,
+      "patch": null,
+      "fader": null,
+      "description": "Main stereo mix",
+      "provenance": "Conventions: 'Main should be the full mix. Send to Matrix 1. Main has no physical output of its own; it only feeds Matrix 1.'"
+    },
+    "Matrix 1": {
+      "kind": "matrix",
+      "fed_by": {
+        "type": "main",
+        "index": 1
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7,
+          8
+        ],
+        "stated": true
+      },
+      "fader": null,
+      "description": "Main stereo output",
+      "provenance": "Conventions: 'Matrix 1 takes its feed from Main. Patch output to internal XLRs 7 and 8.'"
+    }
+  },
+  "aux": null
+}

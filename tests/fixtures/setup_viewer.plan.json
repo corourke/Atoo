@@ -1,0 +1,97 @@
+{
+  "conventions_file": "fixtures/setup_viewer.md",
+  "input_list": "fixtures/setup_viewer.csv",
+  "channels": [
+    {
+      "channel": 1,
+      "bank": "ch",
+      "name": "Kick",
+      "color": "Red",
+      "source": {"input": "Kick", "type": "Mic", "model": "Beta 91", "stereo": false, "phantom": false},
+      "patch": {"group": "A", "sockets": [1], "stated": true},
+      "processing": {"hpf_hz": 40, "preset": null},
+      "fader": {"fader_db": -144, "muted": null},
+      "dca": ["Drums"],
+      "mute_group": ["Band"],
+      "bus_sends": [
+        {"bus": "MON1", "mode": "pre", "level_db": -144},
+        {"bus": "Drums", "mode": "post", "level_db": 0.0}
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Channel Assignments: drums first, kit order kick/snare",
+        "patch": "Input list: AES50-A 1, stated",
+        "processing": "Processing: 'highpass at 40Hz on anything in drums category'",
+        "dca": "DCAs: 'Drums DCA should include every channel in drums category'",
+        "mute_group": "Mute Groups: 'Band: All band instruments'",
+        "bus_sends": "Busses: Drums mix bus includes all drum channels post unity",
+        "fader": "Channel Processing: 'Leave all faders all the way down'"
+      }
+    },
+    {
+      "channel": 2,
+      "bank": "ch",
+      "name": "Vocal 1",
+      "color": null,
+      "source": {"input": "Lead Vox", "type": "Mic", "model": "SM58", "stereo": false, "phantom": true},
+      "patch": {"group": "A", "sockets": [2], "stated": false},
+      "processing": {"hpf_hz": 80, "preset": "Vocal"},
+      "fader": {"fader_db": -6.0, "muted": false},
+      "dca": [],
+      "mute_group": [],
+      "bus_sends": [],
+      "main_routes": [{"index": 1}],
+      "provenance": {
+        "channel": "Channel Assignments: vocals after drums",
+        "patch": "Input list: AES50-A 2 (auto-assigned, no stated socket)"
+      }
+    }
+  ],
+  "dcas": {"Drums": {"index": 1}},
+  "mute_groups": {"Band": {"index": 1}},
+  "busses": {
+    "Drums": {
+      "destination": {"type": "main", "index": 1},
+      "index": 1,
+      "dca": [],
+      "mute_group": [],
+      "description": "Drum submix",
+      "provenance": "Busses: 'Drums mix bus feeds Main 1'"
+    }
+  },
+  "outputs": {
+    "Main L/R": {
+      "socket": {"group": "A", "sockets": [1, 2]},
+      "sockets": [{"group": "A", "sockets": [1, 2]}],
+      "kind": "main",
+      "index": 1,
+      "description": "House PA feed",
+      "provenance": "Outputs: 'Main out to house PA on AES50-A 1/2'"
+    }
+  },
+  "unassigned_inputs": ["Spare 1"],
+  "notes": [
+    {"text": "Kick HPF inferred from drums category rule.", "source": "model"}
+  ],
+  "meta": {
+    "generated_at": "2026-09-15T12:00:00+00:00",
+    "strategy": "compile",
+    "verify_at_generation": {
+      "skipped": false,
+      "ok": false,
+      "error_count": 1,
+      "warning_count": 1,
+      "summary": "BLOCKED -- do not apply"
+    },
+    "critic_findings": null,
+    "verify_findings": {
+      "errors": [
+        {"severity": "error", "code": "V001", "where": "ch.2", "message": "Phantom power on an unpatched socket."}
+      ],
+      "warnings": [
+        {"severity": "warning", "code": "V002", "where": "bus.Drums", "message": "Bus has no stated send mode."}
+      ]
+    },
+    "expectations_findings": {"errors": [], "warnings": []}
+  }
+}

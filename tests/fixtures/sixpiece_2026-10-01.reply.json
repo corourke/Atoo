@@ -1,0 +1,1105 @@
+{
+ "channels": [
+  {
+   "input": "Kick",
+   "bank": "ch",
+   "name": "Kick",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Kick B91A"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Snare",
+   "bank": "ch",
+   "name": "Snare",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Snare i5"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Hi-hat",
+   "bank": "ch",
+   "name": "Hi-hat",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Hi Hat"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Rack tom 1",
+   "bank": "ch",
+   "name": "Rack tom 1",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "H.Tom e604"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Rack tom 2",
+   "bank": "ch",
+   "name": "Rack tom 2",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "M.Tom e604"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Floor tom 1",
+   "bank": "ch",
+   "name": "Floor tom 1",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Fl.Tom e604"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Floor tom 2",
+   "bank": "ch",
+   "name": "Floor tom 2",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Fl.Tom e604"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "OH L",
+   "bank": "ch",
+   "name": "OH L",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "O.Head SM81"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "OH R",
+   "bank": "ch",
+   "name": "OH R",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "O.Head SM81"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Sample Pad",
+   "bank": "ch",
+   "name": "Sample Pad",
+   "color": "Red",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 40,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Synth"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Bass",
+   "bank": "ch",
+   "name": "Bass",
+   "color": "Blue",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 80,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Bass GTR"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Band"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ]
+  },
+  {
+   "input": "EG SR",
+   "bank": "ch",
+   "name": "EG SR",
+   "color": "Magenta",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 80,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "E.GTR Gen"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Guitars"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ]
+  },
+  {
+   "input": "EG SL",
+   "bank": "ch",
+   "name": "EG SL",
+   "color": "Magenta",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 80,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "E.GTR Gen"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Guitars"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ]
+  },
+  {
+   "input": "AG SR",
+   "bank": "ch",
+   "name": "AG SR",
+   "color": "Magenta",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 80,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "A.GTR DI"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Guitars"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ]
+  },
+  {
+   "input": "Keys L",
+   "pair": "Keys R",
+   "bank": "ch",
+   "name": "Keys",
+   "color": "Cyan",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 80,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Keys"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Keys"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ]
+  },
+  {
+   "input": "DSR Vox",
+   "bank": "ch",
+   "name": "DSR Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "DSC Lead Vox",
+   "bank": "ch",
+   "name": "DSC Lead Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "DSL Vox",
+   "bank": "ch",
+   "name": "DSL Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "USR Vox",
+   "bank": "ch",
+   "name": "USR Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "USL Vox",
+   "bank": "ch",
+   "name": "USL Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "USC Vox",
+   "bank": "ch",
+   "name": "USC Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Beta58"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "DSC Vox",
+   "bank": "ch",
+   "name": "DSC Vox",
+   "color": "Green",
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "hpf_hz": 120,
+    "gain_db": 20,
+    "trim_db": 0,
+    "preset": "Vocal Gen"
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": []
+  },
+  {
+   "input": "Ambient/EKIT",
+   "bank": "ch",
+   "name": "Ambient/EKIT",
+   "color": null,
+   "patch": {
+    "group": "A"
+   },
+   "processing": {
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [],
+   "mute_group": [],
+   "main_routes": []
+  }
+ ],
+ "dcas": [
+  {
+   "name": "Drums",
+   "fader": {
+    "fader_db": 0
+   }
+  },
+  {
+   "name": "Guitars",
+   "fader": {
+    "fader_db": 0
+   }
+  },
+  {
+   "name": "Keys",
+   "fader": {
+    "fader_db": 0
+   }
+  },
+  {
+   "name": "Vocals",
+   "fader": {
+    "fader_db": 0
+   }
+  },
+  {
+   "name": "Band",
+   "fader": {
+    "fader_db": 0
+   }
+  },
+  {
+   "name": "FX",
+   "fader": {
+    "fader_db": 0
+   }
+  }
+ ],
+ "mute_groups": [
+  {
+   "name": "Band"
+  },
+  {
+   "name": "Vocals"
+  },
+  {
+   "name": "FX"
+  }
+ ],
+ "busses": [
+  {
+   "name": "MON1",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "MON1",
+    "patch": {
+     "group": "LCL",
+     "sockets": [
+      1
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "mono": true,
+   "provenance": "Busses: MON1 mono, local XLR 1, fader down",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad",
+      "Bass",
+      "EG SR",
+      "EG SL",
+      "AG SR",
+      "Keys",
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox",
+      "Ambient/EKIT"
+     ],
+     "mode": "pre",
+     "level_db": -144
+    }
+   ]
+  },
+  {
+   "name": "MON2",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "MON2",
+    "patch": {
+     "group": "LCL",
+     "sockets": [
+      2
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "mono": true,
+   "provenance": "Busses: MON2 local XLR 2",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad",
+      "Bass",
+      "EG SR",
+      "EG SL",
+      "AG SR",
+      "Keys",
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox",
+      "Ambient/EKIT"
+     ],
+     "mode": "pre",
+     "level_db": -144
+    }
+   ]
+  },
+  {
+   "name": "MON3",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "MON3",
+    "patch": {
+     "group": "LCL",
+     "sockets": [
+      3
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "mono": true,
+   "provenance": "Busses: MON3 local XLR 3",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad",
+      "Bass",
+      "EG SR",
+      "EG SL",
+      "AG SR",
+      "Keys",
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox",
+      "Ambient/EKIT"
+     ],
+     "mode": "pre",
+     "level_db": -144
+    }
+   ]
+  },
+  {
+   "name": "MON4",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "MON4",
+    "patch": {
+     "group": "LCL",
+     "sockets": [
+      4
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "mono": true,
+   "provenance": "Busses: MON4 local XLR 4",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad",
+      "Bass",
+      "EG SR",
+      "EG SL",
+      "AG SR",
+      "Keys",
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox",
+      "Ambient/EKIT"
+     ],
+     "mode": "pre",
+     "level_db": -144
+    }
+   ]
+  },
+  {
+   "name": "Drums",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "mono": false,
+   "provenance": "Mix busses: Drums stereo",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad"
+     ],
+     "mode": "post",
+     "level_db": 0
+    }
+   ]
+  },
+  {
+   "name": "Drums Comp",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": -6
+   },
+   "mono": false,
+   "provenance": "Mix busses: Drums Comp fader -6 dB",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Hi-hat",
+      "Rack tom 1",
+      "Rack tom 2",
+      "Floor tom 1",
+      "Floor tom 2",
+      "OH L",
+      "OH R",
+      "Sample Pad"
+     ],
+     "mode": "post",
+     "level_db": 0
+    }
+   ]
+  },
+  {
+   "name": "Vocals",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "mono": false,
+   "provenance": "Mix busses: Vocals stereo",
+   "sends": [
+    {
+     "from": [
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox"
+     ],
+     "mode": "post",
+     "level_db": 0
+    }
+   ]
+  },
+  {
+   "name": "VOX Reverb",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "dca": [
+    "FX"
+   ],
+   "mute_group": [
+    "FX"
+   ],
+   "mono": false,
+   "provenance": "FX busses: stereo, to Main",
+   "sends": [
+    {
+     "from": [
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox"
+     ],
+     "mode": "post",
+     "level_db": 0
+    }
+   ]
+  },
+  {
+   "name": "VOX Delay",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "dca": [
+    "FX"
+   ],
+   "mute_group": [
+    "FX"
+   ],
+   "mono": false,
+   "provenance": "FX busses: stereo, to Main",
+   "sends": [
+    {
+     "from": [
+      "DSR Vox",
+      "DSC Lead Vox",
+      "DSL Vox",
+      "USR Vox",
+      "USL Vox",
+      "USC Vox",
+      "DSC Vox"
+     ],
+     "mode": "post",
+     "level_db": 0
+    }
+   ]
+  },
+  {
+   "name": "Snare Verb",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "dca": [
+    "FX"
+   ],
+   "mute_group": [
+    "FX"
+   ],
+   "mono": false,
+   "provenance": "FX busses: stereo, to Main",
+   "sends": [
+    {
+     "from": [
+      "Snare"
+     ],
+     "mode": "pre",
+     "level_db": -10
+    }
+   ]
+  },
+  {
+   "name": "INST Reverb",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0
+   },
+   "dca": [
+    "FX"
+   ],
+   "mute_group": [
+    "FX"
+   ],
+   "mono": false,
+   "provenance": "FX busses: stereo, to Main",
+   "sends": [
+    {
+     "from": [
+      "Bass",
+      "EG SR",
+      "EG SL",
+      "AG SR",
+      "Keys"
+     ],
+     "mode": "post",
+     "level_db": -144
+    }
+   ]
+  }
+ ],
+ "outputs": [
+  {
+   "name": "Main 1",
+   "patch": null,
+   "kind": "main",
+   "fader": {
+    "fader_db": 0
+   },
+   "provenance": "Outputs: Main has no physical output of its own"
+  },
+  {
+   "name": "Matrix 1",
+   "patch": {
+    "group": "LCL",
+    "sockets": [
+     7,
+     8
+    ]
+   },
+   "kind": "matrix",
+   "fader": {
+    "fader_db": 0
+   },
+   "fed_by": {
+    "type": "main",
+    "index": 1
+   },
+   "provenance": "Outputs: Matrix 1 fed from Main, internal XLR 7 and 8, stereo"
+  }
+ ],
+ "unassigned_inputs": [],
+ "notes": [
+  {
+   "text": "Aux strips: MUSIC, HOST and TALKBACK are not in the input list, so they were not created (nothing invented). The Speech DCA, Speech mute group and Strings/Horns/Tracks groups are empty and not created.",
+   "source": "model"
+  },
+  {
+   "text": "Drums Comp bus: compressor 'No Stressor', threshold -20 dB, attack 20 ms, release 50 ms; ratio and other settings not set.",
+   "source": "model"
+  },
+  {
+   "text": "Keys bus not created: only one keyboard channel (stereo pair counts as one). Strings and Horns busses not created: no such channels.",
+   "source": "model"
+  },
+  {
+   "text": "Ambient/EKIT placed on a regular channel because the instructions call it a channel; monitor sends only, no Main route.",
+   "source": "model"
+  }
+ ]
+}

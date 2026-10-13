@@ -1,0 +1,760 @@
+{
+ "channels": [
+  {
+   "input": "Kick",
+   "name": "Kick",
+   "color": "Red",
+   "processing": {
+    "preset": "Kick In",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Drums",
+    "dca": "category table: Drums",
+    "mute_group": "category table: Drums",
+    "fader": "category table: Drums: fader fully down (-144 dB)",
+    "main_routes": "category table: Drums: Main only through its busses",
+    "processing": "category table: Drums: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Snare",
+   "name": "Snare",
+   "color": "Red",
+   "processing": {
+    "preset": "Snare",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Drums",
+    "dca": "category table: Drums",
+    "mute_group": "category table: Drums",
+    "fader": "category table: Drums: fader fully down (-144 dB)",
+    "main_routes": "category table: Drums: Main only through its busses",
+    "processing": "category table: Drums: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Rack Tom",
+   "name": "Rack Tom",
+   "color": "Red",
+   "processing": {
+    "preset": "H Tom",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Drums",
+    "dca": "category table: Drums",
+    "mute_group": "category table: Drums",
+    "fader": "category table: Drums: fader fully down (-144 dB)",
+    "main_routes": "category table: Drums: Main only through its busses",
+    "processing": "category table: Drums: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Floor Tom",
+   "name": "Floor Tom",
+   "color": "Red",
+   "processing": {
+    "preset": "Fl Tom",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Drums",
+    "dca": "category table: Drums",
+    "mute_group": "category table: Drums",
+    "fader": "category table: Drums: fader fully down (-144 dB)",
+    "main_routes": "category table: Drums: Main only through its busses",
+    "processing": "category table: Drums: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "OH L",
+   "pair": "OH R",
+   "stereo": true,
+   "name": "OH",
+   "color": "Red",
+   "processing": {
+    "preset": "OH",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Drums"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "pair": "Conventions: L/R pairs become one stereo channel, overheads included",
+    "color": "category table: Drums",
+    "dca": "category table: Drums",
+    "mute_group": "category table: Drums",
+    "fader": "category table: Drums: fader fully down (-144 dB)",
+    "main_routes": "category table: Drums: Main only through its busses",
+    "processing": "category table: Drums: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Bass DI",
+   "name": "Bass DI",
+   "color": "Blue",
+   "processing": {
+    "preset": "Bass",
+    "gain_db": 26,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Band"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "color": "category table: Bass",
+    "dca": "category table: Bass",
+    "mute_group": "category table: Bass",
+    "fader": "category table: Bass: fader fully down (-144 dB)",
+    "main_routes": "category table: Bass: straight to Main 1",
+    "processing": "category table: Bass: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Gtr 1",
+   "name": "Gtr 1",
+   "color": "Pink",
+   "processing": {
+    "preset": "E Gtr",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Band"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "color": "category table: Guitars",
+    "dca": "category table: Guitars",
+    "mute_group": "category table: Guitars",
+    "fader": "category table: Guitars: fader fully down (-144 dB)",
+    "main_routes": "category table: Guitars: straight to Main 1",
+    "processing": "category table: Guitars: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Gtr 2",
+   "name": "Gtr 2",
+   "color": "Pink",
+   "processing": {
+    "preset": "E Gtr",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Band"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "color": "category table: Guitars",
+    "dca": "category table: Guitars",
+    "mute_group": "category table: Guitars",
+    "fader": "category table: Guitars: fader fully down (-144 dB)",
+    "main_routes": "category table: Guitars: straight to Main 1",
+    "processing": "category table: Guitars: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Keys L",
+   "pair": "Keys R",
+   "stereo": true,
+   "name": "Keys",
+   "color": "Cyan",
+   "processing": {
+    "preset": "Keys",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Band"
+   ],
+   "mute_group": [
+    "Band"
+   ],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "pair": "Conventions: L/R pairs become one stereo channel; A11+A12 starts on an odd socket",
+    "color": "category table: Keys",
+    "dca": "category table: Keys",
+    "mute_group": "category table: Keys",
+    "fader": "category table: Keys: fader fully down (-144 dB)",
+    "main_routes": "category table: Keys: straight to Main 1",
+    "processing": "category table: Keys: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Lead Vox",
+   "name": "Lead Vox",
+   "color": "Green",
+   "processing": {
+    "preset": "Vocal",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Vocals",
+    "dca": "category table: Vocals",
+    "mute_group": "category table: Vocals",
+    "fader": "category table: Vocals: fader fully down (-144 dB)",
+    "main_routes": "category table: Vocals: Main only through its busses",
+    "processing": "category table: Vocals: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "BV Gtr",
+   "name": "BV Gtr",
+   "color": "Green",
+   "processing": {
+    "preset": "Vocal",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Vocals",
+    "dca": "category table: Vocals",
+    "mute_group": "category table: Vocals",
+    "fader": "category table: Vocals: fader fully down (-144 dB)",
+    "main_routes": "category table: Vocals: Main only through its busses",
+    "processing": "category table: Vocals: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "BV Keys",
+   "name": "BV Keys",
+   "color": "Green",
+   "processing": {
+    "preset": "Vocal",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Vocals",
+    "dca": "category table: Vocals",
+    "mute_group": "category table: Vocals",
+    "fader": "category table: Vocals: fader fully down (-144 dB)",
+    "main_routes": "category table: Vocals: Main only through its busses",
+    "processing": "category table: Vocals: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Guest Vox",
+   "name": "Guest Vox",
+   "color": "Green",
+   "processing": {
+    "preset": "Vocal",
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Vocals"
+   ],
+   "mute_group": [
+    "Vocals"
+   ],
+   "main_routes": [],
+   "provenance": {
+    "color": "category table: Vocals",
+    "dca": "category table: Vocals",
+    "mute_group": "category table: Vocals",
+    "fader": "category table: Vocals: fader fully down (-144 dB)",
+    "main_routes": "category table: Vocals: Main only through its busses",
+    "processing": "category table: Vocals: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Playback L",
+   "pair": "Playback R",
+   "stereo": true,
+   "name": "Playback",
+   "color": "Yellow",
+   "processing": {
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -144
+   },
+   "dca": [
+    "Playback"
+   ],
+   "mute_group": [],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "pair": "Conventions: L/R pairs become one stereo channel named Playback",
+    "color": "category table: Playback",
+    "dca": "category table: Playback",
+    "fader": "category table: Playback: fader fully down (-144 dB)",
+    "main_routes": "category table: Playback: straight to Main 1",
+    "processing": "category table: Playback: gain 20 dB, trim 0 dB"
+   }
+  },
+  {
+   "input": "Music",
+   "quote": "Walk-in music (\"Music\") on Aux 1, stereo, source LCL 3-4. Fader at -20dB",
+   "bank": "aux",
+   "channel": 1,
+   "name": "Music",
+   "stereo": true,
+   "patch": {
+    "group": "LCL",
+    "sockets": [
+     3,
+     4
+    ],
+    "stated": true
+   },
+   "color": "Yellow",
+   "processing": {
+    "gain_db": 20,
+    "trim_db": 0
+   },
+   "fader": {
+    "fader_db": -20,
+    "muted": false
+   },
+   "dca": [
+    "Playback"
+   ],
+   "mute_group": [],
+   "main_routes": [
+    {
+     "index": 1
+    }
+   ],
+   "provenance": {
+    "channel": "Instructions: 'Walk-in music (\"Music\") on Aux 1, stereo, source LCL 3-4. Fader at -20dB.'",
+    "dca": "Conventions: Playback DCA includes any aux the show adds for music",
+    "main_routes": "Conventions: playback goes direct to Main"
+   }
+  }
+ ],
+ "busses": [
+  {
+   "name": "Vox Wedge",
+   "mono": true,
+   "color": "White",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "Vox Wedge",
+    "patch": {
+     "group": "A",
+     "sockets": [
+      1
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -12,
+    "muted": false
+   },
+   "sends": [
+    {
+     "from": [
+      "Lead Vox",
+      "Guest Vox"
+     ],
+     "mode": "pre",
+     "level_db": -18,
+     "provenance": "Instructions: Lead Vox sends to Vox Wedge; Conventions: monitor sends PRE at -18 dB"
+    }
+   ],
+   "provenance": "Instructions: Vox Wedge patched to AES50-A output 1; Conventions: wedge mix is mono"
+  },
+  {
+   "name": "Gtr Wedge",
+   "mono": true,
+   "color": "White",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "Gtr Wedge",
+    "patch": {
+     "group": "A",
+     "sockets": [
+      2
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -12,
+    "muted": false
+   },
+   "sends": [
+    {
+     "from": [
+      "Gtr 1",
+      "BV Gtr"
+     ],
+     "mode": "pre",
+     "level_db": -18,
+     "provenance": "Instructions: Gtr 1 and BV Gtr send to Gtr Wedge; Conventions: PRE at -18 dB"
+    }
+   ],
+   "provenance": "Instructions: AES50-A output 2; wedge mono"
+  },
+  {
+   "name": "Keys Wedge",
+   "mono": true,
+   "color": "White",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "Keys Wedge",
+    "patch": {
+     "group": "A",
+     "sockets": [
+      3
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -12,
+    "muted": false
+   },
+   "sends": [
+    {
+     "from": [
+      "Keys",
+      "BV Keys"
+     ],
+     "mode": "pre",
+     "level_db": -18,
+     "provenance": "Instructions: Keys and BV Keys send to Keys Wedge; Conventions: PRE at -18 dB"
+    }
+   ],
+   "provenance": "Instructions: AES50-A output 3; wedge mono"
+  },
+  {
+   "name": "Drum IEM",
+   "mono": false,
+   "color": "White",
+   "destination": {
+    "type": "dedicated_output",
+    "label": "Drum IEM",
+    "patch": {
+     "group": "A",
+     "sockets": [
+      7,
+      8
+     ],
+     "stated": true
+    }
+   },
+   "fader": {
+    "fader_db": -12,
+    "muted": false
+   },
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Bass DI",
+      "Lead Vox",
+      "Playback"
+     ],
+     "mode": "pre",
+     "level_db": -18,
+     "provenance": "Instructions: Kick, Snare, Bass DI, Lead Vox and Playback send to Drum IEM; Conventions: PRE at -18 dB"
+    }
+   ],
+   "provenance": "Instructions: AES50-A outputs 7 and 8; Conventions: IEM mix is stereo"
+  },
+  {
+   "name": "Drums",
+   "mono": false,
+   "color": "Red",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   },
+   "preset": "Mix Bus",
+   "sends": [
+    {
+     "from": [
+      "Kick",
+      "Snare",
+      "Rack Tom",
+      "Floor Tom",
+      "OH"
+     ],
+     "mode": "post",
+     "level_db": 0,
+     "provenance": "Conventions: every drums channel POST at 0 dB"
+    }
+   ],
+   "provenance": "Conventions: Drums mix bus, stereo"
+  },
+  {
+   "name": "Vocals",
+   "mono": false,
+   "color": "Green",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   },
+   "preset": "Mix Bus",
+   "sends": [
+    {
+     "from": [
+      "Lead Vox",
+      "BV Gtr",
+      "BV Keys",
+      "Guest Vox"
+     ],
+     "mode": "post",
+     "level_db": 0,
+     "provenance": "Conventions: every vocals channel POST at 0 dB"
+    }
+   ],
+   "provenance": "Conventions: Vocals mix bus, stereo"
+  },
+  {
+   "name": "Vox Verb",
+   "mono": false,
+   "color": "Purple",
+   "destination": {
+    "type": "main",
+    "index": 1
+   },
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   },
+   "preset": "Vox Verb",
+   "dca": [
+    "FX"
+   ],
+   "mute_group": [
+    "FX"
+   ],
+   "sends": [
+    {
+     "from": [
+      "Lead Vox",
+      "BV Gtr",
+      "BV Keys",
+      "Guest Vox"
+     ],
+     "mode": "post",
+     "level_db": -6,
+     "provenance": "Conventions: Vox Verb POST at -6 dB from vocals channels"
+    }
+   ],
+   "provenance": "Conventions: FX bus Vox Verb, stereo"
+  }
+ ],
+ "dcas": [
+  {
+   "name": "Drums",
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   }
+  },
+  {
+   "name": "Band",
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   }
+  },
+  {
+   "name": "Vocals",
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   }
+  },
+  {
+   "name": "Playback",
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   }
+  },
+  {
+   "name": "FX",
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   }
+  }
+ ],
+ "mute_groups": [
+  {
+   "name": "Band"
+  },
+  {
+   "name": "Vocals"
+  },
+  {
+   "name": "FX"
+  }
+ ],
+ "outputs": [
+  {
+   "name": "PA",
+   "kind": "main",
+   "index": 1,
+   "patch": {
+    "group": "LCL",
+    "sockets": [
+     1,
+     2
+    ],
+    "stated": true
+   },
+   "fader": {
+    "fader_db": 0,
+    "muted": false
+   },
+   "provenance": "Conventions: Main 1 named PA on LCL 1 and 2 at unity"
+  }
+ ],
+ "unassigned_inputs": [],
+ "notes": [
+  {
+   "text": "Bus presets: Drums/Vocals 'Mix Bus' and Vox Verb 'Vox Verb' as per conventions.",
+   "source": "model"
+  }
+ ]
+}

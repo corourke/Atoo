@@ -1,0 +1,1214 @@
+{
+  "channels": [
+    {
+      "input": "Kick",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 1",
+        "patch": "Patching convention: starts at A 1",
+        "processing": "Drums get 40 Hz high-pass per conventions",
+        "gain_db": "Conventions: 20dB on each channel",
+        "fader": "Conventions: all faders down",
+        "dca": "Drums DCA per conventions",
+        "mute_group": "Band mute group per conventions"
+      }
+    },
+    {
+      "input": "Snare",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 2",
+        "patch": "Patching convention: A 2"
+      }
+    },
+    {
+      "input": "Hi-hat",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 3",
+        "patch": "Patching convention: A 3"
+      }
+    },
+    {
+      "input": "Rack tom 1",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 4",
+        "patch": "Patching convention: A 4"
+      }
+    },
+    {
+      "input": "Rack tom 2",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 5",
+        "patch": "Patching convention: A 5"
+      }
+    },
+    {
+      "input": "Floor tom 1",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 6",
+        "patch": "Patching convention: A 6"
+      }
+    },
+    {
+      "input": "Floor tom 2",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 7",
+        "patch": "Patching convention: A 7"
+      }
+    },
+    {
+      "input": "OH L",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 8",
+        "patch": "Patching convention: A 8; kept mono per conventions (OH L/R get separate processing)"
+      }
+    },
+    {
+      "input": "OH R",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 9",
+        "patch": "Patching convention: A 9"
+      }
+    },
+    {
+      "input": "Sample Pad",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Red",
+      "processing": {
+        "hpf_hz": 40,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 10",
+        "patch": "Patching convention: A 10"
+      }
+    },
+    {
+      "input": "Bass",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Blue",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Band"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Input list row 11",
+        "patch": "Patching convention: A 11",
+        "processing": "Bass/instruments get 80 Hz high-pass per conventions",
+        "main_routes": "Bass not in a mix bus, routes directly to Main 1 per conventions"
+      }
+    },
+    {
+      "input": "EG SR",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Magenta",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Input list row 12",
+        "patch": "Patching convention: A 12"
+      }
+    },
+    {
+      "input": "EG SL",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Magenta",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Input list row 13",
+        "patch": "Patching convention: A 13"
+      }
+    },
+    {
+      "input": "AG SR",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Magenta",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Input list row 14",
+        "patch": "Patching convention: A 14"
+      }
+    },
+    {
+      "input": "Keys L",
+      "pair": "Keys R",
+      "stereo": true,
+      "patch": {
+        "group": "A"
+      },
+      "color": "Cyan",
+      "processing": {
+        "hpf_hz": 80,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Input list rows 15-16",
+        "patch": "Patching convention: A 15-16 (stereo pair)",
+        "stereo": "Conventions: L/R without 'separate processing' note = stereo pair",
+        "processing": "Keys are band instruments, 80 Hz high-pass per conventions"
+      },
+      "inferred": [
+        {
+          "field": "stereo",
+          "basis": "Keys L and Keys R are named as stereo pair in input list; conventions for non-overhead instruments with L/R designation"
+        }
+      ]
+    },
+    {
+      "input": "DSR Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 17",
+        "patch": "Patching convention: A 17",
+        "processing": "Vocals get 120 Hz high-pass per conventions",
+        "main_routes": "Vocals in Vocals mix bus, routes via bus to Main"
+      }
+    },
+    {
+      "input": "DSC Lead Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 18",
+        "patch": "Patching convention: A 18"
+      }
+    },
+    {
+      "input": "DSL Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 19",
+        "patch": "Patching convention: A 19"
+      }
+    },
+    {
+      "input": "USR Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 20",
+        "patch": "Patching convention: A 20"
+      }
+    },
+    {
+      "input": "USL Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 21",
+        "patch": "Patching convention: A 21"
+      }
+    },
+    {
+      "input": "USC Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 22",
+        "patch": "Patching convention: A 22"
+      }
+    },
+    {
+      "input": "DSC Vox",
+      "patch": {
+        "group": "A"
+      },
+      "color": "Green",
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "main_routes": [],
+      "provenance": {
+        "input": "Input list row 23",
+        "patch": "Patching convention: A 23"
+      }
+    },
+    {
+      "input": "Talkback",
+      "patch": {
+        "group": "A",
+        "sockets": [
+          40
+        ]
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "gain_db": 20
+      },
+      "fader": {
+        "fader_db": -144
+      },
+      "channel": 40,
+      "dca": [],
+      "mute_group": [],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "input": "Instructions: Talkback on Channel 40, source A 40",
+        "patch": "Instructions override conventions",
+        "processing": "Talkback is speech-like, applying 120 Hz high-pass per conventions for speech"
+      }
+    }
+  ],
+  "busses": [
+    {
+      "name": "MON1",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON1",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            1
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad",
+            "Bass",
+            "EG SR",
+            "EG SL",
+            "AG SR",
+            "Keys L",
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "provenance": "Conventions: every channel except speech sends to monitor, pre-fader, all the way down"
+        }
+      ],
+      "provenance": "Conventions: Monitor 1 of 4, mono, to local XLR 1"
+    },
+    {
+      "name": "MON2",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON2",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            2
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad",
+            "Bass",
+            "EG SR",
+            "EG SL",
+            "AG SR",
+            "Keys L",
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "provenance": "Conventions: every channel except speech sends to monitor, pre-fader, all the way down"
+        }
+      ],
+      "provenance": "Conventions: Monitor 2 of 4, mono, to local XLR 2"
+    },
+    {
+      "name": "MON3",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON3",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            3
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad",
+            "Bass",
+            "EG SR",
+            "EG SL",
+            "AG SR",
+            "Keys L",
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "provenance": "Conventions: every channel except speech sends to monitor, pre-fader, all the way down"
+        }
+      ],
+      "provenance": "Conventions: Monitor 3 of 4, mono, to local XLR 3"
+    },
+    {
+      "name": "MON4",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON4",
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            4
+          ],
+          "stated": true
+        }
+      },
+      "mono": true,
+      "fader": {
+        "fader_db": -144
+      },
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad",
+            "Bass",
+            "EG SR",
+            "EG SL",
+            "AG SR",
+            "Keys L",
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "pre",
+          "level_db": -144,
+          "provenance": "Conventions: every channel except speech sends to monitor, pre-fader, all the way down"
+        }
+      ],
+      "provenance": "Conventions: Monitor 4 of 4, mono, to local XLR 4"
+    },
+    {
+      "name": "Drums",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band",
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad"
+          ],
+          "mode": "post",
+          "level_db": 0,
+          "provenance": "Conventions: Drums mix bus receives all drum channels, post-fader, unity"
+        }
+      ],
+      "provenance": "Conventions: Mix bus, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "Mix bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "Drums Comp",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": -6
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band",
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "Kick",
+            "Snare",
+            "Hi-hat",
+            "Rack tom 1",
+            "Rack tom 2",
+            "Floor tom 1",
+            "Floor tom 2",
+            "OH L",
+            "OH R",
+            "Sample Pad"
+          ],
+          "mode": "post",
+          "level_db": 0,
+          "provenance": "Conventions: Drums Comp is duplicate of Drums bus, same channels, fader at -6dB"
+        }
+      ],
+      "provenance": "Conventions: Mix bus, stereo, fader at -6dB, heavy compression",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "Mix bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "Vocals",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals",
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "post",
+          "level_db": 0,
+          "provenance": "Conventions: Vocals mix bus receives all vocal channels, post-fader, unity"
+        }
+      ],
+      "provenance": "Conventions: Mix bus, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "Mix bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "VOX Reverb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "post",
+          "level_db": 0,
+          "provenance": "Conventions: FX bus receiving all vocal channels, post-fader, unity"
+        }
+      ],
+      "provenance": "Conventions: FX bus for vocal reverb, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "FX bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "VOX Delay",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "DSR Vox",
+            "DSC Lead Vox",
+            "DSL Vox",
+            "USR Vox",
+            "USL Vox",
+            "USC Vox",
+            "DSC Vox"
+          ],
+          "mode": "post",
+          "level_db": 0,
+          "provenance": "Conventions: FX bus receiving all vocal channels, post-fader, unity"
+        }
+      ],
+      "provenance": "Conventions: FX bus for vocal delay, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "FX bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "Snare Verb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "Snare"
+          ],
+          "mode": "pre",
+          "level_db": -10,
+          "provenance": "Conventions: FX bus for snare reverb, snare channel only, pre-fader, -10dB"
+        }
+      ],
+      "provenance": "Conventions: FX bus for snare reverb, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "FX bus conventionally stereo"
+        }
+      ]
+    },
+    {
+      "name": "INST Reverb",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "mono": false,
+      "fader": {
+        "fader_db": 0
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "sends": [
+        {
+          "from": [
+            "Bass",
+            "EG SR",
+            "EG SL",
+            "AG SR",
+            "Keys L"
+          ],
+          "mode": "post",
+          "level_db": -144,
+          "provenance": "Conventions: FX bus for instrument reverb, all instruments except drums/vocals, post-fader, all the way down by default"
+        }
+      ],
+      "provenance": "Conventions: FX bus for instrument reverb, stereo, fader at unity, routed to Main 1",
+      "inferred": [
+        {
+          "field": "mono",
+          "basis": "FX bus conventionally stereo"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Main 1",
+      "kind": "main",
+      "index": 1,
+      "patch": null,
+      "provenance": "Conventions: Main 1 is the full mix, not patched to physical output directly"
+    },
+    {
+      "name": "Matrix 1",
+      "kind": "matrix",
+      "index": 1,
+      "fed_by": {
+        "type": "main",
+        "index": 1
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7,
+          8
+        ],
+        "stated": true
+      },
+      "provenance": "Conventions: Matrix 1 fed from Main 1, patched to local XLRs 7-8",
+      "inferred": []
+    }
+  ],
+  "dcas": [
+    {
+      "name": "Drums"
+    },
+    {
+      "name": "Guitars"
+    },
+    {
+      "name": "Keys"
+    },
+    {
+      "name": "Band"
+    },
+    {
+      "name": "Vocals"
+    },
+    {
+      "name": "FX"
+    }
+  ],
+  "mute_groups": [
+    {
+      "name": "Band"
+    },
+    {
+      "name": "Vocals"
+    },
+    {
+      "name": "FX"
+    }
+  ],
+  "category_colors": [
+    {
+      "category": "drums",
+      "color": "Red"
+    },
+    {
+      "category": "bass",
+      "color": "Blue"
+    },
+    {
+      "category": "guitars",
+      "color": "Magenta"
+    },
+    {
+      "category": "keys",
+      "color": "Cyan"
+    },
+    {
+      "category": "vocals",
+      "color": "Green"
+    }
+  ],
+  "unassigned_inputs": [
+    {
+      "input": "Ambient/EKIT",
+      "quote": "Conventions: 'Any inputs that are for background music, or any audio source that is not a part of the band should be placed on an Aux channel.' The notes say 'AMBIENT MIC or Electronic Drum Kit' -- if electronic drum kit it is part of band, if ambient mic it is environmental/background. Placed on Aux 1 following the conservative interpretation of the 'ambient' designation."
+    }
+  ],
+  "notes": [
+    {
+      "text": "Aux 1 (Ambient/EKIT): Input list row 24 placed on Aux channel per conventions for misc/background inputs. Patched to A 24. Note ambiguity in 'Ambient' vs 'Electronic Drum Kit' -- if this is the e-kit, it should be moved to a regular channel in the Drums section. Verify at soundcheck.",
+      "source": "model"
+    },
+    {
+      "text": "Drums Comp bus compressor setting per conventions: No Stressor model, threshold -20dB, attack 20ms, release 50ms. This cannot be set in the current format; configure manually on the console.",
+      "source": "model"
+    },
+    {
+      "text": "All monitor bus sends (MON1-4) are set to -144 (all the way down) with send switch unmuted (mute off). Bring up individual sends at soundcheck as needed for each wedge/IEM mix.",
+      "source": "model"
+    },
+    {
+      "text": "All channel faders and monitor bus faders start fully down (-144). Mix bus and FX bus faders start at unity (0). Bring up channel faders at soundcheck.",
+      "source": "model"
+    },
+    {
+      "text": "Phantom power: applied per input list row settings. Drums mics (Kick, toms, overheads) and vocal mics (all varieties) are set per input list. DI channels (Bass, Guitars, Keys) have no phantom.",
+      "source": "model"
+    }
+  ]
+}

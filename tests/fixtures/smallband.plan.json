@@ -1,0 +1,1251 @@
+{
+  "channels": [
+    {
+      "channel": 1,
+      "bank": "ch",
+      "name": "Kick",
+      "color": "Red",
+      "source": {
+        "input": "Kick",
+        "type": "Mic",
+        "model": "Beta 52",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          1
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Conventions: 'Patch drums first... Drum kit order: kick, snare...' \u2014 Kick first.",
+        "patch": "No socket given in input list; chose LCL group sequentially, avoiding Bass's stated LCL 9.",
+        "processing": "Conventions: 'highpass at 40 Hz on anything in the drums category.'",
+        "dca": "DCAs: 'Drums DCA should include every channel in the drums category.'",
+        "mute_group": "Mute Groups: 'Band: All band instruments' \u2014 drums counted as band instrument per domain note that 'instruments' excludes vocals only.",
+        "bus_sends": "Busses: Drums/Drums Comp mix busses include all drum channels post/unity; Monitor busses: all channel sends down, pre, per convention."
+      }
+    },
+    {
+      "channel": 2,
+      "bank": "ch",
+      "name": "Snare",
+      "color": "Red",
+      "source": {
+        "input": "Snare",
+        "type": "Mic",
+        "model": "SM57",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          2
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Snare Verb",
+          "mode": "pre",
+          "level_db": -10.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Conventions drum order: kick, snare next.",
+        "patch": "No socket given; chosen LCL 2.",
+        "processing": "Drums category HPF 40Hz.",
+        "dca": "Drums DCA membership.",
+        "mute_group": "Band mute group per drums = band instrument.",
+        "bus_sends": "FX Busses: 'Snare Verb -- Snare channels. Sends from channels at -10db, PRE fader.'"
+      }
+    },
+    {
+      "channel": 3,
+      "bank": "ch",
+      "name": "HiHat",
+      "color": "Red",
+      "source": {
+        "input": "HiHat",
+        "type": "Mic",
+        "model": "Audix i5",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          3
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Drum order: after snare, hi hat.",
+        "patch": "Chosen LCL 3.",
+        "processing": "Drums HPF 40Hz.",
+        "dca": "Drums DCA.",
+        "mute_group": "Band mute group.",
+        "bus_sends": "Drums/Drums Comp busses + monitor sends per convention."
+      }
+    },
+    {
+      "channel": 4,
+      "bank": "ch",
+      "name": "OH L",
+      "color": "Red",
+      "source": {
+        "input": "OH L",
+        "type": "Mic",
+        "model": "SM81",
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          4
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Conventions: 'If you see Left/Right designations in the overhead names, do NOT patch as a stereo pair, keep as separate mono channels.' Input list note confirms.",
+        "patch": "No socket given; LCL 4 chosen.",
+        "processing": "Drums HPF 40Hz.",
+        "dca": "Drums DCA.",
+        "mute_group": "Band mute group.",
+        "bus_sends": "Drums/Drums Comp + monitor sends."
+      }
+    },
+    {
+      "channel": 5,
+      "bank": "ch",
+      "name": "OH R",
+      "color": "Red",
+      "source": {
+        "input": "OH R",
+        "type": "Mic",
+        "model": "SM81",
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          5
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 40,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "Drums Comp",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Kept mono per overhead exception rule.",
+        "patch": "LCL 5 chosen.",
+        "processing": "Drums HPF 40Hz.",
+        "dca": "Drums DCA.",
+        "mute_group": "Band mute group.",
+        "bus_sends": "Drums/Drums Comp + monitor sends."
+      }
+    },
+    {
+      "channel": 6,
+      "bank": "ch",
+      "name": "Bass",
+      "color": "Blue",
+      "source": {
+        "input": "Bass",
+        "type": "DI",
+        "model": "Countryman",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          9
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Band"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Patch order: bass follows drums per conventions.",
+        "patch": "Input list: 'LCL 9' stated socket.",
+        "processing": "Conventions: 'Same idea for band instruments, but higher -- 80 Hz.'",
+        "dca": "DCAs: no named 'Bass' DCA; falls to 'Band: Include all other instruments not included in one of the DCAs above.'",
+        "mute_group": "Band mute group: bass is a band instrument.",
+        "bus_sends": "FX Busses: 'INST Reverb -- All instrument channels (but not drums). ... all the way down, POST fader.' Not part of any mix bus, so main_routes direct per 'Send all Channels to Main unless included in mix busses.'"
+      }
+    },
+    {
+      "channel": 7,
+      "bank": "ch",
+      "name": "Elec Gtr",
+      "color": "Pink",
+      "source": {
+        "input": "Elec Gtr",
+        "type": "Instrument",
+        "model": "",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          6
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Guitars"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Patch order: guitars after bass.",
+        "patch": "No socket given; LCL 6 chosen.",
+        "processing": "Conventions: 'Guitars channels get a high-pass at 80Hz.'",
+        "dca": "DCAs: 'Guitars: all guitars-category channels.'",
+        "mute_group": "Band mute group: guitar is a band instrument.",
+        "bus_sends": "INST Reverb per FX Busses rule; direct to Main since not in a mix bus."
+      }
+    },
+    {
+      "channel": 8,
+      "bank": "ch",
+      "name": "Keyboard",
+      "color": "Cyan",
+      "source": {
+        "input": "Keyboard",
+        "type": "Instrument",
+        "model": "Stereo DI",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          7
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 80,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Keys"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "INST Reverb",
+          "mode": "post",
+          "level_db": -144
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Patch order: keyboards after guitars.",
+        "patch": "No socket given; LCL 7 chosen.",
+        "processing": "Band-instrument default HPF 80Hz (no keyboard-specific rule).",
+        "dca": "DCAs: 'Keys: all keys-category channels' \u2014 created even with a single member per 'if there is at least one member.'",
+        "mute_group": "Band mute group: keys are a band instrument.",
+        "bus_sends": "INST Reverb per FX rule; direct to Main since 'Keys' mix bus only created 'if there are multiple keyboards' (only one here)."
+      }
+    },
+    {
+      "channel": 9,
+      "bank": "ch",
+      "name": "Lead Vox",
+      "color": "Green",
+      "source": {
+        "input": "Lead Vox",
+        "type": "Mic",
+        "model": "SM58",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          8
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Patch order: vocals after instruments.",
+        "patch": "No socket given; LCL 8 chosen.",
+        "processing": "Conventions: 'Vocals need more low end removed ... 120Hz.'",
+        "dca": "DCAs: 'Vocals: all vocals-category channels.'",
+        "mute_group": "Mute Groups: 'Vocals: All vocal channels.'",
+        "bus_sends": "Vocals mix bus (post/unity, feeds Main) plus VOX Reverb/VOX Delay FX busses (post/unity, all vocal channels); main_routes empty since routed via Vocals bus."
+      }
+    },
+    {
+      "channel": 10,
+      "bank": "ch",
+      "name": "BG Vox 1",
+      "color": "Green",
+      "source": {
+        "input": "BG Vox 1",
+        "type": "Mic",
+        "model": "SM58",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          10
+        ],
+        "stated": false
+      },
+      "processing": {
+        "hpf_hz": 120,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "VOX Reverb",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "VOX Delay",
+          "mode": "post",
+          "level_db": 0.0
+        },
+        {
+          "bus": "MON1",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON2",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON3",
+          "mode": "pre",
+          "level_db": -144
+        },
+        {
+          "bus": "MON4",
+          "mode": "pre",
+          "level_db": -144
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "channel": "Patch order: second vocal channel.",
+        "patch": "No socket given; LCL 10 chosen (LCL 9 reserved for Bass).",
+        "processing": "Vocals HPF 120Hz.",
+        "dca": "Vocals DCA.",
+        "mute_group": "Vocals mute group.",
+        "bus_sends": "Vocals mix bus + VOX Reverb/Delay FX busses; routed via bus, no direct main route."
+      }
+    },
+    {
+      "channel": 1,
+      "bank": "aux",
+      "name": "Playback",
+      "color": "Yellow",
+      "source": {
+        "input": "Playback",
+        "type": "Line",
+        "model": "Stereo DI",
+        "stereo": true,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          21,
+          22
+        ],
+        "stated": true
+      },
+      "processing": {
+        "hpf_hz": null,
+        "preset": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "trim_db": null,
+        "balance_db": null,
+        "invert": null,
+        "gain_db": null
+      },
+      "fader": {
+        "fader_db": null,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "bus_sends": [],
+      "main_routes": [
+        {
+          "index": 1
+        }
+      ],
+      "provenance": {
+        "channel": "Conventions: 'Any inputs that are for background music ... should be placed on an Aux channel.' Domain knowledge: external feeds belong on aux strips.",
+        "patch": "Input list: 'AES50-A 21 ... occupies A21 and A22', stated stereo pair.",
+        "processing": "Aux strips have no HPF node on WING (domain knowledge); other processing not stated.",
+        "dca": "No category (tracks/trax) match for 'misc' background music; convention DCA list doesn't cover it.",
+        "mute_group": "Not a band instrument or vocal; no mute group applies.",
+        "bus_sends": "No bus assignment stated for background-music aux; not part of any mix/FX/monitor bus per convention silence.",
+        "fader": "Conventions only state 'leave all faders down' under Channel Processing (ch bank); not explicitly extended to Aux, left null per soundcheck-decision rule.",
+        "main_routes": "Domain rule: 'Every input needs an output' \u2014 routed directly to Main as the only sensible path for background music since no bus claims it."
+      }
+    }
+  ],
+  "dcas": {
+    "Drums": {
+      "index": 1
+    },
+    "Guitars": {
+      "index": 2
+    },
+    "Keys": {
+      "index": 3
+    },
+    "Vocals": {
+      "index": 4
+    },
+    "Band": {
+      "index": 5
+    },
+    "FX": {
+      "index": 6
+    }
+  },
+  "mute_groups": {
+    "Band": {
+      "index": 1
+    },
+    "Vocals": {
+      "index": 2
+    },
+    "FX": {
+      "index": 3
+    }
+  },
+  "busses": {
+    "MON1": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON1",
+        "socket": {
+          "group": "LCL",
+          "sockets": [
+            1
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": true,
+      "description": "Monitor wedge 1.",
+      "provenance": "Busses: 'Create four monitor busses... Patch output to local XLR outputs 1 through 4 if not specified otherwise. Leave bus faders all the way down.'",
+      "index": 1
+    },
+    "MON2": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON2",
+        "socket": {
+          "group": "LCL",
+          "sockets": [
+            2
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": true,
+      "description": "Monitor wedge 2.",
+      "provenance": "Same monitor-bus convention as MON1.",
+      "index": 2
+    },
+    "MON3": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON3",
+        "socket": {
+          "group": "LCL",
+          "sockets": [
+            3
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": true,
+      "description": "Monitor wedge 3.",
+      "provenance": "Same monitor-bus convention as MON1.",
+      "index": 3
+    },
+    "MON4": {
+      "destination": {
+        "type": "dedicated_output",
+        "label": "MON4",
+        "socket": {
+          "group": "LCL",
+          "sockets": [
+            4
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": true,
+      "description": "Monitor wedge 4.",
+      "provenance": "Same monitor-bus convention as MON1.",
+      "index": 4
+    },
+    "Drums": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": null,
+      "description": "Consolidated drum mix, feeds Main.",
+      "provenance": "Busses: 'Drums: include all drum channels, and it feeds the main mix.' Mix busses to Main POST unity, bus fader unity.",
+      "index": 5
+    },
+    "Drums Comp": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": -6.0,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": null,
+      "description": "Parallel heavily-compressed duplicate of the Drums bus.",
+      "provenance": "Busses: '\"Drums Comp\": ... A duplicate of the Drums bus ... Leave the fader pulled down 6dB.'",
+      "index": 6
+    },
+    "Vocals": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [],
+      "mute_group": [],
+      "mono": null,
+      "description": "Consolidated vocal mix, feeds Main.",
+      "provenance": "Busses: '\"Vocals\": include all vocal channels.' Mix bus rule: Main POST unity.",
+      "index": 7
+    },
+    "VOX Reverb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "mono": null,
+      "description": "Reverb return for all vocal channels.",
+      "provenance": "FX Busses: 'VOX Reverb -- All vocal channels', sent to Main unity post; DCA/Mute Group FX: 'include all the effects return busses' / 'All FX busses.'",
+      "index": 8
+    },
+    "VOX Delay": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "mono": null,
+      "description": "Delay return for all vocal channels.",
+      "provenance": "FX Busses: 'VOX Delay -- All vocal channels.'",
+      "index": 9
+    },
+    "Snare Verb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "mono": null,
+      "description": "Reverb return for snare only.",
+      "provenance": "FX Busses: 'Snare Verb -- Snare channels. Sends from channels at -10db, PRE fader.' Bus itself still sent to Main at unity post per FX bus default.",
+      "index": 10
+    },
+    "INST Reverb": {
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0.0,
+        "muted": null
+      },
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "mono": null,
+      "description": "Reverb return for non-drum instrument channels.",
+      "provenance": "FX Busses: 'INST Reverb -- All instrument channels (but not drums). Set send levels ... all the way down, POST fader.'",
+      "index": 11
+    }
+  },
+  "outputs": {
+    "Main": {
+      "kind": "main",
+      "socket": null,
+      "description": "Full band mix; EQ'd for recording quality per conventions.",
+      "provenance": "Outputs: 'Main should be the full mix, EQed so it sounds good for a recording.' No physical output socket stated for Main itself.",
+      "index": 1
+    },
+    "Matrix 1": {
+      "kind": "matrix",
+      "fed_by": {
+        "type": "main",
+        "index": 1
+      },
+      "socket": {
+        "group": "LCL",
+        "sockets": [
+          7,
+          8
+        ],
+        "stated": true
+      },
+      "description": "Room-corrected feed derived from Main.",
+      "provenance": "Outputs: 'Matrix 1 takes its feed from Main and gets EQed to correct for the room. Patch output to internal XLRs 7 and 8.'",
+      "index": 1
+    }
+  },
+  "unassigned_inputs": [],
+  "notes": [
+    {
+      "text": "Keyboard input list has a single row (model 'Stereo DI') with no matching second row; per stereo-pairing rule this cannot be treated as a stereo pair (no two sequential rows), so it is patched as one mono channel. Flagging for human confirmation in case a second Keyboard input was omitted from the sheet.",
+      "source": "model"
+    },
+    {
+      "text": "Playback (background music) aux channel is not addressed by any bus/monitor convention; it was routed directly to Main per the domain rule 'every input needs an output', since no mix/FX/monitor bus claims it. Its starting fader was left null (soundcheck decision) because the 'leave all faders down' instruction is stated under Channel Processing for the ch bank, not explicitly for Aux.",
+      "source": "model"
+    },
+    {
+      "text": "Monitor bus (MON1-4) sends were applied to all ch-bank instrument/vocal channels per convention, but were NOT extended to the Playback aux channel, since background music has no foldback purpose and the convention text only discusses 'channels'.",
+      "source": "model"
+    },
+    {
+      "text": "Mute group 'Band' interpreted per domain knowledge distinction ('instruments' vs 'vocals') as all non-vocal band-instrument channels: Kick, Snare, HiHat, OH L, OH R, Bass, Elec Gtr, Keyboard.",
+      "source": "model"
+    },
+    {
+      "text": "DCA 'Band' holds Bass only, since Bass has no dedicated named DCA in the conventions list and the 'Band' DCA is defined as catching all other instruments not covered elsewhere.",
+      "source": "model"
+    },
+    {
+      "text": "'Drums Comp' bus: apply 'No Stressor' compressor, threshold -20dB, attack 20ms, release 50ms, as stated in conventions -- no field exists on a bus for compressor settings.",
+      "source": "model"
+    },
+    {
+      "text": "'Main' output: apply EQ 'so it sounds good for a recording' -- no processing field exists for Main; recorded here only.",
+      "source": "model"
+    },
+    {
+      "text": "'Matrix 1' output: apply room-correction EQ -- no processing field exists for Matrix; recorded here only.",
+      "source": "model"
+    },
+    {
+      "text": "No horns, strings, or additional keyboards/trax present in this show's input list, so the 'Keys'/'Horns'/'Strings' mix busses and the 'Tracks'/'Strings'/'Horns' DCAs were not created (no qualifying members).",
+      "source": "model"
+    }
+  ],
+  "meta": {
+    "generated_at": "2026-09-20T15:08:22+00:00",
+    "strategy": "generate",
+    "conventions_stack": [
+      {
+        "path": "conventions.md",
+        "role": "conventions",
+        "source": "--conventions"
+      }
+    ],
+    "verify_at_generation": {
+      "skipped": false,
+      "ok": false,
+      "error_count": 4,
+      "warning_count": 0,
+      "summary": "BLOCKED -- do not apply"
+    },
+    "critic_findings": [],
+    "verify_findings": {
+      "errors": [
+        {
+          "severity": "error",
+          "code": "bus.unstated-width-for-dedicated-output",
+          "message": "routes to a dedicated physical output but this bus's mono/stereo width was never stated -- state it explicitly (e.g. 'Set width to mono') so the output socket(s) can be resolved correctly",
+          "where": "busses[MON1]",
+          "source": "verify"
+        },
+        {
+          "severity": "error",
+          "code": "bus.unstated-width-for-dedicated-output",
+          "message": "routes to a dedicated physical output but this bus's mono/stereo width was never stated -- state it explicitly (e.g. 'Set width to mono') so the output socket(s) can be resolved correctly",
+          "where": "busses[MON2]",
+          "source": "verify"
+        },
+        {
+          "severity": "error",
+          "code": "bus.unstated-width-for-dedicated-output",
+          "message": "routes to a dedicated physical output but this bus's mono/stereo width was never stated -- state it explicitly (e.g. 'Set width to mono') so the output socket(s) can be resolved correctly",
+          "where": "busses[MON3]",
+          "source": "verify"
+        },
+        {
+          "severity": "error",
+          "code": "bus.unstated-width-for-dedicated-output",
+          "message": "routes to a dedicated physical output but this bus's mono/stereo width was never stated -- state it explicitly (e.g. 'Set width to mono') so the output socket(s) can be resolved correctly",
+          "where": "busses[MON4]",
+          "source": "verify"
+        }
+      ],
+      "warnings": []
+    },
+    "console_model": "wing-compact"
+  }
+}

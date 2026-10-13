@@ -1,0 +1,213 @@
+{
+  "change": "trumpet, sax and trombone on LCL 21-23, Band DCA",
+  "name": "horns for tonight",
+  "add": {
+    "channels": [
+      {
+        "channel": 14,
+        "bank": "ch",
+        "name": "Trumpet",
+        "color": "Amber",
+        "source": {
+          "input": "Trumpet",
+          "type": "Mic",
+          "model": "SM57",
+          "stereo": false,
+          "phantom": false
+        },
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            21
+          ],
+          "stated": true
+        },
+        "processing": {
+          "gain_db": 20,
+          "trim_db": 0,
+          "preset": "Trumpet",
+          "hpf_hz": null,
+          "hi_cut_hz": null,
+          "tilt_db": null,
+          "balance_db": null,
+          "invert": null
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "dca": [
+          "Band"
+        ],
+        "mute_group": [
+          "Band"
+        ],
+        "bus_sends": [
+          {
+            "bus": "Horns",
+            "mode": "post",
+            "level_db": 0
+          }
+        ],
+        "main_routes": [],
+        "provenance": {
+          "patch": "the change: 'on LCL 21-23' -> LCL 21",
+          "dca": "the change: 'Band DCA'",
+          "color": "conventions: Horns-Amber",
+          "processing": "conventions: trumpet takes the preset \"Trumpet\", which carries its high-pass; gain 20dB, trim 0dB",
+          "mute_group": "conventions: Band mute group holds every horns channel",
+          "main_routes": "conventions: a channel in a mix bus does not also go to Main directly",
+          "fader": "conventions: channel faders start at unity, unmuted",
+          "bus_sends": "conventions: \"Horns\": every horns-category channel, POST fader at unity"
+        }
+      },
+      {
+        "channel": 15,
+        "bank": "ch",
+        "name": "Sax",
+        "color": "Amber",
+        "source": {
+          "input": "Sax",
+          "type": "Mic",
+          "model": "SM57",
+          "stereo": false,
+          "phantom": false
+        },
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            22
+          ],
+          "stated": true
+        },
+        "processing": {
+          "gain_db": 20,
+          "trim_db": 0,
+          "preset": "A Sax",
+          "hpf_hz": null,
+          "hi_cut_hz": null,
+          "tilt_db": null,
+          "balance_db": null,
+          "invert": null
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "dca": [
+          "Band"
+        ],
+        "mute_group": [
+          "Band"
+        ],
+        "bus_sends": [
+          {
+            "bus": "Horns",
+            "mode": "post",
+            "level_db": 0
+          }
+        ],
+        "main_routes": [],
+        "provenance": {
+          "patch": "the change: 'on LCL 21-23' -> LCL 22",
+          "dca": "the change: 'Band DCA'",
+          "color": "conventions: Horns-Amber",
+          "processing": "conventions: alto sax takes the preset \"A Sax\", which carries its high-pass; gain 20dB, trim 0dB",
+          "mute_group": "conventions: Band mute group holds every horns channel",
+          "main_routes": "conventions: a channel in a mix bus does not also go to Main directly",
+          "fader": "conventions: channel faders start at unity, unmuted",
+          "bus_sends": "conventions: \"Horns\": every horns-category channel, POST fader at unity"
+        }
+      },
+      {
+        "channel": 16,
+        "bank": "ch",
+        "name": "Trombone",
+        "color": "Amber",
+        "source": {
+          "input": "Trombone",
+          "type": "Mic",
+          "model": "SM57",
+          "stereo": false,
+          "phantom": false
+        },
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            23
+          ],
+          "stated": true
+        },
+        "processing": {
+          "gain_db": 20,
+          "trim_db": 0,
+          "preset": "T Bone",
+          "hpf_hz": null,
+          "hi_cut_hz": null,
+          "tilt_db": null,
+          "balance_db": null,
+          "invert": null
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "dca": [
+          "Band"
+        ],
+        "mute_group": [
+          "Band"
+        ],
+        "bus_sends": [
+          {
+            "bus": "Horns",
+            "mode": "post",
+            "level_db": 0
+          }
+        ],
+        "main_routes": [],
+        "provenance": {
+          "patch": "the change: 'on LCL 21-23' -> LCL 23",
+          "dca": "the change: 'Band DCA'",
+          "color": "conventions: Horns-Amber",
+          "processing": "conventions: trombone takes the preset \"T Bone\", which carries its high-pass; gain 20dB, trim 0dB",
+          "mute_group": "conventions: Band mute group holds every horns channel",
+          "main_routes": "conventions: a channel in a mix bus does not also go to Main directly",
+          "fader": "conventions: channel faders start at unity, unmuted",
+          "bus_sends": "conventions: \"Horns\": every horns-category channel, POST fader at unity"
+        }
+      }
+    ],
+    "busses": {
+      "Horns": {
+        "mono": false,
+        "preset": "Mix Bus",
+        "color": "Amber",
+        "destination": {
+          "type": "main",
+          "index": 1
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "provenance": "conventions: 'Mix busses are STEREO, routed to Main at unity, faders at unity.' Every mix bus takes the bus preset \"Mix Bus\"; \"Horns\": every horns-category channel"
+      }
+    },
+    "dcas": {},
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [],
+    "dcas": [],
+    "mute_groups": [],
+    "outputs": []
+  },
+  "modify": [],
+  "notes": [
+    "'sax' read as an alto sax, so it takes the A Sax preset; say 'baritone sax' for B Sax.",
+    "The Horns mix bus is new: the Demo show has no horns until now."
+  ]
+}

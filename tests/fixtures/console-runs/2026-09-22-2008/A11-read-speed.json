@@ -1,0 +1,18 @@
+{
+  "console": "WING,192.0.2.16,WING-PP-SERIAL01,wing-compact,SERIAL00000001,3.1-0-g9f314617:release",
+  "model": "wing-compact",
+  "plan_addresses": 6032,
+  "per_leaf": {
+    "seconds": 998.58,
+    "requests": 6032,
+    "values": 5712
+  },
+  "node_dumps": {
+    "seconds": 963.75,
+    "requests": 684,
+    "values": 5712
+  },
+  "disagreements": 8,
+  "only_per_leaf": 0,
+  "only_by_dump": 0
+}

@@ -1,0 +1,12 @@
+socket,name,category,type,model,phantom,notes
+,Kick,drums,Mic,Beta 52,FALSE,
+,Snare,drums,Mic,SM57,FALSE,
+,HiHat,drums,Mic,Audix i5,FALSE,
+,OH L,drums,Mic,SM81,TRUE,Kept as two mono channels so they can be panned separately
+,OH R,drums,Mic,SM81,TRUE,
+LCL 9,Bass,bass,DI,Countryman,FALSE,
+,Elec Gtr,guitars,Instrument,,FALSE,
+,Keyboard,keyboards,Instrument,Stereo DI,FALSE,
+,Lead Vox,vocals,Mic,SM58,FALSE,
+,BG Vox 1,vocals,Mic,SM58,FALSE,
+AES50-A 21,Playback,misc,Line,Stereo DI,FALSE,One row per stereo pair; it occupies A 21 and A 22

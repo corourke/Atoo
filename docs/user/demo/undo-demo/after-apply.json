@@ -1,0 +1,11 @@
+{
+  "/ch/1/name": "Kick",
+  "/ch/1/in/conn/grp": "A",
+  "/ch/1/in/conn/in": 1,
+  "/ch/1/flt/lcf": 39.90524673461914,
+  "/ch/2/name": "Snare",
+  "/ch/2/flt/lcf": 39.90524673461914,
+  "/bus/1/name": "MON1",
+  "/dca/1/name": "Drums",
+  "/dca/2/name": "Horns"
+}

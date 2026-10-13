@@ -1,0 +1,37 @@
+name: War story or audit idea
+description: Something went silently wrong on a show. It may become an audit rule or a watch condition.
+labels: ["war story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The best ideas for what to check come from shows that went wrong.
+        Leave out names of venues, bands or people if you would rather.
+  - type: textarea
+    id: what
+    attributes:
+      label: What went wrong
+      description: What the audience or the band heard, or did not hear.
+    validations:
+      required: true
+  - type: textarea
+    id: found
+    attributes:
+      label: How you found it
+      description: When it was noticed, by whom, and what it turned out to be on the desk.
+    validations:
+      required: true
+  - type: textarea
+    id: catch
+    attributes:
+      label: What would have caught it
+      description: A check before doors, or a warning during the show. A guess is fine.
+  - type: dropdown
+    id: desk
+    attributes:
+      label: Desk
+      options:
+        - WING Compact
+        - WING (full-size)
+        - WING Rack
+        - Another desk

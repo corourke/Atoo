@@ -1,0 +1,18 @@
+order,patch,name,category,type,model,phantom,notes
+1,AES50-A 1,Kick,drums,Mic,Beta 91A,TRUE,Boundary mic inside the kick
+2,AES50-A 2,Snare,drums,Mic,SM57,FALSE,Top
+3,AES50-A 3,Rack Tom,drums,Mic,e604,FALSE,
+4,AES50-A 4,Floor Tom,drums,Mic,e604,FALSE,
+5,AES50-A 5,OH L,drums,Mic,KSM137,TRUE,
+6,AES50-A 6,OH R,drums,Mic,KSM137,TRUE,
+7,AES50-A 7,Bass DI,bass,DI,J48,TRUE,Active DI after the pedalboard
+8,AES50-A 8,Gtr 1,guitars,Mic,e906,FALSE,Stage left amp
+9,AES50-A 9,Gtr 2,guitars,Mic,SM57,FALSE,Stage right amp
+10,AES50-A 11,Keys L,keys,DI,ProD2,FALSE,Stereo DI
+11,AES50-A 12,Keys R,keys,DI,ProD2,FALSE,
+12,AES50-A 13,Lead Vox,vocals,Mic,Beta 58A,FALSE,Centre
+13,AES50-A 14,BV Gtr,vocals,Mic,SM58,FALSE,Gtr 1 sings
+14,AES50-A 15,BV Keys,vocals,Mic,SM58,FALSE,
+,AES50-A 16,Guest Vox,vocals,Mic,SM58,FALSE,Only when the guest singer sits in
+15,LCL 1,Playback L,playback,Line,,FALSE,Backing tracks from the laptop at FOH
+16,LCL 2,Playback R,playback,Line,,FALSE,

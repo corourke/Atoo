@@ -1,0 +1,10 @@
+# A blank issue stays possible (the maintainers file plenty); the forms and
+# the links below steer everyone else.
+blank_issues_enabled: true
+contact_links:
+  - name: A question, an idea, or a conventions file to share
+    url: https://github.com/corourke/Atoo/discussions
+    about: Ask, suggest and share in Discussions, so the issue list stays a list of things to fix.
+  - name: A security problem
+    url: https://github.com/corourke/Atoo/security/advisories/new
+    about: Report it privately. SECURITY.md says what counts.

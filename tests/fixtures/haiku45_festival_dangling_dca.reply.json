@@ -1,0 +1,9 @@
+{"channels":[
+{"input":"Kick","name":"Kick","color":"Red","patch":{"group":"LCL","sockets":[1]},"processing":{"hpf_hz":40,"gain_db":20,"trim_db":0},"dca":["Drums"],"mute_group":["Band"],"provenance":{"dca":"DCAs: Drums DCA includes all drum channels","mute_group":"Mute Groups: Band includes all band instruments"}},
+{"input":"BassDI","name":"BassDI","color":"Blue","patch":{"group":"LCL","sockets":[7]},"processing":{"hpf_hz":80,"gain_db":20,"trim_db":0},"dca":["Band"],"mute_group":["Band"],"main_routes":[{"index":1}],"provenance":{"dca":"DCAs: Bass not explicitly listed, goes to Band DCA","mute_group":"Mute Groups: Band includes all band instruments"}},
+{"input":"VOX 1","name":"VOX 1","color":"Green","patch":{"group":"LCL","sockets":[12]},"processing":{"hpf_hz":120,"gain_db":20,"trim_db":0},"dca":["Vocals"],"mute_group":["Vocals"],"provenance":{"dca":"DCAs: Vocals DCA includes all vocal channels","mute_group":"Mute Groups: Vocals includes all vocal channels"}}],
+"dcas":[{"name":"Drums"},{"name":"Bass"},{"name":"Vocals"}],
+"mute_groups":[{"name":"Band"},{"name":"Vocals"}],
+"busses":[],
+"outputs":[{"name":"Main","kind":"main","index":1,"patch":{"group":"LCL","sockets":[7,8]}}],
+"unassigned_inputs":[],"notes":[]}

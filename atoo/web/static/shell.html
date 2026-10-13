@@ -1,0 +1,1525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atoo</title>
+<link rel="stylesheet" href="/static/styles.css">
+<script>
+  // Before first paint, so a chosen theme never flashes the other one.
+  // The toggle itself is in shell.js; this only applies what it saved.
+  // Dark unless this browser saved another choice (the maintainer, 2026-10-11:
+  // "Dark look is almost always going to be preferred by users"); a
+  // saved "auto" follows the OS.
+  var theme = "dark";
+  try {
+    var t = localStorage.getItem("atoo.theme");
+    if (t === "light" || t === "dark" || t === "auto") theme = t;
+  } catch (e) { /* storage unavailable: the default */ }
+  if (theme !== "auto") document.documentElement.dataset.theme = theme;
+</script>
+</head>
+<!--
+  The shell: one page, three modes, from mockups/build-page/version-h.html.
+
+  Five phases of version H are in. Phase 1 is the
+  chrome: the mode nav, the bundle bar with its console readout and Ping,
+  and the findings dock. Phase 2 is Build's three file tiles -- 01
+  Conventions, 02 Input list, 03 Instructions -- each read-only, each with
+  its derived path and state badge, and step 03 showing the two conventions
+  layers with an overrides/adds-to-house tag per section. Phase 3 is 04 Plan: run the build, draw the plan, flow its findings into
+  the dock -- setup.js. Phase 4 is Apply: the pre-flight
+  verify, the dry-run preview, the one arming checkbox and the journal
+  view -- apply.js. Phase 6 moved the Watch page in --
+  watch.js, formerly app.js on its own page at `/` -- and with it the
+  shell itself moved from `/app` to `/`. Phase 5 is Amend --
+  the Patch screen, where a change is typed --
+  a mode of Apply rather than a page of its own: the four-stage review is
+  drawn by amend.js, and every write -- apply, amend, undo -- still goes
+  through apply.js and its one arming checkbox.
+
+  Three things live OUTSIDE the mode panels, and that placement is the
+  design rather than an accident of markup: the bundle bar, because one
+  show bundle is what all three modes work on; the console readout,
+  because there is one console -- editable there and nowhere else, since
+  one plan may be applied to a primary and then a backup desk; and the
+  findings dock, because a finding
+  raised in Build is the reason you would not press Apply.
+-->
+<body class="shell">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">A2</span>
+    <div>
+      <h1>Atoo</h1>
+      <p class="tagline">Build, apply and prove one show</p>
+    </div>
+  </div>
+  <nav class="page-nav" aria-label="Mode" id="mode-nav">
+    <button type="button" class="page-nav-link page-nav-active" id="nav-build" data-mode="build" aria-current="page">Build</button>
+    <button type="button" class="page-nav-link" id="nav-apply" data-mode="apply">Apply</button>
+    <button type="button" class="page-nav-link" id="nav-watch" data-mode="watch">Watch</button>
+    <button type="button" class="page-nav-link theme-toggle" id="theme-toggle"
+            title="Colour theme: Dark by default; click for Auto (follows your system), then Light">Theme: Dark</button>
+  </nav>
+</header>
+
+<!-- ---- The stale-page banner ---------------------------------------------
+     Shown when the server behind this page is no longer the one that drew
+     it: it was restarted (its instance id changed), or it now has a
+     different show bundle open than this page shows (another tab opened
+     one). The maintainer's desk session, 2026-09-24: a tab kept from A19 showed
+     A19's journal stack against A20's server. A banner rather than a
+     silent reload, because a reload loses whatever was typed and changes
+     what is on screen without saying why. While it is up, every control
+     that writes or runs is off (shell.js); text fields stay readable so
+     anything typed can be copied before reloading. The server refuses a
+     stale write regardless (409) -- this is the courtesy, that is the
+     guard. -->
+<div class="stale-banner" id="stale-banner" role="alert" hidden>
+  <div class="stale-banner-text">
+    <strong id="stale-banner-title">This page is out of date.</strong>
+    <span id="stale-banner-detail"></span>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" id="stale-reload-btn" data-stale-ok>Reload page</button>
+</div>
+
+<!-- ---- The bundle bar (version H's settled design) --------------------
+     `Show bundle: touringband/  [Open...] [New show...]`, plus the
+     console readout and Ping. It is outside .app-shell because it does not
+     belong to any one mode. -->
+<div class="bundle-chrome" id="bundle-chrome">
+  <div class="bundle-bar" id="bundle-bar">
+    <span class="bundle-bar-label">Show bundle:</span>
+    <code class="bundle-bar-name" id="bundle-name">none</code>
+    <span class="state-badge state-readonly" id="bundle-readonly" hidden>read-only</span>
+    <button type="button" class="demo-chip" id="demo-chip" data-popup="demo-popup" hidden>Demo &middot; what's this?</button>
+    <button type="button" class="pipe-change-btn" id="bundle-change-btn">Open&hellip;</button>
+    <button type="button" class="pipe-change-btn" id="bundle-new-btn">New show&hellip;</button>
+    <span class="bundle-bar-sep" aria-hidden="true"></span>
+    <!-- The ONE console on this page (the maintainer, 2026-09-24: "Editable in
+         the bundle bar only"). Ping, Apply, Patch, Undo and Watch all use
+         the address shown here, and it says where it came from: the
+         environment, the config file, or "set here". Change... is refused
+         by the server while a write is running. -->
+    <span class="console-readout">
+      <span class="bundle-bar-label">Console:</span>
+      <code class="bundle-bar-name" id="console-address">not set</code>
+      <span class="console-source" id="console-source" hidden></span>
+      <button type="button" class="pipe-change-btn" id="console-change-btn">Change&hellip;</button>
+      <span class="bundle-bar-sep" aria-hidden="true"></span>
+      <button type="button" class="btn btn-secondary btn-sm" id="ping-btn">Ping</button>
+      <span class="ping-pill" id="ping-pill">not pinged</span>
+    </span>
+    <div class="bundle-bar-spacer"></div>
+  </div>
+
+  <!-- An earlier change made what the Demo show is a yellow notice under the bar;
+       an earlier change (mockups/apply-flow/) made it a popup, shown once
+       (`#demo-popup`, below), which the bar's "Demo · what's this?" chip
+       reopens. -->
+
+  <!-- With no show open, the Demo show is the one thing a
+       newcomer with no desk can try. The button does what Console:
+       Change... -> Demo -> Use this console does. -->
+  <p class="no-show-notice" id="no-show-notice" hidden>
+    No show open.
+    <button type="button" class="btn btn-secondary btn-sm" id="try-demo-btn">Try the Demo show</button>
+    &mdash; no desk needed.
+  </p>
+
+  <!-- Change... and New show... open the file browser -- a
+       folder chooser, and a folder namer with New folder -- rather than a
+       path box; its own path field keeps the paste-a-path fast path. -->
+
+  <!-- The console editor. Demo (the maintainer 2026-10-01: "Set where
+       we choose a demo console on the same dialog as where we choose the
+       IP address. Just call it 'Demo'") is chosen HERE, beside the
+       address, and nowhere else. It opens the packaged,
+       read-only demo show AND sets the Demo console, as one action: the
+       bar reads "Demo show (read-only)" and "Demo", Watch runs on the
+       built-in rig with the demo show's watch.json, Ping has nothing to
+       ping, and Apply previews against the simulated rig but never writes.
+       Choosing an address, or opening or creating a show, leaves it. -->
+  <div class="bundle-bar-edit" id="console-bar-edit">
+    <div class="field console-kind" role="radiogroup" aria-label="Which console">
+      <span>Console</span>
+      <div class="console-kind-opts">
+        <label class="console-kind-opt"><input type="radio" name="console-kind" id="console-kind-desk" value="desk" checked> Address</label>
+        <label class="console-kind-opt"><input type="radio" name="console-kind" id="console-kind-demo" value="demo"> Demo</label>
+      </div>
+    </div>
+    <label class="field">
+      <span>Console address</span>
+      <input type="text" id="console-edit-address" autocomplete="off" placeholder="203.0.113.50">
+    </label>
+    <label class="field field-narrow">
+      <span>Port</span>
+      <input type="number" id="console-edit-port" min="1" max="65535" placeholder="2223">
+    </label>
+    <button type="button" class="btn btn-primary btn-sm" id="console-set-btn">Use this console</button>
+    <button type="button" class="btn btn-secondary btn-sm" id="console-cancel-btn">Cancel</button>
+    <span class="bundle-bar-hint" id="console-edit-hint">Ping, Apply, Patch, Undo and Watch all use this one address.</span>
+    <span class="bundle-bar-hint" id="console-demo-hint" hidden>Opens the demo show, read-only, on a built-in WING Compact rig: no console needed. Build, Apply and Watch can all be looked at; nothing can be saved, built or written.</span>
+  </div>
+
+  <p id="bundle-message" class="panel-message" hidden></p>
+  <p id="console-message" class="panel-message panel-message-error" hidden></p>
+
+</div>
+
+<div class="app-shell">
+  <div class="shell-body">
+    <div class="layout-main">
+
+      <!-- ---- Build: version H's four steps ------------------------------
+           `01 Conventions` is the HOUSE file and sits outside the bundle
+           (#81 point 5) -- hence its own path and the "House" tag. 02 and
+           03 are bundle slots, so their paths are DERIVED from the one
+           folder named in the bundle bar and shown as readouts: there is
+           nothing there to choose, which is why "Change file" is quiet
+           rather than a text box sitting open.
+
+           Steps 02 and 03 edit the bundle's own input.csv and
+           instructions.md: an editable table, and
+           the whole file in one text editor (the maintainer, 2026-09-28: no
+           sections view), each with a Save. Step 01's house file is
+           edited the same way (the maintainer, 2026-09-25), with a warning up
+           once it has changes, naming the blast radius: editing it changes
+           the next build of every show that names it (OPTIONS-H.md,
+           decision 6). Step 02's Save splices only the changed rows into
+           the file (atoo/source_edit.py); every Save is refused when
+           the file changed on disk since the page read it. New file on
+           step 01 and on step 03 (also New instructions.md in its panel)
+           create an EMPTY file, never over one that exists; the example
+           beside each editor is a suggestion, inserted only on request. -->
+      <section class="mode-panel is-active" id="mode-build" role="region" aria-label="Build">
+        <!-- An earlier change (the maintainer, 2026-10-01): the status line that sat
+             under these tiles is gone. Each of its readouts is now on the
+             tile it describes -- input rows on 02, the conventions
+             stack's layers on 03 (the stack its panel draws), each file's findings count on its own tile, the plan's
+             freshness and Rebuild on 04 -- and its sentence of
+             instructions is the "?" beside the tiles. Every block of
+             instructions on Build is a `.help-pop` like it: the same
+             text, opened on demand (shell.js, "pop-up help"). -->
+        <div class="pipeline-wrap" id="pipeline-wrap">
+          <div class="pipeline-row">
+          <div class="pipeline-nav" role="tablist" aria-label="Build steps" id="build-steps">
+
+            <div class="pipe-stop" role="tab" id="tab-conventions" data-step="conventions"
+                 aria-controls="panel-conventions" aria-selected="true" tabindex="0">
+              <div class="pipe-stop-top">
+                <span class="pipe-num">01</span>
+                <span class="pipe-label">Conventions</span>
+                <span class="state-badge state-notset" id="badge-conventions">Not set</span>
+              </div>
+              <span class="pipe-file-hint" id="hint-conventions">not set</span>
+              <!-- A file not there yet is a to-do on its tile,
+                   never a finding in the dock until Build is pressed. -->
+              <p class="pipe-todo" id="todo-conventions" hidden></p>
+              <div class="pipe-stop-actions">
+                <span class="house-tag" title="Not part of the show bundle">House</span>
+                <button type="button" class="pipe-change-btn" id="change-conventions">Change file</button>
+                <button type="button" class="pipe-change-btn" id="new-conventions">New file</button>
+                <span class="pipe-stop-spacer"></span>
+                <span class="pipe-stat pipe-stat-findings" id="findings-conventions" hidden></span>
+              </div>
+              <!-- Change file and New file open the file browser (issue
+                   #291). New file creates an EMPTY conventions file
+                   (2026-09-28: the example is a suggestion beside the
+                   editor, never written by New file), and never over an
+                   existing file. The dialog's
+                   one checkbox is the only way it touches
+                   ~/.atoo.config, and it only ever adds a default: one
+                   naming a different file is reported, and replacing it is
+                   a separate button that names it. -->
+            </div>
+
+            <div class="pipe-arrow" aria-hidden="true">&#8594;</div>
+
+            <div class="pipe-stop" role="tab" id="tab-input-list" data-step="input_list"
+                 aria-controls="panel-input-list" aria-selected="false" tabindex="-1">
+              <div class="pipe-stop-top">
+                <span class="pipe-num">02</span>
+                <span class="pipe-label">Input list</span>
+                <span class="state-badge state-notset" id="badge-input-list">Not set</span>
+              </div>
+              <span class="pipe-file-hint" id="hint-input-list">no show bundle open</span>
+              <p class="pipe-todo" id="todo-input-list" hidden></p>
+              <div class="pipe-stop-actions">
+                <button type="button" class="pipe-change-btn" id="change-input-list">Change file</button>
+                <span class="pipe-stop-spacer"></span>
+                <span class="pipe-stat pipe-stat-findings" id="findings-input-list" hidden></span>
+                <span class="pipe-stat"><strong id="status-rows">&mdash;</strong> input rows<span id="status-skipped" title="Rows with - in their Order cell: in input.csv, left out of the next build" hidden></span></span>
+              </div>
+              <!-- Change file opens the file browser. An input list chosen
+                   from outside the open bundle is COPIED into it as
+                   input.csv, and the page says so; one already
+                   there is never replaced without asking. -->
+            </div>
+
+            <div class="pipe-arrow" aria-hidden="true">&#8594;</div>
+
+            <div class="pipe-stop" role="tab" id="tab-instructions" data-step="instructions"
+                 aria-controls="panel-instructions" aria-selected="false" tabindex="-1">
+              <div class="pipe-stop-top">
+                <span class="pipe-num">03</span>
+                <span class="pipe-label">Instructions</span>
+                <span class="state-badge state-notset" id="badge-instructions">Not set</span>
+              </div>
+              <span class="pipe-file-hint" id="hint-instructions">no show bundle open</span>
+              <p class="pipe-todo" id="todo-instructions" hidden></p>
+              <div class="pipe-stop-actions">
+                <button type="button" class="pipe-change-btn" id="change-instructions">Change file</button>
+                <!-- Shown only when a bundle is open and has no
+                     instructions.md: creates an empty one in the bundle,
+                     never over one that is there. -->
+                <button type="button" class="pipe-change-btn" id="new-instructions" title="Create an empty instructions.md in this bundle" hidden>New file</button>
+                <span class="pipe-stop-spacer"></span>
+                <span class="pipe-stat pipe-stat-findings" id="findings-instructions" hidden></span>
+                <!-- The conventions stack's depth: house file, then this
+                     show's instructions -- the stack step 03's panel draws,
+                     so its count is on step 03's tile. -->
+                <span class="state-badge state-notset" id="status-layers">0 layers</span>
+              </div>
+              <!-- As for step 02: a file chosen from outside the bundle is
+                   copied in as instructions.md -- which is also
+                   the only instructions file `atoo build` reads. New
+                   file needs no dialog: its place is fixed, in the bundle. -->
+            </div>
+
+            <div class="pipe-arrow" aria-hidden="true">&#8594;</div>
+
+            <!-- 04 is the output: the bundle's plan.json, and the build
+                 that writes it. setup.js owns this tile and its panel. -->
+            <div class="pipe-stop" role="tab" id="tab-plan" data-step="plan"
+                 aria-controls="panel-plan" aria-selected="false" tabindex="-1">
+              <div class="pipe-stop-top">
+                <span class="pipe-num">04</span>
+                <span class="pipe-label">Plan</span>
+                <span class="state-badge state-notset" id="badge-plan">Not built</span>
+              </div>
+              <span class="pipe-file-hint" id="hint-plan">no show bundle open</span>
+              <div class="pipe-stop-actions">
+                <!-- Like every other tile's (the maintainer, 2026-09-25): opens a
+                     plan.json from anywhere, read-only, in the file browser. -->
+                <button type="button" class="pipe-change-btn" id="plan-browse-btn"
+                        title="Open a plan.json from anywhere -- read-only; nothing is copied or written">Change file</button>
+                <span class="pipe-stop-spacer"></span>
+                <!-- The plan's freshness, and the Rebuild beside it -- the
+                     status line's, moved onto the tile it describes (issue
+                     #408). setup.js draws all four. -->
+                <span class="readout pipe-stat" id="status-build-progress" hidden></span>
+                <span class="sep" id="status-plan-sep" aria-hidden="true" hidden>&middot;</span>
+                <span class="state-badge state-notset" id="status-plan-badge" hidden>Plan</span>
+                <button type="button" class="btn btn-primary btn-sm pipe-rebuild-btn" id="status-rebuild-btn" hidden>Rebuild plan</button>
+              </div>
+            </div>
+          </div>
+          <div class="help-pop pipeline-help">
+            <button type="button" class="help-btn" aria-label="Help: the Build steps"
+                    aria-expanded="false" aria-controls="help-build-steps">?</button>
+            <div class="help-popover" id="help-build-steps" role="note" hidden>
+              Steps 01&ndash;03 write a file only on Save; step 04 runs <code>atoo build</code>. Nothing here reaches a console.
+            </div>
+          </div>
+          </div>
+
+        </div>
+
+        <div class="build-body">
+
+          <!-- ---- 01 Conventions ------------------------------------- -->
+          <!-- Every Build step draws blocks by one rule (the maintainer,
+               2026-10-13; docs/developer/ui-style.md, §3 "Blocks and
+               sections"): a block's header sits OUTSIDE and above its box
+               (.block-head: white title, grey caps notation); a section inside
+               the box has a grey caps heading (.section-head); nothing is titled
+               inside a border. The selected tile already names the step, so
+               the first block's header does that job. -->
+          <section id="panel-conventions" class="step-panel is-active" role="tabpanel" aria-labelledby="tab-conventions">
+            <div class="step-scroll">
+              <div class="tile-stale" id="stale-conventions" hidden>
+                <span>This file changed on disk after the page read it.</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="reload-conventions">Reload</button>
+              </div>
+
+              <!-- What New file just did, in words: the file it wrote, and
+                   exactly what it wrote to ~/.atoo.config, or why it
+                   left it alone. When the config already names a different
+                   default, the button here -- which names that file -- is
+                   the only way the page replaces it. -->
+              <div class="tile-note" id="conv-created" hidden>
+                <span id="conv-created-text"></span>
+                <button type="button" class="btn btn-secondary btn-sm" id="conv-replace-default" hidden>Replace the default</button>
+              </div>
+
+              <div class="block-head">
+                <h2>House conventions</h2>
+                <span class="notation">Markdown &middot; outside the show bundle &middot; shared by every show</span>
+                <span class="help-pop">
+                  <button type="button" class="help-btn" aria-label="Help: how the conventions file is read"
+                          aria-expanded="false" aria-controls="help-conv-file">?</button>
+                  <span class="help-popover" id="help-conv-file" role="note" hidden>
+                    The whole file reaches the model as one layer &mdash; headings, if you use them,
+                    are for you.
+                    <code>&lt;!-- ... --&gt;</code> text is a comment &mdash; not read by the build.
+                  </span>
+                </span>
+              </div>
+              <div class="panel box">
+                <p class="body-line house-conv-line">
+                  <code class="house-conv-strip-file" id="conv-house-file">not set</code>
+                  <span class="house-conv-strip-origin" id="conv-house-origin"></span>
+                  <span class="help-pop">
+                    <button type="button" class="help-btn" aria-label="Help: the house conventions file"
+                            aria-expanded="false" aria-controls="help-conv-house">?</button>
+                    <span class="help-popover house-conv-strip-note" id="help-conv-house" role="note" hidden>
+                      Named once in <code>~/.atoo.config</code> <code>[conventions]</code>
+                      (or per run with <code>--conventions</code>) and reused by every show.
+                      A bundle already built opens on the file its <code>plan.json</code>
+                      records, so the tile shows what built this show.
+                      Editable here like step 03 &mdash; but an edit changes the next build
+                      of every other show that names it too. If it is true of this show only,
+                      it belongs in step 03 Instructions.
+                    </span>
+                  </span>
+                </p>
+                <!-- the maintainer, 2026-09-28: no sections view. The whole file in
+                     one editor, headings and comments as written; Save and
+                     Discard come up once it differs from the file. The
+                     example below is a suggestion: Insert puts it (or the
+                     part of it selected) at the cursor, and only Save
+                     writes it. -->
+                <div class="section">
+                <div class="section-head">
+                  <h3>File</h3>
+                  <div class="panel-toolbar-spacer"></div>
+                  <span class="state-badge state-drafted" id="conv-ro-badge" hidden>Editing house style</span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="conv-cancel-btn" hidden>Discard</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="conv-save-btn" hidden>Save</button>
+                </div>
+                <div class="amend-signpost house-edit-warning" id="conv-edit-warning" role="note" hidden>
+                  <span><strong>Editing your house style.</strong> This file is not part of
+                  <span class="bundle-name-display" id="conv-edit-bundle">this show</span>. Saving
+                  changes the next build of <em>every</em> show that names it &mdash; if what you
+                  are about to write is true of tonight only, discard it and put it in step 03
+                  Instructions instead.</span>
+                </div>
+                <div class="save-note" id="conv-save-note" role="status" hidden>
+                  <span id="conv-save-text"></span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="conv-save-reload" hidden>Reload</button>
+                </div>
+                <textarea id="conv-text" class="source-editor" data-step="conventions" spellcheck="false"
+                          aria-label="House conventions file" hidden></textarea>
+                <p class="step-empty" id="conv-empty" hidden></p>
+                <details class="conv-card source-example" id="conv-example" hidden>
+                  <summary><span class="chevron">&#9656;</span><span class="conv-heading">Example</span><span class="conv-summary-text">a starting layout to copy from &mdash; never written unless you insert it and Save</span></summary>
+                  <div class="conv-card-body">
+                    <pre class="conv-source-pre source-example-text" id="conv-example-text"></pre>
+                    <div class="source-example-actions">
+                      <button type="button" class="btn btn-secondary btn-sm" id="conv-example-insert">Insert whole example</button>
+                      <span class="step-footer-note">Select part of the example to insert just that, at the cursor.</span>
+                    </div>
+                  </div>
+                </details>
+                </div>
+                <div class="step-footer">
+                  <div class="step-footer-spacer"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="next-to-input-list">Next: Input list &rarr;</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---- 02 Input list -------------------------------------- -->
+          <section id="panel-input-list" class="step-panel" role="tabpanel" aria-labelledby="tab-input-list" hidden>
+            <div class="step-scroll">
+              <div class="tile-stale" id="stale-input-list" hidden>
+                <span>This file changed on disk after the page read it.</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="reload-input-list">Reload</button>
+              </div>
+              <div class="block-head">
+                <h2>Input list</h2>
+                <span class="notation">CSV &middot; <code>input.csv</code> &middot; in the bundle<span id="input-count-note"></span></span>
+                  <span class="help-pop">
+                    <button type="button" class="help-btn" aria-label="Help: the input list"
+                            aria-expanded="false" aria-controls="help-input-list">?</button>
+                    <span class="help-popover" id="help-input-list" role="note" hidden>
+                      One row per <strong>physical input</strong>, which is why a name lives here and
+                      not on a strip: <code>apply</code> writes the name, colour and icon to the
+                      <em>socket</em>, and the strip inherits them. Editable rows only &mdash; no
+                      plan columns. Save writes the bundle's <code>input.csv</code>, changing only
+                      the rows you changed; the plan then reads Stale until it is rebuilt.
+                      Step 04 shows these same rows beside the plan: an edit made there is
+                      an edit made here, unsaved until Save.
+                      <strong>Order</strong> is the band's own number for each input; it does
+                      not set the desk channel. <strong>Skip</strong> keeps a row in the file
+                      and leaves it out of the next build. Drag a row by its handle, or move
+                      it with &#9650; &#9660; or Alt+&uarr;/&darr;; <strong>+</strong> inserts
+                      a blank row below.
+                    </span>
+                  </span>
+              </div>
+              <div class="panel box">
+                <div class="section-head">
+                  <div class="panel-toolbar-spacer"></div>
+                  <span class="state-badge state-drafted" id="input-dirty-badge" hidden>Unsaved changes</span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="input-source-toggle-btn">View source</button>
+                </div>
+                <div class="save-note" id="input-save-note" role="status" hidden>
+                  <span id="input-save-text"></span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="input-save-reload" hidden>Reload</button>
+                </div>
+                <div class="table-wrap" id="input-table-wrap" hidden>
+                  <table class="it" id="input-table">
+                    <thead>
+                      <tr>
+                        <th class="col-move"><span class="visually-hidden">Move</span></th>
+                        <th class="col-order" title="The band's own input number (their IEM split or stage-box order) -- it does not set the desk channel. Skip leaves the row out of the next build; it stays in input.csv.">Order</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Model</th>
+                        <th class="col-phantom">Phantom</th>
+                        <th class="col-preset" title="A preset from Atoo's preset library. It wins over the conventions and instructions, as a stated patch does.">Preset</th>
+                        <th class="col-notes">Notes</th>
+                        <th class="col-sock">Patch</th>
+                        <th class="col-remove"><span class="visually-hidden">Insert or remove</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="input-rows"></tbody>
+                  </table>
+                </div>
+                <!-- Step 02's Notes cell is an icon; this is the box it opens
+                     (the maintainer, 2026-09-28). OK puts the text in the row's own
+                     notes cell -- the same unsaved edit, Save and Discard as
+                     typing in a cell. Esc or Cancel leaves the row as it was. -->
+                <dialog class="note-dialog" id="note-dialog" aria-labelledby="note-dialog-title">
+                  <form method="dialog" class="note-dialog-form">
+                    <h2 class="note-dialog-title" id="note-dialog-title">Notes</h2>
+                    <textarea id="note-dialog-text" rows="7" spellcheck="true"
+                              aria-labelledby="note-dialog-title"></textarea>
+                    <p class="note-dialog-hint">Enter starts a new line. Ctrl+Enter or OK keeps it;
+                      Esc or Cancel leaves the note as it was. Save writes it to
+                      <code>input.csv</code>.</p>
+                    <div class="note-dialog-buttons">
+                      <button type="button" class="btn btn-secondary btn-sm" id="note-dialog-cancel">Cancel</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="note-dialog-ok">OK</button>
+                    </div>
+                  </form>
+                </dialog>
+                <datalist id="input-type-options"></datalist>
+                <!-- Step 02's Preset column (the maintainer, 2026-09-28): the preset
+                     library's names, from GET /api/build/presets. Free text
+                     is still accepted -- with no library, or a name the
+                     library has not got yet (verify says preset.unknown). -->
+                <datalist id="input-preset-options"></datalist>
+                <p class="panel-note preset-library-note" id="input-preset-note" hidden></p>
+                <datalist id="input-category-options"></datalist>
+                <p class="step-empty" id="input-empty" hidden></p>
+                <pre id="input-source" class="conv-source-pre" hidden></pre>
+                <div class="panel-toolbar" id="input-edit-toolbar" style="margin-bottom:0;" hidden>
+                  <button type="button" class="btn btn-ghost btn-sm" id="input-add-row">+ Add row</button>
+                  <div class="panel-toolbar-spacer"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="input-discard-btn" disabled hidden>Discard changes</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="input-save-btn" disabled hidden>Save</button>
+                </div>
+                <div class="step-footer">
+                  <span class="step-footer-note">
+                    Adding inputs just for tonight, to a show that is already on the desk?
+                    Type them as a <strong>change</strong> on the Patch screen instead of
+                    editing this list &mdash; an edit here means a rebuild.
+                    <button type="button" class="link-btn" data-goto-amend>Patch this show &rarr;</button>
+                  </span>
+                  <div class="step-footer-spacer"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="next-to-instructions">Next: Instructions &rarr;</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---- 03 Instructions ------------------------------------
+               The conventions stack, drawn the way `atoo build`
+               prints it, and this show's file in one editor. -->
+          <section id="panel-instructions" class="step-panel" role="tabpanel" aria-labelledby="tab-instructions" hidden>
+            <div class="step-scroll">
+              <div class="block-head">
+                <h2>Conventions, in order</h2>
+                <span class="notation">Each layer overrides the one above it</span>
+                <span class="help-pop">
+                  <button type="button" class="help-btn" aria-label="Help: how the two layers are combined"
+                          aria-expanded="false" aria-controls="help-conv-stack">?</button>
+                  <span class="help-popover" id="help-conv-stack" role="note" hidden>
+                    Both layers reach the model, labelled, with the precedence rule stated between
+                    them &mdash; nothing merges the two texts in code. The same list is written into
+                    the plan at <code>meta.conventions_stack</code>.
+                  </span>
+                </span>
+              </div>
+              <div class="panel box house-conv-panel">
+                <div class="house-conv-strip">
+                  <ol class="stack-list" id="conv-stack"></ol>
+                  <button type="button" class="btn btn-secondary btn-sm" id="house-conv-toggle-btn">View house file</button>
+                </div>
+                <pre id="house-conv-source" class="conv-source-pre" hidden></pre>
+              </div>
+
+              <div class="tile-stale" id="stale-instructions" hidden>
+                <span>This file changed on disk after the page read it.</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="reload-instructions">Reload</button>
+              </div>
+
+              <div class="block-head">
+                <h2>Instructions</h2>
+                <span class="notation">Markdown &middot; <code>instructions.md</code> &middot; in the bundle &middot; this show only</span>
+                <span class="help-pop">
+                  <button type="button" class="help-btn" aria-label="Help: what belongs in this show's instructions"
+                          aria-expanded="false" aria-controls="help-instr-file">?</button>
+                  <span class="help-popover" id="help-instr-file" role="note" hidden>
+                    Only what is true of <em>this</em> show. Where this file is silent, the house
+                    conventions apply in full; where the two disagree, this file wins. Nothing
+                    merges the two texts &mdash; the model applies the rule sentence by sentence.
+                    <code>&lt;!-- ... --&gt;</code> text is a comment &mdash; not read by the build.
+                  </span>
+                </span>
+              </div>
+              <div class="panel box">
+                <!-- As step 01: the whole file in one editor (the maintainer,
+                     2026-09-28), and the example as a suggestion only. -->
+                <div class="section-head">
+                  <h3>File</h3>
+                  <div class="panel-toolbar-spacer"></div>
+                  <span class="state-badge state-drafted" id="instr-edit-badge" hidden>Unsaved changes</span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="instr-cancel-btn" hidden>Discard</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="instr-save-btn" hidden>Save</button>
+                </div>
+                <div class="save-note" id="instr-save-note" role="status" hidden>
+                  <span id="instr-save-text"></span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="instr-save-reload" hidden>Reload</button>
+                </div>
+                <textarea id="instr-text" class="source-editor" data-step="instructions" spellcheck="false"
+                          aria-label="This show's instructions.md" hidden></textarea>
+                <p class="step-empty" id="instr-empty" hidden></p>
+                <div class="step-empty-action" id="instr-create-row" hidden>
+                  <button type="button" class="btn btn-primary btn-sm" id="instr-create-btn">New instructions.md</button>
+                  <span class="step-footer-note">An empty one in this bundle. Nothing is overwritten.</span>
+                </div>
+                <details class="conv-card source-example" id="instr-example" hidden>
+                  <summary><span class="chevron">&#9656;</span><span class="conv-heading">Example</span><span class="conv-summary-text">a starting layout to copy from &mdash; never written unless you insert it and Save</span></summary>
+                  <div class="conv-card-body">
+                    <pre class="conv-source-pre source-example-text" id="instr-example-text"></pre>
+                    <div class="source-example-actions">
+                      <button type="button" class="btn btn-secondary btn-sm" id="instr-example-insert">Insert whole example</button>
+                      <span class="step-footer-note">Select part of the example to insert just that, at the cursor.</span>
+                    </div>
+                  </div>
+                </details>
+                <div class="step-footer">
+                  <span class="step-footer-note">Both layers are read by <code>atoo build</code>.</span>
+                  <div class="step-footer-spacer"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="next-to-plan">Next: Plan &rarr;</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---- 04 Plan -------------------------------------------
+               Run `atoo build --show` in a worker thread
+               on the server, watch it say running / done / failed, and
+               read the plan it wrote with the renderers that were the
+               viewer at /setup. Its verify and critic findings go to the
+               dock, each with a jump back to the section that caused it.
+               One Plan block with three sections, in
+               the maintainer's order -- Options (folds), Build output, Changed
+               since the last build -- then Channels, Busses and Outputs
+               as blocks of their own (setup.js draws those). -->
+          <section id="panel-plan" class="step-panel" role="tabpanel" aria-labelledby="tab-plan" hidden>
+            <div class="step-scroll">
+              <div class="block-head">
+                <h2>Plan</h2>
+                <span class="notation">Output &middot; JSON &middot; in the bundle &middot; compiled by <code>atoo build</code></span>
+              </div>
+              <section class="panel box" id="build-plan-block" aria-label="Plan">
+                <!-- Options folds (the maintainer, 2026-10-13); its summary says
+                     what is chosen, so a closed fold still answers "for
+                     which WING". A build in progress opens it. -->
+                <details class="section fold" id="sec-options" open>
+                  <summary class="section-head"><h3>Options</h3><span class="state is-live" id="options-building" hidden>Building</span><span class="push meta" id="options-aside"></span></summary>
+                  <div class="panel-row">
+                    <label class="field">
+                      <span>Console model &mdash; which WING this plan is for</span>
+                      <select id="run-console-model">
+                        <option value="">Choose&hellip;</option>
+                      </select>
+                    </label>
+                    <label class="field field-buttons">
+                      <span>&nbsp;</span>
+                      <span><input type="checkbox" id="run-critic" checked> Run the critic pass (<code>--critic</code>)</span>
+                    </label>
+                    <div class="field field-buttons">
+                      <span>&nbsp;</span>
+                      <span class="run-build-actions">
+                        <button type="button" class="btn btn-primary" id="run-build-btn">Build plan</button>
+                        <span class="help-pop">
+                          <button type="button" class="help-btn" aria-label="Help: what Build plan runs and writes"
+                                  aria-expanded="false" aria-controls="help-run-build">?</button>
+                          <span class="help-popover" id="help-run-build" role="note" hidden>
+                            Runs <code id="run-command">atoo build</code> &mdash; the command, not a copy
+                            of it &mdash; with the three files above. It writes the bundle's
+                            <code>plan.json</code>, and drafts watch conditions into its
+                            <code>watch.json</code>: merged, never written over the top. A build needs a
+                            model (<code>ATOO_AI_PROVIDER</code>) and can take minutes. The critic is a
+                            second model pass in a reviewer role &mdash; its findings are advice, never
+                            enforced; only the deterministic verifier gates anything. Both land in the dock.
+                          </span>
+                        </span>
+                        <span class="lock-reason" id="run-build-lock" hidden></span>
+                      </span>
+                    </div>
+                  </div>
+                  <p class="panel-note" id="run-model-note" hidden></p>
+                  <p id="run-message" class="panel-message" hidden></p>
+                  <div class="run-in-box" id="run-panel" hidden>
+                <div class="panel-toolbar">
+                  <strong class="run-label">Build</strong>
+                  <span class="state-badge state-notset" id="run-state">Idle</span>
+                  <span class="readout" id="run-elapsed"></span>
+                  <span class="readout" id="run-exit"></span>
+                  <div class="panel-toolbar-spacer"></div>
+                  <!-- POST /api/build/stop: ends the model call (its connection is
+                       closed), so a stop in the silent thinking stretch lands too. -->
+                  <button type="button" class="btn btn-secondary btn-sm" id="run-stop-btn" hidden
+                          title="Stop this build. The model call is ended and nothing is written.">Stop</button>
+                </div>
+                <p class="run-stopped" id="run-stopped" role="status" hidden></p>
+                <!-- The model call the build is in, live: GET /api/build/status's
+                     `progress`. -->
+                <div class="run-progress" id="run-progress" hidden>
+                  <div class="run-progress-bar" id="run-progress-bar" role="progressbar"
+                       aria-label="Build in progress"><span></span></div>
+                  <div class="run-progress-line">
+                    <strong id="run-progress-phase"></strong>
+                    <span class="run-progress-stage" id="run-progress-stage"></span>
+                    <span class="readout" id="run-progress-elapsed"></span>
+                    <span class="readout" id="run-progress-tokens"></span>
+                  </div>
+                  <p class="run-progress-note" id="run-progress-note" hidden></p>
+                  <ol class="run-progress-calls" id="run-progress-calls"></ol>
+                  <!-- What the model is writing: `progress.thinking_line`,
+                       `progress.outline` (the partial JSON, read tolerantly) and
+                       `progress.tail` (its last 2 KB, raw, for the curious). -->
+                  <div class="run-live" id="run-live" hidden>
+                    <!-- The latest message is the whole of the
+                         default view, in a box that stays two lines tall so
+                         the page does not jump as it changes. What the model
+                         has written is folded closed, like Raw output. -->
+                    <div class="run-live-last" id="run-live-last" aria-live="polite">
+                      <p class="run-live-thinking" id="run-live-thinking" hidden></p>
+                      <p class="run-live-now" id="run-live-now" hidden></p>
+                    </div>
+                    <details class="run-live-raw run-live-written" id="run-live-written">
+                      <summary id="run-live-written-summary">Model output</summary>
+                      <ul class="run-live-sections" id="run-live-sections"></ul>
+                    </details>
+                    <details class="run-live-raw" id="run-live-raw">
+                      <summary>Raw output (the last 2 KB the model wrote)</summary>
+                      <pre id="run-live-tail"></pre>
+                    </details>
+                  </div>
+                </div>
+                <!-- The build's own terminal output: the command line and its
+                     running stderr. Folded closed by default, like Model
+                     output and Raw output (the maintainer, 2026-09-28: "On rebuild,
+                     we are still seeing the model output -- I don't see an
+                     option to fold it closed"), so the default view during a
+                     build is the status line, the two-line latest message
+                     and the folds. -->
+                <details class="run-live-raw run-log-fold" id="run-log-fold">
+                  <summary id="run-log-summary">Build log output</summary>
+                  <p class="plan-source" style="margin:4px 0 8px;"><code id="run-last-command"></code></p>
+                  <pre id="run-log" class="conv-source-pre"></pre>
+                </details>
+                  </div>
+                </details>
+
+                <!-- No plan yet: the block is Options and this line. -->
+                <div class="section" id="plan-empty">
+                  <p class="empty">No plan yet. Build one above, or open a <code>plan.json</code> with the tile's Change file.</p>
+                </div>
+
+                <!-- Build output: the file, when, which WING, the plan it
+                     replaced; verify and the findings line; Plan current or
+                     Stale (the reason and Rebuild); the stats; and
+                     one folded Details line for the model's notes and the
+                     build details. Drawn by setup.js's renderBuildOutput. -->
+                <div class="section" id="sec-output" hidden>
+                  <div class="section-head"><h3>Build output</h3><span class="push"><span class="state" id="plan-state-tag" hidden></span></span></div>
+                  <p class="body-line" id="plan-source"></p>
+                  <p class="body-line findings-line" id="plan-verify-line"></p>
+                  <!-- The plan is older than its inputs -- which
+                       file changed, and the one button that rebuilds it (the
+                       same `POST /api/build/run` as Build plan above). Drawn
+                       by setup.js from `plan_freshness` in the build payload:
+                       by content (the sha256s the plan recorded), never by
+                       timestamp. -->
+                  <div class="plan-stale-reason" id="plan-stale-reason" role="status" hidden>
+                    <div class="plan-stale-text">
+                      <strong id="plan-stale-title">This plan is stale.</strong>
+                      <ul id="plan-stale-list"></ul>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="plan-rebuild-btn">Rebuild plan</button>
+                  </div>
+                  <div id="plan-output"></div>
+                </div>
+
+                <!-- What this rebuild changed against the plan
+                     it replaced (`meta.changes_since_previous`), worst
+                     first. Open when a change was not asked for; absent
+                     after a first build. Drawn by setup.js's renderChanges. -->
+                <details class="section fold chg-block" id="sec-changes" data-step="plan" hidden></details>
+              </section>
+
+              <div id="plan-view" hidden>
+                <div id="plan-render"></div>
+                <!-- Step 04's Input columns are step 02's editor: this is
+                     that editor's unsaved badge, Discard and Save, shown a
+                     second time (shell.js wires them to the same
+                     saveInputList). setup.js moves it into the Channels
+                     section on every draw. -->
+                <div class="plan-input-toolbar" id="plan-input-toolbar">
+                  <div class="panel-toolbar">
+                    <span class="plan-input-mode" id="plan-input-mode"></span>
+                    <button type="button" class="link-btn" id="plan-input-edit-link" hidden>Edit in step 02 &rarr;</button>
+                    <div class="panel-toolbar-spacer"></div>
+                    <span class="state-badge state-drafted" id="plan-input-dirty-badge" hidden>Unsaved changes</span>
+                    <button type="button" class="btn btn-secondary btn-sm" id="plan-input-discard-btn" disabled hidden>Discard changes</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="plan-input-save-btn" disabled hidden>Save input list</button>
+                  </div>
+                  <div class="save-note" id="plan-input-save-note" role="status" hidden>
+                    <span id="plan-input-save-text"></span>
+                    <button type="button" class="btn btn-secondary btn-sm" id="plan-input-save-reload" hidden>Reload</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="plan-step-footer">
+                <!-- The path the tile's Change file chose, and the load it
+                     presses: setup.js's `loadPlanPath`, unchanged. Not shown. -->
+                <input type="hidden" id="plan-path">
+                <button type="button" id="plan-load-btn" hidden>Load plan</button>
+                <div class="step-footer">
+                  <span class="step-footer-note">Findings reviewed and the plan says what you meant? The next step writes it to a desk.</span>
+                  <div class="step-footer-spacer"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="back-to-instructions">&larr; Correct the instructions</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- ---- Apply: version H's write screen ------------
+           THE ONE SCREEN IN ATOO THAT WRITES TO A CONSOLE. That is
+           the maintainer's decision and the reason Amend is a mode of this
+           screen rather than a page of its own (OPTIONS-H.md): one
+           console field, one --confirm discipline, one journal, one
+           pre-flight, and one place to review when any of it changes.
+
+           There is exactly ONE arming control here -- the checkbox
+           below -- and adding a second anywhere is the thing the rule
+           forbids.
+
+           No console field, either. The one console is the bundle bar's:
+           resolved at startup, shown with where it came from, and
+           editable THERE and only there (the maintainer, 2026-09-24). A second box
+           to type an address into is a second chance to write to the wrong
+           desk -- so this screen names the bar's desk beside every write,
+           and every write request carries the desk the page names
+           (`expected_console`) so a stale page cannot write elsewhere. -->
+      <section class="mode-panel" id="mode-apply" role="region" aria-label="Apply" hidden>
+        <div class="apply-shell">
+
+          <!-- Version H's `Full build | Amend` switch (phase 4's control,
+               enabled by phase 5), called Patch. The ids keep the old word: scripts and tests use them.
+               Patch is a MODE of this screen, not a page: both modes share
+               the four steps below (mockups/apply-flow/) -- the
+               one Preview, the one arming checkbox, the one History. -->
+          <div class="apply-mode-switch" id="apply-mode-switch" role="group" aria-label="Apply mode">
+            <button type="button" class="seg-btn is-active" id="apply-mode-full" data-apply-mode="full" aria-pressed="true">Full build</button>
+            <button type="button" class="seg-btn" id="apply-mode-amend" data-apply-mode="amend" aria-pressed="false">Patch</button>
+            <span class="apply-mode-switch-hint" id="apply-mode-hint"></span>
+          </div>
+
+          <!-- ---- Step 1: what will be written ------------------------- -->
+          <section class="panel apply-step" id="apply-step-1" aria-labelledby="apply-step-1-title">
+            <div class="apply-step-head">
+              <span class="apply-step-num">1</span>
+              <h2 class="apply-step-title" id="apply-step-1-title">What will be written</h2>
+              <span class="apply-step-state" id="apply-step-1-state"></span>
+            </div>
+
+            <!-- Full build: the plan, and the pre-flight verify that
+                 `atoo apply` runs before a single packet goes out
+                 (cli.apply_cmd, "The gate"). The gate is real whether or
+                 not this line is on screen; it is here so it is VISIBLE. -->
+            <div data-apply-only="full">
+              <p class="apply-step-line">
+                <span id="apply-subject">No show bundle open.</span>
+                <span class="help-pop">
+                  <button type="button" class="help-btn" aria-label="Help: what a full build writes"
+                          aria-expanded="false" aria-controls="help-apply">?</button>
+                  <span class="help-popover" id="help-apply" role="note" hidden>
+                    A full build writes every address in the plan, every fader included &mdash; for a show already on the desk, use <strong>Patch</strong>. It writes the open bundle's <code>plan.json</code> to the console in the bar; change either there. A plan built for a different WING model is applied if this desk has every socket it patches; one that patches a socket the desk lacks is refused before anything is written.
+                  </span>
+                </span>
+              </p>
+              <div class="apply-facts" id="apply-plan-facts"></div>
+              <p class="apply-step-line apply-preflight-line" id="apply-preflight-panel">
+                <span class="state-badge state-notset" id="apply-preflight-badge">Pre-flight verify: not run</span>
+                <button type="button" class="apply-help" data-popup="popup-preflight" aria-label="What is pre-flight verify?" title="What is pre-flight verify?">?</button>
+                <span class="findings-summary" id="apply-preflight-summary" hidden></span>
+                <button type="button" class="link-btn apply-recheck" id="apply-preflight-btn">Re-check</button>
+              </p>
+              <p class="step-empty" id="apply-preflight-empty" hidden></p>
+              <p class="panel-note" id="apply-preflight-input-note" hidden></p>
+              <p class="panel-note" id="apply-console-line"></p>
+              <details class="apply-options" id="apply-advanced">
+                <summary><strong>Options</strong> &middot; skip the pre-flight; disconnect unused output sockets</summary>
+                <div class="apply-option">
+                  <label><input type="checkbox" id="apply-skip-verify"> Skip the pre-flight verify</label>
+                  <button type="button" class="apply-help" data-popup="popup-preflight" aria-label="What is pre-flight verify?">?</button>
+                  <span class="apply-warn-caption" id="apply-skip-verify-warn" hidden>
+                    This is the check that catches an impossible plan before it reaches the desk.
+                    Skipping it writes a plan nothing has agreed is applicable.
+                  </span>
+                </div>
+                <div class="apply-option">
+                  <label><input type="checkbox" id="apply-clean-toggle"> Disconnect output sockets the plan doesn't use</label>
+                  <button type="button" class="apply-help" data-popup="popup-clean-sockets" aria-label="What does disconnecting unused output sockets do?">?</button>
+                  <div class="apply-option-sub" id="apply-clean-sub" hidden>
+                    <input type="text" id="apply-clean-sockets" autocomplete="off" spellcheck="false" placeholder="LCL=8,A=48" aria-label="Socket groups to clean">
+                    <span class="apply-option-hint">Which socket groups to clean, and how many sockets each has. Example: <code>LCL=8,A=48</code>.</span>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <!-- Patch (an earlier change as Amend): what is typed is a
+                 CHANGE (the maintainer, 2026-09-26). "Patch" anywhere else
+                 on this page -- a finding, a plan field -- means socket
+                 routing. The review is drawn from the command's own
+                 --review-json by amend.js; there is no arming control in
+                 this block, and there must never be one. -->
+            <div data-apply-only="amend" id="amend-panel" hidden>
+              <p class="apply-step-line apply-dim">
+                <span id="amend-subject"></span>
+                <span class="help-pop">
+                  <button type="button" class="help-btn" aria-label="Help: Patch"
+                          aria-expanded="false" aria-controls="help-patch">?</button>
+                  <span class="help-popover" id="help-patch" role="note" hidden>
+                    For the setup window: after the build, before doors, not mid-show. Save a console snapshot once the board is patched, and the worst a bad change can cost is a reload. A change starts from the plan this desk's newest write left on it (or <code>plan.json</code> if this bundle has not written to it); the review says which. A change is for tonight: a permanent one belongs in the input list or instructions, and a rebuild. A typed change can also edit a strip that is already running &mdash; only the fields it names.
+                  </span>
+                </span>
+              </p>
+              <div class="apply-mode-switch patch-source-switch" role="group" aria-label="Where the change comes from">
+                <button type="button" class="seg-btn is-active" id="patch-source-change" data-patch-source="change" aria-pressed="true">Type a change</button>
+                <button type="button" class="seg-btn" id="patch-source-rebuilt" data-patch-source="rebuilt" aria-pressed="false">From a rebuilt plan</button>
+              </div>
+              <div data-patch-only="change">
+                <textarea id="patch-change-text" rows="3" autocomplete="off" spellcheck="true"
+                          aria-label="The change, in your own words"
+                          placeholder="trumpet, sax and trombone on A 21-23 for tonight, in the Horns DCA, sent to MON2"></textarea>
+                <p class="apply-info" id="patch-model-note" hidden></p>
+              </div>
+              <div data-patch-only="rebuilt" hidden>
+                <input type="text" id="amend-rebuilt" autocomplete="off" placeholder="rebuilt.plan.json (in the bundle)" aria-label="The rebuilt plan">
+                <p class="panel-note">
+                  The same show built again with tonight's change in it, beside the plan on the
+                  desk rather than over it: <code id="amend-build-hint">atoo build --show &lt;bundle&gt; --out &lt;bundle&gt;/rebuilt.plan.json</code>.
+                </p>
+              </div>
+              <details class="apply-options" id="amend-advanced">
+                <summary><strong>Options</strong> &middot; let the change reuse one occupied strip</summary>
+                <div class="apply-option">
+                  <label><input type="checkbox" id="amend-allow-toggle"> Allow the change to reuse one occupied strip</label>
+                  <div class="apply-option-sub" id="amend-allow-sub" hidden>
+                    <input type="text" id="amend-allow" autocomplete="off" spellcheck="false" placeholder="ch:20" aria-label="The occupied strip to reuse">
+                    <span class="apply-option-hint">
+                      Normally only free strips are used. Name the one strip that's in use and may
+                      be changed (<code>ch:20</code>, <code>aux:3</code>); the preview names it. Only a
+                      strip you have looked at on the desk: a strip that never answered is not free.
+                    </span>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <!-- ---- Step 2: Preview ----------------------------------------
+               One button. A Full build reads every address the plan would
+               write; a Patch reads which strips are free (and compiles a
+               typed change). Either way it writes nothing, and its result
+               -- the desk drawn as scribble strips (desk_view.py) -- fills
+               this box. In the Demo it reads the simulated WING. -->
+          <section class="panel apply-step" id="apply-step-2" aria-labelledby="apply-step-2-title">
+            <div class="apply-step-head">
+              <span class="apply-step-num">2</span>
+              <h2 class="apply-step-title" id="apply-step-2-title">Preview</h2>
+              <span class="apply-step-state" id="apply-step-2-state"></span>
+            </div>
+            <div class="apply-run-row">
+              <button type="button" class="btn btn-primary" id="apply-preview-btn">Preview</button>
+              <span class="apply-run-note" id="apply-preview-note"></span>
+            </div>
+            <p class="apply-stale" id="apply-stale" hidden>Step 1 changed since this preview. Preview again before writing.</p>
+            <p class="apply-progress-line readout" id="apply-progress-line" hidden></p>
+            <!-- The model call's progress (the readout, fed by the same
+                 `progress` field of GET /api/apply/status). Read-only. -->
+            <div class="run-progress" id="patch-progress" hidden>
+              <div class="run-progress-bar" id="patch-progress-bar" role="progressbar"
+                   aria-label="Compiling the change"><span></span></div>
+              <div class="run-progress-line">
+                <strong id="patch-progress-phase"></strong>
+                <span class="run-progress-stage" id="patch-progress-stage"></span>
+                <span class="readout" id="patch-progress-elapsed"></span>
+                <span class="readout" id="patch-progress-tokens"></span>
+              </div>
+            </div>
+            <div id="apply-review" hidden>
+              <div class="apply-facts" id="apply-review-facts"></div>
+              <div class="desk-view" id="apply-desk"></div>
+              <div class="desk-legend" id="apply-desk-legend"></div>
+
+              <!-- Patch: what the change writes, and what it refuses -- the
+                   command's own sentences (amend.js). -->
+              <div id="amend-review" hidden>
+                <div class="patch-change-head" id="patch-change-head" hidden>
+                  <p class="apply-summary-line" id="patch-change-name"></p>
+                  <blockquote class="patch-change-text" id="patch-change-quote"></blockquote>
+                </div>
+                <ul class="amend-strip-notes" id="amend-strip-notes"></ul>
+                <h3 class="apply-sub-title">Will be written</h3>
+                <p class="apply-summary-line" id="amend-delta-headline"></p>
+                <div class="amend-changes" id="amend-changes"></div>
+                <div class="amend-edits" id="amend-edits" hidden>
+                  <span class="apply-warnings-label">These change something already running &mdash; only the fields the change names, old &rarr; new</span>
+                  <ul id="amend-edits-list"></ul>
+                </div>
+                <div class="amend-releases" id="amend-releases" hidden>
+                  <span class="apply-warnings-label">These clear what is on the desk today</span>
+                  <ul id="amend-releases-list"></ul>
+                </div>
+                <ul class="amend-infos" id="amend-infos"></ul>
+                <div class="amend-preflight" id="amend-preflight" hidden>
+                  <span class="apply-warnings-label">Pre-flight &mdash; verify and sockets, as a full build checks them</span>
+                  <p class="amend-preflight-line" id="amend-preflight-line"></p>
+                  <pre class="amend-preflight-refusal" id="amend-preflight-refusal" hidden></pre>
+                  <ul class="amend-preflight-notes" id="amend-preflight-notes"></ul>
+                </div>
+                <p class="apply-dim" id="amend-targets-line"></p>
+                <details class="conv-card" id="amend-withheld">
+                  <summary><span class="chevron">&#9656;</span><span class="conv-heading">Everything else on the desk is left alone</span><span class="conv-summary-text" id="amend-withheld-count"></span></summary>
+                  <div class="conv-card-body">
+                    <p class="panel-note" style="margin-top:0;">
+                      Every address a full build of this plan would write that belongs to an object
+                      this change does not own. None of these is written, and a confirmed write
+                      reads them all before and after as the proof.
+                    </p>
+                    <div class="amend-withheld-groups" id="amend-withheld-groups"></div>
+                  </div>
+                </details>
+                <p class="panel-note" id="amend-proof-line"></p>
+                <p class="panel-note readout" id="patch-timing"></p>
+                <details class="conv-card">
+                  <summary><span class="chevron">&#9656;</span><span class="conv-heading">The desk read, as the command printed it</span></summary>
+                  <pre class="conv-source-pre" id="amend-occupancy-summary"></pre>
+                </details>
+              </div>
+              <div class="apply-result-slot" id="apply-preview-slot"></div>
+            </div>
+            <div class="apply-log-slot" id="apply-log-slot-2"></div>
+          </section>
+
+          <!-- ---- Step 3: Arm and write ----------------------------------
+               THE ONE ARMING CONTROL IN ATOO (`--confirm` on the
+               command line). It arms a full build, a change and an undo
+               alike; adding a second anywhere is the thing the rule forbids.
+               Write is enabled only after a preview of exactly what step 1
+               holds; the server refuses anything else (409). -->
+          <section class="panel apply-step" id="apply-step-3" aria-labelledby="apply-step-3-title">
+            <div class="apply-step-head">
+              <span class="apply-step-num">3</span>
+              <h2 class="apply-step-title" id="apply-step-3-title">Arm and write</h2>
+              <span class="apply-step-state" id="apply-step-3-state"></span>
+            </div>
+            <div class="apply-run-row apply-arm-row">
+              <label class="apply-arm-checkbox"><input type="checkbox" id="apply-arm-checkbox"> <span>Arm</span></label>
+              <button type="button" class="btn btn-primary btn-danger" id="apply-run-btn" disabled>Write to console</button>
+              <span class="help-pop">
+                <button type="button" class="help-btn" aria-label="Help: arming"
+                        aria-expanded="false" aria-controls="help-apply-write">?</button>
+                <span class="help-popover" id="help-apply-write" role="note" hidden>
+                  The one arming control in Atoo (<code>--confirm</code> on the command line). It arms a full build, a change and an undo alike; without it nothing reaches the console. A write spends the tick: the next one needs it again.
+                </span>
+              </span>
+            </div>
+            <p class="apply-locked" id="apply-disabled-reason" hidden></p>
+            <p id="apply-message" class="panel-message" hidden></p>
+            <div class="apply-write-result" id="apply-write-result" hidden>
+              <p class="apply-write-line" id="apply-write-line"></p>
+              <p class="apply-write-sub" id="apply-write-sub"></p>
+            </div>
+            <div class="apply-result-slot" id="apply-write-slot"></div>
+            <div class="apply-log-slot" id="apply-log-slot-3"></div>
+          </section>
+
+          <!-- The run log, and the journal view. Each is moved by apply.js
+               into the step its run belongs to: a preview's into step 2, a
+               write's into step 3, an undo's into step 4. -->
+          <details class="apply-log" id="apply-run-panel" hidden>
+            <summary>
+              <strong class="panel-toolbar-label" id="apply-run-label">Apply</strong>
+              <span class="state-badge state-notset" id="apply-run-state">Idle</span>
+              <span class="readout" id="apply-run-elapsed"></span>
+              <span class="readout" id="apply-run-exit"></span>
+              <span class="apply-log-hint">the command's own output</span>
+            </summary>
+            <p class="plan-source" style="margin:6px 0 8px;"><code id="apply-run-command"></code></p>
+            <pre id="apply-run-log" class="conv-source-pre"></pre>
+          </details>
+
+          <!-- The journal view. Mismatch and unreadable rows are expanded and
+               coloured; match and skipped-no-change are collapsed into counted
+               groups. The summary line is apply.ApplyResult.summary(), the
+               string the command itself prints, sent down by the server. -->
+          <details class="apply-journal" id="apply-result-panel" hidden>
+            <summary id="apply-result-summary">All changes, address by address</summary>
+            <p class="apply-summary-line" id="apply-summary-line"></p>
+            <div class="apply-chips" id="apply-chips"></div>
+            <!-- The journal's warnings and notes are in the dock (Issue
+                 #434), as `apply.journal-warning` / `apply.journal-note`. -->
+            <p class="findings-summary" id="apply-result-findings" hidden></p>
+            <div class="apply-journal-flagged" id="apply-journal-flagged"></div>
+            <div class="apply-journal-groups" id="apply-journal-groups"></div>
+            <p class="panel-note" id="apply-journal-note"></p>
+            <div class="step-footer" id="apply-watch-footer" hidden>
+              <span class="step-footer-note">Watch is what notices if the desk stops matching the plan.</span>
+              <div class="step-footer-spacer"></div>
+              <button type="button" class="btn btn-secondary btn-sm" id="apply-to-watch">Start watching &rarr;</button>
+            </div>
+          </details>
+
+          <!-- ---- Step 4: History (the journal stack) --------
+               Every confirmed apply, change, amend and undo in this bundle,
+               newest first. Undo pops the TOP row -- `atoo undo --show`
+               -- and is armed by the same one checkbox in step 3: an undo is
+               a write. -->
+          <section class="panel apply-step" id="journal-stack-panel" aria-labelledby="apply-step-4-title">
+            <div class="apply-step-head">
+              <span class="apply-step-num">4</span>
+              <h2 class="apply-step-title" id="apply-step-4-title">History</h2>
+              <span class="apply-step-state">every write from this show, newest first</span>
+            </div>
+            <table class="journal-stack-table">
+              <thead><tr><th>When (UTC)</th><th>Kind</th><th>Desk</th><th>Summary</th><th>Mismatches</th><th></th></tr></thead>
+              <tbody id="journal-stack-rows"></tbody>
+            </table>
+            <p class="step-empty" id="journal-stack-empty" hidden></p>
+            <p class="panel-note" id="journal-stack-desk"></p>
+            <div class="apply-run-row apply-undo-row">
+              <button type="button" class="btn btn-secondary btn-sm" id="undo-preview-btn">Preview undo</button>
+              <button type="button" class="btn btn-primary btn-danger btn-sm" id="undo-run-btn" disabled>Undo newest write</button>
+              <span class="help-pop">
+                <button type="button" class="help-btn" aria-label="Help: Undo"
+                        aria-expanded="false" aria-controls="help-journal-stack">?</button>
+                <span class="help-popover" id="help-journal-stack" role="note" hidden>
+                  Undo reverses the row marked <strong>top</strong> &mdash; the newest write still standing on the console in the bar &mdash; and never reaches underneath it. A row written to a different desk is left alone: each desk keeps its own history. <em>Preview undo</em> needs no arming; Undo is armed by the checkbox in step 3.
+                </span>
+              </span>
+            </div>
+            <p class="apply-locked" id="undo-locked" hidden></p>
+            <div class="apply-log-slot" id="apply-log-slot-4"></div>
+            <!-- "Keep this in the show": a change's text
+                 into instructions.md and its new inputs into input.csv. It
+                 writes the show's files, never the console, so it is not
+                 behind the arming checkbox; it previews first, and writes
+                 only on its own second click. plan.json is never touched. -->
+            <div class="promote-panel" id="promote-panel" hidden>
+              <strong id="promote-title"></strong>
+              <pre class="conv-source-pre" id="promote-preview"></pre>
+              <ul class="amend-infos" id="promote-infos"></ul>
+              <div class="apply-run-row">
+                <button type="button" class="btn btn-primary btn-sm" id="promote-confirm-btn">Write it into instructions.md and input.csv</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="promote-cancel-btn">Cancel</button>
+              </div>
+              <p class="panel-message" id="promote-message" hidden></p>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- ---- Watch: FR-6.4's alert table --------------
+           MOVED here from the old standalone page at `/`, not rewritten:
+           the connect panel, the watch-rules editor, the severity pills,
+           the coverage caveat and the alert table are that page's markup
+           with its element ids unchanged, driven by the same script
+           (watch.js, formerly app.js).
+
+           READ-ONLY (FR-6.7). Nothing in this mode writes to a console:
+           Start opens a watch loop that reads, and the only thing Save
+           writes is the watch-conditions file on disk. There is no arming
+           control here -- Apply's is the only one in Atoo. -->
+      <section class="mode-panel" id="mode-watch" role="region" aria-label="Watch" hidden>
+        <div class="watch-shell">
+
+          <!-- An earlier change (mockups/watch-layout/, look B). While a watch
+               runs, the alert table is first, right under a one-row
+               header, and everything else folds to one line below it.
+               The desk's state is read from how the screen LOOKS -- the
+               rows' colour and weight -- not from a label. -->
+          <div id="watch-flash" class="watch-flash" aria-hidden="true"></div>
+          <section id="panel" class="panel watch-head">
+            <div class="stage-head watch-head-row">
+              <h2 class="stage-title">Watch</h2>
+              <label class="watch-interval">
+                <span>Every</span>
+                <input id="interval" type="number" step="0.5" min="0.5" value="2">
+                <span>s</span>
+              </label>
+              <button id="start-btn" class="btn btn-primary">Start watching</button>
+              <button id="stop-btn" class="btn btn-secondary" disabled>Stop</button>
+              <!-- A toggle button, not a checkbox: the only checkbox that
+                   reaches a console is Apply's arming control. (The rows'
+                   Suppress boxes, drawn by watch.js, only hide a row on
+                   this page -- an earlier change.) -->
+              <button type="button" id="watch-flash-on" class="watch-flash-toggle" aria-pressed="false"
+                      title="A brief full-screen flash, in the finding's colour, the moment a new warning or error appears. Once per finding, never repeating while it stands; never for an info. With reduced motion: a steady edge glow instead.">Flash on new: <b>Off</b></button>
+              <span class="watch-head-spacer"></span>
+              <!-- Warning and Info are buttons -- a click hides
+                   every row of that severity, a second click brings them
+                   back. Error is not: an error is a setting that cannot
+                   work, and hiding all of them at once is unsafe. -->
+              <section class="summary" aria-label="Finding counts by severity">
+                <div class="count-pill count-error" data-sev="error"><span class="count-num">0</span> Error</div>
+                <button type="button" class="count-pill count-warning" data-sev="warning" aria-pressed="false"
+                        title="Click to hide every warning; click again to show them"><span class="count-num">0</span> Warning<span class="count-hidden" hidden></span></button>
+                <button type="button" class="count-pill count-info" data-sev="info" aria-pressed="false"
+                        title="Click to hide every info; click again to show them"><span class="count-num">0</span> Info<span class="count-hidden" hidden></span></button>
+              </section>
+              <span id="last-updated">&mdash;</span>
+              <div id="conn-pill" class="pill pill-idle">Not connected</div>
+            </div>
+            <p id="panel-message" class="panel-message" hidden></p>
+            <!-- What this read could NOT check. A shorter list of
+                 findings must never be mistakable for a healthier desk, so
+                 it stays in view, one line under the header. -->
+            <p id="coverage-note" class="coverage-line" hidden></p>
+          </section>
+
+          <section class="table-wrap watch-table-wrap">
+            <table id="alert-table">
+              <thead>
+                <tr>
+                  <th class="col-sev">Severity</th>
+                  <th class="col-where">Where</th>
+                  <th class="col-title">Finding</th>
+                  <th class="col-rule">Rule</th>
+                  <th class="col-since">Since</th>
+                </tr>
+              </thead>
+              <tbody id="alert-body"></tbody>
+            </table>
+            <p id="empty-state" class="empty-state">Not watching yet. Press Start watching above.</p>
+          </section>
+
+          <!-- Findings suppressed one at a time by their row's
+               box, folded below the table. Unticking one here brings its
+               row back. Held by this page for the watch session only. -->
+          <details id="watch-suppressed" class="panel watch-fold watch-suppressed" hidden>
+            <summary class="stage-head watch-fold-head">
+              <h2 class="stage-title">Suppressed <span id="watch-suppressed-count">(0)</span></h2>
+              <span class="watch-fold-line">Hidden by their box while they stand. Untick one to bring it back.</span>
+              <span class="watch-fold-hint">Show</span>
+            </summary>
+            <ul id="watch-suppressed-list" class="watch-suppressed-list"></ul>
+            <p class="dock-resolved-hint">
+              Suppressing only hides a finding on this page; the desk is not
+              touched. A suppressed fault that clears and later comes back
+              is shown again, as new. Start clears every suppression.
+            </p>
+          </details>
+
+          <!-- Everything about the session that is not an alert, one line
+               until opened: which console, the baseline, the notes. -->
+          <details id="watch-about" class="panel watch-fold">
+            <summary class="stage-head watch-fold-head">
+              <h2 class="stage-title">This watch</h2>
+              <span class="watch-fold-line" id="watch-about-line"></span>
+              <span class="watch-fold-hint">Details</span>
+            </summary>
+            <p id="console-origin" class="console-origin" hidden></p>
+            <section id="baseline-note" class="baseline-note" hidden></section>
+            <!-- Notes about the watch itself (a name resolved at
+                 Start, a condition not watched, names refreshed) -- status,
+                 not alerts, so not rows in the table above. -->
+            <div id="watch-notes" class="watch-notes" aria-live="polite" hidden></div>
+          </details>
+
+          <!-- The watch-rules editor. Rules live here and nowhere else:
+               Build has no watch step (OPTIONS-H point 3). A bundle build
+               DRAFTS into the bundle's watch.json, and the Source
+               column is how a condition the build proposed is told apart
+               from one the engineer wrote.
+
+               Its file is a bundle file, handled as Build's input.csv and
+               instructions.md are: Change file opens the file
+               browser and COPIES a file from outside the bundle in as its
+               watch.json (asking before it replaces one, keeping the old
+               one as watch.json.bak); New file makes an empty watch.json
+               in the bundle, never over one; Save writes the file shown.
+               With no bundle open, Change file uses the file where it is. -->
+          <details id="wc-panel" class="panel watch-fold" open>
+            <summary class="stage-head watch-fold-head">
+              <h2 class="stage-title">Watch conditions</h2>
+              <span class="stage-kind" id="wc-fold-meta">JSON &middot; in the bundle &middot; <code>watch.json</code></span>
+              <span class="watch-fold-hint">Edit</span>
+            </summary>
+            <div class="panel-toolbar wc-file-row">
+              <strong class="panel-toolbar-label">File</strong>
+              <code class="wc-file is-empty" id="wc-file">no watch-conditions file</code>
+              <button type="button" class="pipe-change-btn" id="wc-change-btn" title="Choose a watch-conditions file -- one from outside the bundle is copied in as watch.json">Change file</button>
+              <button type="button" class="pipe-change-btn" id="wc-new-btn" title="Create an empty watch.json in this bundle" hidden>New file</button>
+              <div class="panel-toolbar-spacer"></div>
+              <span class="state-badge state-drafted" id="wc-dirty-badge" hidden>Unsaved changes</span>
+              <button id="wc-save-btn" type="button" class="btn btn-primary btn-sm">Save</button>
+            </div>
+            <p id="wc-message" class="panel-message" hidden></p>
+            <p id="wc-empty-state" class="setup-dim">No watch conditions -- built-in structural rules only.</p>
+            <p class="panel-note" id="wc-drafted-note" hidden>
+              <span class="state-badge state-drafted" id="wc-drafted-badge"></span>
+              A bundle build proposed these. Editing one makes it yours, and
+              so does pressing its <strong>Drafted</strong> tag; a deleted one is not
+              re-added by the next build. Nothing is saved until you press Save.
+            </p>
+
+            <div id="wc-table-wrap" class="table-wrap" hidden>
+              <table id="wc-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Description</th>
+                    <th title="A channel or aux name, or a position: CH 10, AUX 3, BUS 3, MAIN 1, MTX 3, DCA 14; a range: DCA 10-16; every strip of a kind: ALL AUX; one strip of a kind by its name, found once at Start: BUS Drums">Channel</th>
+                    <th>Field</th>
+                    <th>Operator</th>
+                    <th>Value</th>
+                    <th>Severity</th>
+                    <th>Source</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="wc-body"></tbody>
+              </table>
+            </div>
+            <div class="wc-add-row">
+              <button id="wc-add-btn" class="btn btn-secondary">+ Add condition</button>
+            </div>
+          </details>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ---- The findings dock ------------------------------------------
+         Shared by all three modes, so a Build finding is still on screen
+         while you look at Apply. It renders atoo.diagnostics.Diagnostic
+         dicts and only those (FR-X.15b), with jump links a finding carries
+         in its own `jumps` list. An earlier change (mockups/findings-dock/,
+         approved 2026-10-11): the verdict first, then one line per
+         finding -- To check, the critic's Advice -- and two closed folds,
+         Choices (every INFO) and Build details. -->
+    <div class="dock-col" id="dock-col">
+      <button type="button" class="dock-tab" id="dock-tab" aria-expanded="true" aria-controls="findings-dock" title="Show findings">
+        <span class="dock-tab-count" id="dock-tab-count">0</span>
+        <span class="dock-tab-label">Findings</span>
+      </button>
+      <aside class="findings-dock" id="findings-dock" aria-label="Findings">
+        <div class="dock-header">
+          <div>
+            <h2 class="dock-title">Findings <span class="dock-title-count" id="dock-title-count"
+                title="Errors and warnings: what needs a look">0</span></h2>
+            <p class="dock-subtitle">What needs a look, first</p>
+          </div>
+          <div class="dock-header-spacer"></div>
+          <button type="button" class="btn-icon btn-icon-muted" id="dock-collapse-btn" title="Collapse the Findings panel" aria-label="Collapse the Findings panel">&#8594;</button>
+        </div>
+        <div class="dock-body">
+          <div class="dock-verdict" id="dock-verdict" hidden></div>
+          <section class="dock-section" id="dock-check" hidden>
+            <h3 class="dock-head">To check <span class="dock-count" id="dock-check-count">0</span></h3>
+            <ul class="dock-list" id="dock-active-list"></ul>
+          </section>
+          <section class="dock-section" id="dock-advice" hidden>
+            <h3 class="dock-head dock-head-advice">Advice <span class="dock-count" id="dock-advice-count">0</span>
+              <span class="dock-head-note">a second model's opinion; never blocks Apply</span></h3>
+            <ul class="dock-list" id="dock-advice-list"></ul>
+          </section>
+          <!-- Every INFO but the build details, closed by default (its
+               state remembered per viewer). -->
+          <details class="dock-fold dock-info" id="dock-info" hidden>
+            <summary><span class="chevron">&#9656;</span> Choices
+              <span class="dock-count dock-count-info" id="dock-info-count">0</span>
+              <span class="dock-head-note">made where your conventions were silent</span></summary>
+            <ul class="dock-list" id="dock-info-list"></ul>
+          </details>
+          <!-- How the model's reply was read: kept, and the CLI prints
+               them, but they are not choices to review. -->
+          <details class="dock-fold dock-details" id="dock-details" hidden>
+            <summary><span class="chevron">&#9656;</span> Build details
+              <span class="dock-count dock-count-dim" id="dock-details-count">0</span>
+              <span class="dock-head-note">how the reply was read, for debugging</span></summary>
+            <ul class="dock-list" id="dock-details-list"></ul>
+          </details>
+          <p class="dock-empty-note" id="dock-active-empty">
+            Nothing to report yet. Findings from a build, a verify or an apply
+            appear here.
+          </p>
+          <details class="dock-resolved" id="dock-resolved" hidden>
+            <summary><span class="chevron">&#9656;</span> Addressed <span id="dock-resolved-count">(0)</span></summary>
+            <ul class="dock-list" id="dock-resolved-list"></ul>
+            <p class="dock-resolved-hint">
+              Ticking a finding only hides it from the list above. Nothing is
+              rebuilt, and the next run reports it again if it is still true.
+            </p>
+          </details>
+        </div>
+      </aside>
+    </div>
+
+  </div>
+</div>
+
+<!-- ---- The file browser -------------------------------------
+     One modal for every "which file?" on the page: the bundle bar's
+     Change... and New show..., each Build tile's Change file, step 01's New
+     file, step 04's Change file, and Watch's Change file. The page
+     cannot see the disk, so each folder is asked of the server
+     (GET /api/fs/list -- names and sizes, never contents), which answers
+     this machine's own browser only. filebrowser.js draws it; the button
+     that opened it decides what choosing does. -->
+<div class="fb-backdrop" id="fb-modal" hidden>
+  <div class="fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+    <div class="fb-head">
+      <h2 class="fb-title" id="fb-title">Choose a file</h2>
+      <button type="button" class="btn-icon btn-icon-muted" id="fb-close" aria-label="Close" title="Close (Esc)">&times;</button>
+    </div>
+    <p class="fb-note" id="fb-note" hidden></p>
+    <div class="fb-pathrow">
+      <button type="button" class="btn-icon" id="fb-up" title="Up one folder (Backspace)" aria-label="Up one folder">&uarr;</button>
+      <button type="button" class="btn-icon" id="fb-home" title="Home folder" aria-label="Home folder">~</button>
+      <input type="text" id="fb-path" autocomplete="off" spellcheck="false" aria-label="Folder or file path -- type or paste one and press Enter">
+      <button type="button" class="btn btn-secondary btn-sm" id="fb-go">Go</button>
+    </div>
+    <nav class="fb-crumbs" id="fb-crumbs" aria-label="Folder path"></nav>
+    <div class="fb-list-wrap">
+      <ul class="fb-list" id="fb-list" role="listbox" tabindex="0" aria-label="Folder contents"></ul>
+      <p class="fb-empty" id="fb-empty" hidden></p>
+    </div>
+    <div class="fb-listfoot">
+      <label class="check-field"><input type="checkbox" id="fb-hidden"> <span>Show hidden</span></label>
+      <label class="check-field" id="fb-all-row"><input type="checkbox" id="fb-all"> <span>Show all files</span></label>
+      <span class="fb-counts" id="fb-counts"></span>
+      <span class="fb-spacer"></span>
+      <button type="button" class="btn btn-secondary btn-sm" id="fb-newfolder-btn">New folder</button>
+    </div>
+    <div class="fb-newfolder" id="fb-newfolder" hidden>
+      <label class="field">
+        <span>New folder here</span>
+        <input type="text" id="fb-newfolder-name" autocomplete="off" spellcheck="false">
+      </label>
+      <button type="button" class="btn btn-primary btn-sm" id="fb-newfolder-create">Create folder</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="fb-newfolder-cancel">Cancel</button>
+    </div>
+    <label class="field fb-name-row" id="fb-name-row" hidden>
+      <span id="fb-name-label">File name</span>
+      <input type="text" id="fb-name" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="check-field fb-check-row" id="fb-check-row" hidden>
+      <input type="checkbox" id="fb-check">
+      <span id="fb-check-label"></span>
+    </label>
+    <p class="fb-check-note" id="fb-check-note" hidden></p>
+    <div class="fb-ask" id="fb-ask" role="alertdialog" aria-labelledby="fb-ask-text" hidden>
+      <p class="fb-ask-text" id="fb-ask-text"></p>
+      <div class="fb-ask-buttons" id="fb-ask-buttons"></div>
+    </div>
+    <p class="panel-message panel-message-error" id="fb-error" role="alert" hidden></p>
+    <div class="fb-foot">
+      <span class="fb-selection" id="fb-selection"></span>
+      <button type="button" class="btn btn-secondary" id="fb-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="fb-confirm">Open</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popups (mockups/apply-flow/): opened by any button with
+     `data-popup="<id>"`, closed by `data-popup-close`, Escape, or a click on
+     the scrim (shell.js). Each says one thing a person asked to have said. -->
+<div class="sp-popup-scrim" id="popup-scrim" hidden>
+  <div class="sp-popup" id="demo-popup" role="dialog" aria-modal="true" aria-labelledby="demo-popup-title" hidden>
+    <h3 id="demo-popup-title">This is the Demo show</h3>
+    <p>It's a packaged show on a simulated WING Compact, so you can look at Build, Apply and
+      Watch without a console.</p>
+    <ul>
+      <li><strong>Works:</strong> reading the show's files and plan, previewing a Full build
+        against the simulated desk, previewing a typed Patch (when a model is set up), and
+        watching the desk.</li>
+      <li><strong>Switched off:</strong> saving changes, building, writing to a console, and
+        Undo.</li>
+    </ul>
+    <p class="apply-dim">To work on your own show, choose a console address in the bar, or open
+      or create a show.</p>
+    <div class="sp-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-popup-close>Got it</button></div>
+  </div>
+  <div class="sp-popup" id="popup-preflight" role="dialog" aria-modal="true" aria-labelledby="popup-preflight-title" hidden>
+    <h3 id="popup-preflight-title">Pre-flight verify</h3>
+    <p>Before anything touches the desk, Atoo checks the plan against the console it's
+      going to: every socket exists, every stereo pair can be formed, and every value is within
+      the console's range.</p>
+    <ul>
+      <li><strong>An error</strong> is a setting that can't work on this desk. It stops the
+        write until it's fixed.</li>
+      <li><strong>A warning or a note</strong> is listed in Findings and doesn't stop
+        anything.</li>
+    </ul>
+    <p class="apply-dim">It runs again whenever you come back to Apply, or press Re-check. You
+      can skip it under Options, for example to write a plan you've already checked against this
+      desk.</p>
+    <div class="sp-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-popup-close>Close</button></div>
+  </div>
+  <div class="sp-popup" id="popup-clean-sockets" role="dialog" aria-modal="true" aria-labelledby="popup-clean-title" hidden>
+    <h3 id="popup-clean-title">Disconnect output sockets the plan doesn't use</h3>
+    <p>A full build writes every output socket the plan routes something to. Any other socket
+      keeps whatever was patched there before: from an earlier show, an earlier apply, or by
+      hand. That can put a stray signal on a cable you thought was dead.</p>
+    <p>Turn this on to disconnect those other sockets as well. Name each socket group to clean
+      and how many sockets it has, for example <code>LCL=8,A=48</code>. Groups you don't name
+      are left as they are.</p>
+    <p class="apply-dim">The disconnects show in the preview like every other write, and Undo
+      puts them back.</p>
+    <div class="sp-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-popup-close>Close</button></div>
+  </div>
+</div>
+
+<script src="/static/shell.js"></script>
+<script src="/static/filebrowser.js"></script>
+<script src="/static/setup.js"></script>
+<script src="/static/amend.js"></script>
+<script src="/static/apply.js"></script>
+<script src="/static/watch.js"></script>
+</body>
+</html>

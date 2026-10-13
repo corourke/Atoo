@@ -1,0 +1,40 @@
+{
+  "_comment": "The 'before' half of atoo/watch.py's FR-6.4 demo -- the same small rig as audit_demo_state.json, but with every issue fixed. Watching the transition from this file to that one is what 'an operator made a change that trips an audit rule' looks like. See examples/README.md's 'Watching a console continuously' section.",
+
+  "/ch/1/name": "Kick", "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1,
+  "/ch/1/mute": 0, "/ch/1/fdr": 0.0, "/ch/1/tags": "#D1",
+  "/ch/1/send/1/on": 1, "/ch/1/send/1/lvl": 0.0,
+
+  "/ch/2/name": "Snare", "/ch/2/in/conn/grp": "LCL", "/ch/2/in/conn/in": 2,
+  "/ch/2/mute": 0, "/ch/2/fdr": 0.0, "/ch/2/tags": "#D1",
+  "/ch/2/send/1/on": 1, "/ch/2/send/1/lvl": 0.0,
+
+  "/ch/3/name": "Vocal 1", "/ch/3/in/conn/grp": "LCL", "/ch/3/in/conn/in": 3,
+  "/ch/3/mute": 0, "/ch/3/fdr": 0.0, "/ch/3/tags": "#D1,#M1",
+  "/ch/3/send/2/on": 1, "/ch/3/send/2/lvl": 0.0,
+
+  "/ch/4/name": "Vocal 2", "/ch/4/in/conn/grp": "LCL", "/ch/4/in/conn/in": 4,
+  "/ch/4/mute": 0, "/ch/4/fdr": 0.0, "/ch/4/tags": "#D1",
+
+  "/ch/5/name": "Bass", "/ch/5/in/conn/grp": "LCL", "/ch/5/in/conn/in": 5,
+  "/ch/5/mute": 0, "/ch/5/fdr": 0.0, "/ch/5/tags": "#D1",
+
+  "/ch/6/name": "Bass DI", "/ch/6/in/conn/grp": "LCL", "/ch/6/in/conn/in": 6,
+  "/ch/6/mute": 0, "/ch/6/fdr": 0.0, "/ch/6/tags": "#D1",
+
+  "/ch/7/name": "Playback", "/ch/7/in/conn/grp": "A", "/ch/7/in/conn/in": 1,
+  "/ch/7/mute": 0, "/ch/7/fdr": 0.0, "/ch/7/tags": "#D1",
+  "/ch/7/send/1/on": 1, "/ch/7/send/1/lvl": 0.0,
+
+  "/bus/1/name": "Drums", "/bus/1/mute": 0, "/bus/1/fdr": 0.0, "/bus/1/main/1/on": 1,
+  "/bus/2/name": "Monitor 1", "/bus/2/mute": 0, "/bus/2/fdr": 0.0,
+
+  "/main/1/mute": 0, "/main/1/fdr": 0.0,
+
+  "/dca/1/name": "Drums", "/dca/1/mute": 0, "/dca/1/fdr": 0.0,
+  "/mgrp/1/name": "Vocals", "/mgrp/1/mute": 0,
+
+  "/io/in/LCL/9/vph": 0,
+  "/io/out/LCL/1/grp": "MAIN", "/io/out/LCL/1/in": 1,
+  "/io/out/LCL/2/grp": "BUS", "/io/out/LCL/2/in": 2
+}

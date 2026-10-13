@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-09-28T12:00:00+00:00",
+  "console_model": "wing-compact",
+  "model": "fixture-model",
+  "effort": "high",
+  "outcome": {"status": "done", "reason": null},
+  "build_log": {
+    "generator": {
+      "notes": [
+        {"t": 10.0, "text": "Reading the input list: drums, bass, guitars, keys and vocals, with the instructions for this show."},
+        {"t": 30.0, "text": "Counting the channels: 12 drums, 2 bass and 4 guitars fill LCL 1-18, then vocals overflow to AES50-A."},
+        {"t": 35.0, "text": "The tricky question is whether \"leave all faders down\" applies to the busses as well."},
+        {"t": 45.0, "text": "The bus object has no index field; key order has to survive the schema."},
+        {"t": 50.0, "text": "Writing the JSON now, with provenance for each channel."},
+        {"t": 50.0, "text": "Kick needs phantom required? No, it is a dynamic mic."},
+        {"t": 60.0, "text": "Kick gets a 40Hz high-pass, as drums do."}
+      ],
+      "usage": {"input": 1000, "output": 2000}
+    },
+    "critic": {
+      "notes": [
+        {"t": 4.0, "text": "Socket 25 onward are on AES50-A; the next free one is A6."},
+        {"t": 8.0, "text": "The Drums Comp compressor detail seems missing from the plan."}
+      ],
+      "usage": {"input": 3000, "output": 400}
+    },
+    "watchlist": {
+      "notes": [],
+      "usage": {"input": 2500, "output": 100}
+    }
+  }
+}

@@ -1,0 +1,39 @@
+socket,name,category,type,model,phantom,notes
+,Kick,drums,Mic,Beta 91A,TRUE,
+,Snare,drums,Mic,,FALSE,
+,HiHat,drums,Mic,,FALSE,not patched for this event
+,Tom1,drums,Mic,,FALSE,
+,Tom2,drums,Mic,,FALSE,
+,Tom3,drums,Mic,,FALSE,
+,Tom4,drums,Mic,,FALSE,not patched for this event
+,OH L,drums,Mic,,TRUE,
+,OH R,drums,Mic,,FALSE,not patched for this event
+,Pads,drums,Instrument,,FALSE,not patched for this event
+,PERC 1,drums,Mic,,FALSE,not patched for this event
+,PERC2,drums,Mic,,FALSE,not patched for this event
+,BassDI,bass,DI,,FALSE,
+,BassMic,bass,Mic,,FALSE,not patched for this event
+,EG 1,guitars,Instrument,,FALSE,
+,EG 2,guitars,Instrument,,FALSE,
+,AC Guit 1,guitars,Instrument,,FALSE,
+,AC GUIT 2,guitars,Instrument,,FALSE,not patched for this event
+,Keys 1,keys,Instrument,,FALSE,
+,Keys 2,keys,Instrument,,FALSE,not patched for this event
+,Horns 1,horns,Instrument,,FALSE,not patched for this event
+,Horns 2,horns,Instrument,,FALSE,not patched for this event
+,Strings 1,strings,Instrument,,FALSE,not patched for this event
+,Strings 2,strings,Instrument,,FALSE,not patched for this event
+,VOX 1,vocals,Mic,,FALSE,
+,VOX 2,vocals,Mic,,FALSE,
+,VOX 3,vocals,Mic,,FALSE,
+,VOX 4,vocals,Mic,,FALSE,
+,VOX 5,vocals,Mic,,FALSE,not patched for this event
+,HOST,speech,Mic,,FALSE,
+,T DRUMS,tracks,Line,,FALSE,multitrack playback return
+,T Bass,tracks,Line,,FALSE,multitrack playback return
+,T Keys,tracks,Line,,FALSE,multitrack playback return
+,T Elec Guit,tracks,Line,,FALSE,multitrack playback return
+,T Ac Guit,tracks,Line,,FALSE,multitrack playback return
+,T Strings,tracks,Line,,FALSE,multitrack playback return
+,T VOX/FX,tracks,Line,,FALSE,multitrack playback return
+,T Click/Guide,tracks,Line,,FALSE,multitrack playback return

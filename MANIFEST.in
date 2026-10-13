@@ -1,0 +1,6 @@
+# The source distribution (sdist) is the package, its data, README.md,
+# LICENSE and pyproject.toml -- what a wheel is built from. setuptools
+# would also add tests/test_*.py by default, but not tests/fixtures/, so
+# those tests could not run from an sdist anyway: the tests live in the
+# repository, not in the release.
+prune tests

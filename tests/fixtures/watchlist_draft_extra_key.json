@@ -1,0 +1,32 @@
+{
+  "watch_conditions": [
+    {
+      "id": "main-pa-muted",
+      "description": "Main PA must stay unmuted during the show",
+      "channel": "MAIN 1",
+      "index": 1,
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error"
+    },
+    {
+      "id": "lead-vox-muted",
+      "description": "Lead vocal must not be muted",
+      "channel": "Lead Vox",
+      "field": "muted",
+      "operator": "==",
+      "value": false,
+      "severity": "error"
+    },
+    {
+      "id": "kick-gain",
+      "description": "An invented field: refused on its own",
+      "channel": "Kick",
+      "field": "gain",
+      "operator": "==",
+      "value": 20,
+      "severity": "warning"
+    }
+  ]
+}

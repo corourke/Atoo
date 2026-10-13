@@ -1,0 +1,642 @@
+{
+  "type": "chpreset.11",
+  "creator_fw": "VERSION_FULL",
+  "creator_sn": "NO_SERIAL",
+  "creator_model": "WING-EDIT",
+  "creator_version": "3.3.3",
+  "creator_name": "WING-PP-SERIAL01",
+  "created": "2026-09-12 16:35:44",
+  "source_channel": 56,
+  "info_text": "Mix Bus",
+  "scopes_content": " ++++++++++++++",
+  "scopes_main": "++++",
+  "scopes_send": "++++++++++++++++++++++++",
+  "scopes_feed": "                                                ",
+  "target_fx": [
+    0,
+    0
+  ],
+  "ch_data": {
+    "in": {
+      "set": {
+        "inv": false,
+        "trim": 0,
+        "bal": 0
+      }
+    },
+    "col": 10,
+    "name": "Mix Bus",
+    "icon": 5,
+    "led": true,
+    "busmono": false,
+    "mute": false,
+    "fdr": -144,
+    "pan": 0,
+    "wid": 100,
+    "mon": "A",
+    "eq": {
+      "on": true,
+      "mdl": "STD",
+      "mix": 100,
+      "lg": 0,
+      "lf": 50.6005249,
+      "lq": 0.997970223,
+      "leq": "BW18",
+      "1g": 0,
+      "1f": 129.8763428,
+      "1q": 0.997970223,
+      "2g": 0,
+      "2f": 299.2471619,
+      "2q": 0.997970223,
+      "3g": 0,
+      "3f": 699.4875488,
+      "3q": 0.997970223,
+      "4g": 0,
+      "4f": 1499.78833,
+      "4q": 0.997970223,
+      "5g": 0,
+      "5f": 2992.470947,
+      "5q": 0.997970223,
+      "6g": 0,
+      "6f": 6013.883789,
+      "6q": 0.997970223,
+      "hg": 0,
+      "hf": 14057.40039,
+      "hq": 0.997970223,
+      "heq": "BW24",
+      "tilt": 0
+    },
+    "dyn": {
+      "on": true,
+      "mdl": "COMP",
+      "mix": 100,
+      "gain": 0,
+      "thr": -20,
+      "ratio": 5,
+      "knee": 4,
+      "det": "RMS",
+      "att": 20,
+      "hld": 40,
+      "rel": 150.3349457,
+      "env": "LOG",
+      "auto": true
+    },
+    "dynxo": {
+      "depth": 6,
+      "type": "OFF",
+      "f": 1002.37439,
+      "q": 0.400000006
+    },
+    "dynsc": {
+      "type": "OFF",
+      "f": 1002.37439,
+      "q": 1.995881796,
+      "src": "SELF",
+      "tap": "BUS"
+    },
+    "preins": {
+      "on": false,
+      "ins": "NONE"
+    },
+    "main": {
+      "1": {
+        "on": true,
+        "lvl": 0,
+        "pre": false
+      },
+      "2": {
+        "on": false,
+        "lvl": 0,
+        "pre": false
+      },
+      "3": {
+        "on": false,
+        "lvl": 0,
+        "pre": false
+      },
+      "4": {
+        "on": false,
+        "lvl": 0,
+        "pre": false
+      }
+    },
+    "send": {
+      "1": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "2": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "3": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "4": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "5": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "6": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "7": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "8": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "9": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "10": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "11": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "12": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "13": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "14": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "15": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "16": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX1": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX2": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX3": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX4": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX5": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX6": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX7": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      },
+      "MX8": {
+        "on": false,
+        "lvl": -144,
+        "pre": false
+      }
+    },
+    "postins": {
+      "on": false,
+      "ins": "NONE"
+    },
+    "dly": {
+      "on": false,
+      "mode": "M",
+      "dly": 0.100000001
+    },
+    "tags": "",
+    "bus_feed": {
+      "1": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "2": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "3": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "4": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "5": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "6": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "7": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "8": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "9": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "10": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "11": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "12": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "13": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "14": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "15": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "16": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "17": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "18": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "19": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "20": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "21": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "22": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "23": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "24": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "25": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "26": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "27": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "28": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "29": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "30": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "31": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "32": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "33": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "34": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "35": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "36": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "37": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "38": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "39": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "40": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "41": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "42": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "43": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "44": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "45": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "46": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "47": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      },
+      "48": {
+        "on": false,
+        "lvl": -144,
+        "pon": false,
+        "mode": "PRE",
+        "plink": 0,
+        "pan": 0
+      }
+    }
+  }
+}
