@@ -1,0 +1,16 @@
+{
+  // atoo.app: a static page deployed via Cloudflare Workers (Workers Builds),
+  // the same way as the docs site in ./docs (a separate Worker, docs.atoo.app).
+  // No build step and no Worker script (`main`): this folder's files are served
+  // as static assets. ./.assetsignore keeps the docs sources, this config and
+  // the README out of the upload.
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "atoo-site",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "."
+  }
+  // Custom domain: add `atoo.app` in the dashboard (Worker -> Settings ->
+  // Domains & Routes -> Add -> Custom domain), or declare it here instead:
+  //   "routes": [{ "pattern": "atoo.app", "custom_domain": true }]
+}

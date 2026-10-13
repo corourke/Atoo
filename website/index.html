@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atoo</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Atoo">
+<meta property="og:description" content="Patches a complete show on a Behringer WING from your input list and conventions, audits it for correctness, and watches pre-show for routing errors.">
+<meta property="og:url" content="https://atoo.app/">
+<meta property="og:image" content="https://atoo.app/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Patches a complete show on a Behringer WING from your input list and conventions, audits it for correctness, and watches pre-show for routing errors.">
+<style>
+/* atoo.app: one static page, dark only. Colours and type are the app's
+   own: near-black ground, brass accent, the light-on-dark readout chip.
+   The screenshots are the app running its packaged Demo show; the files
+   ending in -phone are tighter crops served below 600px. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0c0e; --bg-panel: #19191c; --bg-row: #141416;
+  --border: #303034; --text: #e8e9ec; --text-dim: #9a9aa1;
+  --accent: #c9982e; --accent-ink: #1a1400;
+  --readout-bg: #d8d8d8; --readout-fg: #17171a;
+  --ready-fg: #6fdc9a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+
+header.top { border-bottom: 1px solid var(--border); }
+header.top .wrap { display: flex; align-items: center; gap: 12px; padding-block: 16px; }
+.brand-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 4px;
+  background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 14px; flex: none;
+}
+.wordmark { font-weight: 700; letter-spacing: 0.08em; font-size: 15px; }
+nav { margin-left: auto; display: flex; gap: 18px; align-items: center; }
+nav a {
+  color: var(--text-dim); text-decoration: none; font-size: 12px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+nav a:hover { color: var(--text); }
+
+.survey { background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+.survey .wrap { padding-block: 10px; font-size: 14px; }
+.survey a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.survey a:hover { text-decoration: underline; }
+.hero { padding: 64px 0 32px; }
+.hero h1 { font-size: 56px; line-height: 1; margin: 0 0 18px; letter-spacing: -0.01em; }
+.hero .tagline { font-size: 22px; line-height: 1.45; max-width: 760px; margin: 0 0 12px; }
+.hero .say { color: var(--text-dim); font-style: italic; margin: 0 0 28px; }
+.ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  display: inline-block; padding: 10px 18px; border-radius: 4px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none; border: 1px solid var(--border); color: var(--text);
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.shot {
+  margin: 40px 0 8px; border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; background: var(--bg-panel);
+}
+.shot img { display: block; width: 100%; height: auto; }
+.io { margin-top: 48px; }
+.io .shot { margin: 0; }
+.io-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 32px 0 10px; }
+.io-arrow { color: var(--text-dim); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0; }
+.io .caption { margin: 10px 0 0; }
+.io-desc { margin: 0 0 12px; max-width: 760px; }
+.caption { color: var(--text-dim); font-size: 13px; margin: 0 0 48px; }
+
+section { padding: 40px 0; border-top: 1px solid var(--border); }
+h2 {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); margin: 0 0 16px;
+}
+.lede { font-size: 19px; max-width: 760px; margin: 0; }
+
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; padding: 20px; }
+.card h3 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+.chip {
+  background: var(--readout-bg); color: var(--readout-fg);
+  font: 700 11px/1 ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 2px;
+}
+.card p { margin: 0; color: var(--text-dim); font-size: 15px; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+ul.plain { margin: 0; padding-left: 18px; }
+ul.plain li { margin-bottom: 8px; }
+
+pre {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px;
+  padding: 16px; overflow-x: auto; font-size: 14px; margin: 0 0 12px;
+}
+.ok { color: var(--ready-fg); font-weight: 700; }
+
+footer { border-top: 1px solid var(--border); padding: 32px 0 48px; color: var(--text-dim); font-size: 14px; }
+footer p { margin: 0 0 8px; }
+
+@media (max-width: 760px) {
+  .hero h1 { font-size: 42px; }
+  .hero .tagline { font-size: 19px; }
+  .three, .two { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="brand-mark" aria-hidden="true">A2</span>
+    <span class="wordmark">ATOO</span>
+    <nav>
+      <a href="https://docs.atoo.app/">Docs</a>
+      <a href="https://github.com/corourke/Atoo">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="survey">
+  <div class="wrap"><a href="https://forms.gle/XHgQamPK8cS9DRiM7" target="_blank" rel="noopener">Take our Sound Engineers Survey &rarr;</a></div>
+</div>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>Atoo</h1>
+    <p class="tagline">Patches a complete show on a Behringer WING from your input list and conventions, audits it for correctness, and watches pre-show for routing errors.</p>
+    <p class="say">Atoo is said "A-two": your A2, the second engineer at the desk.</p>
+    <div class="ctas">
+      <a class="btn primary" href="https://github.com/corourke/Atoo">Get it on GitHub</a>
+      <a class="btn" href="#try">Try the Demo, no desk needed</a>
+    </div>
+  </div>
+
+  <div class="io">
+    <h2 style="margin-top:8px">From two text files to a whole desk</h2>
+    <p class="io-label">You write, once: your house conventions (excerpt)</p>
+    <div class="shot"><picture><source media="(max-width: 600px)" srcset="img/conventions-phone.png"><img src="img/conventions.png" alt="An excerpt of the house conventions: patch from the input list, colour by category, pair L/R inputs into one stereo channel, channel order."></picture></div>
+    <p class="io-arrow">&darr; Atoo builds</p>
+    <p class="io-desc">16 input rows became 14 channels, 7 busses, 5 DCAs, and mains. OH, Keys and Playback joined into stereo pairs, every channel colored by category, and every instrument and vocal set up with its preset. The walk-in music from tonight&rsquo;s instructions is on Aux 1; the guest vocal who isn&rsquo;t singing tonight is skipped.</p>
+    <div class="shot"><picture><source media="(max-width: 600px)" srcset="img/plan-channels-phone.png"><img src="img/plan-channels.png" alt="The plan: 16 input rows become 14 channels, coloured by category, stereo pairs joined, each with its DCA and mute group; walk-in music on Aux 1; the guest vocal skipped."></picture></div>
+
+    <p class="io-label">You write, for tonight: the show&rsquo;s instructions (excerpt)</p>
+    <div class="shot"><picture><source media="(max-width: 600px)" srcset="img/instructions-phone.png"><img src="img/instructions.png" alt="An excerpt of tonight's instructions: three wedges and a drummer's in-ear mix with their sends and outputs."></picture></div>
+    <p class="io-arrow">&darr; Atoo builds</p>
+    <div class="shot"><picture><source media="(max-width: 600px)" srcset="img/plan-busses-phone.png"><img src="img/plan-busses.png" alt="The busses: three mono wedges and a stereo in-ear mix patched to their outputs, plus the Drums and Vocals mix busses and the Vox Verb FX bus from the conventions."></picture></div>
+    <p class="caption">Four monitor mixes patched to their outputs, mono wedges and a stereo in-ear as the conventions say, plus the mix and FX busses the conventions always build. The Demo show, as shipped.</p>
+  </div>
+
+  <section>
+    <h2>The problem</h2>
+    <p class="lede">Setting up a WING for a show is an afternoon of menu work: patching, naming, colouring, gain, high-pass, monitor sends, DCAs. You do it the same way every show, from memory, usually alone. When something is wrong, the desk won't tell you: every screen looks fine, and the vocal still isn't in the PA. And when the surprise horn section shows up 30 minutes before doors, you're praying that you're patched right while running cable on a packed stage.</p>
+    <p class="lede" style="margin-top:16px">Atoo is a second pair of hands and eyes. It sets the desk up the way you always do, from your own conventions, confirms every setting landed, verifies the signal path for every channel, makes complex last minute patches without disturbing what's already there, and keeps watch until doors.</p>
+  </section>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="three">
+      <div class="card">
+        <h3><span class="chip">01</span> Patches</h3>
+        <p>Builds the whole show from your input list and your own house conventions: every channel, patch, colour, bus, send and DCA. A late change is one line.</p>
+      </div>
+      <div class="card">
+        <h3><span class="chip">02</span> Audits</h3>
+        <p>Checks the plan against the desk's real limits before anything is written, then reads every value back. What didn't land is named, not found at soundcheck.</p>
+      </div>
+      <div class="card">
+        <h3><span class="chip">03</span> Watches</h3>
+        <p>Watches the desk before doors for routing errors: the double-routed host mic, the muted mix bus, the DCA pulled to the floor.</p>
+      </div>
+    </div>
+    <div class="shot" style="margin:24px 0 8px">
+      <img src="img/watch-table.png" alt="Watch: Lead Vox muted, and the Band DCA pulled to the floor, each with why it matters.">
+    </div>
+    <p class="caption" style="margin-bottom:0">Watch, before doors: what is wrong, where, and why it matters.</p>
+  </section>
+
+  <section>
+    <h2>Where the AI is, and where it isn't</h2>
+    <div class="two">
+      <p class="lede" style="font-size:17px">A build needs your own AI API key. Atoo is built and tested on Claude; you can try a local model, but none has done the job well so far.</p>
+      <ul class="plain">
+        <li>The model builds the show plan, a file you can read, before the show.</li>
+        <li>The local Python code applies it to the console, with full logging and undo.</li>
+        <li>Anything the model chose that you didn't state is announced.</li>
+        <li>Verify, apply, undo, audit, watch and the Demo use no model at all.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="try">
+    <h2>Try it in two minutes, with no desk</h2>
+    <pre>pipx install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
+atoo ui</pre>
+    <p>Press <strong>Try the Demo show</strong>: a five-piece band opens on a simulated WING Compact. Look through Build, Apply and Watch. <span class="ok">Nothing is written anywhere.</span></p>
+    <p style="color:var(--text-dim);font-size:14px">Python 3.11 or newer. Runs on your laptop, in the browser or from the command line. No server and no account with us.</p>
+  </section>
+
+  <section>
+    <h2>Consoles</h2>
+    <p>The Behringer <strong>WING Compact</strong>, the full-size <strong>WING</strong> and the <strong>WING Rack</strong>. No other console is supported. Atoo never mixes.</p>
+    <p style="color:var(--text-dim);font-size:14px">Full applies are proven on a WING Compact. See <a href="https://docs.atoo.app/reference/limitations/">what Atoo can&rsquo;t do yet</a>.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Free and open source (AGPL-3.0). <a href="https://www.act4audio.com/">Commercial licences by agreement</a>. Built and maintained by Cameron O'Rourke (<a href="https://www.act4audio.com/">Act4Audio</a>), a live-sound engineer and technical consultant.</p>
+    <p>Atoo is an independent project. It is not affiliated with, endorsed by or supported by Music Tribe. Behringer, WING and Midas are trademarks of Music Tribe Global Brands Ltd.</p>
+  </div>
+</footer>
+
+</body>
+</html>
