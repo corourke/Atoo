@@ -77,6 +77,7 @@ says which check found it:
 | Starts with | Found by |
 |---|---|
 | `inferred.`, `reply.`, `build.` | the build: a choice made, or how the model's draft was filled in |
+| `rebuild.` | the browser, from what a rebuild changed against the plan it replaced |
 | `critic.` | the critic pass, a second model call that checks the plan against your conventions |
 | `patch.`, `strip.`, `group.` and others | verify: the plan against the desk's limits and your input list |
 | `apply.` | the Apply pre-flight and the apply run |
@@ -106,7 +107,12 @@ about several strips is one line, such as *3 strips built from
 instructions.md, not on the input list*, with each strip listed inside.
 
 - **To check**: errors, then warnings. Findings about strips come before
-  findings about files.
+  findings about files. With warnings and no errors the verdict reads,
+  for example, **Ready to apply · 1 to check**. After a rebuild, each
+  strip that changed although nothing it is made from changed is one of
+  these, `rebuild.unasked-change`: *Not asked for: gain 20 → 26 dB* on
+  `CH 6 Bass DI`, with links to its row and to the step 04 list of
+  changes ([What a rebuild changed](/build/pipeline/#what-a-rebuild-changed)).
 - **Advice**: the critic's warnings, marked with a dashed edge. They are
   a second opinion and never block an apply.
 - **▸ Choices**: the INFO notes that are choices, folded: what the build

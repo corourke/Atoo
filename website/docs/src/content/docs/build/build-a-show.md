@@ -67,7 +67,8 @@ instructions win. Without a file, the house rules apply in full.
 
 ## 5. Build the plan: 04 Plan
 
-1. Click the **04 Plan** tile.
+1. Click the **04 Plan** tile. The step opens on the **Plan** box, whose
+   first part is **Options**.
 2. Under **Console model**, choose your desk: **WING Compact**,
    **WING (full-size console)** or **WING Rack**.
 3. **Run the critic pass** is ticked: a second model reads the plan
@@ -75,12 +76,32 @@ instructions win. Without a file, the house rules apply in full.
    to skip that call.
 4. Press **Build plan**.
 
-The step shows what the model is doing while it works, with a clock and a
-**Stop** button. A build takes a few minutes. When it lands, the tile
-reads **PLAN CURRENT**, and the step shows the plan as tables: one row
-per input (channel, patch, phantom, DCAs, mute groups), then the busses
-and the outputs. Press **▸** on any row for its high-pass, sends, colour
-and the reason for each value.
+**Options** folds: click its heading to close it. Closed, it still says
+which WING and whether the critic runs, and the page remembers the
+choice. A build opens it again.
+
+Options shows what the model is doing while it works, with a clock and a
+**Stop** button, and its heading reads **BUILDING**. A build takes a few
+minutes. When it lands, the tile reads **PLAN CURRENT**, and the Plan
+box gains two more parts:
+
+- **Build output**: the file, when it was built and for which WING;
+  verify's verdict and a count of the findings, with a link into the
+  **Findings** panel; one line of counts (channels, aux, busses, outputs,
+  DCAs, mute groups, inputs left unassigned); and a folded **▸ Details**
+  line holding the model's own notes and how the build read its reply.
+  On the right of its heading, **PLAN CURRENT** or **STALE**.
+- **Changed since the last build**, after a rebuild only: what changed
+  against the plan this one replaced, one line per strip. It is open
+  when a change was not asked for, and folded otherwise.
+  [What a rebuild changed](/build/pipeline/#what-a-rebuild-changed) explains it.
+
+Below the box, the plan is three tables: **Channels**, one row per input
+(channel, patch, phantom, DCAs, mute groups), then **Busses** and
+**Outputs**. Press **▸** on any row for its high-pass, sends, colour and
+the reason for each value. After a rebuild, a strip that changed carries
+**ADDED**, **CHANGED** or **MOVED** by its number: yellow when nothing it
+is made from changed, grey when your edit asked for it.
 
 ![Step 04's channel table for a 19-channel band](../../../assets/img/build-plan-channels.png)
 
@@ -95,6 +116,9 @@ a link to the row it is about.
 - **ERROR**: the plan cannot be written as it stands, and the verdict
   reads **Blocked**. Fix the file the finding points at and build again.
 - **WARNING**, under **To check**: it can be written, but look first.
+  The verdict counts them: **Ready to apply · 1 to check**. A rebuild's
+  change that nothing you edited asked for is one of these
+  (`rebuild.unasked-change`), one per strip.
 - **Advice**: the critic's disagreements, a second model's opinion. Read
   them, but they never block an apply.
 - **INFO**, folded under **▸ Choices**: choices the plan made that your
@@ -110,7 +134,9 @@ a link to the row it is about.
 ## When you change a file
 
 Save an edit to any of the three files and the **04 Plan** tile reads
-**STALE**, listing which file changed. Press **Rebuild plan**.
+**STALE**. So does **Build output**, which lists which file changed.
+Press **Rebuild plan**. When the rebuild lands, **Changed since the last
+build** says what it changed.
 
 ## When it does not work
 

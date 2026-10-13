@@ -193,8 +193,14 @@ prints all of it instead of the short lines, with why each change is
 graded as it is. It is a `build` flag, so it shows the next rebuild in
 full, not the last one.
 
-In the browser the same lines end Build step 04's **Build log output**
-fold; the step 04 tables do not mark changed strips.
+In the browser, Build step 04's Plan box has the same list as its
+**Changed since the last build** part, worst first. Each strip is a link
+to its row, and the part is open when a change was not asked for. In the
+tables, each changed strip carries **ADDED**, **CHANGED** or **MOVED** by
+its number, yellow and with a yellow edge when it was not asked for, grey
+when it was. Each change nobody asked for is also a WARNING in the
+**Findings** panel, under **To check** (`rebuild.unasked-change`), so the
+verdict reads **Ready to apply · 1 to check**. It does not block Apply.
 
 Worked example: [Command-line quickstart](/getting-started/quickstart/).
 
