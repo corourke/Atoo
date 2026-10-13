@@ -944,9 +944,13 @@ under "Lines with no effect". Every rule cites the text it comes from, verbatim,
 
 Code then checks it: every citation must be in the conventions or the domain
 knowledge, and every conventions line (not blank, not a heading, not a comment) must
-be cited or listed as having no effect. Each miss is a WARNING. The file is still
-used with warnings -- a line no rule covers is given to the generator verbatim -- and
-refused only when it is empty or none of its citations is found.
+be cited or listed as having no effect. A citation not found is a WARNING; a line
+no rule covers is a note, and is given to the generator verbatim. A line of your
+preset map (- Kick: "Kick In", indented under a line that names presets) is
+covered when your preset library -- [presets] default in ~/.atoo.config -- has
+every preset it names, cited or not; one naming a preset the library has not got
+is a note saying so. The file is still used with warnings, and refused only when
+it is empty or none of its citations is found.
 
 The file ends with a Category table: one JSON object per category restating its
 colour, HPF, DCA, mute group, gain, trim, fader and Main routing, which the build

@@ -268,6 +268,29 @@ items is. A list line, such as
 half its items, and at least two, are each quoted whole: the resolved
 file cites a colour list one category at a time.
 
+Your preset map is the exception: an item indented under a line that
+names presets (`- Default channel presets by source, from my preset
+library:`) that quotes a preset (`- Kick: "Kick In"`) or says `no
+preset` counts as covered whenever your preset library has every preset
+it names, whether the resolved file cites it or not. The build's preset
+choice reads that line, not a rule, and the generator still reads it
+as you wrote it. The library is the one the build uses (`--presets`, or
+`[presets] default` in `~/.atoo.config`; `resolve --check` reads the
+default). An item naming a preset the library has not got is still a
+note, and says which. Here `house.md`'s map has `- Kick: "Kick In"`,
+which the starter library (here `[presets] default = "presets"`) has, and `- Snare: "Snare Top"`, which it has
+not; `resolve --check` lists only the second:
+
+```
+NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
+         Top", which is not in the preset library (presets) -- a channel given
+         it is built without its processing
+         Your line: - Snare: "Snare Top"
+         Fix: export a preset saved under that name into the library, or
+         change the line to a name `atoo presets` lists
+         (resolve.line-not-covered)
+```
+
 **Making it again.** It is made again by itself when it goes stale. To
 make it again anyway — you have read it and disagree with a decision,
 say, and have reworded your conventions, or you want a second opinion —
