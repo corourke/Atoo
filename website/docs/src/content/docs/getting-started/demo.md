@@ -38,12 +38,12 @@ build looks like.
 
 A box opens, once, saying what the Demo is: what works in it, what is
 switched off, and how to leave it. Press **Got it**. The bar now reads
-**Demo show**, **READ-ONLY**, **Demo · what's this?** and **Demo**; the
-**Demo · what's this?** chip opens the box again.
+**Demo show**, **READ-ONLY**, **Demo · what's this?** and **Demo**;
+**Demo · what's this?** opens the box again.
 
 ![The Demo show's box: what works, what is switched off, and Got it](../../../assets/img/demo-popup.png)
 
-![The bar with the Demo show open, and its chip](../../../assets/img/demo-bar.png)
+![The bar with the Demo show open](../../../assets/img/demo-bar.png)
 
 ## Build: the files and the plan
 

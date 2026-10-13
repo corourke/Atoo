@@ -24,7 +24,7 @@ before anything goes near the desk.
 3. Type a name under **New show folder**, say `friday-club`, and press
    **Create show**.
 
-The bar reads **Show bundle: friday-club/**. That folder holds all of
+Next to **Show bundle**, the bar reads **friday-club/**. That folder holds all of
 this show's files ([Show bundles](/build/show-bundles/)).
 
 ## 2. Check your house rules: 01 Conventions

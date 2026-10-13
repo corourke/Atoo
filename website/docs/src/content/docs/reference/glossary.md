@@ -13,7 +13,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 
 | Word | What it is | Where you meet it |
 |---|---|---|
-| Show bundle | one show's folder: its input list, instructions, plan, watch conditions and journals | **Show bundle:** in the bar; `--show` ([Show bundles](/build/show-bundles/)) |
+| Show bundle | one show's folder: its input list, instructions, plan, watch conditions and journals | **Show bundle** in the bar; `--show` ([Show bundles](/build/show-bundles/)) |
 | Conventions | how you set up a desk, in your own words, for every show | **01 Conventions**; `--conventions` ([Writing conventions](/build/conventions/)) |
 | Input list | what is plugged in, and where | **02 Input list**; `input.csv` ([Writing an input list](/build/input-lists/)) |
 | Instructions | what is different about tonight | **03 Instructions**; `instructions.md` |
@@ -39,7 +39,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 
 | Word | What it is | Where you meet it |
 |---|---|---|
-| Console | the one desk address the page uses | **Console:** and **Change…** in the bar; `--console` |
+| Console | the one desk address the page uses | **Console** and **Change…** in the bar; `--console` |
 | Ping | one round trip to the desk, for its name and model; changes nothing | **Ping**; `atoo ping` |
 | Pre-flight verify | the plan checked again against this desk's model, just before a write | **Pre-flight verify** in Apply step 1 |
 | Full build | the whole plan written to a desk you are setting up | **Full build**, **Write to console**; `atoo apply` ([Apply a plan to the desk](/apply/apply-to-desk/)) |

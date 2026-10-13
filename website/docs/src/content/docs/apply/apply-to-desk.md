@@ -27,9 +27,10 @@ the desk.
    console**.
 3. Press **Ping**.
 
-The pill next to **Ping** names the desk's model, its address and the
-round trip in milliseconds. If it reads *no reply from 192.0.2.16:2223 --
-is the console reachable, and is its OSC remote enabled?*, see
+Next to **Ping**, a green **ANSWERED** tag is followed by the desk's
+model, its address and the round trip in milliseconds. If a red **NO
+REPLY** tag is followed by *no reply from 192.0.2.16:2223 -- is the
+console reachable, and is its OSC remote enabled?*, see
 [Troubleshooting](/troubleshooting/troubleshooting/#atoo-cannot-reach-the-console).
 
 Ping sends one message and reads nothing else, so it is safe to press at
