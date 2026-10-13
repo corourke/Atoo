@@ -59,7 +59,7 @@ verify**, and **Disconnect output sockets the plan doesn't use**. Ticking
 the second opens a box for the socket groups to clean and how many
 sockets each has, such as `LCL=8,A=48`; its **?** says why you would.
 
-![Apply, Full build: the four boxes before a preview](../../../assets/img/apply-screen.png)
+![Apply, Full build: the four steps before a preview](../../../assets/img/apply-screen.png)
 
 ## 3. Step 2: Preview
 

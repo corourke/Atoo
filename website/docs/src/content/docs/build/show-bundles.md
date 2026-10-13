@@ -17,7 +17,7 @@ convention.
 ## The four slots
 
 The [Demo show](/getting-started/demo/) is one, and it ships with Atoo. From the
-top of a Atoo checkout:
+top of an Atoo checkout:
 
 ```bash
 ls starter/demo-show/
@@ -40,7 +40,7 @@ below (`journals/`, `builds/` and so on) as you use it.
 | `plan.json` | the plan the last build made | `atoo build`, and nothing else |
 | `plan.partial.json` | the part of the reply a FAILED build received, kept as evidence of why; removed by the next build that succeeds | `atoo build` |
 | `plan.previous.json` | the plan a rebuild replaced, moved aside the moment the rebuild starts, so a build that fails or is stopped leaves no out-of-date `plan.json` for Apply to offer. A rebuild ends by comparing the new plan with it, strip by strip ([What a rebuild changed](/build/pipeline/#what-a-rebuild-changed)). One generation only; not tracked by git (`.gitignore`) | `atoo build` |
-| `watch.json` | the watchlist | `atoo build` drafts it, you edit it (in the UI: Watch's rules editor) |
+| `watch.json` | your [watch conditions](/watch/watch-conditions/) | `atoo build` drafts it, you edit it (in the browser: Watch's **Watch conditions**) |
 | `journals/` | a **directory**: every journalled write in time order, one file each, named for the desk it wrote to — which `atoo undo` walks back one step at a time, per desk. The newest 5 are kept | `apply`, `patch`, `amend` and `undo`, on `--confirm` |
 | `builds/` | a **directory**: one file per build — done, failed or stopped — holding what each model call noted and what it cost. The newest 5 are kept | `atoo build` (and the UI's Build) |
 | `logs/` | a **directory**: text transcripts of a build and its verify, `<UTC time>-build.txt` and `<UTC time>-verify.txt`, one pair per run. The newest 5 runs are kept | a rebuild script of your own, if you keep one |
@@ -114,13 +114,13 @@ atoo verify --show docs/user/demo/touringband
   [info] plan: 'Magenta' is the desk's Pink (11): EG 1. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   [info] busses[MON5, MON6, Drums, Drums Comp, Vocals, Keys, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (11 busses): width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs / Mix busses conventionally stereo / FX busses conventionally stereo  (inferred.bus-width)
-  [info] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [info] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
   [info] channels[Keys L]: linked as a stereo pair -- no convention states it; decided by the generator: Input list designates Keys L/R as left/right pair on consecutive AES50-A sockets 15+16; stereo pairing conventional for DI sources  (inferred.channel-stereo)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
 
-The transcripts on this page run from the top of a Atoo checkout,
+The transcripts on this page run from the top of an Atoo checkout,
 on `docs/user/demo/touringband`, a touring band's show frozen so that
 what is printed here stays true. On your own show it is `--show my-show`.
 
@@ -178,7 +178,7 @@ Drop `--show` and the same command reports **15**. The bundle adds two
 from its own `watch.json`, which nothing on the command line named: its
 `Kick` condition fires (`CH 1 "Kick" is not muted`), and its
 `main-fader-floor` condition adds a note that it read `Main` as
-`MAIN 1`. It also takes one away: with the bundle's plan, SP-L002 is
+`MAIN 1`. It also takes one away: with the bundle's plan, L002 is
 quiet about CH 7's fader at the floor, because the plan puts that fader
 there. See [Watch conditions](/watch/watch-conditions/) for what those findings
 mean.
@@ -246,13 +246,13 @@ the reason above: it is used where it is, never copied. See
 [the file browser](/build/build-a-show/#1-make-the-show).
 
 **`watch.json` goes with the bundle the same way.** Watch's
-rules editor names the bundle's `watch.json`, and its **Change file**
+**Watch conditions** names the bundle's `watch.json`, and its **Change file**
 copies a watch-conditions file from outside into the bundle as
 `watch.json` — the same question before replacing one, the same
 `backups/watch.json.bak`, the same note in the Findings panel. **New file** makes an
 empty `watch.json` in the bundle when it has none, and **Save** writes the
 bundle's. With no bundle open, a file is used where it is. See
-[the watch-rules editor](/watch/watch-a-show/#3-say-what-matters-tonight-watch-conditions).
+[Watch conditions](/watch/watch-a-show/#3-say-what-matters-tonight-watch-conditions).
 
 That record says where each file is **relative to the bundle** — usually
 `../house-rules.md` — along with its absolute path and a fingerprint

@@ -156,8 +156,8 @@ export ANTHROPIC_API_KEY=sk-ant-...     # or ATOO_AI_API_KEY
 ```
 
 That is all a Claude build needs. By default every call runs on
-`claude-sonnet-5-5`: the plan, the `--critic` review, the watchlist
-draft and the resolve step. `ATOO_AI_MODEL` changes the first;
+`claude-sonnet-5-5`: the plan, the `--critic` review, the
+watch-conditions draft and the resolve step. `ATOO_AI_MODEL` changes the first;
 `ATOO_AI_CRITIC_MODEL`, `ATOO_AI_WATCHLIST_MODEL` and
 `ATOO_AI_RESOLVE_MODEL` change the other three.
 

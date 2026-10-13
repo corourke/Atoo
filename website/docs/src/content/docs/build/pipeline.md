@@ -148,8 +148,19 @@ Which lines are "about" a strip is read from their words, so a line
 that calls a strip by another name is not seen, and the section says so
 at INFO. A changed line that names no strip at all ("monitor sends are
 pre-fader") could be about anything, so every change is then taken as
-asked for, and said at INFO. A heading, or a line you only re-wrapped,
-asks for nothing and does not count.
+asked for, and said at INFO. A heading, or a line you only re-wrapped or
+re-indented (the same words, in the same order), changes no rule, so it
+asks for nothing; counted as a line naming no strip, it would make every
+change look asked for and hide the one that was not. The section counts
+those lines at INFO.
+
+**When a change is a WARNING**, nothing has stopped: the plan is
+written and verified as usual, and Apply will take it. Read the value
+before you do. If the new one is right, there is nothing to do. If it
+is not, say what you want in your conventions or the show's
+instructions and build again: the line you add asks for that strip, so
+the next comparison grades its change as INFO. A rebuild that changed
+nothing says *Changed since the last build: nothing*.
 
 Here the Demo show (from a checkout's `starter/`) was built, then the
 `Guest Vox` row was un-skipped in `input.csv` and named in the Vox Wedge
@@ -172,11 +183,18 @@ Changed since the last build -- 3 strips against plan.previous.json: 1 added, 1 
 ```
 
 `Playback` moved because a row was added before it: matched by its input
-row, it shows as moved rather than as removed and added. A strip with
-more than two changed values gets one line ending *"and 3 more values"*;
-`--all-changes` lists every value of every strip, with why each is graded
-as it is. The plan keeps the comparison too, at
-`meta.changes_since_previous`.
+row, it shows as moved rather than as removed and added.
+
+**Every changed value.** A strip with more than two changed values gets
+one line ending *"and 3 more values"*. The plan keeps the whole
+comparison at `meta.changes_since_previous`: each strip with its grade,
+its reason, and every value old and new. `--all-changes` on a build
+prints all of it instead of the short lines, with why each change is
+graded as it is. It is a `build` flag, so it shows the next rebuild in
+full, not the last one.
+
+In the browser the same lines end Build step 04's **Build log output**
+fold; the step 04 tables do not mark changed strips.
 
 Worked example: [Command-line quickstart](/getting-started/quickstart/).
 
@@ -218,7 +236,7 @@ atoo verify --plan starter/demo-show/plan.json --input starter/demo-show/input.c
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
 
-(`starter/demo-show/` is the Demo show, in a Atoo checkout. The test
+(`starter/demo-show/` is the Demo show, in an Atoo checkout. The test
 suite re-runs this transcript, so it stays what the command prints.)
 
 The `[info]` lines are **notes, not problems**: what the plan carries,
@@ -277,10 +295,10 @@ atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --plan docs/u
 ```
 Audit findings: 5 warning, 3 info.
 
-[WARNING] SP-C001 Phantom Power On Unpatched Socket
+[WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
 
-[WARNING] SP-CH002 DCA Fader Low With Active Members
+[WARNING] CH002 DCA Fader Low With Active Members
   DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
   ...
 ```
@@ -321,7 +339,7 @@ There is no `CRITICAL`: `ERROR` already refuses everything.
 |---|---|---|
 | 1 Build | the conventions grammar | [Writing conventions](/build/conventions/) |
 | 3 Verify | the plan checks against the console model | `atoo/verify_plan.py` |
-| 5 Audit / watch | the structural rules (`SP-C`, `SP-R`, …), the plan-diff checks (`SP-CV`), and your own watch conditions | `docs/developer/audit-rules.md` |
+| 5 Audit / watch | the structural rules (`C001`, `R005`, …), the plan-diff checks (`CV001`, …), and your own watch conditions | `docs/developer/audit-rules.md` |
 
 Both catalogues grow as rules are added, so this page does not count
 them; the linked source is the list.

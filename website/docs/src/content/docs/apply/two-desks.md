@@ -202,7 +202,7 @@ something Atoo does not know:
 ```
 Console: WING,198.51.100.8,MON-RACK,wing-racksize,S2301R7,3.1-0-g9f314617:release
 
-WARNING: 198.51.100.8 calls itself 'wing-racksize', a model name atoo has never measured on a real desk, so it cannot tell which WING this is. Sockets were checked against the plan's own model only, the WING Compact; a confirmed apply still reads every write back from the desk and proves it landed. The desk's own token is recorded in the journal (desk.model_token) -- once the model is known it is one line in console_facts.IDENTITY_MODEL_ALIASES.
+WARNING: 198.51.100.8 calls itself 'wing-racksize', a model name Atoo has never measured on a real desk, so it cannot tell which WING this is. Sockets were checked against the plan's own model only, the WING Compact; a confirmed apply still reads every write back from the desk and proves it landed. The desk's own token is recorded in the journal (desk.model_token) -- once the model is known it is one line in console_facts.IDENTITY_MODEL_ALIASES.
 ```
 
 Please send that token in — `atoo ping` shows it too, and the

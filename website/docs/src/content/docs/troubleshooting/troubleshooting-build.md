@@ -87,7 +87,7 @@ Nothing is written:
 Stopped by you (Ctrl-C) after 18s. Nothing was written to the show; plan.json is unchanged.
 ```
 
-The exit code is 130. A stop during the watchlist draft, after the plan
+The exit code is 130. A stop during the watch-conditions draft, after the plan
 was written, says so instead. The thinking summaries each call shows
 are kept in the build's log, which [`atoo lessons`](/build/lessons/)
 reads.
@@ -142,9 +142,9 @@ them are thinking, which is never returned:
   On Haiku the generator's thinking budget (`ATOO_AI_THINKING_BUDGET`,
   16,000 by default) counts against that ceiling too; `0` turns it off.
 
-The critic (`--critic`) and the watchlist draft can hit their own
+The critic (`--critic`) and the watch-conditions draft can hit their own
 ceiling, but they do not fail the build: it carries on without them,
-saying `critic pass did not run: ...` or `watchlist draft did not run:
+saying `critic pass did not run: ...` or `watch-conditions draft did not run:
 ...` with the same sentence, which names their own effort setting
 (`ATOO_AI_CRITIC_EFFORT`, `ATOO_AI_WATCHLIST_EFFORT`). Those
 two run on `claude-sonnet-5-5` by default, whatever the generator runs on

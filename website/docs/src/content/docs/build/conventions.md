@@ -162,7 +162,7 @@ says how wide they are still gives an applicable plan. `verify` adds a
 note for each width it decided:
 
 ```
-  [info] busses[MON1]: width set to mono -- the conventions did not state it; decided by atoo's fallback rule: it feeds a dedicated output on a single socket (A 21), and one jack carries one signal  (inferred.bus-width)
+  [info] busses[MON1]: width set to mono -- the conventions did not state it; decided by Atoo's fallback rule: it feeds a dedicated output on a single socket (A 21), and one jack carries one signal  (inferred.bus-width)
 ```
 
 A wedge on one socket is mono; an in-ear or a mix bus is stereo. If that

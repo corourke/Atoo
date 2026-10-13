@@ -40,7 +40,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 | Word | What it is | Where you meet it |
 |---|---|---|
 | Console | the one desk address the page uses | **Console:** and **Change…** in the bar; `--console` |
-| Ping | one round trip to the desk; reads and writes nothing | **Ping**; `atoo ping` |
+| Ping | one round trip to the desk, for its name and model; changes nothing | **Ping**; `atoo ping` |
 | Pre-flight verify | the plan checked again against this desk's model, just before a write | **Pre-flight verify** in Apply step 1 |
 | Full build | the whole plan written to a desk you are setting up | **Full build**, **Write to console**; `atoo apply` ([Apply a plan to the desk](/apply/apply-to-desk/)) |
 | Patch | a change to a show already on the desk, nothing else moved | **Patch**, **Write changes to console**; `atoo patch` ([Patch a show](/patch/patch-a-show/)) |
@@ -49,7 +49,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 | Journal | the record of one write, with each value it replaced | **The journal**; the show's `journals/` folder ([The journal](/apply/journals/)) |
 | History | every write from this show, newest first | **History**, Apply step 4 |
 | Undo | puts back what the newest write still on the desk changed | **Preview undo**, **Undo newest write**; `atoo undo` ([Undo](/apply/undo/)) |
-| Demo | a packaged, read-only show on a simulated WING Compact | **Try the Demo show**; `atoo init --demo` ([Try the Demo show](/getting-started/demo/)) |
+| Demo | a packaged, read-only show on a simulated WING Compact | **Try the Demo show** ([Try the Demo show](/getting-started/demo/)); `atoo init --demo` copies it into your folder as an editable `demo-show/` |
 
 ## See also
 

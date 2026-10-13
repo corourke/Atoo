@@ -77,7 +77,7 @@ is the Demo console's rig (the desk as the Demo show leaves it), and
 `docs/user/demo/demo-show/horns.change-set.json` is the
 change set for the Demo's 6pm change, *"trumpet, sax and trombone on LCL
 21-23, Band DCA"*, written by hand as a model would answer under the
-starter conventions. Run it from the top of a Atoo checkout:
+starter conventions. Run it from the top of an Atoo checkout:
 
 ```
 atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.change-set.json --state atoo/web/demo_states/before.json

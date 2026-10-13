@@ -190,7 +190,7 @@ Pre-flight verify of the amended plan against the WING (full-size console) at 19
 
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
 
 BLOCKED: do not apply.
 

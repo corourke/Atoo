@@ -46,7 +46,7 @@ line that sums up the findings:
 | `APPLICABLE: warnings only.` | warnings, no errors |
 | `BLOCKED: do not apply.` | at least one error |
 
-For example, on the Demo show, from a Atoo checkout:
+For example, on the Demo show, from an Atoo checkout:
 
 ```
 atoo verify --plan starter/demo-show/plan.json --input starter/demo-show/input.csv
@@ -80,7 +80,7 @@ says which check found it:
 | `critic.` | the critic pass, a second model call that checks the plan against your conventions |
 | `patch.`, `strip.`, `group.` and others | verify: the plan against the desk's limits and your input list |
 | `apply.` | the Apply pre-flight and the apply run |
-| `SP-` | the checks `audit` and Watch run on the desk itself (the full list) |
+| a letter code and three digits, such as `R005` or `CV016` | the checks `audit` and Watch run on the desk itself (the full list) |
 | `WATCH:` | one of your own watch conditions |
 
 A critic finding starts with a short claim, such as *Keys bus created,

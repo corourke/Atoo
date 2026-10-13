@@ -27,11 +27,11 @@ Find the symptom, then go to its page.
 | `amend` says a socket does not exist on this desk | [desk](/troubleshooting/troubleshooting-desk/#amend-says-a-socket-does-not-exist-on-this-desk) |
 | `apply` warns that the desk's model has never been measured | [desk](/troubleshooting/troubleshooting-desk/#apply-warns-that-the-desks-model-has-never-been-measured) |
 | `undo` says "nothing more to undo on this desk" | [desk](/troubleshooting/troubleshooting-desk/#undo-says-nothing-more-to-undo-on-this-desk) |
-| `audit` or `watch` says `SP-C003` | [audit](/troubleshooting/troubleshooting-audit/#audit-or-watch-says-sp-c003) |
-| A channel is silent but its patch is right: `SP-C004` | [audit](/troubleshooting/troubleshooting-audit/#a-channel-is-silent-but-its-patch-is-right-sp-c004) |
-| An effect is on the strip but you cannot hear it: `SP-E001`, `SP-E002` | [audit](/troubleshooting/troubleshooting-audit/#an-effect-is-on-the-strip-but-you-cannot-hear-it-sp-e001-sp-e002) |
-| The band cannot hear talkback: `SP-T001` | [audit](/troubleshooting/troubleshooting-audit/#the-band-cannot-hear-talkback-sp-t001) |
-| Talkback and a band input on one strip: `SP-CV014` | [audit](/troubleshooting/troubleshooting-audit/#talkback-and-a-band-input-on-one-strip-sp-cv014) |
+| `audit` or `watch` says `C003` | [audit](/troubleshooting/troubleshooting-audit/#audit-or-watch-says-c003) |
+| A channel is silent but its patch is right: `C004` | [audit](/troubleshooting/troubleshooting-audit/#a-channel-is-silent-but-its-patch-is-right-c004) |
+| An effect is on the strip but you cannot hear it: `E001`, `E002` | [audit](/troubleshooting/troubleshooting-audit/#an-effect-is-on-the-strip-but-you-cannot-hear-it-e001-e002) |
+| The band cannot hear talkback: `T001` | [audit](/troubleshooting/troubleshooting-audit/#the-band-cannot-hear-talkback-t001) |
+| Talkback and a band input on one strip: `CV014` | [audit](/troubleshooting/troubleshooting-audit/#talkback-and-a-band-input-on-one-strip-cv014) |
 | `audit` or `watch` says rules "could not be checked" | [audit](/troubleshooting/troubleshooting-audit/#audit-or-watch-says-rules-could-not-be-checked) |
 | `audit` says "No findings" on a console that is visibly wrong | [audit](/troubleshooting/troubleshooting-audit/#audit-says-no-findings-on-a-console-that-is-visibly-wrong) |
 | `audit` or `watch` reports a duplicate name that is not on the desk | [audit](/troubleshooting/troubleshooting-audit/#audit-or-watch-reports-a-duplicate-name-that-is-not-on-the-desk) |

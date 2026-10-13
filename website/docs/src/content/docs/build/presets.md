@@ -8,7 +8,7 @@ sidebar:
 <!-- Generated from docs/user/presets.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
 Your own `.chn` exports, applied as ordinary parameter writes -- and your `.bus` exports, which also load an FX bus's effect.
 
-Run everything on this page from the top of a Atoo checkout.
+Run everything on this page from the top of an Atoo checkout.
 
 ## These are Atoo's presets, not the console's
 
@@ -236,7 +236,7 @@ atoo verify --plan tests/fixtures/preset-test.plan.json --presets starter/preset
   [warning] channels[MLD VOX]: names the preset 'vocal', which the library has (Vocal.chn), but the plan carries none of its values -- it was built before presets were expanded into the plan, or without a library -- so nothing from it will be written  (preset.not-expanded)
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
 
 APPLICABLE: warnings only.
 ```
@@ -307,7 +307,7 @@ atoo verify --plan /tmp/preset-test.expanded.json --presets starter/presets
   [warning] channels[HH]: names the preset 'Kick (In)', which is not in the library at starter/presets (20 presets) -- that strip will be built without it. Closest in the library: Kick In  (preset.unknown)
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
   [info] plan: 4 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (81), ch 9 Keys (81), ch 10 Perc (81), ch 14 Vocal (78)  (preset.expanded)
 
 APPLICABLE: warnings only.

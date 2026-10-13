@@ -83,7 +83,7 @@ A bus named with an old word says so the same way, as `bus.colour-alias`.
 
 A conventions file that asks for a colour outside the eighteen gets a
 warning naming the strip and the eighteen it could have had. On the
-Demo show (from a Atoo checkout) with Gtr 1 set to `Gold`:
+Demo show (from an Atoo checkout) with Gtr 1 set to `Gold`:
 
 ```bash
 python3 -c "import json; p = json.load(open('starter/demo-show/plan.json')); \

@@ -20,7 +20,7 @@ $ atoo verify --show demo-show
 
   [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 BLOCKED: do not apply.
 ```
@@ -56,7 +56,7 @@ $ atoo verify --show unpatched-show
 
   [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 APPLICABLE: warnings only.
 ```
@@ -128,7 +128,7 @@ $ atoo verify --show demo-show
 
   [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 BLOCKED: do not apply.
 ```
@@ -185,7 +185,7 @@ conventions](/build/conventions/) — fixes every show you build after this one.
 **Inputs are not covered by this rule, deliberately.** Two channels on
 one physical *input* is legitimate — a split to a broadcast truck, one
 socket reused between acts at a festival — so it stays advice
-(`reconcile.duplicated-input` here, `SP-C002` from `audit`), never a
+(`reconcile.duplicated-input` here, `C002` from `audit`), never a
 refusal.
 
 ## A plan names a preset that cannot be found

@@ -402,19 +402,19 @@ up twice. Three of those rules run only when Watch has the show's plan
 (`--show`, or the Watch screen with a show open); the example above has
 none, so they did not run there:
 
-- **A channel that reaches no output** is `SP-CV016`, with the plan.
+- **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
   write `muted` `==` `false` on the channel that matters.
-- **Something muted that the plan leaves unmuted** is `SP-CV017`, with
+- **Something muted that the plan leaves unmuted** is `CV017`, with
   the plan, at WARNING. If you always watch with the plan, write a mute
   condition only where the mute should be an ERROR, as the PA and the
   lead vocal are above; the table's WARNING mute rows, the FX bus and
   the wedge, are for watching without it.
-- **A DCA at -20 dB or lower with live strips in it** is `SP-CH002`. A
+- **A DCA at -20 dB or lower with live strips in it** is `CH002`. A
   DCA fader condition still earns its place when you want your own
-  threshold and severity. A send left on at -100 dB is `SP-L001`.
-- **48V on an empty socket, two strips with one name** are `SP-C001` and
-  `SP-N001`. **An effect bypassed on an FX bus** is `SP-CV015`, with the
+  threshold and severity. A send left on at -100 dB is `L001`.
+- **48V on an empty socket, two strips with one name** are `C001` and
+  `N001`. **An effect bypassed on an FX bus** is `CV015`, with the
   plan.
 
 Where one of your conditions and a built-in rule both fire, Watch in the

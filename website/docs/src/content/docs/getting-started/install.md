@@ -20,8 +20,9 @@ atoo ui       # opens Atoo in your browser, starting there
 ```
 
 The first line installs Atoo and its browser UI into a private
-folder of their own and puts the `atoo` command on your `PATH`. It
-changes nothing else on the laptop. [First run](#first-run-atoo-init)
+folder of their own and puts the `atoo` command on your `PATH`, with
+`a2` beside it as a short spelling of the same command (`a2 ui` is
+`atoo ui`). It changes nothing else on the laptop. [First run](#first-run-atoo-init)
 says what the other two lines do.
 
 Windows has not been tried yet: see [Windows](#windows).

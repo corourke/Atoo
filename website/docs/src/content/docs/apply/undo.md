@@ -145,7 +145,7 @@ Two more outcomes are counted apart from that refusal:
 `docs/user/demo/undo-demo/` holds a nine-address slice of a real apply
 journal from a WING Compact and `after-apply.json`, the
 desk as that run left it — except that somebody has since renamed DCA 2
-from `Guitars` to `Horns`. Run this from the top of a Atoo checkout:
+from `Guitars` to `Horns`. Run this from the top of an Atoo checkout:
 
 ```
 atoo undo docs/user/demo/undo-demo/apply-journal.json --state docs/user/demo/undo-demo/after-apply.json

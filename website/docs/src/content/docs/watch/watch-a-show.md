@@ -41,28 +41,28 @@ at the top of each. Here on the [Demo show](/getting-started/demo/):
   `CH 10 "Lead Vox"`. Beside it is the claim, in large type (*is muted*,
   or a built-in rule's name), with the reason under it.
 - Rules starting `WATCH:` are your **watch conditions** (below). The
-  `SP-` rules are built in. An info row is a note, in quieter type: a
+  rules named by a code such as `R005` are built in. An info row is a note, in quieter type: a
   screen holding only info still looks calm.
 - The show's plan adds three rules, each a warning:
-  **SP-CV016 Planned Routes All Off** (a channel whose every planned
+  **CV016 Planned Routes All Off** (a channel whose every planned
   send and Main route is off or at the floor: *CH 1 "Kick": the plan
   sends it to Drums and Drums Comp; neither send is on*),
-  **SP-CV017 Muted Against Plan** (a channel, bus, DCA, Main or Matrix
+  **CV017 Muted Against Plan** (a channel, bus, DCA, Main or Matrix
   the plan leaves unmuted, muted on the desk; never the talkback mic),
   and, when the plan loads an FX bus's effect from a bus preset,
-  **SP-CV015 FX Bus Effect Contradicts Plan** (that bus's insert switched
+  **CV015 FX Bus Effect Contradicts Plan** (that bus's insert switched
   off, the reverb bypassed, or the engine holding another effect). On the
-  Demo, Lead Vox muted shows SP-CV017 folded under the show's own
-  condition (*Also SP-CV017 Muted Against Plan*), and the Vox Verb bus is
-  sometimes switched off to show SP-CV015.
+  Demo, Lead Vox muted shows CV017 folded under the show's own
+  condition (*Also CV017 Muted Against Plan*), and the Vox Verb bus is
+  sometimes switched off to show CV015.
 - Watch reads the output sockets the plan patches and the outputs of any
   AES50 stage box on the desk, so monitor busses patched to a stage box
   are not called unrouted. A Matrix the phones listen to is not
   "unpatched".
 - **One fault, one row.** When one of your conditions and a built-in
-  rule catch the same thing (your `DCA Band` fader condition and SP-CH002
+  rule catch the same thing (your `DCA Band` fader condition and CH002
   both see the Band DCA at the floor), the row is yours, at your
-  severity, with the built-in named under it: *Also SP-CH002 DCA Fader
+  severity, with the built-in named under it: *Also CH002 DCA Fader
   Low With Active Members*.
 - **A row clears itself** when the fault is fixed on the desk: the table
   is the desk as it is now, not a log. To hide one you have already seen,

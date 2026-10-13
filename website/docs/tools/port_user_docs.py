@@ -3,16 +3,15 @@
 
     python3 tools/port_user_docs.py <path to docs/user in the development repo>
 
-Until the two repositories' workflow is settled (Issue #702 in the
-development repository), the source of truth is `docs/user/` there: its
-worked examples are re-run by its own test suite. This script copies it
-here, every run from scratch, so a page is never edited in this site:
+The source of truth is `docs/user/` in the development repository, beside
+the code, where its worked examples are re-run by the test suite; each
+release converts it into this site (Cameron, 2026-10-13). This script is
+that conversion. It copies the pages here, every run from scratch, so a
+page is never edited in this site:
 
 * each page lands in its section's directory (SECTIONS below), with
   Starlight frontmatter: its H1 becomes `title`, its first paragraph
   `description`, and its place in SECTIONS `sidebar.order`;
-* the product's old name becomes Atoo everywhere, commands, environment
-  variables and paths included (RENAMES below);
 * a link to another page becomes the site's own URL, keeping its anchor;
   an image is served from src/assets/img/; a link that leaves the user
   guide (developer docs, the repository's own files) keeps its text and
@@ -67,15 +66,6 @@ DRAFTS: set[str] = set()
 
 NOT_PAGES = {"STYLE"}
 
-# Order matters: the specific spellings first.
-RENAMES = [
-    ("corourke/ShowProof", "\x00REPO\x00"),   # the repository keeps its name
-    ("SHOWPROOF_", "ATOO_"),
-    ("ShowProof", "Atoo"),
-    ("showproof", "atoo"),
-    ("\x00REPO\x00", "corourke/ShowProof"),
-]
-
 PAGE_OF = {page: section for section, pages in SECTIONS.items() for page in pages}
 
 LINK = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^)\s]+)\)")
@@ -92,12 +82,6 @@ def url_of(page: str) -> str:
     if page == "README":
         return "/"
     return f"/{PAGE_OF[page]}/{page}/"
-
-
-def rename(text: str) -> str:
-    for old, new in RENAMES:
-        text = text.replace(old, new)
-    return text
 
 
 def split_title(text: str, name: str) -> tuple[str, str]:
@@ -157,7 +141,7 @@ class Port:
         # link to the top of the page.
         self.title_slug = {}
         for p in src.glob("*.md"):
-            m = re.search(r"^# (.+)$", rename(p.read_text(encoding="utf-8")), flags=re.M)
+            m = re.search(r"^# (.+)$", p.read_text(encoding="utf-8"), flags=re.M)
             if m:
                 self.title_slug[p.stem] = slug(m.group(1))
 
@@ -193,7 +177,7 @@ class Port:
 
     def page(self, name: str, out: Path, depth: int, front: dict) -> None:
         raw = (self.src / f"{name}.md").read_text(encoding="utf-8")
-        title, body = split_title(rename(raw), name)
+        title, body = split_title(raw, name)
         if name == "README":
             # The front page is for readers; the section for the pages'
             # writers points into the development repository.

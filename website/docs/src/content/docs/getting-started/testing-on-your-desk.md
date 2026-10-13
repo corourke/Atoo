@@ -85,10 +85,10 @@ atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json
 ```
 Audit findings: 7 warning, 8 info.
 
-[WARNING] SP-C001 Phantom Power On Unpatched Socket
+[WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
 
-[WARNING] SP-CH002 DCA Fader Low With Active Members
+[WARNING] CH002 DCA Fader Low With Active Members
   DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
   ...
 ```

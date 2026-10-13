@@ -12,7 +12,7 @@ It is the only file that changes every week. Your
 [conventions](/build/conventions/) say how you build a show; the input list
 says what is on stage tonight.
 
-Every example on this page runs from the top of a Atoo checkout,
+Every example on this page runs from the top of an Atoo checkout,
 on the touring band's list frozen under
 `docs/user/demo/touringband/`.
 
@@ -327,7 +327,7 @@ names.
 
 `LCL 15`+`LCL 16`, never `LCL 7`+`LCL 12` and never `LCL 2`+`LCL 3`.
 
-This is the desk's routing hardware, not a Atoo rule: a WING forms a
+This is the desk's routing hardware, not an Atoo rule: a WING forms a
 stereo pair only from consecutive `[odd, even]` sockets. It is a
 constraint on the **cabling**, so it is cheapest to fix while writing the
 list. `verify` refuses a plan that patches a pair the other way round:

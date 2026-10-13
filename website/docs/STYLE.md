@@ -88,7 +88,7 @@ make that safe. Never say the model touches the console: it does not.
 
 ## Using the name
 
-The project may be renamed. Say "Atoo" where a sentence needs a
+The product is Atoo (renamed from ShowProof on 2026-10-13). Say "Atoo" where a sentence needs a
 name, and "it" or "the tool" otherwise. Never build a heading, a joke or a
 page title around the name.
 

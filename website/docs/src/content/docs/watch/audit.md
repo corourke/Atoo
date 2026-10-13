@@ -38,36 +38,36 @@ real desk, swap `--state FILE` for `--console 192.0.2.16`.
 ```
 Audit findings: 7 warning, 8 info.
 
-[WARNING] SP-C001 Phantom Power On Unpatched Socket
+[WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
 
-[WARNING] SP-CH002 DCA Fader Low With Active Members
+[WARNING] CH002 DCA Fader Low With Active Members
   DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
 
-[WARNING] SP-L001 Send On But Near-Silent
+[WARNING] L001 Send On But Near-Silent
   CH 2 "Snare"'s send to BUS 1 is on at -105dB -- audible in principle, in practice dead.
 
-[WARNING] SP-N001 Duplicate Channel/Aux Names
+[WARNING] N001 Duplicate Channel/Aux Names
   2 channel/aux strips share the name 'Vocal': CH 3, CH 4.
 
-[WARNING] SP-R001 Bus No Inputs
+[WARNING] R001 Bus No Inputs
   BUS 3 "FX" is in use but no strip has an active send to it.
 
-[WARNING] SP-R002 Bus No Output (2)
+[WARNING] R002 Bus No Output (2)
   BUS 2 "Monitor 1", BUS 3 "FX"
   Each is in use but has no route to a physical output -- not directly, not through a Main, and not through a Matrix.
 
-[INFO] SP-C002 Shared Physical Input
+[INFO] C002 Shared Physical Input
   LCL 5 feeds more than one strip: CH 5 "Bass", CH 6 "Bass DI".
 
-[INFO] SP-CH001 Channel Not In Any DCA (5)
+[INFO] CH001 Channel Not In Any DCA (5)
   CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback"
   Each is in use but belongs to no DCA group.
 
-[INFO] SP-CH003 Mute Group Active, Silencing Routed Members
+[INFO] CH003 Mute Group Active, Silencing Routed Members
   MGRP 1 "Vocals" is engaged and is silencing 1 active member(s): CH 3 "Vocal".
 
-[INFO] SP-L002 Active Strip Fader At Floor
+[INFO] L002 Active Strip Fader At Floor
   CH 7 "Playback" is unmuted and in use, but its own fader is at -144dB.
 
 Physical sockets read: in LCL 1-9; out LCL 1.
@@ -78,7 +78,7 @@ Physical sockets read: in LCL 1-9; out LCL 1.
 `LCL 9` -- with the name the desk is showing in quotes.
 
 **A rule that fires on several strips is one entry**, with the count in
-brackets: `SP-CH001 ... (5)` above is five channels, listed once, and the
+brackets: `CH001 ... (5)` above is five channels, listed once, and the
 sentence they share is said once. Where the strips differ in something
 you would act on -- a level, a socket -- each keeps its own line under
 the one heading. The count on the first line is still per finding: 15,
@@ -97,7 +97,7 @@ No findings -- every rule in this audit passed.
 ```
 
 **Every finding cites the rule it broke**, by an ID that does not change
-when the wording does: `SP-CH002` above. Quote it in a bug report;
+when the wording does: `CH002` above. Quote it in a bug report;
 `docs/developer/audit-rules.md` lists them
 all. No rule guesses what a channel is from its name: every rule works
 from the desk's routing, patch, mute and fader values.
@@ -190,7 +190,7 @@ recognise — it names the rules that therefore did not run rather than
 leaving you to read their silence as an all-clear:
 
 ```
-Physical sockets read: none. SP-R002 (Bus No Output), SP-R003 (Matrix Orphan), SP-R004 (Main Patched But Unfed), SP-R005 (Main Not Patched), SP-R006 (Matrix Fed But Not Patched), SP-CV009 (Undeclared Physical Output Patch) and SP-C001 (Phantom Power On Unpatched Socket) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
+Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), CV009 (Undeclared Physical Output Patch) and C001 (Phantom Power On Unpatched Socket) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
 ```
 
 Those rules stand down only when no output socket was read at all. A
@@ -273,7 +273,7 @@ findings go on top of the structural ones, and the first is the reason to
 do this at all:
 
 ```
-[WARNING] SP-CV006 Bus Send Contradicts Plan
+[WARNING] CV006 Bus Send Contradicts Plan
   CH 1 "Kick": plan says send to Drums is -6dB, live console reads 0dB (tolerance 0.5dB). (plan provenance: Busses: Drums (post, -6dB))
 ```
 
@@ -282,7 +282,7 @@ that asked for `-6dB` — rather than just two numbers. That is what a diff
 against a plan buys you over a diff against nothing.
 
 ```
-[WARNING] SP-CV009 Undeclared Physical Output Patch
+[WARNING] CV009 Undeclared Physical Output Patch
   LCL 1 is patched to MAIN 1 on the live console, but no bus or output in the plan routes anywhere to this socket -- likely leftover from an earlier apply, a different show, or manual patching.
 ```
 
@@ -294,9 +294,9 @@ what actually disconnects one; the audit only reports it.
 bus sends, direct-to-Main routes, and a narrow trim/balance/invert/
 head-amp-gain slice of processing. Two of its checks are about drift and
 are what [Watch](/watch/watch/) runs from the plan too: a channel whose every
-planned send and Main route is off (SP-CV016), and a channel, bus, DCA,
+planned send and Main route is off (CV016), and a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
-(SP-CV017). The filter family, the parametric EQ
+(CV017). The filter family, the parametric EQ
 and the compressor are **not** diffed yet — see
 `docs/developer/audit-rules.md` for the
 field-by-field table. `--plan` also works with `--console`, and with
@@ -325,8 +325,8 @@ And it never does it quietly. Whatever it held back is counted, named
 and explained at the end of the report:
 
 ```
-[INFO] SP-S001 Findings Withheld From This Report
-  10 finding(s) are not listed above because a plan was supplied: 1 SP-C002 (1 about an object the plan never mentions); 5 SP-CH001 (5 about an object the plan never mentions); 1 SP-L001 (1 about an object the plan never mentions); 1 SP-N001 (1 about an object the plan never mentions); 2 SP-R002 (2 about an object the plan never mentions). Re-run the same audit with no plan to see every finding the rules produced.
+[INFO] S001 Findings Withheld From This Report
+  10 finding(s) are not listed above because a plan was supplied: 1 C002 (1 about an object the plan never mentions); 5 CH001 (5 about an object the plan never mentions); 1 L001 (1 about an object the plan never mentions); 1 N001 (1 about an object the plan never mentions); 2 R002 (2 about an object the plan never mentions). Re-run the same audit with no plan to see every finding the rules produced.
 ```
 
 Drop `--plan` and you get all fifteen back. A shorter report should never

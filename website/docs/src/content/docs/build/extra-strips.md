@@ -119,7 +119,7 @@ atoo verify --plan plan.json --input input.csv
 
   [warning] channels[TALKBACK]: aux 8 'TALKBACK' is not on the input list; built because club.md says 'Setup TALKBACK on Aux 8, source LCL 22 if available'. Left unpatched (if available): LCL 22 is taken by input list row 'Lead Vox'  (reconcile.from-instructions)
 
-  [info] channels[MUSIC]: linked as a stereo pair -- no convention states it; decided by atoo's fallback rule: two sockets (LCL 23-24) make one stereo strip  (inferred.channel-stereo)
+  [info] channels[MUSIC]: linked as a stereo pair -- no convention states it; decided by Atoo's fallback rule: two sockets (LCL 23-24) make one stereo strip  (inferred.channel-stereo)
   [info] channels[MUSIC]: aux 1 'MUSIC' is not on the input list; built because club.md says 'Setup a MUSIC playback on Aux 1, source LCL 23-24', on LCL 23-24 as it states  (reconcile.from-instructions)
 
 APPLICABLE: warnings only.

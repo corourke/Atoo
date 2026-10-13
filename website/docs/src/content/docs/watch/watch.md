@@ -22,26 +22,26 @@ or try it on the [Demo show](/getting-started/demo/) with no desk.
 rules come from the bundle's plan, each a WARNING that clears itself
 when the desk is put back:
 
-- `SP-CV016 Planned Routes All Off`: a channel whose every send and Main
+- `CV016 Planned Routes All Off`: a channel whose every send and Main
   route the plan built is switched off or pulled to the floor. *CH 1
   "Kick": the plan sends it to Drums and Drums Comp; neither send is on.
   Its signal reaches nothing the plan routes it to.*
   One send off is not this rule (moving a channel between busses is your
   call); a monitor send the plan leaves at the floor for you to bring up
   is not a planned route.
-- `SP-CV017 Muted Against Plan`: a channel, bus, DCA, Main or Matrix the
+- `CV017 Muted Against Plan`: a channel, bus, DCA, Main or Matrix the
   plan leaves unmuted, muted on the desk. *BUS 9 "Vocals" is muted on the
   desk; the plan leaves it unmuted.* A WARNING rather than an error,
   because muting between songs is normal; if a particular mute should be
   an error, write a [watch condition](/watch/watch-conditions/) for it. The
   talkback mic is left out: it is muted between talks on purpose.
-- `SP-CV015 FX Bus Effect Contradicts Plan`, when the plan loads an
+- `CV015 FX Bus Effect Contradicts Plan`, when the plan loads an
   effect from a bus preset (a reverb on the Vox Verb bus, say: see
   [Bus presets](/build/bus-presets/)): that bus's
   insert switched off (the effect bypassed, so the bus returns nothing),
   pointing at another engine, or its engine holding another effect.
 
-The plan also quiets one rule: `SP-L002 Active Strip Fader At Floor`
+The plan also quiets one rule: `L002 Active Strip Fader At Floor`
 (INFO) is not raised for a fader the plan itself puts at the floor --
 under conventions that start every fader down, that is every channel
 until you bring it up. A fader the plan puts anywhere else, found at the
@@ -55,7 +55,7 @@ the outputs of every AES50 stage box the desk reports a device on (or a
 channel takes its input from). A Matrix that the phones or the monitor
 speakers listen to counts as reaching an output with no socket of its
 own. If a reading still could not see a stage box's outputs, the
-monitor busses on it are not called unrouted: `SP-R007 Output Route Not
+monitor busses on it are not called unrouted: `R007 Output Route Not
 Checked` says, at INFO, which outputs were not read.
 
 Every transcript on this page runs against a captured state file, with
@@ -92,11 +92,11 @@ No findings -- every rule in this audit passed.
 
 Physical sockets read: in LCL 1-9; out LCL 1-2.
 [2026-09-22T05:57:48+00:00] change detected:
-  NEW     [WARNING] SP-C001 Phantom Power On Unpatched Socket: 48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
-  NEW     [WARNING] SP-CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
-  NEW     [WARNING] SP-L001 Send On But Near-Silent: CH 2 "Snare"'s send to BUS 1 is on at -105dB -- audible in principle, in practice dead.
+  NEW     [WARNING] C001 Phantom Power On Unpatched Socket: 48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
+  NEW     [WARNING] CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
+  NEW     [WARNING] L001 Send On But Near-Silent: CH 2 "Snare"'s send to BUS 1 is on at -105dB -- audible in principle, in practice dead.
   ...
-  NEW     [INFO] SP-CH001 Channel Not In Any DCA (5): CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback" -- each is in use but belongs to no DCA group.
+  NEW     [INFO] CH001 Channel Not In Any DCA (5): CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback" -- each is in use but belongs to no DCA group.
   ... 2 more NEW lines
 ```
 
@@ -117,8 +117,8 @@ atoo watch --state-sequence audit_demo_state.json,audit_demo_state_before.json -
 
 ```
 [2026-09-22T06:14:12+00:00] change detected:
-  CLEARED [WARNING] SP-C001 Phantom Power On Unpatched Socket: 48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
-  CLEARED [WARNING] SP-CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
+  CLEARED [WARNING] C001 Phantom Power On Unpatched Socket: 48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
+  CLEARED [WARNING] CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
   ... 8 more CLEARED lines
 ```
 
@@ -182,8 +182,8 @@ A watch reads every strip, bus, DCA, mute-group and input-socket name on
 its **first pass** — the baseline Start takes — and then **every fifth
 pass** (`--name-refresh 5`, the default). The passes in between carry the
 names the last refresh read, so every rule still has them: the in-use
-rules (SP-R001, SP-R002, SP-L002 and the SP-CH rules), the duplicate-name
-rules SP-N001 and SP-N002, a watch condition that names a strip, and DCA
+rules (R001, R002, L002 and the CH rules), the duplicate-name
+rules N001 and N002, a watch condition that names a strip, and DCA
 and mute-group membership by group name.
 
 That takes a pass between refreshes from 323 requests to 235, about a
@@ -192,29 +192,29 @@ seconds** at the default 2-second `--interval`; a longer interval
 stretches it, and `--name-refresh N` changes it.
 
 **What it costs: a rename is seen at the next refresh, not the next
-pass.** Rename a channel, or give two strips the same name, and SP-N001
+pass.** Rename a channel, or give two strips the same name, and N001
 says so up to five passes later. The findings carry one INFO for the whole
 session saying exactly that, in the baseline and in every pass's table
 (never as a change), so a quiet table between refreshes is never mistaken
 for a check that ran:
 
 ```
-[INFO] SP-W001 Names are refreshed, not read every pass
+[INFO] W001 Names are refreshed, not read every pass
   Strip, bus, DCA, mute-group and input-socket names are read at Start and refreshed every 5 readings (about every 30s at the default 2s interval); a rename shows up at the next refresh. Everything else is read every pass. atoo watch --name-refresh 1 reads names every pass.
 ```
 
 A strip **patched** to a different socket between refreshes is not left
 waiting: the socket's name is read on the pass the new patch appears.
 
-- `--name-refresh 1` reads names on every pass, with no SP-W001.
+- `--name-refresh 1` reads names on every pass, with no W001.
 - With `--per-leaf` the default is 1: a pass is about two minutes, so a
   refresh every five would leave a rename unseen for ten of them, to save
   88 of ~6,100 requests. `--name-refresh N` still applies if you say it.
 - The Watch screen in `atoo ui` does the same, and has no control
-  for it. It shows SP-W001 on the **This watch** line under the table, not as a
+  for it. It shows W001 on the **This watch** line under the table, not as a
   row in the table.
 - `--state-sequence` and the Demo console read no names at all — their
-  states are fixed — so neither carries SP-W001.
+  states are fixed — so neither carries W001.
 - A scoped name in a watch condition (`BUS Drums`) still resolves once,
   against the first pass, which always reads every name.
 

@@ -11,6 +11,9 @@ drift. For how to *use* these together, start at
 [the front page](/).
 
 <!-- preamble:start -->
+`a2` is a short spelling of `atoo`: the same program, so `a2 build`
+and `atoo build` are one command. This page writes `atoo` throughout.
+
 ## Exit codes
 
 This is the canonical statement; everywhere else in the docs points here.
@@ -42,7 +45,7 @@ which code carries it depends on the command:
 | `watch` | **`1`** | the last pass had a finding at error severity -- an audit rule or one of your own [watch conditions](/watch/watch-conditions/) |
 | `ping` | n/a | it has nothing to find. `0` if the desk answered, `1` if it did not |
 | `presets` | n/a | it reports library problems but none of them blocks a build, so `0` either way. `1` only if the library is not there to read, or, with `--expand`, the plan cannot be read or written |
-| `ui` | n/a | `0` when the server stops, and when a Atoo UI was already serving on the port (it is opened instead). `1` if it could not start -- the `[ui]` extra is not installed, a plan or watch-conditions file would not load, or something else is using the port |
+| `ui` | n/a | `0` when the server stops, and when an Atoo UI was already serving on the port (it is opened instead). `1` if it could not start -- the `[ui]` extra is not installed, a plan or watch-conditions file would not load, or something else is using the port |
 | `init` | n/a | `0` when it is done, including when there was nothing to do. `1` if the folder or a config value could not be written |
 | `resolve` | `2` | the resolved conventions are usable but the check found a quote that is not there -- or, with `--check`, the file is stale. A conventions line no rule covers is only a note (the generator is given it as written), and leaves it `0`. `1` when there is no usable file: missing, refused (empty, or nothing it cites is found), or the model call failed |
 
@@ -359,7 +362,7 @@ with the plan's. A different model whose panel has every socket the plan patches
 -- a Compact plan on a Rack backup -- is applied, with an INFO naming both and the
 verify re-run against the desk's model. A socket the desk does not have (LCL 20 on
 a full-size WING) is REFUSED, each one named, --skip-verify or not. A desk whose
-model atoo has never measured is applied with a WARNING, sockets checked
+model Atoo has never measured is applied with a WARNING, sockets checked
 against the plan's model only, and its token journalled as desk.model_token.
 --console-model states which model to check the plan for.
 
@@ -393,7 +396,7 @@ the plan routes anywhere to, instead of leaving whatever was already patched the
 | Option | What it does |
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--plan` | A plan JSON produced by `atoo build`. Required unless --show supplies it. |
 | `--input` | The input list the plan was built from. Optional, but without it the checks that need it are skipped: that every input became a channel, that no channel was invented, and that phantom power is safe for the microphones in use. |
 | `--presets` `DIR` | Atoo's own preset library: a directory of .chn channel-preset exports, looked up by the name inside the file. These are NOT the console's own presets or scenes -- those cannot be recalled remotely at all -- they are parameter values Atoo writes like any other. `build` expands each named preset INTO the plan (its processing values, the plan's own processing winning where both set one), and `apply` writes what the plan carries; verify and apply use the library only to say whether it changed since. A plan naming a preset this library hasn't got is a warning, never a block. Defaults to [presets] default in ~/.atoo.config. |
@@ -443,7 +446,7 @@ trim/balance/invert/head-amp-gain slice of processing should be, so a finding ca
 the plan's own provenance text instead of just a structural fact. `processing`'s filter
 family (hpf_hz/hi_cut_hz/tilt_db), the parametric EQ and the compressor are still not
 diffed (see
-docs/developer/audit-rules.md for why). --plan also flags (SP-CV009) any
+docs/developer/audit-rules.md for why). --plan also flags (CV009) any
 physical output socket --output-sockets read that's patched to something the plan
 never routes there at all -- catches stray/leftover routing an apply run never wrote,
 same finding `apply --clean-output-sockets` can act on. --plan is independent of
@@ -455,7 +458,7 @@ that matters on any desk, and any finding about a parameter the plan itself stat
 withheld too, because the conventions diff already checks that parameter against what
 you asked for. Hazards are never withheld for being outside the plan: 48V on an
 unpatched socket, a mix reaching no loudspeaker, a routed strip sitting silent. Nothing
-goes quietly -- SP-S001 at the end of the report counts what was withheld and why, and
+goes quietly -- S001 at the end of the report counts what was withheld and why, and
 running without --plan shows everything the rules produced.
 ```
 
@@ -473,14 +476,14 @@ running without --plan shows everything the rules produced.
 | `--matrices` `VALUE` | Matrices to read (default: 8, WING Compact) |
 | `--dcas` `VALUE` | DCAs to read (default: 16, WING Compact) |
 | `--mute-groups` `VALUE` | Mute groups to read (default: 8, WING Compact) |
-| `--input-sockets` | Physical input socket counts to read phantom power from, e.g. 'LCL=20,A=48'. Omit and atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches from. Pass this to override that. |
-| `--output-sockets` | Physical output socket counts to read patch state from, e.g. 'LCL=16'. Omit and atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches to. Pass this for a stage box or a card the plan does not mention. The report says which sockets it read. |
+| `--input-sockets` | Physical input socket counts to read phantom power from, e.g. 'LCL=20,A=48'. Omit and Atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches from. Pass this to override that. |
+| `--output-sockets` | Physical output socket counts to read patch state from, e.g. 'LCL=16'. Omit and Atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches to. Pass this for a stage box or a card the plan does not mention. The report says which sockets it read. |
 | `--raw-log` `FILE` | Append every raw OSC request and reply to FILE, exactly as `apply --raw-log` does -- the literal bytes, not the values made of them. For a read that is slow or comes back short: the progress line says how many addresses went unanswered, and this says which. Written line by line, so a read stopped with Ctrl-C still leaves a complete log. Live reads only. |
 | `--no-progress` | Do not print the progress line while reading the console. A live read is a few hundred requests (thousands with --per-leaf) and normally reports 'read 120/323 (37%%) 2s -- /io/in/USR/44 (node)' on stderr as it goes, plus how many addresses went unanswered at the end. Without it a slow read looks like a hung one, so pass this only when something downstream is parsing stderr. |
 | `--per-leaf` | Read the console one request per leaf -- about 6,100 requests and two minutes on a WING Compact -- instead of the default, which fetches each object whole with the protocol's node-dump query (`,s *`): about 320 requests and five seconds. The two paths were compared address by address on a real WING Compact and agreed on all 5,860 values; the 304 insert and FX-slot leaves added since have not yet been compared on hardware. This is the diagnostic path: use it if a read looks wrong and you want to rule the node dump out, or if a desk misbehaves when asked for whole nodes. Names and tags are read one at a time either way, and so is any leaf a dump does not carry. |
 | `--bulk-read` | Accepted and ignored: reading by node dump is now the default. Kept so scripts written when it was opt-in still run. See --per-leaf. |
 | `--dump-state` `FILE` | After a live read, save everything read to FILE as the same address -> value JSON --state takes, so this exact reading can be audited again offline -- with a different --plan, after a fix to a rule, or by someone who was not at the desk. Written before the audit runs. Live reads only: refused with --state. The file does not record the console model; replay it with --plan to supply one. |
-| `--plan` | A plan JSON file (the same shape `atoo build` produces). Independent of --console/--state -- it works on top of whichever live state source was already selected -- and it changes the report two ways. It ADDS conventions-diff findings, comparing live state against what the plan says it should be (mute, fader level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow trim/balance/invert/head-amp-gain slice of processing; see docs/developer/audit-rules.md for what's not yet covered). And it WITHHOLDS structural findings the plan is not about: one about a strip or bus the plan never mentions, unless the rule is one that matters on any desk (48V on an unpatched socket, a mix that reaches no loudspeaker, a routed strip sitting silent), and any finding about a parameter the plan itself states, since the conventions diff already checks that against what you asked for. Nothing is dropped silently: the count and the reason are reported as SP-S001. Without --plan, nothing is withheld. |
+| `--plan` | A plan JSON file (the same shape `atoo build` produces). Independent of --console/--state -- it works on top of whichever live state source was already selected -- and it changes the report two ways. It ADDS conventions-diff findings, comparing live state against what the plan says it should be (mute, fader level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow trim/balance/invert/head-amp-gain slice of processing; see docs/developer/audit-rules.md for what's not yet covered). And it WITHHOLDS structural findings the plan is not about: one about a strip or bus the plan never mentions, unless the rule is one that matters on any desk (48V on an unpatched socket, a mix that reaches no loudspeaker, a routed strip sitting silent), and any finding about a parameter the plan itself states, since the conventions diff already checks that against what you asked for. Nothing is dropped silently: the count and the reason are reported as S001. Without --plan, nothing is withheld. |
 | `--trace-from` | Signal-graph node to trace from, e.g. 'input:LCL:3' or 'strip:/ch/12'. |
 | `--trace-to` | Signal-graph node to trace to, e.g. 'output:LCL:1' or 'main:1'. |
 
@@ -574,14 +577,14 @@ What it tells you goes to stderr, severity-labelled, worst first:
   WARNING  a default was applied, or a rule matched nothing
   NOTE     a choice made where your conventions were silent, or nothing to do;
            said out loud rather than hidden, and never blocks
-A finding that is a limitation of atoo itself says so -- editing your
+A finding that is a limitation of Atoo itself says so -- editing your
 conventions file will not fix it. The code in parentheses is
 stable across rewordings; quote it in a bug report.
 ```
 
 | Option | What it does |
 |---|---|
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
 | `--input` | Input list CSV path -- one band/event/venue's physical inputs. Omit together with --conventions to auto-detect the pair in the current directory instead. |
 | `--conventions` | Your conventions file (Markdown) -- standing house style, reusable across every show, like the conventions.md `atoo init` copies in. Plain English; the model reads it directly. Defaults to ~/.atoo.config's [conventions] default. A show bundle's instructions.md layers over this, it does not replace it. |
@@ -787,7 +790,7 @@ are safe either way -- a new channel only lands on a strip the desk reads free.
 | `--promote` `CHANGE` | Keep a change already written in the show for good: append its text to the bundle's instructions.md, under a dated 'Promoted changes' heading, and a row to input.csv for each input it added that the list does not have. CHANGE is its number (3, or 'change 3'), its short name, or its journal entry. Needs --show; no console or model. A preview unless --confirm. plan.json is not touched: rebuild to put the change in it. A change that was undone is refused. |
 | `--conventions` `FILE` | The house conventions to compile the change with. Default: the file the show on the desk was built from (recorded in its plan), else the [conventions] default in ~/.atoo.config. The bundle's instructions.md layers on top, as for a build. |
 | `--presets` `DIR` | The preset library the change's new channels and busses take their presets from (.chn channel presets, .bus bus presets), expanded into the change as a build expands them into a plan. Not needed as a rule: without it, the library the plan on the desk was built with (or the packaged starter presets, when its files match them), else [presets] default in ~/.atoo.config; an INFO says which. With none, a change that names presets says so up front, as a WARNING, and its new strips are written without those presets' values. |
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--no-constrain` | Do not constrain the model's reply to the change-set format (the same escape as `build --no-constrain`). The reply is still checked against it. Only the claude and ollama providers constrain decoding; on ATOO_AI_PROVIDER=api the schema is never sent, so this changes nothing there. |
 | `--prompt-dir` `DIR` | Read change_compile.md from DIR instead of the packaged prompts (sets ATOO_PROMPT_DIR for this run). |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
@@ -990,7 +993,7 @@ over the same engine the commands use, not a separate implementation.
 
 The page opens in your default browser once the server answers, and its address is
 printed too (--no-browser only prints it; with no display, as over SSH, nothing is
-opened). If a Atoo UI is already serving on the port, `ui` opens that one and
+opened). If an Atoo UI is already serving on the port, `ui` opens that one and
 exits 0 rather than failing. Loopback-only by default and no
 external network calls at any point -- this is meant to run on a laptop with no
 internet access, only LAN reach to the console.
@@ -1063,7 +1066,7 @@ The page is at /. /app redirects there.
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
 | `--host` | Interface to bind (default: 127.0.0.1, loopback only). On a network address a second machine may Watch; opening files and every write from the page (apply, patch, undo, build, saving a file) still answer this machine only |
-| `--port` `VALUE` | Port to serve on (default: 8420). If a Atoo UI is already serving there, that one is opened instead |
+| `--port` `VALUE` | Port to serve on (default: 8420). If an Atoo UI is already serving there, that one is opened instead |
 | `--no-browser` | Do not open the page in a browser; only print its address. By default the page opens in the default browser once the server answers |
 | `--plan` | A plan.json to show at startup on Build step 04 -- the same shape `atoo build` produces. Optional; a plan can also be loaded (or replaced) later from the browser without restarting. |
 | `--watch-conditions` | A watch-conditions JSON file to load at startup into Watch conditions, on the Watch screen -- the same file `atoo watch --watch-conditions` accepts. Optional; falls back to ~/.atoo.config's [watch_conditions] default when omitted (see `atoo watch --help`), and can also be loaded (or replaced) later from the browser without restarting. |
@@ -1181,7 +1184,7 @@ _Not written yet._
 | Option | What it does |
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--plan` | A plan JSON to check. Required unless --show supplies it. |
 | `--input` | The input list the plan was built from. Without it, the checks that need it are skipped: that every input became a channel, that no channel was invented, and that phantom power is safe. |
 | `--presets` `DIR` | Atoo's own preset library: a directory of .chn channel-preset exports, looked up by the name inside the file. These are NOT the console's own presets or scenes -- those cannot be recalled remotely at all -- they are parameter values Atoo writes like any other. `build` expands each named preset INTO the plan (its processing values, the plan's own processing winning where both set one), and `apply` writes what the plan carries; verify and apply use the library only to say whether it changed since. A plan naming a preset this library hasn't got is a warning, never a block. Defaults to [presets] default in ~/.atoo.config. |
@@ -1212,7 +1215,7 @@ Names (strips, buses, DCAs, mute groups, input sockets) are read on the first re
 every --name-refresh reads after it (default 5, about every 30s; 1 with --per-leaf), not
 every read: a node dump cannot carry a name, so they are over a quarter of a read's requests.
 Between refreshes the rules see the last names read, and a rename shows up at the next
-refresh -- the findings say so at INFO (SP-W001). --name-refresh 1 reads them every time.
+refresh -- the findings say so at INFO (W001). --name-refresh 1 reads them every time.
 
 The first read is reported as a baseline, not an alert -- whatever's already wrong when
 you start watching isn't a change. --state-sequence plays a fixed list of JSON captures
@@ -1221,8 +1224,8 @@ fire with no hardware at all.
 
 With --show, the bundle's plan adds three drift checks, each a WARNING that clears
 when the desk is put back: a channel whose every planned send and Main route is off
-(SP-CV016), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted
-(SP-CV017), and an FX bus's effect bypassed or changed (SP-CV015). The plan's output
+(CV016), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted
+(CV017), and an FX bus's effect bypassed or changed (CV015). The plan's output
 sockets are read too, and the outputs of any AES50 stage box the desk reports.
 
 --watch-conditions PATH adds operator-authored alerts on top of the built-in
@@ -1276,13 +1279,13 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 | `--matrices` `VALUE` | Matrices to read (default: 8, WING Compact) |
 | `--dcas` `VALUE` | DCAs to read (default: 16, WING Compact) |
 | `--mute-groups` `VALUE` | Mute groups to read (default: 8, WING Compact) |
-| `--input-sockets` | Physical input socket counts to read phantom power from, e.g. 'LCL=20,A=48'. Omit and atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches from. Pass this to override that. |
-| `--output-sockets` | Physical output socket counts to read patch state from, e.g. 'LCL=16'. Omit and atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches to. Pass this for a stage box or a card the plan does not mention. The report says which sockets it read. |
+| `--input-sockets` | Physical input socket counts to read phantom power from, e.g. 'LCL=20,A=48'. Omit and Atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches from. Pass this to override that. |
+| `--output-sockets` | Physical output socket counts to read patch state from, e.g. 'LCL=16'. Omit and Atoo reads the panel of whichever model the desk says it is, plus every group the --plan patches to. Pass this for a stage box or a card the plan does not mention. The report says which sockets it read. |
 | `--raw-log` `FILE` | Append every raw OSC request and reply to FILE, exactly as `apply --raw-log` does -- the literal bytes, not the values made of them. For a read that is slow or comes back short: the progress line says how many addresses went unanswered, and this says which. Written line by line, so a read stopped with Ctrl-C still leaves a complete log. Live reads only. |
 | `--no-progress` | Do not print the progress line while reading the console. A live read is a few hundred requests (thousands with --per-leaf) and normally reports 'read 120/323 (37%%) 2s -- /io/in/USR/44 (node)' on stderr as it goes, plus how many addresses went unanswered at the end. Without it a slow read looks like a hung one, so pass this only when something downstream is parsing stderr. |
 | `--per-leaf` | Read the console one request per leaf -- about 6,100 requests and two minutes on a WING Compact -- instead of the default, which fetches each object whole with the protocol's node-dump query (`,s *`): about 320 requests and five seconds. The two paths were compared address by address on a real WING Compact and agreed on all 5,860 values; the 304 insert and FX-slot leaves added since have not yet been compared on hardware. This is the diagnostic path: use it if a read looks wrong and you want to rule the node dump out, or if a desk misbehaves when asked for whole nodes. Names and tags are read one at a time either way, and so is any leaf a dump does not carry. |
 | `--bulk-read` | Accepted and ignored: reading by node dump is now the default. Kept so scripts written when it was opt-in still run. See --per-leaf. |
 | `--interval` `VALUE` | Seconds between reads (default: 2.0). Read-only polling -- WING's OSC offers only a single, network-wide event subscription that expires every 10 seconds, so nothing here pushes. Note this is the gap BETWEEN reads, not their period: one read of a live console is 6,143 addresses, fetched by node dump in about 320 requests and ~5 seconds on a WING Compact, so at the default a pass starts every seven seconds or so. With --per-leaf a read is about two minutes and an interval this short changes almost nothing. |
 | `--count` `VALUE` | Stop after this many reads. Default: run until Ctrl-C for --console, or once through the list for --state-sequence. Against a live console budget ~5s per read plus --interval between them: --count 8 is about a minute. With --per-leaf it is ~2 minutes per read, so --count 8 is about 17 minutes. watch prints its own estimate before the first read, and each read reports its progress and how many addresses went unanswered. |
-| `--name-refresh` `N` | Read strip, bus, DCA, mute-group and input-socket names on the first read and then every N reads, instead of every read. A node dump cannot carry a name, so on a WING Compact names are 88 of a read's ~320 requests. Default: 5 -- about every 30 seconds at the default --interval -- or 1 with --per-leaf. 1 reads names every time. Between refreshes each read carries the last names read, so every rule still runs; a rename shows up at the next refresh, and the findings say so at INFO (SP-W001). |
+| `--name-refresh` `N` | Read strip, bus, DCA, mute-group and input-socket names on the first read and then every N reads, instead of every read. A node dump cannot carry a name, so on a WING Compact names are 88 of a read's ~320 requests. Default: 5 -- about every 30 seconds at the default --interval -- or 1 with --per-leaf. 1 reads names every time. Between refreshes each read carries the last names read, so every rule still runs; a rename shows up at the next refresh, and the findings say so at INFO (W001). |
 | `--watch-conditions` | Path to a JSON file of operator-authored watch conditions -- alerts on top of the built-in structural rules, e.g. "the crowd mic must never be unmuted." Optional; without it, only the built-in rules run. See the watch subcommand's own --help text for the file's shape. |

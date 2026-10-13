@@ -125,7 +125,7 @@ that come and go at random, so within a few seconds the table fills:
 Error rows fill red and warning rows amber, so you can tell from across
 the room that something needs you. Rules starting `WATCH:` are the
 show's own watch conditions, folded into the **Watch conditions** line
-below the table; the `SP-` rules are built-in checks. The **This watch**
+below the table; rules named by a code such as `R005` are built-in checks. The **This watch**
 line, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
 BUS Drum IEM → BUS 4, BUS Drums → BUS 5, MAIN PA → MAIN 1, ...*: which
 bus, DCA and Main each condition's name was matched to when the watch
@@ -134,9 +134,9 @@ started. The show watches Lead Vox muted; the PA (Main 1) muted or below
 Wedge mixes muted, and the three mix and FX busses below -40 dB; and any
 DCA muted or below -30 dB, with the Band DCA held above -20 dB. When the
 Band DCA goes to the floor, the show's conditions and the built-in
-SP-CH002 all catch it: the conditions' rows, with SP-CH002 named under
+CH002 all catch it: the conditions' rows, with CH002 named under
 the first. The house conventions start every channel fader at the floor,
-and the plan puts them there, so SP-L002 *Active Strip Fader At Floor*
+and the plan puts them there, so L002 *Active Strip Fader At Floor*
 says nothing about them: Watch checks that rule against the show's plan,
 and names only a fader at the floor that the plan put somewhere else,
 like the Drums bus when it drops. A row disappears by itself when the fault clears. Press
@@ -181,7 +181,7 @@ their own, so the change adds a **Horns** bus, compressed by the **Mix
 Bus** bus preset, and nothing already on the desk moves.
 
 As [above](#apply-a-preview-on-the-simulated-desk), the Demo's **Patch**
-needs a model to compile a typed change. From a Atoo checkout you
+needs a model to compile a typed change. From an Atoo checkout you
 can see the review with no model at all: the change is compiled already,
 in `docs/user/demo/demo-show/horns.change-set.json`, and the Demo
 console's rig stands in for the desk. See [Patching a running

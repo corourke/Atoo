@@ -102,7 +102,7 @@ turns it off. stdout and the journal are the same either way.
 
 Steps 1 and 2 need no console: point `apply` at an address where nothing
 is listening and the verdict still prints first. Here it is on the Demo
-show, from a Atoo checkout:
+show, from an Atoo checkout:
 
 ```
 atoo apply --plan starter/demo-show/plan.json --input starter/demo-show/input.csv --console 127.0.0.1 --timeout 0.2

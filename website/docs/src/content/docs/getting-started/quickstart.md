@@ -11,7 +11,7 @@ a readback proving every value landed.
 
 This uses a 19-channel touring band on a WING Compact, which ships with
 Atoo under `docs/user/demo/`. Copy it into a folder of your own
-first, from the top of a Atoo checkout, so nothing you build
+first, from the top of an Atoo checkout, so nothing you build
 overwrites the shipped copy:
 
 ```bash
@@ -167,7 +167,7 @@ flags.
   [info] plan: 'Magenta' is the desk's Pink (11): EG 1. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   [info] busses[MON5, MON6, Drums, Drums Comp, Vocals, Keys, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (11 busses): width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs / Mix busses conventionally stereo / FX busses conventionally stereo  (inferred.bus-width)
-  [info] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [info] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
   [info] channels[Keys L]: linked as a stereo pair -- no convention states it; decided by the generator: Input list designates Keys L/R as left/right pair on consecutive AES50-A sockets 15+16; stereo pairing conventional for DI sources  (inferred.channel-stereo)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.

@@ -14,10 +14,10 @@ serving the static `dist/` as assets: separate from the marketing site
 
 ## Where the pages come from
 
-**Do not edit `src/content/docs/` by hand.** Until the two repositories'
-workflow is settled, the user guide's source of truth is `docs/user/` in the
-development repository, where its worked examples are re-run by the test
-suite. The pages here are a one-way port of it:
+**Do not edit `src/content/docs/` by hand.** The user guide's source of
+truth is `docs/user/` in the development repository, beside the code, where
+its worked examples are re-run by the test suite; each release converts it
+into this site (Cameron, 2026-10-13). The pages here are that one-way port:
 
 ```bash
 cd website/docs
@@ -31,8 +31,6 @@ The port (`tools/port_user_docs.py`) rebuilds `src/content/docs/` and
 - each page goes to its section's folder (the `SECTIONS` table in the
   script), with its H1 as `title`, its first paragraph as `description` and
   its place in the table as `sidebar.order`;
-- the old product name becomes Atoo everywhere: commands, `ATOO_*`
-  variables, `~/.atoo.config`, `~/Documents/Atoo`;
 - a link to another page becomes the site's URL, with its anchor; a link
   that leaves the user guide (the developer docs, the repository's own
   files) keeps its text and loses the link, and the port lists each one;
