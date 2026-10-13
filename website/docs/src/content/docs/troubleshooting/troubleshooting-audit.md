@@ -275,10 +275,7 @@ these, in this order:
   anything left out with `--channels`, `--buses` and the other count
   flags. See [the section above](#audit-or-watch-says-rules-could-not-be-checked).
 - **No rule covers it.** Some things are left out on purpose. Listenback
-  is one, and word clock against the expansion bays is another. The
-  "What is not covered" list in
-  `audit-rules.md`
-  says why for each.
+  is one, and word clock against the expansion bays is another.
 
 ## `audit` or `watch` reports a duplicate name that is not on the desk
 
@@ -365,4 +362,4 @@ Ways out, in this order:
 - [Troubleshooting](/troubleshooting/troubleshooting/) — every symptom, and the page it is on
 - [Checking a desk](/watch/audit/) — `atoo audit`
 - [Watching from the command line](/watch/watch/) — `atoo watch`
-- `docs/developer/audit-rules.md` — every rule ID
+- [Reading findings](/build/reading-findings/#codes) — what a finding's code tells you

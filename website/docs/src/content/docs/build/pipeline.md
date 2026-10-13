@@ -339,7 +339,7 @@ There is no `CRITICAL`: `ERROR` already refuses everything.
 |---|---|---|
 | 1 Build | the conventions grammar | [Writing conventions](/build/conventions/) |
 | 3 Verify | the plan checks against the console model | `atoo/verify_plan.py` |
-| 5 Audit / watch | the structural rules (`C001`, `R005`, …), the plan-diff checks (`CV001`, …), and your own watch conditions | `docs/developer/audit-rules.md` |
+| 5 Audit / watch | the structural rules (`C001`, `R005`, …), the plan-diff checks (`CV001`, …), and your own watch conditions | each finding names its rule; [Reading findings](/build/reading-findings/#codes) |
 
 Both catalogues grow as rules are added, so this page does not count
 them; the linked source is the list.

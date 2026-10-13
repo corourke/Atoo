@@ -101,10 +101,8 @@ consultant for real shows.
 ## Who maintains it in six months?
 
 Its author uses it on real shows, which is why it exists. It is open
-source, and the design documents, the requirements and the parameter
-map read from a real desk are all in the repository, so someone else can
-pick it up (`docs/developer/`,
-`docs/reference/`).
+source: the code, its tests and these pages are in its repository, so
+someone else can pick it up.
 
 ## Which consoles?
 

@@ -383,6 +383,5 @@ wrong with it and is then ignored. The browser page can write the
 - [Command-line quickstart](/getting-started/quickstart/) — both files through to a proven desk
 - [Show bundles](/build/show-bundles/) — where `instructions.md` lives
 - `starter/conventions.md` — the complete starter, which builds the Demo show
-- `docs/developer/artifact-formats.md` —
-  the normative detail, including every phrasing the generator is told to
-  recognise
+- [Conventions reference](/build/conventions-reference/) — the levels
+  vocabulary, the desk's colours, and the rules Atoo writes beside yours

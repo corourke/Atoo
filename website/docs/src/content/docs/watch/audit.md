@@ -97,9 +97,8 @@ No findings -- every rule in this audit passed.
 ```
 
 **Every finding cites the rule it broke**, by an ID that does not change
-when the wording does: `CH002` above. Quote it in a bug report;
-`docs/developer/audit-rules.md` lists them
-all. No rule guesses what a channel is from its name: every rule works
+when the wording does: `CH002` above. Quote it in a bug report. No rule
+guesses what a channel is from its name: every rule works
 from the desk's routing, patch, mute and fader values.
 
 **`audit` exits `0` on warnings and info, and `1` on an error**, or
@@ -297,9 +296,7 @@ are what [Watch](/watch/watch/) runs from the plan too: a channel whose every
 planned send and Main route is off (CV016), and a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
 (CV017). The filter family, the parametric EQ
-and the compressor are **not** diffed yet — see
-`docs/developer/audit-rules.md` for the
-field-by-field table. `--plan` also works with `--console`, and with
+and the compressor are **not** diffed yet. `--plan` also works with `--console`, and with
 `--show` it comes from the [show bundle](/build/show-bundles/).
 
 ### What `--plan` stops saying, and why it tells you
@@ -336,5 +333,5 @@ be something you can mistake for a clean desk.
 
 - [Watching from the command line](/watch/watch/) — the same rules on a loop
 - [Troubleshooting](/troubleshooting/troubleshooting/) — when it cannot reach the console
-- `docs/developer/audit-rules.md` — every rule ID
+- [Reading findings](/build/reading-findings/#codes) — what a finding's code tells you
 - [Command reference](/reference/cli-reference/) — every flag, generated from the code

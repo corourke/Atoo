@@ -98,7 +98,7 @@ WING's `/aux/1` and `/aux/2` would be refused on an untouched board.
 
 `--state FILE` takes an offline capture instead of a desk, as
 `audit --state` does, so the whole review can be done on the way to the
-venue. `docs/user/demo/amend-demo/` holds a small band's
+venue. `docs/user/demo/amend-demo/`, in an Atoo checkout, holds a small band's
 applied plan, a rebuild of it with a trumpet and a tenor sax added, and a
 capture of a desk running the show with somebody else's "Podium" on
 strip 11:

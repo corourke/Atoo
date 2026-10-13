@@ -69,4 +69,3 @@ browser; everything it does can also be done from the command line.
 | [Checking a desk](/watch/audit/) | `audit`: one read, signal tracing, and checking a desk against its plan |
 | [Watching from the command line](/watch/watch/) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](/reference/cli-reference/) | every command and flag (generated from the code) |
-| The web UI's HTTP API | scripting against `atoo ui` (a developer reference, in `docs/developer/`) |

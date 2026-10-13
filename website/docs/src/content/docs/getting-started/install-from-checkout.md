@@ -17,8 +17,8 @@ is `rm -rf .venv` away from gone.
 as `apt install python3-venv`.
 
 ```bash
-git clone https://github.com/corourke/ShowProof.git
-cd ShowProof
+git clone https://github.com/corourke/Atoo.git
+cd Atoo
 python3.12 -m venv .venv           # name the interpreter explicitly
 source .venv/bin/activate
 python3 -m pip install --upgrade pip    # editable installs need pip >= 21.3

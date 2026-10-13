@@ -16,11 +16,10 @@ serving the static `dist/` as assets: separate from the marketing site
 
 **Do not edit `src/content/docs/` or `src/assets/img/` by hand.** The user
 guide's source is `docs/user/` in the development repository, beside the
-code, where its worked examples are re-run by the test suite (Cameron,
-2026-10-13). **Every push to its `main` that changes the guide publishes it
+code, where its worked examples are re-run by the test suite. **Every push to its `main` that changes the guide publishes it
 here by itself:** its `publish-docs` workflow re-runs the worked examples,
 converts the pages with `tools/docs_to_starlight.py`, checks them
-(approved paths only, private references stripped, a scrub check), and
+(approved paths only, no issue or PR reference in a page, a scrub check), and
 commits to this repository's `main` as "Docs: <sha> from atoo-dev", only
 when something changed. Cloudflare then deploys. To do the same by hand:
 

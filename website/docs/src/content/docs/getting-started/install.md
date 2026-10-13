@@ -14,7 +14,7 @@ it up and open it in your browser.
 With [pipx](#getting-pipx) installed:
 
 ```bash
-pipx install "atoo[ui] @ git+https://github.com/corourke/ShowProof.git"
+pipx install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 atoo init     # makes ~/Documents/Atoo: house conventions, presets
 atoo ui       # opens Atoo in your browser, starting there
 ```
@@ -74,7 +74,7 @@ reading `~/.atoo.config`, which says so when it fails.
 To run Atoo on a newer Python than pipx's own, name it:
 
 ```bash
-pipx install --python python3.12 "atoo[ui] @ git+https://github.com/corourke/ShowProof.git"
+pipx install --python python3.12 "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 ```
 
 To install a newer Python on a Mac, see [Installing from a
@@ -262,7 +262,7 @@ From a checkout, see [Installing from a checkout](/getting-started/install-from-
 installed without `[ui]`. With pipx, install it again with the extra:
 
 ```bash
-pipx install --force "atoo[ui] @ git+https://github.com/corourke/ShowProof.git"
+pipx install --force "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 ```
 
 The UI is the one part of Atoo that is not dependency-free, so

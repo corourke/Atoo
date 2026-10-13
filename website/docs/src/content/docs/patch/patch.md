@@ -74,8 +74,8 @@ and on the page: `change 3: horns for tonight`.
 `--change-set FILE` uses a change set compiled earlier instead of calling
 the model. The Demo show has both: `atoo/web/demo_states/before.json`
 is the Demo console's rig (the desk as the Demo show leaves it), and
-`docs/user/demo/demo-show/horns.change-set.json` is the
-change set for the Demo's 6pm change, *"trumpet, sax and trombone on LCL
+`docs/user/demo/demo-show/horns.change-set.json`, in an Atoo checkout, is
+the change set for the Demo's 6pm change, *"trumpet, sax and trombone on LCL
 21-23, Band DCA"*, written by hand as a model would answer under the
 starter conventions. Run it from the top of an Atoo checkout:
 

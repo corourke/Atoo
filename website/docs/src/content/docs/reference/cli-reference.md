@@ -419,8 +419,8 @@ _Not written yet._
 
 ```
 Audit a console's live state against deterministic structural rules, and
-optionally trace a signal path across it. The rules are listed in
-docs/developer/audit-rules.md.
+optionally trace a signal path across it. Every finding names its rule
+by an ID that does not change when the wording does.
 
   atoo audit --console 203.0.113.50
   atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json
@@ -445,8 +445,7 @@ DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow
 trim/balance/invert/head-amp-gain slice of processing should be, so a finding can cite
 the plan's own provenance text instead of just a structural fact. `processing`'s filter
 family (hpf_hz/hi_cut_hz/tilt_db), the parametric EQ and the compressor are still not
-diffed (see
-docs/developer/audit-rules.md for why). --plan also flags (CV009) any
+diffed. --plan also flags (CV009) any
 physical output socket --output-sockets read that's patched to something the plan
 never routes there at all -- catches stray/leftover routing an apply run never wrote,
 same finding `apply --clean-output-sockets` can act on. --plan is independent of
@@ -483,7 +482,7 @@ running without --plan shows everything the rules produced.
 | `--per-leaf` | Read the console one request per leaf -- about 6,100 requests and two minutes on a WING Compact -- instead of the default, which fetches each object whole with the protocol's node-dump query (`,s *`): about 320 requests and five seconds. The two paths were compared address by address on a real WING Compact and agreed on all 5,860 values; the 304 insert and FX-slot leaves added since have not yet been compared on hardware. This is the diagnostic path: use it if a read looks wrong and you want to rule the node dump out, or if a desk misbehaves when asked for whole nodes. Names and tags are read one at a time either way, and so is any leaf a dump does not carry. |
 | `--bulk-read` | Accepted and ignored: reading by node dump is now the default. Kept so scripts written when it was opt-in still run. See --per-leaf. |
 | `--dump-state` `FILE` | After a live read, save everything read to FILE as the same address -> value JSON --state takes, so this exact reading can be audited again offline -- with a different --plan, after a fix to a rule, or by someone who was not at the desk. Written before the audit runs. Live reads only: refused with --state. The file does not record the console model; replay it with --plan to supply one. |
-| `--plan` | A plan JSON file (the same shape `atoo build` produces). Independent of --console/--state -- it works on top of whichever live state source was already selected -- and it changes the report two ways. It ADDS conventions-diff findings, comparing live state against what the plan says it should be (mute, fader level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow trim/balance/invert/head-amp-gain slice of processing; see docs/developer/audit-rules.md for what's not yet covered). And it WITHHOLDS structural findings the plan is not about: one about a strip or bus the plan never mentions, unless the rule is one that matters on any desk (48V on an unpatched socket, a mix that reaches no loudspeaker, a routed strip sitting silent), and any finding about a parameter the plan itself states, since the conventions diff already checks that against what you asked for. Nothing is dropped silently: the count and the reason are reported as S001. Without --plan, nothing is withheld. |
+| `--plan` | A plan JSON file (the same shape `atoo build` produces). Independent of --console/--state -- it works on top of whichever live state source was already selected -- and it changes the report two ways. It ADDS conventions-diff findings, comparing live state against what the plan says it should be (mute, fader level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow trim/balance/invert/head-amp-gain slice of processing; the filters, the parametric EQ and the compressor are not compared yet). And it WITHHOLDS structural findings the plan is not about: one about a strip or bus the plan never mentions, unless the rule is one that matters on any desk (48V on an unpatched socket, a mix that reaches no loudspeaker, a routed strip sitting silent), and any finding about a parameter the plan itself states, since the conventions diff already checks that against what you asked for. Nothing is dropped silently: the count and the reason are reported as S001. Without --plan, nothing is withheld. |
 | `--trace-from` | Signal-graph node to trace from, e.g. 'input:LCL:3' or 'strip:/ch/12'. |
 | `--trace-to` | Signal-graph node to trace to, e.g. 'output:LCL:1' or 'main:1'. |
 

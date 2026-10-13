@@ -420,8 +420,7 @@ none, so they did not run there:
 Where one of your conditions and a built-in rule both fire, Watch in the
 browser shows them as one row, yours
 ([Read the table](/watch/watch-a-show/#2-read-the-table)). What the plan's
-rules catch is in [Watching from the command line](/watch/watch/); the
-rule catalogue has the rest.
+rules catch is in [Watching from the command line](/watch/watch/).
 
 ## Where the file comes from
 
@@ -440,4 +439,3 @@ then edit — see [Show bundles](/build/show-bundles/#a-build-writes-back-into-t
 - [Watching from the command line](/watch/watch/) — `atoo watch`
 - [Watch the desk during a show](/watch/watch-a-show/) — the **Watch conditions** editor in the browser
 - [Show bundles](/build/show-bundles/) — where `watch.json` lives
-- `docs/developer/audit-rules.md` — the full watch-condition reference

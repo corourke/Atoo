@@ -429,6 +429,3 @@ compressor put back to the factory reading too.
   naming a preset from the file that decides who gets one
 - [Bus presets: mix and FX busses](/build/bus-presets/)
 - [Applying a plan](/apply/applying/) -- what `apply` does write
-- `docs/reference/wing-channel-preset.md` -- the field-by-field
-  justification for the allow-list above, and the type each value is
-  written as

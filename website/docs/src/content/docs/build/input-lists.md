@@ -12,9 +12,9 @@ It is the only file that changes every week. Your
 [conventions](/build/conventions/) say how you build a show; the input list
 says what is on stage tonight.
 
-Every example on this page runs from the top of an Atoo checkout,
-on the touring band's list frozen under
-`docs/user/demo/touringband/`.
+Every example on this page runs from the top of an Atoo checkout, on
+the touring band's list frozen there under `docs/user/demo/touringband/`.
+With your own list, use its path instead.
 
 A **socket** is the physical connector on the desk (`LCL 3`,
 `AES50-A 12`, `USB 47`); a **patch** is the connection between a channel
@@ -376,9 +376,7 @@ bypassed anywhere.
 
 **`apply` does not write them yet.** For now the `USR` slots are set up
 on the console by hand, and `verify` says so once per plan rather than
-letting a section it ignores look like one it honoured. The shape is in
-`docs/developer/artifact-formats.md`'s
-`user_sources` section.
+letting a section it ignores look like one it honoured.
 
 ## Checking a list before the desk exists
 
@@ -408,5 +406,5 @@ wherever it is used. The two useful moments:
   that decides what happens to these rows
 - [Command-line quickstart](/getting-started/quickstart/) — an input list through to a proven desk
 - [Show bundles](/build/show-bundles/) — where `input.csv` lives for one show
-- `docs/developer/artifact-formats.md` —
-  the normative format, including `user_sources`
+- [Channels that are not on the input list](/build/extra-strips/) — talkback,
+  playback and the strips you add at every show

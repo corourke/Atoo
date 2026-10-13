@@ -1,6 +1,6 @@
 /*
  * Atoo docs theme: the app's own look. Tokens follow Atoo's UI
- * (showproof/web/static/styles.css in the development repository, and the
+ * (atoo/web/static/styles.css in the development repository, and the
  * approved atoo.app site): true near-black, a brass accent (#c9982e), sharp,
  * minimally rounded modules and bold uppercase labels. Dark is the primary
  * look (astro.config.mjs makes it the default); light is a secondary check.

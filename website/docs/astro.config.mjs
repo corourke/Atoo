@@ -6,7 +6,7 @@ import starlight from '@astrojs/starlight';
 // See wrangler.jsonc for deploy config and README.md for the workflow.
 //
 // The pages under src/content/docs/ are GENERATED from the user guide in the
-// development repository by its tools/docs_to_starlight.py, at each release;
+// development repository by its tools/docs_to_starlight.py, on every push;
 // edit them there (README.md, "Where the pages come from").
 export default defineConfig({
   site: 'https://docs.atoo.app',
