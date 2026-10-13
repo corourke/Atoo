@@ -40,7 +40,7 @@ Find the symptom, then go to its page.
 | The browser page loads but shows nothing | [ui](/troubleshooting/troubleshooting-ui/#the-page-loads-but-shows-nothing) |
 | In the browser, Build step 04 says Failed | [ui](/troubleshooting/troubleshooting-ui/#build-step-04-says-failed) |
 | The browser page says it is out of date | [ui](/troubleshooting/troubleshooting-ui/#the-page-says-it-is-out-of-date) |
-| In the browser, **Write to console** or **Undo newest write** stays greyed out | [ui](/troubleshooting/troubleshooting-ui/#write-to-console-or-undo-newest-write-stays-greyed-out) |
+| In the browser, **Write to console** or **Undo newest write** stays locked | [ui](/troubleshooting/troubleshooting-ui/#write-to-console-or-undo-newest-write-stays-locked) |
 | Another computer can open the browser page, but only to watch | [ui](/troubleshooting/troubleshooting-ui/#another-computer-can-open-the-page-but-only-to-watch) |
 
 ## `atoo` cannot reach the console

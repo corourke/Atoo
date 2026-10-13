@@ -35,7 +35,8 @@ Patch shares Apply's four numbered steps: **What will be written**,
 
    Leave a socket out and one is chosen for you, and the review says
    which.
-3. Press **Preview**, in step 2.
+3. Press **Preview**, in step 2. Until a change is typed it is locked,
+   and **Locked:** beside it says what it is waiting for.
 
 ![Apply in Patch mode: the change box in step 1, Preview in step 2](../../../assets/img/patch-screen.png)
 
@@ -74,7 +75,8 @@ WARNING naming the presets that will be written without their values.
 Then a count of what will be written and what will **not** be. If it is
 not what you meant, change the words and press **Preview** again. Until
 you do, step 2 says the preview is out of date and the write stays
-locked.
+locked. While the preview still matches your words, the button reads
+**Preview again**.
 
 ## 3. Write it
 
