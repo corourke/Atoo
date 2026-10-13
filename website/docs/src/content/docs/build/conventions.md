@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/conventions.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/conventions.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Your habits, in plain English, written down once and reused for every
 show. This is the file that makes the tool worth using.
 

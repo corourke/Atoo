@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-<!-- Generated from docs/user/patch-a-show.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/patch-a-show.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The horn section turns up at 6pm. Three channels have to go onto a desk
 that is already set up and line-checked, and nothing already in use can
 move.

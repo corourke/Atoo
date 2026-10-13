@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/faq.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/faq.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The questions a careful engineer asks before letting a new tool near a
 desk, with short answers and a link to the page that says more.
 

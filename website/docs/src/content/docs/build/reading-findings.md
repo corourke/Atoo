@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-<!-- Generated from docs/user/reading-findings.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/reading-findings.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Every check Atoo runs reports in the same shape: a **finding**, with
 a severity, the thing it is about, what it found, and a code. This page
 says what each part means and what to do about it.

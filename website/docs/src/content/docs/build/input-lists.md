@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/input-lists.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/input-lists.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The CSV that says what is plugged into the desk for one show.
 
 It is the only file that changes every week. Your

@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/patch.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/patch.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 *From the command line. In the browser, see [Patch a show that is already on the desk](/patch/patch-a-show/).*
 
 The horn section has turned up during the setup window. The show is

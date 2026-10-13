@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-<!-- Generated from docs/user/cli-reference.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/cli-reference.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Every command and every option, generated from the code so it cannot
 drift. For how to *use* these together, start at
 [the front page](/).

@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/limitations.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/limitations.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 What it cannot do yet, what has not been proven on a real desk, and
 where it is rough. Read this before you rely on it for a show.
 

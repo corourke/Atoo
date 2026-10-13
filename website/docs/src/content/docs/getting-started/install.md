@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/install.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/install.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 One command puts Atoo on a Mac or a Linux laptop, and two more set
 it up and open it in your browser.
 

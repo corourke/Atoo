@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/configuration.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/configuration.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Do this once, before your first show. Atoo takes its settings from
 two places, and each one holds different things:
 

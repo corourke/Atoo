@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-<!-- Generated from docs/user/troubleshooting-audit.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/troubleshooting-audit.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 What a finding from `audit` or `watch` means when the cause is not
 obvious, and what to do when a reading looks wrong or slow.
 

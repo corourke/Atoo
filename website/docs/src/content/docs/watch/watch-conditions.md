@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/watch-conditions.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/watch-conditions.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The built-in rules know what a WING should look like; they do not know
 your show. A watch condition is a line you write about *this* rig — the
 Kick stays on LCL 5, the PA is never muted, the Band DCA stays up — and

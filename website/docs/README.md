@@ -14,37 +14,36 @@ serving the static `dist/` as assets: separate from the marketing site
 
 ## Where the pages come from
 
-**Do not edit `src/content/docs/` by hand.** The user guide's source of
-truth is `docs/user/` in the development repository, beside the code, where
-its worked examples are re-run by the test suite; each release converts it
-into this site (Cameron, 2026-10-13). The pages here are that one-way port:
+**Do not edit `src/content/docs/` or `src/assets/img/` by hand.** The user
+guide's source is `docs/user/` in the development repository, beside the
+code, where its worked examples are re-run by the test suite. Each release
+converts it into this site (Cameron, 2026-10-13); the release's publish
+script runs the converter, which lives with the source:
 
 ```bash
-cd website/docs
-python3 tools/port_user_docs.py <path to the development repo>/docs/user
+# in the development repository
+python3 tools/docs_to_starlight.py <this checkout>/website/docs
+# then, here
 npm run build && npm run check-links
 ```
 
-The port (`tools/port_user_docs.py`) rebuilds `src/content/docs/` and
-`src/assets/img/` from scratch every run:
+`tools/docs_to_starlight.py` rewrites `src/content/docs/` and
+`src/assets/img/` from scratch: each page in its sidebar section (the
+converter's `SECTIONS` table), with its title, description and
+`sidebar.order` as frontmatter; links rewritten to this site's URLs;
+images copied; links that leave the user guide kept as text. Every page
+says at its top that it is generated. The development repository's
+`tests/test_docs_to_starlight.py` runs the conversion on every test run,
+so a page with no section, or a link that would break here, fails there
+first.
 
-- each page goes to its section's folder (the `SECTIONS` table in the
-  script), with its H1 as `title`, its first paragraph as `description` and
-  its place in the table as `sidebar.order`;
-- a link to another page becomes the site's URL, with its anchor; a link
-  that leaves the user guide (the developer docs, the repository's own
-  files) keeps its text and loses the link, and the port lists each one;
-- `docs/user/README.md` becomes the front page, without its section for
-  the pages' writers.
-
-A page added to `docs/user/` without a place in `SECTIONS` stops the port,
-and so does a link to a page that does not exist.
+Everything else in this folder (the config, the theme, `STYLE.md`, the
+deploy) belongs to the site and is edited here.
 
 **The command reference** (`reference/cli-reference`) is generated twice
 over: `tools/gen_cli_reference.py` in the development repository writes
 `docs/user/cli-reference.md` from the CLI's own argparse tree (a test there
-fails while it is stale), and the port carries it here like any page. Never
-edit its option tables.
+fails while it is stale), and the converter carries it here like any page.
 
 ---
 
@@ -70,8 +69,8 @@ You do **not** commit `dist/`; Cloudflare runs `npm run build` itself.
 
 `draft: true` in a page's frontmatter keeps it out of `npm run build`
 (production and Cloudflare previews); `npm run dev` and
-`npm run build:staging` still show it. The port sets it for the pages in its
-`DRAFTS` set (none today). A published page must not link to a draft:
+`npm run build:staging` still show it. The converter sets it for the pages
+in its `DRAFTS` set (none today). A published page must not link to a draft:
 `check-links` reports it.
 
 ---
@@ -118,11 +117,10 @@ First-time setup, once, with access to the `atoo.app` zone:
 | Path | What |
 | --- | --- |
 | `astro.config.mjs` | Site config and the sidebar sections |
-| `src/content/docs/**` | The pages: **generated** by the port |
-| `src/assets/img/` | Screenshots: **copied** by the port |
+| `src/content/docs/**` | The pages: **generated** by the converter |
+| `src/assets/img/` | Screenshots: **copied** by the converter |
 | `src/assets/logo.svg`, `public/favicon.svg` | The A2 mark |
 | `src/styles/theme.css` | The app-matching theme |
-| `tools/port_user_docs.py` | The one-way port from `docs/user/` |
 | `tools/check_links.py` | Internal link and anchor check over `dist/` |
 | `wrangler.jsonc` | Cloudflare Worker deploy config |
 | `dist/` | Build output (git-ignored) |

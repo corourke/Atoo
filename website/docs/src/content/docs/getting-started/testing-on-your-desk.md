@@ -5,7 +5,7 @@ sidebar:
   order: 6
 ---
 
-<!-- Generated from docs/user/testing-on-your-desk.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/testing-on-your-desk.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Atoo has written full shows to one model of desk. Yours is the
 test it has not had. This page is four steps, each safer than the next
 one, and you can stop after any of them: a report from step 2 is worth

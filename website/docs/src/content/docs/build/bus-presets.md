@@ -5,7 +5,7 @@ sidebar:
   order: 7
 ---
 
-<!-- Generated from docs/user/bus-presets.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/bus-presets.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 A **bus preset** is a bus's processing, saved on the desk: its EQ and
 compressor, and on an FX bus the effect inserted on it. Atoo puts
 one on a bus when your conventions name it.

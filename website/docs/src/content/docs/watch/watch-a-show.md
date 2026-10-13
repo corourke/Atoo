@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-<!-- Generated from docs/user/watch-a-show.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/watch-a-show.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Someone leaves the lead vocal muted, or pulls the Band DCA to the floor. Watch
 reads the desk every few seconds and shows what is wrong now, against
 your own rules and a set of built-in checks.

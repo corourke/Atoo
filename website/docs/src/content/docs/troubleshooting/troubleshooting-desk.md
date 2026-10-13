@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/troubleshooting-desk.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/troubleshooting-desk.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 `apply`, `amend` and `undo` reached the desk but did not do what you
 expected. When the desk does not answer at all, see
 [`atoo` cannot reach the console](/troubleshooting/troubleshooting/#atoo-cannot-reach-the-console).

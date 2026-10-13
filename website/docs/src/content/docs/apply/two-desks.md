@@ -5,7 +5,7 @@ sidebar:
   order: 6
 ---
 
-<!-- Generated from docs/user/two-desks.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/two-desks.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 *From the command line.*
 
 One plan can go to more than one console — a primary and a backup, say,

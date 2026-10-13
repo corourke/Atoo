@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/troubleshooting-build.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/troubleshooting-build.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 `build` failing, or stopping before it writes a plan. When `build` worked
 but `verify` refuses the plan, see [When `verify` refuses a plan](/troubleshooting/troubleshooting-verify/).
 

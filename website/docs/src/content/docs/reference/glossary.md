@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/glossary.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/glossary.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 One name for each thing, as the browser and the command line say it.
 A label in **bold** is what you see on screen; `code` is what you type.
 

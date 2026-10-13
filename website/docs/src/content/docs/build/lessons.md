@@ -5,7 +5,7 @@ sidebar:
   order: 11
 ---
 
-<!-- Generated from docs/user/lessons.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/lessons.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 If the build keeps asking the same question show after show, your
 conventions have a gap. `atoo lessons` finds those questions. It
 reads a bundle's recent builds and groups everything they noted by

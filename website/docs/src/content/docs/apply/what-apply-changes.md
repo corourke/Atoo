@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/what-apply-changes.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/what-apply-changes.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 A full `atoo apply` makes the desk the plan, so nothing from last
 night's show is left behind to surprise you. That means it writes more
 than the values your plan lists: it resets the rest of the desk, unpatches

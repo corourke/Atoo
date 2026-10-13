@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/amend.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/amend.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 *From the command line. In the browser, it is **From a rebuilt plan** on the Patch screen ([Patch a show](/patch/patch-a-show/)).*
 
 `atoo patch --amended-plan FILE`, or `atoo amend`, takes a

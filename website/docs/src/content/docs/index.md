@@ -3,7 +3,7 @@ title: "Using Atoo"
 description: "Atoo turns an input list and your own house conventions into a complete setup for a Behringer WING, writes it to the desk, reads every value back, and watches the desk during the show. Start with the…"
 ---
 
-<!-- Generated from docs/user/README.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/README.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Atoo turns an input list and your own house conventions into a
 complete setup for a Behringer WING, writes it to the desk, reads every
 value back, and watches the desk during the show. Start with the

@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/conventions-reference.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/conventions-reference.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The words and the details behind [Writing conventions](/build/conventions/):
 the levels vocabulary the build understands, the desk's colours, and
 the resolved file Atoo writes beside your conventions. Come here to

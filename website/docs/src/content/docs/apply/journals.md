@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/journals.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/journals.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Every confirmed write to a desk (`apply`, `patch`, `amend`, `undo`)
 leaves a journal: each address it touched, what the desk held before,
 what was asked for, and what the desk said afterwards. It is the proof

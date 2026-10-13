@@ -5,7 +5,7 @@ sidebar:
   order: 6
 ---
 
-<!-- Generated from docs/user/presets.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/presets.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Your own `.chn` exports, applied as ordinary parameter writes -- and your `.bus` exports, which also load an FX bus's effect.
 
 Run everything on this page from the top of an Atoo checkout.

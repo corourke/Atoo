@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-<!-- Generated from docs/user/apply-to-desk.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/apply-to-desk.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Write the whole show to the desk, and know which values landed, before
 the band walks in.
 

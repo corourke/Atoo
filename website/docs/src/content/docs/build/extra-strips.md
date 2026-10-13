@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-<!-- Generated from docs/user/extra-strips.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/extra-strips.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The input list is what the band brings. Some channels are yours: a
 talkback mic, an ambient pair, a click from your own laptop. Nobody puts
 those on a band's list, so you ask for them in words: in a show's

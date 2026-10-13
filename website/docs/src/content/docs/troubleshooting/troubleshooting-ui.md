@@ -5,7 +5,7 @@ sidebar:
   order: 6
 ---
 
-<!-- Generated from docs/user/troubleshooting-ui.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/troubleshooting-ui.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 `atoo ui` will not start, or its page is blank, stale or read-only.
 
 A healthy start prints where to point a browser and then sits there:

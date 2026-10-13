@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/audit.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/audit.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 A desk that has been through soundcheck, a changeover and three
 engineers is rarely what anyone thinks it is: phantom on an empty socket,
 a bus nobody sends to, a DCA pulled to the floor with the band in it.

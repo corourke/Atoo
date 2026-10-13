@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/watch.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/watch.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Mid-show, nobody re-checks the whole desk after every change. Someone
 bumps a fader, re-patches a stage box line or mutes the wrong group, and
 you find out when the crowd does. `atoo watch` re-reads the desk on

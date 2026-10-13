@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-<!-- Generated from docs/user/applying.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/applying.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 `atoo apply` writes a plan to the desk and then reads every value
 back. The readback is the product: a remote write can fail silently, so
 the only thing that makes "the console is set up the way you wrote it

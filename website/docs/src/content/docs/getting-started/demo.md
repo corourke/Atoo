@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-<!-- Generated from docs/user/demo.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/demo.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Five minutes, no desk, no API key: see a whole show built, checked and
 watched before you write a file of your own.
 

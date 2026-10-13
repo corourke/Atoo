@@ -5,7 +5,7 @@ sidebar:
   order: 10
 ---
 
-<!-- Generated from docs/user/pipeline.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/pipeline.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 Five stages between the two files you write by hand and a desk you can
 trust, plus a stage 0 that runs once per conventions file. Each one
 checks something the one before it could not, and only one of them

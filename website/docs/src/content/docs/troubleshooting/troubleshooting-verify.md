@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-<!-- Generated from docs/user/troubleshooting-verify.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/troubleshooting-verify.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 The plan was built, but `verify` (or the pre-flight before `apply`)
 refuses it, or a preset it names cannot be found.
 

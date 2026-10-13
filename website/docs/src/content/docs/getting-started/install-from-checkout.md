@@ -5,7 +5,7 @@ sidebar:
   order: 7
 ---
 
-<!-- Generated from docs/user/install-from-checkout.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/install-from-checkout.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 To change the code or run the tests, install from a clone of the
 repository into a virtualenv. To use Atoo, the
 [pipx install](/getting-started/install/) is all you need. A virtualenv is a private

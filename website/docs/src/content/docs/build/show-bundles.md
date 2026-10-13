@@ -5,7 +5,7 @@ sidebar:
   order: 8
 ---
 
-<!-- Generated from docs/user/show-bundles.md by tools/port_user_docs.py. Edit it there, then re-run the port. -->
+<!-- Generated from docs/user/show-bundles.md by tools/docs_to_starlight.py in the development repository. Edit it there. -->
 One directory per show. Every command then takes `--show DIR` instead of
 four or five file flags you have to remember to pass together and keep in
 sync by hand.
