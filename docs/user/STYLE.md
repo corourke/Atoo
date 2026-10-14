@@ -96,18 +96,22 @@ page title around the name.
    `tests/test_user_docs.py`.
 2. **[`cli-reference.md`](cli-reference.md) is generated.** Edit only its
    `<!-- preamble -->` blocks, then run `python3 tools/gen_cli_reference.py`.
-3. **These pages are the published site's source.** A push to `main`
-   that changes them publishes them to the docs site (docs.atoo.app),
-   through `tools/docs_to_starlight.py`; the site is never edited by hand.
+3. **These pages are the published site's source.** The docs site
+   (docs.atoo.app) is made from them by `tools/docs_to_starlight.py`, run
+   through `python3 tools/publish_docs.py`; the converted pages are
+   committed with the change, and the site is never edited by hand. Run it
+   after every edit: `tests/test_docs_to_starlight.py` fails while the
+   committed pages differ from a fresh conversion.
    Cite no issue or PR in a page, not even as `#652`: one in a page's
-   prose stops the publish (code blocks are not checked). A new
+   prose stops the conversion (code blocks are not checked). A new
    page needs a place in that script's `SECTIONS`, the sidebar section it
-   appears under, or `tests/test_docs_to_starlight.py` fails. A page's `#`
+   appears under, or the same test fails. A page's `#`
    title becomes the site's page title, so write it as one.
 
 ## Before you push
 
 ```bash
+python3 tools/publish_docs.py
 python3 -m pytest -q tests/test_user_docs.py tests/test_cli_reference.py tests/test_docs_to_starlight.py
 ```
 
