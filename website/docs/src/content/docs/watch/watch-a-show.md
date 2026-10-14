@@ -93,6 +93,37 @@ at the top of each. Here on the [Demo show](/getting-started/demo/):
 - A **Coverage** line under the verdict names any rule the reading could
   not check, so a short table is not mistaken for a healthy desk.
 
+### A clip
+
+When a channel, aux, bus, main or matrix **clips**, a red **ERROR** row,
+**Clipped**, appears for it and stays for about a minute after the last
+clip, then clears by itself. Watch shows no meter and no level: the row
+is the only sign.
+
+> **CH 1 "Kick"** clipped 2 times; the last was 1.0 s ago. This clears in
+> 59 s unless it clips again.
+
+- One row per strip, however many sides, words or times it clipped. A
+  clip inside the minute is the same row: it does not flash again, its
+  count goes up and **This clears in** goes back to 60 s. A clip after
+  the row has cleared is a new row.
+- A strip counts as clipped when its input or its output is within half
+  a decibel of full scale (-0.5 dBFS). That is Watch's reading of "clip",
+  not the desk's: if the desk's own clip light and a row ever
+  disagree, say so.
+- When the packets are frequent enough to time a clip, the row says how
+  long it lasted (*clipped for about 1.2 s*); otherwise only that it
+  did.
+- The rows appear within one reading of the clip, so a clip is shown
+  up to a reading after it happens, and cleared up to a reading after
+  the minute is up.
+- Watch listens to the desk's meters on one more connection (port 2222,
+  one of the desk's 24 client slots) and writes nothing. If it cannot, or
+  the connection drops, **This watch** says **Clip detection: off** and
+  why, and the rest of Watch carries on. On the [Demo show](/getting-started/demo/)
+  the clips are simulated: one strip clips now and then, and one that
+  clips again shows its count rise.
+
 Below the table, two blocks fold to their title while a watch runs.
 Click a title (or its **Details** or **Edit**) to open it:
 
@@ -100,7 +131,8 @@ Click a title (or its **Details** or **Edit**) to open it:
   condition found at Start (*Resolved at Start: DCA Band → DCA 2, MAIN
   PA → MAIN 1*), and how many findings were already present at the
   start. A condition that is **not watched**, because its name matched
-  no strip, shows a warning badge on this line.
+  no strip, shows a warning badge on this line. **Clip detection: on,
+  N packets/s** (or **off**, with the reason) is there too.
 - **Watch conditions** is the editor (below).
 
 Both open again when you press **Stop**. Closing `atoo ui` stops the
@@ -182,6 +214,11 @@ has the full reference: matching by position, range or name.
 
 ## When it does not work
 
+- **This watch says Clip detection: off.** The desk's metering
+  connection could not be opened (it uses one of its 24 client slots),
+  no meter data arrived (a firewall blocking UDP back to this computer
+  stops it), or the connection dropped. Nothing else is affected.
+  **Stop** and **Start watching** to try again.
 - **The header reads a red Error**, with the reason under the word over
   the table: check the address with **Ping**, and see
   [Troubleshooting](/troubleshooting/troubleshooting/#atoo-cannot-reach-the-console).

@@ -152,7 +152,11 @@ the first. The house conventions start every channel fader at the floor,
 and the plan puts them there, so L002 *Active Strip Fader At Floor*
 says nothing about them: Watch checks that rule against the show's plan,
 and names only a fader at the floor that the plan put somewhere else,
-like the Drums bus when it drops. A row disappears by itself when the fault clears. Press
+like the Drums bus when it drops. A row disappears by itself when the fault clears. Now and then a
+strip also **clips**: a red **Clipped** row for a channel, bus or Main,
+which stays about a minute and counts up if the same strip clips again
+([what it says](/watch/watch-a-show/#a-clip)). The Demo simulates those; on a
+real desk they come from the console's meters. Press
 **Stop** when you have seen enough.
 
 ## See the gate refuse a plan
