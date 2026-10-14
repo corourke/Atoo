@@ -105,8 +105,8 @@ The number beside **Findings**, also on the panel's tab when it is
 folded away, counts the errors and warnings. It is grey at 0, yellow
 when there are only warnings, and red when any of them is an error.
 
-Below the verdict, each finding is one line: its severity (**Error**,
-**Warning** or **Info**), where it is, named the way the desk names it
+Below the verdict, each finding is one line: its severity tag (**ERROR**,
+**WARNING** or **INFO**), where it is, named the way the desk names it
 (`CH 23 Crowd`, `AUX 2 HOST`), and what it says. Click
 the line for the rest: the explanation, the fix, the code, which check
 found it, and links to the row, tile or line it is about. One finding
@@ -136,5 +136,6 @@ instructions.md, not on the input list*, with each strip listed inside.
 ![The Findings panel on a built show: the verdict and its counts, the critic's two advice rows, then Choices and Build details folded](../../../assets/img/build-findings.png)
 
 Tick a finding's box once you have dealt with it, and it moves to the
-folded **Addressed** list at the foot of the panel. Watch has its own
+folded **Addressed** list at the foot of the panel, its tag grey, so a
+ticked error no longer reads as live. Watch has its own
 table instead ([Watch the desk during a show](/watch/watch-a-show/)).
