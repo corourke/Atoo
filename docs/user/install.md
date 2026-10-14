@@ -62,8 +62,8 @@ Homebrew's pipx brings a current one. To check:
 pipx environment --value PIPX_DEFAULT_PYTHON    # a path; run it with --version
 ```
 
-`python3` on a stock macOS is 3.9. Everything works there except
-reading `~/.atoo.config`, which says so when it fails.
+`python3` on a stock macOS is 3.9, which is too old: Atoo needs 3.11 or
+newer.
 
 To run Atoo on a newer Python than pipx's own, name it:
 

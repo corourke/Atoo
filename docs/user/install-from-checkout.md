@@ -66,9 +66,6 @@ echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc && exec zsh
 [python.org/downloads](https://www.python.org/downloads/) puts
 `python3.12` in `/usr/local/bin` and needs no package manager.
 
-On Python 3.9 or 3.10, the TOML backport gives you `~/.atoo.config`
-without upgrading: `python3 -m pip install tomli`.
-
 ## When the install fails
 
 **`atoo: command not found` after a successful install.** It
