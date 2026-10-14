@@ -22,17 +22,34 @@ no desk, use the [Demo show](/getting-started/demo/).
 2. Leave **Every** at `2` seconds, or raise it on a slow network.
 3. Press **Start watching**.
 
-The pill reads *Watching* with the desk's address, and the table fills
-within one reading. While a watch runs, the screen is laid out for a
-glance from across the stage: one header line, then the table, and
-everything else folded to a line below it.
+With no console in the bar, **Start watching** is locked and says so:
+*Locked: no console. Choose one in the bar*. Set one there (or choose
+Demo) and it unlocks.
+
+The header names the console (*DEMO RIG*, or the desk's address), its
+state turns a green **Watching** with the desk's name, and the table
+fills within one reading. While a watch runs, the screen is laid out for
+a glance from across the stage: the header, then the table, and
+everything else folded to its title below it.
 
 ## 2. Read the table
 
-You can tell at a glance whether anything needs you. With nothing wrong,
-the table is empty and quiet. A warning row is filled amber, an error
-row red, each with a thick bar of the same colour down its left edge.
-The rows are sorted errors first, then warnings, then info, with the newest
+You can tell at a glance whether anything needs you. One word heads the
+table, in large capitals:
+
+- **TROUBLE**, in red, while any error stands;
+- **WARNING**, in yellow, with warnings and no error;
+- **ALL OK**, in green, with neither. An info is a note, not trouble.
+
+Beside the word is the first thing that is wrong (*CH 10 "Lead Vox" is
+muted*), and on the right the three counts: errors, warnings and info.
+A count lights in its colour only when it is not zero. Before you press
+Start the word is a grey **NOT WATCHING**; until the first reading
+arrives, **STARTING**.
+
+A warning row is filled amber, an error row red, each with a thick bar of
+the same colour down its left edge and its severity in a solid tag. The
+rows are sorted errors first, then warnings, then info, with the newest
 at the top of each. Here on the [Demo show](/getting-started/demo/):
 
 ![The Watch table on the Demo rig: an error row and a warning row, each with a built-in rule folded under it, then a second warning row](../../../assets/img/watch-table.png)
@@ -67,15 +84,17 @@ at the top of each. Here on the [Demo show](/getting-started/demo/):
 - **A row clears itself** when the fault is fixed on the desk: the table
   is the desk as it is now, not a log. To hide one you have already seen,
   [suppress it](#suppress-what-you-have-seen).
-- **Updated 12s ago**, in the header beside the counts, is the time of
-  the last reading. If readings stop arriving while you watch, it turns
-  to a warning and reads **No reading for 45s**, and the table greys out.
-  The table then shows how the desk was at that last reading, not how it
-  is now. Check the desk's network, or Stop and Start again.
-- A **Coverage** line under the header names any rule the reading could
+- **Updated 12s ago**, in the header beside the console's name, is the
+  time of the last reading. If readings stop arriving while you watch, it
+  turns to a yellow **No reading for 45s**, the word over the table
+  turns a grey **NO READING**, and the table greys out. The table then
+  shows how the desk was at that last reading, not how it is now. Check
+  the desk's network, or Stop and Start again.
+- A **Coverage** line under the verdict names any rule the reading could
   not check, so a short table is not mistaken for a healthy desk.
 
-Below the table, two lines open when clicked:
+Below the table, two blocks fold to their title while a watch runs.
+Click a title (or its **Details** or **Edit**) to open it:
 
 - **This watch** says which console it reads, which strip each named
   condition found at Start (*Resolved at Start: DCA Band → DCA 2, MAIN
@@ -103,16 +122,16 @@ from the next one. Hiding a finding only changes this page; nothing is
 sent to the desk.
 
 - **One finding:** tick the box at the start of its row. The row moves to
-  **Suppressed (1)**, folded under the table. Open it and untick the box
-  to bring the row back.
-- **Every warning, or every info:** click its count in the header. The
-  count is struck through and reads, for example, *0 Warning (4
-  hidden)*. Click it again to show them. Errors cannot be hidden this
+  **Suppressed**, folded under the table with its count beside the
+  title. Open it and untick the box to bring the row back.
+- **Every warning, or every info:** click its count at the head of the
+  table. The count is struck through and reads, for example, *0 Warning
+  (4 hidden)*. Click it again to show them. Errors cannot be hidden this
   way, only one at a time: an error is a setting that cannot work.
 
 A hidden finding is left out of the counts (they show what is in the
-table, with the hidden number beside them), does not colour the screen,
-and does not set off **Flash on new**. The Error and Warning counts take
+table, with the hidden number beside them), does not change the word
+over the table, and does not set off **Flash on new**. The Error and Warning counts take
 their colour only for rows still in the table; the Info count stays blue
 while any info is hidden by its box (*0 Info (3 hidden)*), as it is in
 **Suppressed**.
@@ -145,18 +164,26 @@ the table shows when it fires, so write the reason, *"Playback carries
 the backing tracks."*
 
 1. Press **+ Add condition**, fill in the row, and press **Save**.
+   **Save** appears once there is something to save, beside an
+   **Unsaved changes** tag.
 2. A watch that is running uses it from its next reading. No restart.
 
 **Source** says who wrote each row. A build drafts a starting set, marked
-**Drafted**; edit one, or press its **Drafted** tag, and it becomes
+**Drafted** in yellow, and the block's title counts them (*6 drafted,
+unreviewed*); edit one, or press its **Drafted** tag, and it becomes
 **Yours**. A drafted row you delete is not added back by the next build.
+
+On the read-only [Demo show](/getting-started/demo/) the conditions are text: there is
+no **Change file** or **+ Add condition**, and **Save** is locked with
+*Locked: the Demo show is read-only*.
 
 [Your own alerts: watch conditions](/watch/watch-conditions/)
 has the full reference: matching by position, range or name.
 
 ## When it does not work
 
-- **The pill reads** *no reply*: check the address with **Ping**, and see
+- **The header reads a red Error**, with the reason under the word over
+  the table: check the address with **Ping**, and see
   [Troubleshooting](/troubleshooting/troubleshooting/#atoo-cannot-reach-the-console).
 - **A condition never fires**: its **Channel** must match a name on the
   desk. A kind and a name (`DCA Band`) that matched nothing shows as

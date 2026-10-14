@@ -132,11 +132,14 @@ that come and go at random, so within a few seconds the table fills:
 
 ![Watch on the Demo rig: Lead Vox muted and the Band DCA pulled down, three of the show's own conditions firing](../../../assets/img/watch-table.png)
 
-Error rows fill red and warning rows amber, so you can tell from across
-the room that something needs you. Rules starting `WATCH:` are the
-show's own watch conditions, folded into the **Watch conditions** line
-below the table; rules named by a code such as `R005` are built-in checks. The **This watch**
-line, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
+The word over the table says it from across the room: a red **TROUBLE**
+while an error stands, a yellow **WARNING** with warnings only, a green
+**ALL OK** when the faults have gone. Error rows fill red and warning
+rows amber. Rules starting `WATCH:` are the
+show's own watch conditions, listed as text under **Watch conditions**
+below the table, with **Save** locked since the show is read-only; rules
+named by a code such as `R005` are built-in checks. The **This watch**
+block, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
 BUS Drum IEM → BUS 4, BUS Drums → BUS 5, MAIN PA → MAIN 1, ...*: which
 bus, DCA and Main each condition's name was matched to when the watch
 started. The show watches Lead Vox muted; the PA (Main 1) muted or below
