@@ -108,9 +108,10 @@ is made from changed, grey when your edit asked for it.
 ## 6. Read the findings
 
 The **Findings** panel down the right starts with a verdict: **Ready to
-apply** or **Blocked**, and how many things there are to check. Below it,
-each finding is one line: the strip, named as the desk names it (`CH 23
-Crowd`), and what is wrong. Click a line for the explanation, the fix and
+apply** or **Blocked** (or **No plan yet**, before the first build), and
+how many things there are to check. Below it, each finding is one line:
+its severity, the strip, named as the desk names it (`CH 23 Crowd`), and
+what is wrong. Click a line for the explanation, the fix and
 a link to the row it is about.
 
 - **ERROR**: the plan cannot be written as it stands, and the verdict

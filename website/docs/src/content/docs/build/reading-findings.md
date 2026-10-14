@@ -92,15 +92,22 @@ and never stop an apply.
 ## In the browser
 
 The **Findings** panel down the right of Build and Apply opens with a
-verdict: **Ready to apply** (no errors) or **Blocked**, and three counts,
-the things to check, the critic's advice and the notes on choices the
-build made. If the plan is older than its files, the verdict says so
-once, with a **Rebuild** link: the build's and the critic's notes are
-about the plan as it was built. The number beside **Findings** counts
-the errors and warnings.
+verdict, in a large tag: green **Ready to apply** when nothing is an
+error, red **Blocked** with the number of errors beside it, or grey **No
+plan yet** when there are findings but nothing has been built. Under it
+are three counts: the things to check, the critic's advice and the notes
+on choices the build made. A count that is not zero is in bold. If the
+plan is older than its files, the verdict says so once, with a yellow
+**Stale** tag and a **Rebuild** button: the build's and the critic's
+notes are about the plan as it was built.
 
-Below the verdict, each finding is one line: where it is, named the way
-the desk names it (`CH 23 Crowd`, `AUX 2 HOST`), and what it says. Click
+The number beside **Findings**, also on the panel's tab when it is
+folded away, counts the errors and warnings. It is grey at 0, yellow
+when there are only warnings, and red when any of them is an error.
+
+Below the verdict, each finding is one line: its severity (**Error**,
+**Warning** or **Info**), where it is, named the way the desk names it
+(`CH 23 Crowd`, `AUX 2 HOST`), and what it says. Click
 the line for the rest: the explanation, the fix, the code, which check
 found it, and links to the row, tile or line it is about. One finding
 about several strips is one line, such as *3 strips built from
