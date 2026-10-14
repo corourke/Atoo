@@ -1,11 +1,8 @@
 <!-- GENERATED FILE -- edit the preamble blocks only.
 
      Every option table below comes from `atoo/cli.py`'s argparse
-     tree via `tools/gen_cli_reference.py`. Editing a table by hand will
-     be overwritten, and `tests/test_cli_reference.py` will fail until
-     the file is regenerated:
-
-         python3 tools/gen_cli_reference.py
+     tree, by a script in the development repository. Editing a table
+     by hand will be overwritten there.
 
      Text inside a `<!-- preamble:start/end -->` block IS hand-written
      and is preserved across regeneration. Put the "why you would use

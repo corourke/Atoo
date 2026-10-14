@@ -149,7 +149,7 @@ Console: WING,198.51.100.6,MON-RACK,wing-rack,S2301R7,3.1-0-g9f314617:release
 INFO: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
 DRY RUN: 1082 address(es) evaluated, 786 would change, nothing written.
   1 warning(s), listed below
-  - WARNING not reset to initialized first: there is no initialized capture for the WING Rack (19", 4U). The plan is applied as it stands; anything the plan does not write keeps what the desk holds. Initialize the desk by hand first if it carries an old show. To give atoo a capture: initialize the desk, save its show file (.snap) from the desk or WING Edit, then `python3 tools/freeze_initialized_capture.py add wing-rack <that .snap>`.
+  - WARNING not reset to initialized first: there is no initialized capture for the WING Rack (19", 4U). The plan is applied as it stands; anything the plan does not write keeps what the desk holds. Initialize the desk by hand first if it carries an old show. To give Atoo a capture: initialize the desk, save its show file (.snap) from the desk or WING Edit, and attach it to a desk test report (https://github.com/corourke/Atoo/issues/new?template=desk-test-report.yml).
   - INFO 19 strip(s) set to their main input (not their alternate) -- a show apply means stage inputs live
   - INFO 3 direct Main route(s) and 1 Matrix feed(s) set to unity (0 dB), post-fader -- apply's documented default; the conventions have no phrasing for a route's own level or tap
   - INFO ch 20-40, aux 1-8: not in this plan, unpatched from their sources so none listens to a socket the plan uses
