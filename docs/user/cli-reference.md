@@ -955,8 +955,10 @@ be cited or listed as having no effect. A citation not found is a WARNING; a lin
 no rule covers is a note, and is given to the generator verbatim. A line of your
 preset map (- Kick: "Kick In", indented under a line that names presets) is
 covered when your preset library -- [presets] default in ~/.atoo.config -- has
-every preset it names, cited or not; one naming a preset the library has not got
-is a note saying so. The file is still used with warnings, and refused only when
+every preset it names (a bus preset under a line that says bus), cited or not; one
+naming a preset the library has not got is a note saying so, and so is one that
+also states a rule. A library that cannot be read is said at INFO. The file is
+still used with warnings, and refused only when
 it is empty or none of its citations is found.
 
 The file ends with a Category table: one JSON object per category restating its
@@ -1227,6 +1229,11 @@ every --name-refresh reads after it (default 5, about every 30s; 1 with --per-le
 every read: a node dump cannot carry a name, so they are over a quarter of a read's requests.
 Between refreshes the rules see the last names read, and a rename shows up at the next
 refresh -- the findings say so at INFO (W001). --name-refresh 1 reads them every time.
+
+With --console it also listens to the console's meters (a read-only native connection on
+port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,
+aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. If the
+connection cannot be had it says so at INFO (W002) and carries on.
 
 The first read is reported as a baseline, not an alert -- whatever's already wrong when
 you start watching isn't a change. --state-sequence plays a fixed list of JSON captures

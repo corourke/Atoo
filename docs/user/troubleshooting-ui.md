@@ -30,8 +30,10 @@ Three causes, and each names itself:
 
 **`the web UI needs the 'ui' extra -- install it with:` / `  python3 -m
 pip install -e ".[ui]"`** — the server is an optional dependency, so the
-engine installs without FastAPI and uvicorn. Exits `1`. See
-[The extras](install-from-checkout.md#the-extras).
+engine installs without FastAPI and uvicorn. Exits `1`. Install it again
+with `[ui]`: [Installing Atoo](install.md#when-it-does-not-work) for
+pipx, [Installing from a checkout](install-from-checkout.md#when-the-install-fails)
+for a clone.
 
 **`couldn't read plan file 'x.json': No such file or directory`**, and
 the same for `--watch-conditions` — both files are loaded before the
@@ -126,9 +128,10 @@ or runs is off, Watch's **Start watching** and **Save** included, so a
 tab left open on one show cannot write another show's plan. It does not
 reload by itself, so you can copy anything you had typed first.
 
-### Write to console or Undo newest write stays greyed out
+### Write to console or Undo newest write stays locked
 
-The line under the button says why, and it is one of these:
+A locked button has no colour and a dashed edge. **Locked:** beside it
+says why, and it is one of these:
 
 - **Writing is switched off in the Demo show.** The Demo is read-only,
   on a simulated desk: Preview works, writing and Undo never do.
@@ -136,12 +139,14 @@ The line under the button says why, and it is one of these:
   leaves the Demo; then open or create a show of your own.
 - **No console address**, or **No show bundle open**: set the one it
   names in the bar.
+- **Nothing to undo on this desk**: History has no write standing on the
+  console in the bar.
 - **Preview first**, or **Step 1 or the console changed since the
   preview**: press **Preview** in step 2 again.
-- **Blocked: the pre-flight verify has N error(s)**: fix the plan on
+- **The pre-flight verify has N error(s)**: fix the plan on
   **Build** and rebuild, or, if you know why, tick **Skip the pre-flight
   verify** under **Options** in step 1.
-- **Tick Arm to enable the write**: the **Arm** checkbox in step 3. It clears
+- **Tick Arm first**: the **Arm** checkbox in step 3. It clears
   itself after each write, and Undo needs it too.
 
 ### Another computer can open the page, but only to watch

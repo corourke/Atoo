@@ -265,7 +265,8 @@ has nothing to build, and is refused.
 
 In the browser, Build step 02's **Order** cell has a **Skip** box: tick
 it and the cell reads `-` and the row dims; untick it and the number
-comes back.
+comes back. On a read-only show a skipped row's Order cell reads
+**SKIP**.
 
 ## The `preset` column
 
@@ -392,7 +393,10 @@ wherever it is used. The two useful moments:
   an edit made in another program since the page read the file. Name,
   Category and Type are required; Save asks once before writing a list
   that will not load. Rows can be added, and moved by dragging or with
-  Alt+↑ / Alt+↓. See [Build a show](build-a-show.md).
+  Alt+↑ / Alt+↓. See [Build a show](build-a-show.md). On a read-only
+  show, the [Demo](demo.md), the table is plain text: no boxes to type
+  in, no handles or row buttons, and **Save** and **Discard changes**
+  are locked with *Locked: the Demo show is read-only* beside them.
 
 ## See also
 

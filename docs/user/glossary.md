@@ -7,7 +7,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 
 | Word | What it is | Where you meet it |
 |---|---|---|
-| Show bundle | one show's folder: its input list, instructions, plan, watch conditions and journals | **Show bundle:** in the bar; `--show` ([Show bundles](show-bundles.md)) |
+| Show bundle | one show's folder: its input list, instructions, plan, watch conditions and journals | **Show bundle** in the bar; `--show` ([Show bundles](show-bundles.md)) |
 | Conventions | how you set up a desk, in your own words, for every show | **01 Conventions**; `--conventions` ([Writing conventions](conventions.md)) |
 | Input list | what is plugged in, and where | **02 Input list**; `input.csv` ([Writing an input list](input-lists.md)) |
 | Instructions | what is different about tonight | **03 Instructions**; `instructions.md` |
@@ -24,7 +24,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 | Stale | the plan is older than a file it was built from | the **Stale** badge on step 04 |
 | Critic | a second model's opinion of the plan; it never blocks | **Run the critic pass**, **Advice**; `--critic` |
 | Finding | one line a check reports, at ERROR, WARNING or INFO | **Findings**; `verify` ([Reading findings](reading-findings.md)) |
-| Verdict | whether the plan can be written | **Ready to apply** or **Blocked**; `VERIFIED:`, `APPLICABLE:` or `BLOCKED:` |
+| Verdict | whether the plan can be written | **Ready to apply** or **Blocked** (**No plan yet** before a build); `VERIFIED:`, `APPLICABLE:` or `BLOCKED:` |
 | To check | the errors and warnings, read before writing | **To check** under **Findings** |
 | Choices | what the build decided where your files were silent, said at INFO | **Choices** under **Findings** |
 | Build details | how the model's reply was read, at INFO | **Build details** under **Findings** |
@@ -33,7 +33,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 
 | Word | What it is | Where you meet it |
 |---|---|---|
-| Console | the one desk address the page uses | **Console:** and **Change…** in the bar; `--console` |
+| Console | the one desk address the page uses | **Console** and **Change…** in the bar; `--console` |
 | Ping | one round trip to the desk, for its name and model; changes nothing | **Ping**; `atoo ping` |
 | Pre-flight verify | the plan checked again against this desk's model, just before a write | **Pre-flight verify** in Apply step 1 |
 | Full build | the whole plan written to a desk you are setting up | **Full build**, **Write to console**; `atoo apply` ([Apply a plan to the desk](apply-to-desk.md)) |

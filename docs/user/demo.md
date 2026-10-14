@@ -32,16 +32,25 @@ build looks like.
 
 A box opens, once, saying what the Demo is: what works in it, what is
 switched off, and how to leave it. Press **Got it**. The bar now reads
-**Demo show**, **READ-ONLY**, **Demo · what's this?** and **Demo**; the
-**Demo · what's this?** chip opens the box again.
+**Demo show**, **READ-ONLY**, **Demo · what's this?** and **Demo**;
+**Demo · what's this?** opens the box again.
 
 ![The Demo show's box: what works, what is switched off, and Got it](img/demo-popup.png)
 
-![The bar with the Demo show open, and its chip](img/demo-bar.png)
+![The bar with the Demo show open](img/demo-bar.png)
 
 ## Build: the files and the plan
 
 **Build** is four steps across the top. Click each tile to open it.
+Each tile reads a green **LOADED**, with no **Change file** or **New
+file**: nothing in the Demo can be saved, and the bar's **READ-ONLY**
+says so. The steps show their files as plain text: 01 and 03 as the
+text of the file (their **Example** has no Insert button), and 02 as a
+table with nothing to type in,
+no row handles or buttons, and **Save** and **Discard changes** locked
+with *Locked: the Demo show is read-only* beside them. To edit, make a
+copy of your own with `atoo init --demo`
+([below](#see-the-gate-refuse-a-plan)).
 
 - **01 Conventions**: the house rules, in plain English: stereo pairs,
   monitor widths, colours, a channel preset per source, which DCA and
@@ -103,8 +112,9 @@ hold.
 
 ![Apply on the Demo show: the desk drawn as scribble strips after a preview](img/apply-demo-preview.png)
 
-**Write to console** and **Undo newest write** stay locked, and each
-says so under itself: writing is switched off in the Demo show.
+**Write to console** and **Undo newest write** stay locked, drawn
+without colour, and each says why beside it, after **Locked:**: writing
+is switched off in the Demo show.
 **Patch** previews a typed change too, when a model is set up, as for a
 build; without one, its box says so and the Demo previews a Full build
 only.
@@ -114,13 +124,16 @@ only.
 Click **Watch**, then **Start watching**. The simulated desk has faults
 that come and go at random, so within a few seconds the table fills:
 
-![Watch on the Demo rig: Lead Vox muted and the Band DCA pulled down, three of the show's own conditions firing](img/watch-table.png)
+![Watch on the Demo rig: the Vocals bus clipped, Lead Vox muted and the Band DCA pulled down, three of the show's own conditions firing](img/watch-table.png)
 
-Error rows fill red and warning rows amber, so you can tell from across
-the room that something needs you. Rules starting `WATCH:` are the
-show's own watch conditions, folded into the **Watch conditions** line
-below the table; rules named by a code such as `R005` are built-in checks. The **This watch**
-line, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
+The word over the table says it from across the room: a red **TROUBLE**
+while an error stands, a yellow **WARNING** with warnings only, a green
+**ALL OK** when the faults have gone. Error rows fill red and warning
+rows amber. Rules starting `WATCH:` are the
+show's own watch conditions, listed as text under **Watch conditions**
+below the table, with **Save** locked since the show is read-only; rules
+named by a code such as `R005` are built-in checks. The **This watch**
+block, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
 BUS Drum IEM → BUS 4, BUS Drums → BUS 5, MAIN PA → MAIN 1, ...*: which
 bus, DCA and Main each condition's name was matched to when the watch
 started. The show watches Lead Vox muted; the PA (Main 1) muted or below
@@ -133,7 +146,11 @@ the first. The house conventions start every channel fader at the floor,
 and the plan puts them there, so L002 *Active Strip Fader At Floor*
 says nothing about them: Watch checks that rule against the show's plan,
 and names only a fader at the floor that the plan put somewhere else,
-like the Drums bus when it drops. A row disappears by itself when the fault clears. Press
+like the Drums bus when it drops. A row disappears by itself when the fault clears. Now and then a
+strip also **clips**: a red **Clipped** row for a channel, bus or Main,
+which stays about a minute and counts up if the same strip clips again
+([what it says](watch-a-show.md#a-clip)). The Demo simulates those; on a
+real desk they come from the console's meters. Press
 **Stop** when you have seen enough.
 
 ## See the gate refuse a plan

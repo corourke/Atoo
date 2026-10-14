@@ -21,9 +21,10 @@ the desk.
    console**.
 3. Press **Ping**.
 
-The pill next to **Ping** names the desk's model, its address and the
-round trip in milliseconds. If it reads *no reply from 192.0.2.16:2223 --
-is the console reachable, and is its OSC remote enabled?*, see
+Next to **Ping**, a green **ANSWERED** tag is followed by the desk's
+model, its address and the round trip in milliseconds. If a red **NO
+REPLY** tag is followed by *no reply from 192.0.2.16:2223 -- is the
+console reachable, and is its OSC remote enabled?*, see
 [Troubleshooting](troubleshooting.md#atoo-cannot-reach-the-console).
 
 Ping sends one message and reads nothing else, so it is safe to press at
@@ -34,7 +35,11 @@ in `~/.atoo.config` ([Setting up](configuration.md)).
 
 Click **Apply**, and leave **Full build** chosen. The screen is four
 numbered steps, done in order: **What will be written**, **Preview**,
-**Arm and write** and **History**.
+**Arm and write** and **History**. Each step's title sits above its box,
+with a short grey note of what it does (**Reads the desk · writes
+nothing**). Its number is gold while it is the next thing to do and
+green once it is done, and a green tag on the right, such as **Pre-flight
+passed** or **Read 1667 addresses**, says what it found.
 
 Step 1 names the plan, its sha256 and what is in it (channels, aux,
 buses, mains, matrices, DCAs, mute groups and sockets, each when the
@@ -67,15 +72,21 @@ read, how many will change, how many already match, and how many did
 not answer. **All … changes, address by address** opens them with each value now
 and after, the first 250 of a long list.
 
-If you change anything in step 1 after a preview, step 2 says the
-preview is out of date, and the write stays locked until you preview
-again.
+Once the preview is current, the button reads **Preview again** and is
+no longer the gold one: the next thing to do is step 3. If you change
+anything in step 1 after a preview, step 2 says the preview is out of
+date, the button is **Preview** again, and the write stays locked until
+you press it.
 
 ## 4. Step 3: Arm and write
 
 1. Tick **Arm**. It is the only arming control in Atoo, and it
    clears itself after each write.
 2. Press **Write to console**.
+
+Until it can be pressed, **Write to console** has no colour and a dashed
+edge, and **Locked:** beside it says why: **preview first**, or **tick
+Arm first**. Armed, it turns solid red.
 
 The command's own output runs under the button as it goes. A full write
 first puts the desk back to its initialized state, writing only what
@@ -102,6 +113,9 @@ marked **top** is the newest write still standing on this desk.
 
 1. Press **Preview undo** to see what it would put back.
 2. Tick **Arm** in step 3, then press **Undo newest write**.
+
+With no row to undo on this desk, both buttons are locked, and
+**Locked: nothing to undo on this desk** says so.
 
 Undo puts back only the addresses that write changed, and only where
 nothing has written over them since. Undo again to step back one more.

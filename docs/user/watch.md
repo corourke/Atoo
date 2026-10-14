@@ -41,6 +41,17 @@ under conventions that start every fader down, that is every channel
 until you bring it up. A fader the plan puts anywhere else, found at the
 floor on the desk, is still reported.
 
+**Clips are listened for too.** With `--console`, a watch also listens
+to the desk's meters, on one more connection (port 2222) that only reads,
+and raises `L003 Clipped` (an ERROR) for any channel, aux, bus, main or
+matrix that clips, for about a minute after its last clip. It prints as
+a NEW line when the strip clips and a CLEARED line when the minute is up;
+a second clip inside the minute is the same finding with the timer
+moved on, so it does not print again. If the connection cannot be had,
+`W002 Clip detection is off` says why, at INFO, and the watch goes on.
+`--state-sequence` has no meters and no clips. See
+[Watch the desk during a show](watch-a-show.md#a-clip).
+
 Everything else is the desk and your watch conditions.
 
 **Where your outputs go is read, wherever they are.** A watch reads the

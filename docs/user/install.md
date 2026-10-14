@@ -234,7 +234,7 @@ on the working folder, so a new show lands beside the starter ones.
 
 To look round before you have a show or a console, press **Try the Demo
 show** on the empty page (or, at any time, **Change…** beside
-*Console:* and choose **Demo**). It opens a small, read-only show on a
+*Console* and choose **Demo**). It opens a small, read-only show on a
 built-in rig, so Build, Apply's pre-flight and Watch all have something
 to show ([Try the Demo show](demo.md)). Choosing an address, or opening
 or creating a show, leaves it.

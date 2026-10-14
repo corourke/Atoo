@@ -16,20 +16,37 @@ no desk, use the [Demo show](demo.md).
 2. Leave **Every** at `2` seconds, or raise it on a slow network.
 3. Press **Start watching**.
 
-The pill reads *Watching* with the desk's address, and the table fills
-within one reading. While a watch runs, the screen is laid out for a
-glance from across the stage: one header line, then the table, and
-everything else folded to a line below it.
+With no console in the bar, **Start watching** is locked and says so:
+*Locked: no console. Choose one in the bar*. Set one there (or choose
+Demo) and it unlocks.
+
+The header names the console (*DEMO RIG*, or the desk's address), its
+state turns a green **Watching** with the desk's name, and the table
+fills within one reading. While a watch runs, the screen is laid out for
+a glance from across the stage: the header, then the table, and
+everything else folded to its title below it.
 
 ## 2. Read the table
 
-You can tell at a glance whether anything needs you. With nothing wrong,
-the table is empty and quiet. A warning row is filled amber, an error
-row red, each with a thick bar of the same colour down its left edge.
-The rows are sorted errors first, then warnings, then info, with the newest
+You can tell at a glance whether anything needs you. One word heads the
+table, in large capitals:
+
+- **TROUBLE**, in red, while any error stands;
+- **WARNING**, in yellow, with warnings and no error;
+- **ALL OK**, in green, with neither. An info is a note, not trouble.
+
+Beside the word is the first thing that is wrong (*CH 10 "Lead Vox" is
+muted*), and on the right the three counts: errors, warnings and info.
+A count lights in its colour only when it is not zero. Before you press
+Start the word is a grey **NOT WATCHING**; until the first reading
+arrives, **STARTING**.
+
+A warning row is filled amber, an error row red, each with a thick bar of
+the same colour down its left edge and its severity in a solid tag. The
+rows are sorted errors first, then warnings, then info, with the newest
 at the top of each. Here on the [Demo show](demo.md):
 
-![The Watch table on the Demo rig: an error row and a warning row, each with a built-in rule folded under it, then a second warning row](img/watch-table.png)
+![The Watch table on the Demo rig: a Clipped row for BUS 6 "Vocals", an error row and a warning row each with a built-in rule folded under it, then a second warning row](img/watch-table.png)
 
 - **Where** is the strip the row is about, as the desk names it:
   `CH 10 "Lead Vox"`. Beside it is the claim, in large type (*is muted*,
@@ -61,21 +78,55 @@ at the top of each. Here on the [Demo show](demo.md):
 - **A row clears itself** when the fault is fixed on the desk: the table
   is the desk as it is now, not a log. To hide one you have already seen,
   [suppress it](#suppress-what-you-have-seen).
-- **Updated 12s ago**, in the header beside the counts, is the time of
-  the last reading. If readings stop arriving while you watch, it turns
-  to a warning and reads **No reading for 45s**, and the table greys out.
-  The table then shows how the desk was at that last reading, not how it
-  is now. Check the desk's network, or Stop and Start again.
-- A **Coverage** line under the header names any rule the reading could
+- **Updated 12s ago**, in the header beside the console's name, is the
+  time of the last reading. If readings stop arriving while you watch, it
+  turns to a yellow **No reading for 45s**, the word over the table
+  turns a grey **NO READING**, and the table greys out. The table then
+  shows how the desk was at that last reading, not how it is now. Check
+  the desk's network, or Stop and Start again.
+- A **Coverage** line under the verdict names any rule the reading could
   not check, so a short table is not mistaken for a healthy desk.
 
-Below the table, two lines open when clicked:
+### A clip
+
+When a channel, aux, bus, main or matrix **clips**, a red **ERROR** row,
+**Clipped**, appears for it and stays for about a minute after the last
+clip, then clears by itself. Watch shows no meter and no level: the row
+is the only sign.
+
+> **CH 1 "Kick"** clipped 2 times; the last was 1.0 s ago. This clears in
+> 59 s unless it clips again.
+
+- One row per strip, however many sides, words or times it clipped. A
+  clip inside the minute is the same row: it does not flash again, its
+  count goes up and **This clears in** goes back to 60 s. A clip after
+  the row has cleared is a new row.
+- A strip counts as clipped when its input or its output is within half
+  a decibel of full scale (-0.5 dBFS). That is Watch's reading of "clip",
+  not the desk's: if the desk's own clip light and a row ever
+  disagree, say so.
+- When the packets are frequent enough to time a clip, the row says how
+  long it lasted (*clipped for about 1.2 s*); otherwise only that it
+  did.
+- The rows appear within one reading of the clip, so a clip is shown
+  up to a reading after it happens, and cleared up to a reading after
+  the minute is up.
+- Watch listens to the desk's meters on one more connection (port 2222,
+  one of the desk's 24 client slots) and writes nothing. If it cannot, or
+  the connection drops, **This watch** says **Clip detection: off** and
+  why, and the rest of Watch carries on. On the [Demo show](demo.md)
+  the clips are simulated: one strip clips now and then, and one that
+  clips again shows its count rise.
+
+Below the table, two blocks fold to their title while a watch runs.
+Click a title (or its **Details** or **Edit**) to open it:
 
 - **This watch** says which console it reads, which strip each named
   condition found at Start (*Resolved at Start: DCA Band → DCA 2, MAIN
   PA → MAIN 1*), and how many findings were already present at the
   start. A condition that is **not watched**, because its name matched
-  no strip, shows a warning badge on this line.
+  no strip, shows a warning badge on this line. **Clip detection: on,
+  N packets/s** (or **off**, with the reason) is there too.
 - **Watch conditions** is the editor (below).
 
 Both open again when you press **Stop**. Closing `atoo ui` stops the
@@ -97,16 +148,16 @@ from the next one. Hiding a finding only changes this page; nothing is
 sent to the desk.
 
 - **One finding:** tick the box at the start of its row. The row moves to
-  **Suppressed (1)**, folded under the table. Open it and untick the box
-  to bring the row back.
-- **Every warning, or every info:** click its count in the header. The
-  count is struck through and reads, for example, *0 Warning (4
-  hidden)*. Click it again to show them. Errors cannot be hidden this
+  **Suppressed**, folded under the table with its count beside the
+  title. Open it and untick the box to bring the row back.
+- **Every warning, or every info:** click its count at the head of the
+  table. The count is struck through and reads, for example, *0 Warning
+  (4 hidden)*. Click it again to show them. Errors cannot be hidden this
   way, only one at a time: an error is a setting that cannot work.
 
 A hidden finding is left out of the counts (they show what is in the
-table, with the hidden number beside them), does not colour the screen,
-and does not set off **Flash on new**. The Error and Warning counts take
+table, with the hidden number beside them), does not change the word
+over the table, and does not set off **Flash on new**. The Error and Warning counts take
 their colour only for rows still in the table; the Info count stays blue
 while any info is hidden by its box (*0 Info (3 hidden)*), as it is in
 **Suppressed**.
@@ -139,18 +190,31 @@ the table shows when it fires, so write the reason, *"Playback carries
 the backing tracks."*
 
 1. Press **+ Add condition**, fill in the row, and press **Save**.
+   **Save** appears once there is something to save, beside an
+   **Unsaved changes** tag.
 2. A watch that is running uses it from its next reading. No restart.
 
 **Source** says who wrote each row. A build drafts a starting set, marked
-**Drafted**; edit one, or press its **Drafted** tag, and it becomes
+**Drafted** in yellow, and the block's title counts them (*6 drafted,
+unreviewed*); edit one, or press its **Drafted** tag, and it becomes
 **Yours**. A drafted row you delete is not added back by the next build.
+
+On the read-only [Demo show](demo.md) the conditions are text: there is
+no **Change file** or **+ Add condition**, and **Save** is locked with
+*Locked: the Demo show is read-only*.
 
 [Your own alerts: watch conditions](watch-conditions.md)
 has the full reference: matching by position, range or name.
 
 ## When it does not work
 
-- **The pill reads** *no reply*: check the address with **Ping**, and see
+- **This watch says Clip detection: off.** The desk's metering
+  connection could not be opened (it uses one of its 24 client slots),
+  no meter data arrived (a firewall blocking UDP back to this computer
+  stops it), or the connection dropped. Nothing else is affected.
+  **Stop** and **Start watching** to try again.
+- **The header reads a red Error**, with the reason under the word over
+  the table: check the address with **Ping**, and see
   [Troubleshooting](troubleshooting.md#atoo-cannot-reach-the-console).
 - **A condition never fires**: its **Channel** must match a name on the
   desk. A kind and a name (`DCA Band`) that matched nothing shows as
