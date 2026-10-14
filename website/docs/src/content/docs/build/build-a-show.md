@@ -38,8 +38,9 @@ Each tile has a state on the right: green **LOADED** for a file that
 was read, grey **NOT SET**, red **MISSING** for a file the build needs
 that is named but not there, and yellow **STALE** for a file that changed
 on disk after the page read it. Instructions are optional, so a show
-without an `instructions.md` reads a grey **NOT SET** on 03, not red. Under it is the file's path, then **Change file** (and
-**New file** where one can be started).
+without an `instructions.md` reads a grey **NOT SET** on 03, not red. Under it is the file's path (with **HOUSE** beside it on 01),
+then the tile's count (its findings, the input rows, the layers) and, last,
+**Change file** (and **New file** where one can be started). The four tiles are always the same height as each other.
 
 The 01 tile reads **LOADED** with your house file's path, tagged
 **HOUSE**. It is the same file for every show, so leave it alone unless
