@@ -48,6 +48,15 @@ switched off, and how to leave it. Press **Got it**. The bar now reads
 ## Build: the files and the plan
 
 **Build** is four steps across the top. Click each tile to open it.
+Each tile reads a green **LOADED**, with no **Change file** or **New
+file**: nothing in the Demo can be saved, and the bar's **READ-ONLY**
+says so. The steps show their files as plain text: 01 and 03 as the
+text of the file (their **Example** has no Insert button), and 02 as a
+table with nothing to type in,
+no row handles or buttons, and **Save** and **Discard changes** locked
+with *Locked: the Demo show is read-only* beside them. To edit, make a
+copy of your own with `atoo init --demo`
+([below](#see-the-gate-refuse-a-plan)).
 
 - **01 Conventions**: the house rules, in plain English: stereo pairs,
   monitor widths, colours, a channel preset per source, which DCA and

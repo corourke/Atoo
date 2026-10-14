@@ -34,9 +34,18 @@ is ready, they look like this:
 
 ![Build's four tiles: Conventions, Input list and Instructions LOADED, Plan CURRENT](../../../assets/img/build-tiles.png)
 
-The tile reads **LOADED** with your house file's path, tagged **HOUSE**.
-It is the same file for every show, so leave it alone unless the change
-is true of every show you do. To read or edit it, click the tile.
+Each tile has a state on the right: green **LOADED** for a file that
+was read, grey **NOT SET**, red **MISSING** for a file the build needs
+that is named but not there, and yellow **STALE** for a file that changed
+on disk after the page read it. Instructions are optional, so a show
+without an `instructions.md` reads a grey **NOT SET** on 03, not red. Under it is the file's path, then **Change file** (and
+**New file** where one can be started).
+
+The 01 tile reads **LOADED** with your house file's path, tagged
+**HOUSE**. It is the same file for every show, so leave it alone unless
+the change is true of every show you do. To read or edit it, click the
+tile. Once you type in it, a yellow **EDITING HOUSE STYLE** tag and a
+warning come up beside **Save** and **Discard**.
 [Writing conventions](/build/conventions/) says what goes in it.
 
 ## 3. Say what is plugged in: 02 Input list
@@ -52,7 +61,8 @@ Each row is one thing plugged in: **Name**, **Category**, **Type**,
 such as `AES50-A 1`). Name, Category and Type are required: until they
 are filled in they read *required* and are outlined. Leave **Patch** blank and the build chooses a
 socket and tells you which. A socket the desk does not have is refused as
-you type it. Press **Save**.
+you type it. Once you change a cell, a yellow **UNSAVED CHANGES** tag
+comes up with **Discard changes** and **Save**. Press **Save**.
 
 The tile now reads **LOADED** and counts the rows: *20 input rows*.
 [Writing an input list](/build/input-lists/) covers the columns and stereo
@@ -61,9 +71,12 @@ pairs.
 ## 4. Tonight's exceptions: 03 Instructions (optional)
 
 Anything true of this show only: *"MON5 and MON6 are stereo in-ear
-mixes"*, *"no reverb on the speech mics"*. Press **New file** on the tile,
-type, and press **Save**. Where these and your house rules disagree, the
-instructions win. Without a file, the house rules apply in full.
+mixes"*, *"no reverb on the speech mics"*. Press **New file** on the tile
+(or **Create instructions.md** in the step itself), type, and press
+**Save**. Where these and your house rules disagree, the instructions
+win. Without a file, the house rules apply in full. The tile counts the
+layers the build reads: *2 layers* is the house file, then these
+instructions on top.
 
 ## 5. Build the plan: 04 Plan
 
