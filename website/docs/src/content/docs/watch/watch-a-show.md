@@ -52,7 +52,7 @@ the same colour down its left edge and its severity in a solid tag. The
 rows are sorted errors first, then warnings, then info, with the newest
 at the top of each. Here on the [Demo show](/getting-started/demo/):
 
-![The Watch table on the Demo rig: an error row and a warning row, each with a built-in rule folded under it, then a second warning row](../../../assets/img/watch-table.png)
+![The Watch table on the Demo rig: a Clipped row for BUS 6 "Vocals", an error row and a warning row each with a built-in rule folded under it, then a second warning row](../../../assets/img/watch-table.png)
 
 - **Where** is the strip the row is about, as the desk names it:
   `CH 10 "Lead Vox"`. Beside it is the claim, in large type (*is muted*,

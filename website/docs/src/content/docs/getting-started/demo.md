@@ -130,7 +130,7 @@ only.
 Click **Watch**, then **Start watching**. The simulated desk has faults
 that come and go at random, so within a few seconds the table fills:
 
-![Watch on the Demo rig: Lead Vox muted and the Band DCA pulled down, three of the show's own conditions firing](../../../assets/img/watch-table.png)
+![Watch on the Demo rig: the Vocals bus clipped, Lead Vox muted and the Band DCA pulled down, three of the show's own conditions firing](../../../assets/img/watch-table.png)
 
 The word over the table says it from across the room: a red **TROUBLE**
 while an error stands, a yellow **WARNING** with warnings only, a green
