@@ -276,10 +276,12 @@ it names, whether the resolved file cites it or not. The build's preset
 choice reads that line, not a rule, and the generator still reads it
 as you wrote it. The library is the one the build uses (`--presets`, or
 `[presets] default` in `~/.atoo.config`; `resolve --check` reads the
-default). An item naming a preset the library has not got is still a
-note, and says which. Here `house.md`'s map has `- Kick: "Kick In"`,
-which the starter library (here `[presets] default = "presets"`) has, and `- Snare: "Snare Top"`, which it has
-not; `resolve --check` lists only the second:
+default; it says which library it used, as an `INFO preset library:`
+line, before anything else). An item naming a preset the library has not
+got is still a note, and says which. Here `house.md`'s map has
+`- Kick: "Kick In"`, which the starter library (here `[presets] default =
+"presets"`) has, and `- Snare: "Snare Top"`, which it has not;
+`resolve --check` lists only the second:
 
 ```
 NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
@@ -288,6 +290,46 @@ NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
          Your line: - Snare: "Snare Top"
          Fix: export a preset saved under that name into the library, or
          change the line to a name `atoo presets` lists
+         (resolve.line-not-covered)
+```
+
+A few more things about the preset map:
+
+- **Bus presets count.** A map under a line that says *bus*
+  (`- Default bus presets:`) is looked up among your bus presets
+  (`.bus` files), one under a line that says *channel* among your
+  channel presets, and one that says both, or neither, among both. So
+  `- Drums: "Mix Bus"` is covered when `Mix Bus.bus` is in the library.
+- **A heading line is covered with its items.** The line that
+  introduces the map (`- Default channel presets by source, ...:`)
+  counts as covered as soon as any item under it does, so the notes do
+  not depend on which lines the resolved file happened to cite.
+- **An item that states a rule is not covered by the library.** The
+  preset choice reads only the preset's name, so
+  `- Vocals go to the "Vox Verb" bus and get 3 dB more at 3k` is a note
+  that quotes the part it does not carry out ("bus and get 3 dB more at
+  3k"): put the rule on a line of its own. A number, a processing word
+  (a level, a filter, a compressor, `must`, `always`) or more than ten
+  words of prose around a name is read as a rule; a few words saying
+  which channel a name is for (`"H Tom" for the high (or only) rack
+  tom`) are not. Names may be in double or single quotes.
+- **A library that cannot be read is said, not skipped.** If the
+  library's files cannot be opened (the folder is gone, a preset file
+  is damaged), no name can be checked, so every map item counts as
+  covered, and one note says so, `resolve.preset-library-unreadable`,
+  with the reason.
+
+For the Vocals line above, `resolve --check` says:
+
+```
+NOTE     house.md: the preset map line "- Vocals go to the "Vox Verb" bus and
+         get 3 dB more at 3k" says more than a preset name ("bus and get 3 dB
+         more at 3k"), and no rule in house.resolved.md cites it -- the preset
+         choice reads only the name, so the rest reaches the generator
+         verbatim instead
+         Your line: - Vocals go to the "Vox Verb" bus and get 3 dB more at 3k
+         Fix: put that rule on a line of its own, outside the preset map, or
+         resolve again (`atoo resolve`)
          (resolve.line-not-covered)
 ```
 

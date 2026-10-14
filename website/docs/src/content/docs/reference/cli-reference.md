@@ -947,8 +947,10 @@ be cited or listed as having no effect. A citation not found is a WARNING; a lin
 no rule covers is a note, and is given to the generator verbatim. A line of your
 preset map (- Kick: "Kick In", indented under a line that names presets) is
 covered when your preset library -- [presets] default in ~/.atoo.config -- has
-every preset it names, cited or not; one naming a preset the library has not got
-is a note saying so. The file is still used with warnings, and refused only when
+every preset it names (a bus preset under a line that says bus), cited or not; one
+naming a preset the library has not got is a note saying so, and so is one that
+also states a rule. A library that cannot be read is said at INFO. The file is
+still used with warnings, and refused only when
 it is empty or none of its citations is found.
 
 The file ends with a Category table: one JSON object per category restating its
