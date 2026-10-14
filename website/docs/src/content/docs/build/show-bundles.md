@@ -159,10 +159,10 @@ the capture itself. That is what makes it a usable example rather than a
 green screenshot.
 
 `watch` picks up `watch.json`, which nothing on the command line named.
-Against the demo capture that ships beside the bundle:
+Against the audit demo capture, `starter/audit-demo/` in the repository (`atoo init` copies it to `~/Documents/Atoo/audit-demo/`):
 
 ```bash
-atoo watch --show docs/user/demo/touringband --state-sequence docs/user/demo/audit-demo/audit_demo_state.json
+atoo watch --show docs/user/demo/touringband --state-sequence starter/audit-demo/audit_demo_state.json
 ```
 
 ```

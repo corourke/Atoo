@@ -76,10 +76,10 @@ though the first time is better done on one that is not.
    ```
 
 To see what an audit prints before you go near a desk, a saved reading
-stands in for one (from a clone of the repository):
+stands in for one (`atoo init` copies one into your Atoo folder):
 
 ```
-atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json
+atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json
 ```
 
 ```

@@ -310,7 +310,7 @@ readback mismatch, or an unrelated address that moved.
 | Option | What it does |
 |---|---|
 | `--amended-plan` `FILE` | The rebuild: the same show, built again from the same conventions with tonight's change in it (three horn rows added to input.csv, a line in instructions.md). `atoo build` produces it; amend works out what is new in it and writes only that. The same as `atoo patch --amended-plan`. |
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan that is ALREADY on the desk. Normally left out: with --show, it is the plan the desk's own newest journal entry left on it, else the bundle's plan.json. |
 | `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
 | `--state` | A JSON object of address -> value (the same shape `audit --state` takes) -- work out the delta from that instead of a live console. Reviews the whole amendment offline; it can never write. |
@@ -348,7 +348,7 @@ silently, so an acknowledgement is not proof. Anything that didn't land is
 reported by address, and the command exits 2 -- the code build, verify, compare
 and apply use for "it ran and found problems", as against 1 when the command
 could not run at all. audit and watch report their own findings
-with 1, not 2. See the exit-code table in docs/user/cli-reference.md.
+with 1, not 2. The exit-code table is at https://docs.atoo.app/reference/cli-reference/
 
 Before writing, apply asks the desk what is in its two expansion bays
 (/cards/$type and /$syscfg/opt_mod) and REFUSES a plan that patches from or to
@@ -395,7 +395,7 @@ the plan routes anywhere to, instead of leaving whatever was already patched the
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--plan` | A plan JSON produced by `atoo build`. Required unless --show supplies it. |
 | `--input` | The input list the plan was built from. Optional, but without it the checks that need it are skipped: that every input became a channel, that no channel was invented, and that phantom power is safe for the microphones in use. |
@@ -423,9 +423,9 @@ optionally trace a signal path across it. Every finding names its rule
 by an ID that does not change when the wording does.
 
   atoo audit --console 203.0.113.50
-  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json
-  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --trace-from input:LCL:3 --trace-to output:LCL:1
-  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --plan my_show_plan.json
+  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json
+  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --trace-from input:LCL:3 --trace-to output:LCL:1
+  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --plan ~/Documents/Atoo/audit-demo/audit_demo_plan.json
 
 Read-only either way -- nothing here writes to a console. Every finding cites the
 specific rule it violated (its ID), never an inferred channel type: this audit works
@@ -433,7 +433,9 @@ from confirmed routing/patch/mute/fader facts only, the same address scheme `app
 writes to, and never guesses what a channel is from its name.
 
 --state takes a JSON object of OSC address -> value, the same shape a live read
-produces -- try it with no console attached at all via docs/user/demo/audit-demo/audit_demo_state.json.
+produces -- try it with no console attached at all via the demo state `atoo init`
+copies into your working folder, ~/Documents/Atoo/audit-demo/audit_demo_state.json
+(run `atoo init` first if it is not there; if you chose another --dir, use that folder).
 --dump-state FILE writes that shape: a live read saved, to be audited again offline.
 
   atoo audit --console 203.0.113.50 --dump-state tonight.state.json
@@ -463,9 +465,9 @@ running without --plan shows everything the rules produced.
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--console` | Console IP address -- read its live state and audit that. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
-| `--state` | A JSON object of address -> value (an offline capture, or a hand-built demo -- see docs/user/demo/audit-demo/audit_demo_state.json) -- audit that instead of a live console. Lets a novice operator try this with no console attached at all. |
+| `--state` | A JSON object of address -> value (an offline capture, or a hand-built demo -- try ~/Documents/Atoo/audit-demo/audit_demo_state.json, which `atoo init` copies) -- audit that instead of a live console. Lets a novice operator try this with no console attached at all. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 | `--channels` `VALUE` | Channel strips to read (default: 40, WING Compact) |
@@ -511,7 +513,7 @@ The second form is the easy button: with no --input/--conventions given, it look
 the current directory for exactly one .csv input list and exactly one conventions
 source and builds that pair into a plan. Given more than one candidate it prints
 what it found and the exact invocation to use, rather than guessing. See
-docs/user/build-a-show.md.
+https://docs.atoo.app/build/build-a-show/
 
 The plan is written to a file either way -- an
 <input-stem>+<conventions-stem>.plan.json name unless --out says otherwise; pass
@@ -584,7 +586,7 @@ stable across rewordings; quote it in a bug report.
 | Option | What it does |
 |---|---|
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--input` | Input list CSV path -- one band/event/venue's physical inputs. Omit together with --conventions to auto-detect the pair in the current directory instead. |
 | `--conventions` | Your conventions file (Markdown) -- standing house style, reusable across every show, like the conventions.md `atoo init` copies in. Plain English; the model reads it directly. Defaults to ~/.atoo.config's [conventions] default. A show bundle's instructions.md layers over this, it does not replace it. |
 | `--out` | Write the plan JSON here. Default: <input-stem>+<conventions-stem>.plan.json in the current directory. Pass '-' to print to stdout instead of writing a file. |
@@ -606,7 +608,7 @@ _Not written yet._
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan to compare against. Required unless --show supplies it. |
 | `--snapshot` | A .snap show file saved on the console and copied off it (USB stick or the console's own file browser). There is no remote save-and-download; the desk writes it, you fetch it. |
 
@@ -792,7 +794,7 @@ are safe either way -- a new channel only lands on a strip the desk reads free.
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--no-constrain` | Do not constrain the model's reply to the change-set format (the same escape as `build --no-constrain`). The reply is still checked against it. Only the claude and ollama providers constrain decoding; on ATOO_AI_PROVIDER=api the schema is never sent, so this changes nothing there. |
 | `--prompt-dir` `DIR` | Read change_compile.md from DIR instead of the packaged prompts (sets ATOO_PROMPT_DIR for this run). |
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan that is ALREADY on the desk. Normally left out: with --show, it is the plan the desk's own newest journal entry left on it, else the bundle's plan.json, else an empty board. |
 | `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
 | `--state` | A JSON object of address -> value (the same shape `audit --state` takes) -- work out the delta from that instead of a live console. Reviews the whole change offline; it can never write. |
@@ -1069,7 +1071,7 @@ The page is at /. /app redirects there.
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--host` | Interface to bind (default: 127.0.0.1, loopback only). On a network address a second machine may Watch; opening files and every write from the page (apply, patch, undo, build, saving a file) still answer this machine only |
 | `--port` `VALUE` | Port to serve on (default: 8420). If an Atoo UI is already serving there, that one is opened instead |
 | `--no-browser` | Do not open the page in a browser; only print its address. By default the page opens in the default browser once the server answers |
@@ -1168,7 +1170,7 @@ reversal that did not land.
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
@@ -1188,7 +1190,7 @@ _Not written yet._
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--plan` | A plan JSON to check. Required unless --show supplies it. |
 | `--input` | The input list the plan was built from. Without it, the checks that need it are skipped: that every input became a channel, that no channel was invented, and that phantom power is safe. |
@@ -1207,7 +1209,7 @@ poll, only a finding that just started applying, or just stopped.
 
   atoo watch --console 203.0.113.50
   atoo watch --console 203.0.113.50 --interval 5
-  atoo watch --state-sequence docs/user/demo/audit-demo/audit_demo_state_before.json,docs/user/demo/audit-demo/audit_demo_state.json
+  atoo watch --state-sequence ~/Documents/Atoo/audit-demo/audit_demo_state_before.json,~/Documents/Atoo/audit-demo/audit_demo_state.json
 
 Polling, not push: WING's OSC offers one event subscription for the whole network, and
 it dies after 10 seconds unless renewed, so this reads the same address set `audit` does
@@ -1277,9 +1279,9 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 
 | Option | What it does |
 |---|---|
-| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md. |
+| `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--console` | Console IP address -- poll its live state and audit each read. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
-| `--state-sequence` | Comma-separated JSON state files, played in order and then repeated -- an offline demo of an operator making changes between polls, with no console attached. See docs/user/demo/audit-demo/audit_demo_state_before.json / audit_demo_state.json. |
+| `--state-sequence` | Comma-separated JSON state files, played in order and then repeated -- an offline demo of an operator making changes between polls, with no console attached. Try ~/Documents/Atoo/audit-demo/audit_demo_state_before.json and audit_demo_state.json, which `atoo init` copies. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 | `--channels` `VALUE` | Channel strips to read (default: 40, WING Compact) |

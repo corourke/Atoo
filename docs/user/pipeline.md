@@ -286,10 +286,11 @@ structural rules: a bus in use with nothing feeding it, 48V on a socket
 nobody patched, a DCA pulled low over active members. Give it `--plan`
 as well and it also compares the desk with what the plan asked for.
 
-It works offline too, against a saved state:
+It works offline too, against a saved state (`atoo init` puts a demo one
+in your Atoo folder):
 
 ```
-atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --plan docs/user/demo/audit-demo/audit_demo_plan.json
+atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --plan ~/Documents/Atoo/audit-demo/audit_demo_plan.json
 ```
 
 ```

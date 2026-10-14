@@ -27,10 +27,14 @@ below stays only for something the Demo cannot show:
   model, and the Demo is built with none, so this one is written by hand.
   The `patch` transcript runs on the Demo show itself, against the Demo
   console's rig (`atoo/web/demo_states/before.json`).
-- `audit-demo/` -- the `audit`, `watch` and `watch-conditions`
-  transcripts read a hand-built console state with faults seeded on
-  purpose, and its fixed twin. The Demo console's rig is clean, so it
-  has nothing for those pages to find.
+- The `audit`, `watch` and `watch-conditions` transcripts read a
+  hand-built console state with faults seeded on purpose, and its fixed
+  twin, because the Demo console's rig is clean and has nothing for those
+  pages to find. They are not here: they ship with the package as
+  `starter/audit-demo/`, which `atoo init` copies to
+  `~/Documents/Atoo/audit-demo/`, so `audit --help` and
+  `watch --help` can name them on a pipx install, which has no
+  `docs/`.
 
 `smallband/` was archived on 2026-10-11
 (`archive/docs/user/demo/smallband/`): every transcript that ran on it
@@ -45,7 +49,6 @@ now runs on the Demo.
 | `amend-demo/applied.plan.json`, `rebuilt.plan.json`, `occupancy.json` | `tests/fixtures/smallband.plan.json` and `tests/fixtures/amend-demo/` at 66e1461 (frozen copies of `examples/smallband/plan.json` and `examples/amend-demo/`) | `amend.md`, the offline `amend` transcript (test-run) |
 | `demo-show/horns.change-set.json` | written by hand (2026-10-13) for *"trumpet, sax and trombone on LCL 21-23, Band DCA"* under the starter conventions: three horns with their starter presets, on a new Horns mix bus with the "Mix Bus" bus preset; the same file as `tests/fixtures/demo-horns.change-set.json` (a test keeps them equal) | `patch.md`, the offline `patch --change-set` transcript (test-run) |
 | `festival/plan.json`, `festival/builds/` (the two newest) | `examples/festival/` at f906e3d | `lessons.md`, the `lessons` transcript (test-run) |
-| `audit-demo/audit_demo_state.json`, `audit_demo_state_before.json`, `audit_demo_plan.json` | `examples/` at 89e8ca7, unchanged (hand-built, never off a desk) | `audit.md`, `watch.md`, `watch-conditions.md`, the `audit`/`watch` transcripts; `pipeline.md` §5 (test-run); `show-bundles.md`, the `watch --show` transcript; the `audit` and `watch` `--help` examples |
 
 `tests/test_user_docs.py` runs every transcript whose command names a
 file here and compares its output with the page, so a code change that

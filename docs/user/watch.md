@@ -64,11 +64,13 @@ monitor busses on it are not called unrouted: `R007 Output Route Not
 Checked` says, at INFO, which outputs were not read.
 
 Every transcript on this page runs against a captured state file, with
-no console attached, from the frozen copies under
-`docs/user/demo/audit-demo/` in the repository:
+no console attached. [`atoo init`](install.md#first-run-atoo-init) copies
+the captures into your Atoo folder, as `audit-demo/` (run it again if
+yours was made before they existed; it adds what is missing and touches
+nothing you have changed):
 
 ```bash
-cd docs/user/demo/audit-demo
+cd ~/Documents/Atoo/audit-demo
 ```
 
 

@@ -15,11 +15,13 @@ all. This page is the file format, used both by **Watch** in the browser
 and by `atoo watch`.
 
 Every transcript on this page runs against a captured state file, with
-no console attached, from the frozen copies under
-`docs/user/demo/audit-demo/` in the repository:
+no console attached. [`atoo init`](/getting-started/install/#first-run-atoo-init) copies
+the captures into your Atoo folder, as `audit-demo/` (run it again if
+yours was made before they existed; it adds what is missing and touches
+nothing you have changed):
 
 ```bash
-cd docs/user/demo/audit-demo
+cd ~/Documents/Atoo/audit-demo
 ```
 
 ```json

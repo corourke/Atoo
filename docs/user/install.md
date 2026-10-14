@@ -112,6 +112,7 @@ starter set into it:
 |---|---|
 | `README.md` | what each file is, and what to do next |
 | `conventions.md` | example house conventions, to rewrite as your own house style |
+| `audit-demo/` | three small, hand-built console captures for trying [`atoo audit`](audit.md) and [`atoo watch`](watch.md) with no console attached; their `--help` names them |
 | `presets/` | your library of WING channel presets (`.chn`): nineteen starter presets, one per common source, that `conventions.md` names, and three bus presets (`.bus`): a compressor for the mix busses and a reverb for each of two FX busses. Export your own from the desk into it |
 
 Then it points `~/.atoo.config` at them: `[conventions]` at
@@ -133,7 +134,8 @@ Working folder: ~/Documents/Atoo (created)
   README.md                    created
   conventions.md               created
   presets/README.md            created
-  presets/                     22 presets: 22 created
+  presets/                     23 presets: 23 created
+  audit-demo/                  3 files: 3 created
 
 ~/.atoo.config:
   [conventions] default    set to ~/Documents/Atoo/conventions.md
@@ -176,7 +178,8 @@ Working folder: ~/Documents/Atoo (already there)
   README.md                    already there
   conventions.md               already there
   presets/README.md            already there
-  presets/                     22 presets: 22 already there
+  presets/                     23 presets: 23 already there
+  audit-demo/                  3 files: 3 already there
   demo-show/input.csv          created
   demo-show/instructions.md    created
   demo-show/plan.json          created
