@@ -66,14 +66,3 @@ browser; everything it does can also be done from the command line.
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
 
-## For whoever writes these pages
-
-1. **[STYLE.md](STYLE.md)** sets the voice, the words and the formatting
-   for every page here, and says what to run before pushing.
-2. **Every worked example is run before it is committed.**
-3. **`cli-reference.md` is generated.** Edit the preamble blocks; never
-   the option tables. Run `python3 tools/gen_cli_reference.py`; a test
-   fails if it is stale.
-
-The design documents are in `docs/developer/` of the development
-repository; nothing in this guide depends on them.

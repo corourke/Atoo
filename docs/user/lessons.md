@@ -32,8 +32,10 @@ Sources: current, 2026-09-30T01-45-34Z, 2026-09-29T23-06-37Z (3 builds).
   ...
 ```
 
-(`docs/user/demo/festival` is a frozen copy of a festival show's plan and
-its two newest build logs.)
+The example above is from a festival show the maintainers built several
+times; its build logs are not in the public repository. On your own show,
+run `atoo lessons --show <your show folder>` once it has been built a few
+times: each build leaves a log in its `builds/` folder.
 
 ## What it reads
 
