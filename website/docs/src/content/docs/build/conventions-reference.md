@@ -295,10 +295,11 @@ NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
 
 A few more things about the preset map:
 
-- **Bus presets count.** A map under a line that says *bus*
-  (`- Default bus presets:`) is looked up among your bus presets
-  (`.bus` files), one under a line that says *channel* among your
-  channel presets, and one that says both, or neither, among both. So
+- **Bus presets count.** Which presets a map item is looked up among
+  depends on the line it sits under. Under a line that says *bus*
+  (`- Default bus presets:`), it is your bus presets (`.bus` files);
+  under one that says *channel*, your channel presets (`.chn` files);
+  under one that says both, or neither, either kind. So
   `- Drums: "Mix Bus"` is covered when `Mix Bus.bus` is in the library.
 - **A heading line is covered with its items.** The line that
   introduces the map (`- Default channel presets by source, ...:`)
