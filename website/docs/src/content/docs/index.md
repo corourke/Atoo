@@ -15,7 +15,7 @@ browser; everything it does can also be done from the command line.
 |---|---|
 | [Why Atoo](/getting-started/why/) | whether it is worth your time, against what you already do |
 | [Installing Atoo](/getting-started/install/) | getting it onto a laptop, and `atoo init` for a folder of your own |
-| [Installing from a checkout](/getting-started/install-from-checkout/) | changing the code or running the tests: a virtualenv, the extras |
+| [Installing from a checkout](/getting-started/install-from-checkout/) | running Atoo from a clone of its repository, in a virtualenv |
 | [Setting up Atoo](/getting-started/configuration/) | your model and API key, house conventions, presets and desk, set once |
 | [Try the Demo show](/getting-started/demo/) | Build, Apply and Watch on a simulated desk, in five minutes |
 | [Testing on your desk](/getting-started/testing-on-your-desk/) | trying it on your own WING: the Demo, read-only, then a write and its undo, and how to report |

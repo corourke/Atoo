@@ -36,8 +36,10 @@ Three causes, and each names itself:
 
 **`the web UI needs the 'ui' extra -- install it with:` / `  python3 -m
 pip install -e ".[ui]"`** — the server is an optional dependency, so the
-engine installs without FastAPI and uvicorn. Exits `1`. See
-[The extras](/getting-started/install-from-checkout/#the-extras).
+engine installs without FastAPI and uvicorn. Exits `1`. Install it again
+with `[ui]`: [Installing Atoo](/getting-started/install/#when-it-does-not-work) for
+pipx, [Installing from a checkout](/getting-started/install-from-checkout/#when-the-install-fails)
+for a clone.
 
 **`couldn't read plan file 'x.json': No such file or directory`**, and
 the same for `--watch-conditions` — both files are loaded before the
