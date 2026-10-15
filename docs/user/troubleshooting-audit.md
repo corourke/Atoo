@@ -136,6 +136,36 @@ alternate input (`C004` already says so) and for the talkback strip. With `--pla
 states is checked by `CV005`, so `C006` leaves that strip to it. A
 capture taken without the patch readings cannot answer, and the check
 says nothing then.
+## A channel is silent and nothing on it is muted: `C007`
+
+A WING input socket has a mute of its own, separate from the strip's. A
+muted socket silences every channel patched to it, and nothing on the
+strip shows it: the strip's mute is off, its fader is up, its meter is
+flat. It is easy to leave on after a line check, and it can happen
+mid-show.
+
+```
+$ atoo audit --state sockmute.state.json
+Audit findings: 2 warning.
+
+[WARNING] C007 Strip's Input Socket Muted (2)
+  CH 3 "Vox" is fed from AES50-A 3, which is muted at the socket. Nothing on the strip shows it; unmute the input on the desk.
+  CH 5 "OH" is a stereo source on AES50-A 5-6, and AES50-A 6 is muted at the socket while the other is not, so one side of it is silent. Unmute the input on the desk.
+...
+```
+
+Unmute the input on the desk's input page. A stereo source is two sockets,
+so one leg can be muted while the other is not; the finding says which.
+It is a warning, so `audit` exits `0`: a socket mute is something an
+engineer does on purpose, and this one stays only because it cannot be
+seen from the strip.
+
+It reads the local inputs (`LCL`) and the three AES50 ports (`A`, `B`,
+`C`), which costs no extra request. A channel patched from a card, a
+module, USB or StageConnect is not checked: those sockets are not read, so
+the rule says nothing for them rather than guess. A channel on its
+alternate input is reported by `C004` instead, the talkback strip is left out, and with no input sockets
+read the run says that `C007` could not be checked.
 
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 
@@ -208,13 +238,13 @@ and no more.
 **The talk mic's own strip is left out of the mix checks.** A talk mic
 is normally kept out of the mix: fader down, in no DCA. So when
 talkback is assigned, `audit` does not report that strip as "in no DCA"
-(`CH001`), "fader at floor" (`L002`), "sends nowhere" (`R008`) or
-"nothing patched" (`C006`). It says once that it did
+(`CH001`), "fader at floor" (`L002`), "sends nowhere" (`R008`),
+"nothing patched" (`C006`) or "socket muted" (`C007`). It says once that it did
 this, so the exemption is never silent:
 
 ```
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008) and 'nothing patched' (C006) are not reported for it.
+  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ```
 
 ## Talkback and a band input on one strip: `CV014`
@@ -233,7 +263,7 @@ Audit findings: 1 warning, 1 info.
   Talkback is assigned to CH40, and the plan puts 'Tom 3' on ch 40, so the talk mic and that input share one strip. Move the input off ch 40, or set talkback's assign to OFF or the other strip on the desk's talkback page.
 
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008) and 'nothing patched' (C006) are not reported for it.
+  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ...
 ```
 
@@ -254,7 +284,8 @@ Coverage: no output sockets read -- R002, R003, R004, R005, R006 and CV009 could
 
 That is `watch`'s one-line form; `audit` says the same in a sentence
 after its `Physical sockets read:` line. If no input sockets were read
-either, C001 (phantom power on an unpatched socket) joins the list.
+either, C001 (phantom power on an unpatched socket) and C007 (a strip's input
+socket muted) join the list.
 
 Nothing is broken. The six output rules are all about the **output patch** —
 which bus, Main or Matrix feeds which physical jack — and this run never

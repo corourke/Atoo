@@ -25,6 +25,7 @@ Find the symptom, then go to its page.
 | A channel is silent but its patch is right: `C004` | [audit](troubleshooting-audit.md#a-channel-is-silent-but-its-patch-is-right-c004) |
 | A channel is on, named and up, but you hear nothing: `R008` | [audit](troubleshooting-audit.md#a-channel-is-on-named-and-up-but-you-hear-nothing-r008) |
 | A channel is on and named, but nothing is patched to it: `C006` | [audit](troubleshooting-audit.md#a-channel-is-on-and-named-but-nothing-is-patched-to-it-c006) |
+| A channel is silent and nothing on it is muted: `C007` | [audit](troubleshooting-audit.md#a-channel-is-silent-and-nothing-on-it-is-muted-c007) |
 | An effect is on the strip but you cannot hear it: `E001`, `E002` | [audit](troubleshooting-audit.md#an-effect-is-on-the-strip-but-you-cannot-hear-it-e001-e002) |
 | The band cannot hear talkback: `T001` | [audit](troubleshooting-audit.md#the-band-cannot-hear-talkback-t001) |
 | Talkback and a band input on one strip: `CV014` | [audit](troubleshooting-audit.md#talkback-and-a-band-input-on-one-strip-cv014) |
