@@ -33,7 +33,13 @@ pip install -e ".[ui]"`** — the server is an optional dependency, so the
 engine installs without FastAPI and uvicorn. Exits `1`. Install it again
 with `[ui]`: [Installing Atoo](install.md#when-it-does-not-work) for
 pipx, [Installing from a checkout](install-from-checkout.md#when-the-install-fails)
-for a clone.
+for a clone. From a clone, check first that the `atoo` that ran is the
+clone's ([Which atoo am I running?](install-from-checkout.md#3-which-atoo-am-i-running)).
+If that `pip install` answers `error: externally-managed-environment`
+(Homebrew's Python, on a Mac), it was run outside a virtualenv: make one
+in the clone and install into it ([Installing from a
+checkout](install-from-checkout.md#1-make-the-virtualenv-in-the-clone)),
+never with `--break-system-packages`.
 
 **`couldn't read plan file 'x.json': No such file or directory`**, and
 the same for `--watch-conditions` — both files are loaded before the
