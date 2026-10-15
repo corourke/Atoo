@@ -197,7 +197,12 @@ Each row is one check on one channel, bus or DCA:
 | `DCA Band` | `fader_db` | `>=` | `-20` | warning |
 | `MAIN PA` | `muted` | `==` | `false` | error |
 
-**Field** is one of `muted`, `fader_db`, `dca`, `mute_group` or `patch`.
+**Field** is one of `muted`, `fader_db`, `dca`, `mute_group`, `patch`,
+`send_on`, `send_db`, `send_mode` or `phantom`. The three `send_` fields
+are about a channel's send to a bus, and show a **Bus** box under the
+Field (*to bus: BUS 5-8, or a name*): write the bus the way you write a
+channel, and it is rewritten to its one spelling when you leave the box
+([Sends and 48V](watch-conditions.md#sends-and-48v)).
 Give each row an **ID** and a **Description**: the description is what
 the table shows when it fires, so write the reason, *"Playback carries
 the backing tracks."*

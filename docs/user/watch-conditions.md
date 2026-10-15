@@ -74,9 +74,14 @@ rather than for everything you can think of.
 | `dca` | a DCA **name**, e.g. `"Drums"` | `==` `!=` |
 | `mute_group` | a mute-group **name** | `==` `!=` |
 | `patch` | a socket, e.g. `"LCL 3"` | `==` `!=` |
+| `send_on` | `true` / `false`, with a `bus` | `==` `!=` |
+| `send_db` | a number, with a `bus` | `==` `!=` `<` `<=` `>` `>=` |
+| `send_mode` | `"pre"`, `"post"` or `"group"`, with a `bus` | `==` `!=` |
+| `phantom` | `true` / `false` | `==` `!=` |
 
-Only `fader_db` has an ordering worth comparing, so only `fader_db` takes
-`<` and friends. The rest ask a yes/no question: **`==` asserts it holds,
+The last four are [sends and 48V](#sends-and-48v). Only the two levels,
+`fader_db` and `send_db`, have an ordering worth comparing, so only they
+take `<` and friends. The rest ask a yes/no question: **`==` asserts it holds,
 `!=` asserts it does not.** `"field": "dca", "operator": "!=", "value":
 "Drums"` fires when the channel *is* in the Drums DCA.
 
@@ -349,6 +354,164 @@ Things to know:
 - **Fields follow the kind**, as for positions: `patch` on `DCA Vocals`
   is refused.
 
+## Sends and 48V
+
+Some rules are about one show's sends and its 48V, which the built-in rules
+cannot know: *the click stays on in every in-ear mix*, *Kick stays at or
+below -6 dB in the drummer's mix*, *48V stays on for the overheads*. Four
+fields say them.
+
+| field | value | operators | about |
+|---|---|---|---|
+| `send_on` | `true` / `false` | `==` `!=` | the strip's send to the bus is switched on |
+| `send_db` | a number, in dB | `==` `!=` `<` `<=` `>` `>=` | the level of that send |
+| `send_mode` | `"pre"`, `"post"` or `"group"` | `==` `!=` | whether that send is pre- or post-fader |
+| `phantom` | `true` / `false` | `==` `!=` | 48V on the socket the strip is patched to |
+
+The three `send_` fields need one more key, **`bus`**: where the send goes.
+It is written the way `channel` is.
+
+| You write | It means |
+|---|---|
+| `Drums`, `BUS Drums` | the bus named Drums |
+| `BUS 5` | bus 5 |
+| `BUS 5-8`, `ALL BUS` | each of those busses |
+| `MTX 3` | a send to Matrix 3 |
+| `MAIN 1` | the strip's route to Main 1 (a route has a switch and nothing else, so only `send_on` takes it) |
+
+A bus is matched by name against the names last read, case-insensitively,
+so a rename is picked up at the next refresh; a name that matches no bus,
+or two, says nothing that pass. A Main's and a Matrix's names are not read,
+so those are written by position. Only a channel or an aux has sends of
+this kind, and `bus` goes on the three `send_` fields and nowhere else. The
+loader refuses a missing `bus` or one on another field, a bus that does not
+exist, and a field the bus's kind cannot take, before Watch reads anything.
+
+Saved as `sends.watch.json`:
+
+```json
+{
+  "watch_conditions": [
+    {
+      "id": "drums-mix-has-kick-and-snare",
+      "description": "Kick and Snare stay in the Drums mix",
+      "channel": "CH 1-2",
+      "field": "send_on",
+      "bus": "BUS Drums",
+      "operator": "==",
+      "value": true,
+      "severity": "error"
+    },
+    {
+      "id": "kick-level-in-drums",
+      "description": "Kick stays at or below -6 dB in the Drums mix",
+      "channel": "Kick",
+      "field": "send_db",
+      "bus": "BUS Drums",
+      "operator": "<=",
+      "value": -6,
+      "severity": "warning"
+    },
+    {
+      "id": "playback-out-of-drums",
+      "description": "Playback stays out of the Drums mix",
+      "channel": "Playback",
+      "field": "send_on",
+      "bus": "Drums",
+      "operator": "==",
+      "value": false,
+      "severity": "error"
+    }
+  ]
+}
+```
+
+```bash
+atoo watch --state-sequence audit_demo_state.json --watch-conditions sends.watch.json --count 1
+```
+
+Among the structural findings, the baseline has two lines of yours. Kick and
+Snare both have their send to Drums on, so the first condition says nothing:
+
+```
+[ERROR] WATCH:playback-out-of-drums Playback stays out of the Drums mix
+  CH 7 "Playback" has its send to BUS 1 "Drums" switched on -- Playback stays out of the Drums mix.
+
+...
+[WARNING] WATCH:kick-level-in-drums Kick stays at or below -6 dB in the Drums mix
+  CH 1 "Kick" has its send to BUS 1 "Drums" at 0 dB -- Kick stays at or below -6 dB in the Drums mix.
+```
+
+**One finding per strip that breaks it.** A range on `channel` gives each
+strip its own finding, and a range on `bus` lists the busses that break the
+condition inside one finding (*has its sends to BUS 5 "IEM 1" and BUS 6 "IEM
+2" switched off*). A send that was not read is skipped, so a strip with some
+of its sends unread is judged on the rest. `send_db` compares the level
+whether or not the send is switched on, so *stays on* and *stays above -10*
+are two conditions.
+
+**`phantom` is the 48V on the socket the strip is patched to** and, for a
+stereo source, the socket after it: each must satisfy the condition, and the
+finding names the one that does not. It has nothing to say for a strip that
+is not patched, one patched from a card, USB or another group with no
+48V, one on its alternate input, or one whose 48V was not read. Save this
+small capture as `condenser.state.json`:
+
+```json
+{
+  "/ch/1/name": "OH L", "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1,
+  "/ch/2/name": "OH R", "/ch/2/in/conn/grp": "LCL", "/ch/2/in/conn/in": 2,
+  "/ch/3/name": "Piano", "/ch/3/in/conn/grp": "LCL", "/ch/3/in/conn/in": 3,
+  "/io/in/LCL/1/vph": 1, "/io/in/LCL/2/vph": 0, "/io/in/LCL/3/vph": 1
+}
+```
+
+and these conditions as `phantom.watch.json`:
+
+```json
+{
+  "watch_conditions": [
+    {
+      "id": "overheads-48v",
+      "description": "48V stays on for the overheads",
+      "channel": "CH 1-2",
+      "field": "phantom",
+      "operator": "==",
+      "value": true,
+      "severity": "error"
+    },
+    {
+      "id": "piano-no-48v",
+      "description": "The piano never gets 48V",
+      "channel": "Piano",
+      "field": "phantom",
+      "operator": "==",
+      "value": false,
+      "severity": "error"
+    }
+  ]
+}
+```
+
+```bash
+atoo watch --state-sequence condenser.state.json --watch-conditions phantom.watch.json --count 1
+```
+
+```
+...
+[ERROR] WATCH:overheads-48v 48V stays on for the overheads
+  CH 2 "OH R" has 48V off at LCL 2 -- 48V stays on for the overheads.
+
+[ERROR] WATCH:piano-no-48v The piano never gets 48V
+  CH 3 "Piano" has 48V on at LCL 3 -- The piano never gets 48V.
+...
+```
+
+These cost no extra console read: a strip's sends, its Main routes, its
+patch and each socket's 48V and width are part of every pass already. The
+**Watch screen's** conditions table has the same four fields, with the
+**Bus** box under the Field for the `send_` ones.
+
 ## Conditions most shows want
 
 A handful of mistakes ruin a show, and the same handful turns up at most
@@ -365,6 +528,9 @@ breaks it, by number and by its name on the desk.
 | a mix or FX bus muted or at the floor | `BUS 5-7`: `muted` `==` `false`, and `fader_db` `>=` `-40` | error |
 | a DCA muted or pulled down | `DCA 1-5`: `muted` `==` `false`, and `fader_db` `>=` `-30` | error for the mute, warning for the fader |
 | the one channel the room hears | `Lead Vox`, `muted` `==` `false` | error |
+| the click in every in-ear mix | `Click`, `send_on` `==` `true`, `bus` `BUS 5-8` | error |
+| a monitor send kept pre-fader | `CH 1-8`, `send_mode` `==` `"pre"`, `bus` `BUS 1-4` | warning |
+| 48V on the condensers | `CH 5-6`, `phantom` `==` `true` | error |
 
 Write each description as the rule and nothing more (*No DCA is muted.*):
 the report adds the strip and what was read, as in
@@ -418,7 +584,8 @@ none, so they did not run there:
   routes, so a condition for them would say the same thing twice.
 - **A condenser with its 48V off, or 48V on where the plan has none** is
   `CV019`, with the plan. Without it, `C001` covers only 48V on a socket
-  nothing is patched to.
+  nothing is patched to, and a `phantom` condition is the way to say which
+  channels must have it.
 - **Something muted that the plan leaves unmuted** is `CV017`, with
   the plan, at WARNING. If you always watch with the plan, write a mute
   condition only where the mute should be an ERROR, as the PA and the

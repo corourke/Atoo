@@ -1268,6 +1268,12 @@ e.g. "Drums") and "patch" (a socket written the way an input list's patch column
 writes one -- "AES50-A 12", "LCL 3", "AES 1", "CRD 64"). Those three take "=="/"!="
 only. Note "AES 1" (AES/EBU) and "AES50-A 1" are different sockets.
 
+Sends and 48V: "send_on" (bool), "send_db" (number) and "send_mode" ("pre", "post" or
+"group") are about the channel's send to the bus a "bus" key names -- written like
+"channel": a bus's name, "BUS 5", "BUS 5-8", "ALL BUS", "MTX 3" or "MAIN 1" -- and
+"phantom" (bool) is the 48V on the socket the strip is patched to (and the next, for
+a stereo source).
+
   { "id": "kick-stays-in-drums", "description": "Kick must stay in the Drums DCA",
     "channel": "Kick", "field": "dca", "operator": "==", "value": "Drums",
     "severity": "warning" }
