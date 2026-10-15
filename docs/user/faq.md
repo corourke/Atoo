@@ -113,4 +113,4 @@ state and gets out of the way.
 
 [Why Atoo?](why.md) compares it with building by hand or in WING
 Edit, copying last month's show, the desk's presets, and a spreadsheet
-input list, and with Wing Tools.
+input list.

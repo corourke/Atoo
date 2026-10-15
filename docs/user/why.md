@@ -78,10 +78,6 @@ the spreadsheet and once on the desk, and nothing compares the two.
   built and tested on Claude; local models have not worked well so far.
   A build takes minutes, not seconds.
 - **WING only.** The Compact, the full-size WING and the Rack.
-- **Other tools exist.** [Wing Tools](https://wingtools.theta-tontechnik.de/)
-  already reads values back after writing, and checks a snapshot against
-  its own rules. Atoo differs in building from your rules, changing a
-  running desk, and being free and local, not in reading back.
 
 Next: [try the Demo show](../../README.md#try-it-in-two-minutes-with-no-desk),
 or [install it](install.md).
