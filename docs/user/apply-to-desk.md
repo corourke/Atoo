@@ -111,8 +111,17 @@ appears at the top of **History**, step 4, highlighted.
 **History** lists every write from this show, newest first. The row
 marked **top** is the newest write still standing on this desk.
 
-1. Press **Preview undo** to see what it would put back.
-2. Tick **Arm** in step 3, then press **Undo newest write**.
+1. Press **Preview undo**. It reads the desk and writes nothing, and it
+   needs no **Arm**. Directly under the button it says which write it would
+   reverse, whether it is **safe to undo**, and lists the addresses: for
+   each one the strip, the value that write set, the value on the desk now,
+   and the value Undo would put back. Anything that has been **changed
+   since** the write, by hand or by another run, is listed first and marked:
+   Undo leaves it exactly as it is. Step 3's account of the last write
+   stays where it is.
+2. Tick **Arm** in step 3, then press **Undo newest write**. If it had to
+   leave addresses behind, the result says **Partly undone** in yellow and
+   lists them.
 
 With no row to undo on this desk, both buttons are locked, and
 **Locked: nothing to undo on this desk** says so.

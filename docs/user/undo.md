@@ -182,6 +182,28 @@ selector goes back, and written after it.
 with `--confirm`: a file says nothing about what the desk holds now,
 which is the whole question the guard asks.
 
+## The same preview, as data
+
+The browser's **Preview undo** draws this same list. `--result-json FILE`
+writes it as data, for a preview and for a confirmed run alike: one row
+per address, with the strip it belongs to, the value the journalled run
+wrote, the value on the desk now, the value an undo puts back, and
+whether it **goes back**, is **already back**, has **changed since** (it is
+left as it is) or has **no earlier value**.
+
+```
+atoo undo docs/user/demo/undo-demo/apply-journal.json --state docs/user/demo/undo-demo/after-apply.json --result-json undo-preview.json
+python3 -c "import json; d = json.load(open('undo-preview.json')); print(d['outcome'], d['counts']['goes-back'], d['counts']['changed-since']); print(d['rows'][0])"
+```
+
+```
+differs 7 1
+{'address': '/dca/2/name', 'strip': 'dca:2', 'strip_name': '', 'control': 'name', 'written': 'Guitars', 'now': 'Horns', 'goes_back_to': '', 'verdict': 'changed-since', 'detail': None}
+```
+
+`differs` is the word for a preview that would leave something where it is;
+`safe` is one where every address goes back or is already back.
+
 ## Unwinding half a run
 
 ```
