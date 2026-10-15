@@ -367,19 +367,22 @@ Watch say so.
 
 ```
 $ atoo audit --state stereo.state.json
-Audit findings: 1 info.
+Audit findings: 1 warning.
 
-[INFO] R011 Stereo Output Patched On One Side
-  BUS 3 "Drummer" is stereo but is patched on its left side only (LCL 3), among the output sockets read (LCL 1-4), so anything panned right is not heard on an output. A mono wedge fed from a stereo bus works; if that is what the show wants, set it mono, and if not, patch its right side as well.
+[WARNING] R011 Stereo Output Patched On One Side
+  BUS 3 "Drummer" is stereo but is patched on its left side only (LCL 3), among the output sockets read (LCL 1-4), so anything panned right is not heard on an output. If a mono feed is meant, set it mono and this goes away; if not, patch its right side as well.
 
 Physical sockets read: in none; out LCL 1-4.
 ...
 ```
 
-**`R011` is a note, not a fault.** A mono wedge fed from a stereo bus works,
-and a mono PA on Main left is real, so the audit tells you what it found and
-leaves the choice with you: either set the bus **mono** on the desk (so the
-jack carries the whole mix), or patch its **other side** to a second output.
+**`R011` is a warning.** A stereo bus into one speaker is a one-sided mix,
+the kind you notice at soundcheck, so the audit says so. It is a warning and
+not an error, because the desk works and the show can go on, and `audit` exits
+`0`. If one speaker is what you meant (a stage wedge on a stereo bus, or a mono
+PA on Main left), set the bus **mono** on the desk, so the jack carries the
+whole mix, and the warning goes away. If not, patch its **other side** to a
+second output.
 It speaks only for a bus, Main or Matrix that is in use, so a freshly reset
 desk, which patches the left side of its first six busses to the local
 outputs, says nothing. It says nothing for an object patched on both sides,

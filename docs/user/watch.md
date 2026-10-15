@@ -58,7 +58,7 @@ took for a monitor mix:
   The plan states a width for a bus and nothing else, so a Main's and a
   Matrix's width are not compared. Without a plan,
   [`R011`](troubleshooting-audit.md#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)
-  notes a stereo bus, Main or Matrix patched on one side only.
+  warns of a stereo bus, Main or Matrix patched on one side only.
 
 - `CV021 Talkback Misses A Monitor Mix`: talkback is assigned and reaches
   something, but not a monitor mix the plan builds. *Talkback is assigned
