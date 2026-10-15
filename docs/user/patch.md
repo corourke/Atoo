@@ -161,6 +161,20 @@ A change can also edit what is running; see
   fields it names on anything already running — nothing else about a
   running strip moves. Dropping a bus, DCA, mute group or output is shown
   as `MODIFIED`, *not written*: nothing returns one of those to free yet.
+- **Moving a channel is dropping it and adding it again.** *"Move Playback
+  to Aux 8"* returns the old strip to free like any dropped channel, builds
+  the channel on the new strip, and leaves its input sockets alone: the
+  review lists the channel twice, `ADDED` on its new strip and `RELEASED`
+  on its old one, with an INFO saying it was moved. A strip number the
+  change names that is not free is not taken: the channel is placed on a
+  free strip instead, and the review says so.
+- **A part of the model's answer it left out counts as empty.** If it adds
+  one channel and says nothing of busses, DCAs or outputs, the review
+  carries an INFO (*the change set left out add.busses, ...; each is
+  read as empty*) and goes on; the change is not refused for a section
+  with nothing in it. The same holds for a file given to `--change-set`.
+  An answer the model gave that Atoo still refuses is kept as
+  `change.partial.json` in the bundle, and the error says why.
 - **A reference to something that is not there refuses the change**
   (`REFUSED`, exit `2`): *"it names bus 'MON9', which is neither on the
   desk nor added by this change"*. Say it again naming what is there, or
