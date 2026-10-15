@@ -406,6 +406,9 @@ none, so they did not run there:
 - **A channel patched from a bus, Main or Matrix that sends back to it**
   is `R009` (an error), or `R010` while one step of the loop is off or at
   the floor. No condition is needed for it.
+- **A stage box whose link drops** is `C008` (an error, when a channel or
+  output depends on the port) or `C009` (a warning: updating, or in error
+  with nothing patched to it). No condition is needed for it.
 - **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
   write `muted` `==` `false` on the channel that matters.

@@ -216,6 +216,58 @@ the rule says nothing for them rather than guess. A channel on its
 alternate input is reported by `C004` instead, the talkback strip is left out, and with no input sockets
 read the run says that `C007` could not be checked.
 
+## A stage box is on the patch but no audio comes from it: `C008`, `C009`
+
+A WING reports the state of each AES50 port: nothing on it (`-`), linked
+(`OK`), a link error (`ERR`) or updating (`UPD`). A stage box whose link has
+failed silences every input on it and every output to it at once, and nothing
+on a channel shows it: the patch is as you set it, the fader is up and the
+meter is flat. `C008` says so for a port that something depends on, and
+`C009` for a stage box that is not settled.
+
+```
+$ atoo audit --state stagebox.state.json
+Audit findings: 1 error, 1 warning.
+
+[ERROR] C008 AES50 Port Cannot Carry Its Patch
+  AES50-A reports a link error (ERR), and CH 1 "Kick" and CH 2 "Snare" take their input from it. No audio passes while the link is in error: check the cable and the stage box.
+
+[WARNING] C009 AES50 Stage Box Link Not OK
+  AES50-B reports UPD: the stage box on it is updating. Nothing is patched from it or to it yet.
+...
+```
+
+**`C008` is an error.** A port that reads `ERR`, or `-` (no stage box
+there at all), while a channel takes its input from it or an output on it
+carries a source, is a patch that cannot carry audio, and `audit` exits `1`.
+The finding names the port, the channels and the outputs on it. Check the
+cable and the stage box; for `-`, connect the stage box, or patch those
+channels and outputs somewhere else. A stage box that is simply not
+connected, with nothing patched to it, is not an error.
+
+**`C009` is a warning.** It says a stage box is updating (`UPD`), which
+passes no audio until it finishes and names the channels that wait for it,
+or that a stage box is in error with nothing patched from it or to it yet:
+nothing in the show is lost, but the link will not carry audio.
+
+In Watch both appear when the link drops or the box starts updating, and
+clear when it reads `OK`. A port that reads `OK` is silent, and so is a
+run that did not read the link: `audit` and Watch read it whenever they
+read the output sockets, and say that `C008` and `C009` could not be
+checked when they did not. A channel on its alternate input is reported by
+`C004` instead.
+
+**What `ERR` and `UPD` mean is not yet confirmed on a stage box.** The
+desk's own list has those words and Atoo reads them as they say: a link
+error, and an update. `R002` follows sockets, not links, so a bus patched to
+a dead stage box's output still counts as routed there; `C008` is the check
+that the link is up.
+
+**An unplugged stage box that only receives outputs** (monitor wedges, no
+inputs) reads `-`, and its outputs are read only when the show's plan
+declares them. Give the run the plan (`--plan`, or a show in Watch) and
+`C008` sees a source patched to the missing box.
+
 ## A whole group of channels is silent and every one is up: `CH004`
 
 A DCA has a mute button as well as a fader. Mute the Band DCA and every
@@ -461,7 +513,7 @@ did not answer is not reported.
 ## `audit` or `watch` says rules "could not be checked"
 
 ```
-Coverage: no output sockets read -- R002, R003, R004, R005, R006 and CV009 could not be checked.
+Coverage: no output sockets read -- R002, R003, R004, R005, R006, CV009, C008 and C009 could not be checked.
 ```
 
 That is `watch`'s one-line form; `audit` says the same in a sentence
@@ -469,9 +521,10 @@ after its `Physical sockets read:` line. If no input sockets were read
 either, C001 (phantom power on an unpatched socket) and C007 (a strip's input
 socket muted) join the list.
 
-Nothing is broken. The six output rules are all about the **output patch** —
-which bus, Main or Matrix feeds which physical jack — and this run never
-read it, so they declined to answer rather than guess.
+Nothing is broken. The output rules are all about the **output patch** —
+which bus, Main or Matrix feeds which physical jack — and `C008` and `C009`
+read each stage box's link along with it. This run never read it, so they
+declined to answer rather than guess.
 
 That happens when both of the sources that know what jacks the desk has
 come up empty: no `--plan` naming the sockets it patches, and a console
