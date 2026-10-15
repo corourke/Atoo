@@ -103,7 +103,7 @@ Change: Add Trumpet, Sax and Trombone on LCL 21-23
   INFO the model said: The Horns mix bus is new: the Demo show has no horns until now.
   INFO bus 'Horns' (index 8) was judged free from the applied plan alone -- the occupancy read covers strips, not busses
 
-379 address(es) will be written; 1621 belonging to objects this amend does not own will NOT be.
+379 address(es) will be written; 1625 belonging to objects this amend does not own will NOT be.
 
 Pre-flight verify of the changed plan against the WING Compact the plan is for (reviewed offline: no desk was asked): no errors, 1 warning(s) (reconcile.not-checked) -- warnings do not block.
   ...
@@ -143,7 +143,7 @@ other: *"'sax' read as an alto sax, so it takes the A Sax preset; say
 'baritone sax' for B Sax."* The model is told never to leave a strip
 without its preset for want of a word.
 
-Nothing already on the desk is written: the 1621 addresses that belong
+Nothing already on the desk is written: the 1625 addresses that belong
 to the Demo's own strips are left alone, and on a real desk they are
 read before and after the write, as the proof that nothing else moved.
 A change can also edit what is running; see
