@@ -185,7 +185,7 @@ recognise — it names the rules that therefore did not run rather than
 leaving you to read their silence as an all-clear:
 
 ```
-Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), CV009 (Undeclared Physical Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's Input Socket Muted) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
+Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On One Side), CV009 (Undeclared Physical Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's Input Socket Muted) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
 ```
 
 Those rules stand down only when no output socket was read at all. A
@@ -288,14 +288,15 @@ what actually disconnects one; the audit only reports it.
 `--plan` covers mute, fader level, DCA and mute-group membership, patch,
 bus sends, direct-to-Main routes, the trim, balance, invert and head-amp
 gain, the high-pass, hi-cut and tilt and the EQ of a channel or aux a plan
-states (CV008), and the 48V on each input socket (CV019). Some of its checks are about drift and
+states (CV008), the 48V on each input socket (CV019) and the width of each bus (CV020). Some of its checks are about drift and
 are what [Watch](watch.md) runs from the plan too: a channel whose every
 planned send and Main route is off (CV016), a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
 (CV017), a planned send switched off or flipped between pre and post
 (CV006) or a Main route that disagrees with the plan (CV007), a send
 or route that is on although the plan does not have it (CV018), and 48V
-on a socket that is not what the plan states (CV019). Watch
+on a socket that is not what the plan states (CV019), and a bus that is mono or stereo where the plan
+states the other (CV020). Watch
 leaves the send level to `audit`, where CV006 compares it too. It leaves the
 filters and the EQ to `audit` as well: they are set-up values that do not
 drift mid-show, and

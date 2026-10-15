@@ -348,6 +348,62 @@ show's plan adds ([Watching from the command line](watch.md)), and it
 clears when the desk is put back. A socket this rule judges is not also
 reported by `C001`.
 
+## A bus is heard on one side only, or is not the width the plan says: `R011`, `CV020`
+
+Every bus, Main and Matrix has two output slots, a left one and a right one.
+When the object is **stereo** it puts a different signal on each, so if
+everything it is patched to uses the same slot, whatever is panned to the
+other side goes nowhere. The commonest case is a stage wedge on a stereo bus:
+the wedge hears the left side, and a send panned right is lost. `audit` and
+Watch say so.
+
+```
+$ atoo audit --state stereo.state.json
+Audit findings: 1 info.
+
+[INFO] R011 Stereo Output Patched On One Side
+  BUS 3 "Drummer" is stereo but is patched on its left side only (LCL 3), among the output sockets read (LCL 1-4), so anything panned right is not heard on an output. A mono wedge fed from a stereo bus works; if that is what the show wants, set it mono, and if not, patch its right side as well.
+
+Physical sockets read: in none; out LCL 1-4.
+...
+```
+
+**`R011` is a note, not a fault.** A mono wedge fed from a stereo bus works,
+and a mono PA on Main left is real, so the audit tells you what it found and
+leaves the choice with you: either set the bus **mono** on the desk (so the
+jack carries the whole mix), or patch its **other side** to a second output.
+It speaks only for a bus, Main or Matrix that is in use, so a freshly reset
+desk, which patches the left side of its first six busses to the local
+outputs, says nothing. It says nothing for an object patched on both sides,
+patched nowhere (`R002`, `R005` and `R006` say that), or whose width was not
+read, and nothing at all when the output patch was not read (the
+["could not be checked"](#audit-or-watch-says-rules-could-not-be-checked)
+note names it).
+
+**With the plan, `CV020` compares the width.** The plan decides every bus's
+width, mono or stereo, and `atoo apply` writes it. A bus the plan makes mono
+that the desk has as stereo is a warning of its own, and then `R011` stays
+quiet, because the plan says which jacks that bus is patched to.
+
+```
+$ atoo audit --state stereo.state.json --plan show.plan.json
+Audit findings: 1 warning, 1 info.
+
+[WARNING] CV020 Bus Width Contradicts Plan
+  BUS 3 "Drummer": the plan has this bus mono; the desk has it stereo, so an output patched to its left side carries only the left of the mix and anything panned right is lost.
+
+[INFO] S001 Findings Withheld From This Report
+  1 finding(s) are not listed above because a plan was supplied: 1 R011 (1 about a parameter the plan states). Re-run the same audit with no plan to see every finding the rules produced.
+...
+```
+
+Set the bus's width on the desk, or, if the desk is right, say so in your
+conventions and rebuild. The plan states a width for a bus and nothing else,
+so a Main's or a Matrix's is not compared. `CV020` is a warning, so `audit`
+exits `0`; in Watch it is one of the rules the show's plan adds
+([Watching from the command line](watch.md)), and it clears when the desk is
+put back.
+
 ## A high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008`
 
 With `--plan`, `audit` compares the processing the plan states for a
@@ -430,7 +486,9 @@ another effect than the bus preset's ([Bus presets](bus-presets.md)).
 show's plan, with more plan checks: a channel cut off from every
 planned route (CV016), a mute the plan does not have (CV017), 48V that
 is not what the plan states (CV019,
-[above](#a-condenser-is-silent-or-48v-is-on-where-it-should-not-be-cv019)),
+[above](#a-condenser-is-silent-or-48v-is-on-where-it-should-not-be-cv019)), a bus whose width is not
+the plan's (CV020,
+[below](#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)),
 and the plan's sends and Main routes (CV006, CV007, CV018)
 ([Watching from the command line](watch.md); the last three are
 [below](#a-send-or-route-you-did-not-plan-cv018-cv006-cv007)). On that bus E001 and E003 then stay quiet in `audit`,
@@ -553,7 +611,7 @@ did not answer is not reported.
 ## `audit` or `watch` says rules "could not be checked"
 
 ```
-Coverage: no output sockets read -- R002, R003, R004, R005, R006, CV009, C008 and C009 could not be checked.
+Coverage: no output sockets read -- R002, R003, R004, R005, R006, R011, CV009, C008 and C009 could not be checked.
 ```
 
 That is `watch`'s one-line form; `audit` says the same in a sentence

@@ -50,6 +50,15 @@ when the desk is put back:
   have 48V to compare; a channel patched from a card or USB is not
   checked.
 
+- `CV020 Bus Width Contradicts Plan`: a bus that is mono where the plan has it
+  stereo, or stereo where the plan has it mono. *BUS 3 "Drummer": the plan
+  has this bus mono; the desk has it stereo, so an output patched to its left
+  side carries only the left of the mix and anything panned right is lost.*
+  The plan states a width for a bus and nothing else, so a Main's and a
+  Matrix's width are not compared. Without a plan,
+  [`R011`](troubleshooting-audit.md#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)
+  notes a stereo bus, Main or Matrix patched on one side only.
+
 - `CV016 Planned Routes All Off`: a channel whose every send and Main
   route the plan built is switched off or pulled to the floor. *CH 1
   "Kick": the plan sends it to Drums and Drums Comp; neither send is on.
