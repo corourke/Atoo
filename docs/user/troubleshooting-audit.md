@@ -61,6 +61,14 @@ exactly what you want; `audit` exits `0`. Switch the channel back to its
 main input on the desk. A capture taken before this check existed has no
 reading of the switch, and the rule then says nothing either way.
 
+During a virtual soundcheck this warning is noise. In
+[Watch](watch-a-show.md#virtual-soundcheck), the **Virtual soundcheck**
+switch (or `atoo watch --virtual-soundcheck`) shows `C004` and `C005` at
+info, still naming every channel, with *Virtual soundcheck is on, so this is
+expected* in the row. Turning it off makes any channel still on its alternate
+a warning again at once, which is the check you want before doors.
+`atoo audit` has no such switch: it reads the desk once, and says so.
+
 `atoo apply` puts every strip it builds back on its main input, so
 after an apply this finding means somebody switched the strip since.
 The desk's **global** alternate switch is reported separately, once for

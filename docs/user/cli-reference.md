@@ -1235,6 +1235,11 @@ port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a 
 aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. If the
 connection cannot be had it says so at INFO (W002) and carries on.
 
+A channel on its alternate input (C004) and the global alternate switch (C005) are
+warnings, since a show never starts on them. During a virtual soundcheck they are
+right: --virtual-soundcheck reports them at INFO instead (each strip still named, and W003
+saying the switch is on) for this run only. Leave it off when the show is live.
+
 The first read is reported as a baseline, not an alert -- whatever's already wrong when
 you start watching isn't a change. --state-sequence plays a fixed list of JSON captures
 in order (then repeats) instead of a live console, so a novice operator can see an alert
@@ -1320,3 +1325,4 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 | `--count` `VALUE` | Stop after this many reads. Default: run until Ctrl-C for --console, or once through the list for --state-sequence. Against a live console budget ~5s per read plus --interval between them: --count 8 is about a minute. With --per-leaf it is ~2 minutes per read, so --count 8 is about 17 minutes. watch prints its own estimate before the first read, and each read reports its progress and how many addresses went unanswered. |
 | `--name-refresh` `N` | Read strip, bus, DCA, mute-group and input-socket names on the first read and then every N reads, instead of every read. A node dump cannot carry a name, so on a WING Compact names are 88 of a read's ~320 requests. Default: 5 -- about every 30 seconds at the default --interval -- or 1 with --per-leaf. 1 reads names every time. Between refreshes each read carries the last names read, so every rule still runs; a rename shows up at the next refresh, and the findings say so at INFO (W001). |
 | `--watch-conditions` | Path to a JSON file of operator-authored watch conditions -- alerts on top of the built-in structural rules, e.g. "the crowd mic must never be unmuted." Optional; without it, only the built-in rules run. See the watch subcommand's own --help text for the file's shape. |
+| `--virtual-soundcheck` | Say that a virtual soundcheck is under way, so channels on their alternate input (C004) and the global alternate switch (C005) are reported at INFO instead of as warnings. Every strip on its alternate is still named, and an INFO (W003) says the switch is on. It is for this run only; the next `atoo watch` starts with it off, and with it off a channel still on its alternate is a warning. |

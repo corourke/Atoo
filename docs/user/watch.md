@@ -143,6 +143,37 @@ moved on, so it does not print again. If the connection cannot be had,
 `--state-sequence` has no meters and no clips. See
 [Watch the desk during a show](watch-a-show.md#a-clip).
 
+**A virtual soundcheck is on purpose: `--virtual-soundcheck`.** A channel
+switched to its alternate input (`C004`) and the desk's global alternate
+switch (`C005`) are warnings, because a show never starts on them. During a
+virtual soundcheck they are exactly right, so say so:
+
+```bash
+atoo watch --console 192.0.2.16 --virtual-soundcheck
+```
+
+```
+[2026-10-15T18:19:26+00:00] baseline -- 3 finding(s) already present:
+Audit findings: 3 info.
+
+[INFO] C004 Channel On Its Alternate Input (2)
+  CH 12 "Kick In" is listening to its alternate patch from CRD, not its main patch (AES50-A 1). Virtual soundcheck is on, so this is expected; if the show is live, switch it back on the desk and turn virtual soundcheck off.
+  CH 13 "Snare Top" is listening to its alternate patch from CRD, not its main patch (AES50-A 2). Virtual soundcheck is on, so this is expected; if the show is live, switch it back on the desk and turn virtual soundcheck off.
+
+[INFO] W003 Virtual soundcheck is on
+  Virtual soundcheck is on: a channel on its alternate input (C004) and the global alternate switch (C005) are reported at INFO, not as warnings, and every one is still named. Turn it off when soundcheck ends, and any that is still on its alternate becomes a warning at once.
+...
+```
+
+The same two channels without the flag are two `WARNING` rows. With it, every
+channel on its alternate is still named, but at INFO, and `W003` says the
+switch is on, so a quiet screen is never mistaken for a desk with nothing on
+its alternates. The flag belongs to this run: the next `atoo watch` starts
+with it off. To say a soundcheck has ended, stop and start again without the
+flag; whatever is still on its alternate is then a warning in the baseline.
+On the [Watch page](watch-a-show.md#virtual-soundcheck) it is a switch that
+can be turned off without stopping.
+
 Everything else is the desk and your watch conditions.
 
 **Where your outputs go is read, wherever they are.** A watch reads the
