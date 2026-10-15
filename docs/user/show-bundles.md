@@ -162,19 +162,21 @@ atoo watch --show docs/user/demo/touringband --state-sequence starter/audit-demo
 ```
 Watching 1 state file(s) in sequence every 2s (Ctrl-C to stop) -- read-only, nothing here writes to a console.
 
-[2026-10-03T07:22:45+00:00] baseline -- 16 finding(s) already present:
-Audit findings: 8 warning, 8 info.
+[2026-10-03T07:22:45+00:00] baseline -- 17 finding(s) already present:
+Audit findings: 9 warning, 8 info.
 
-... the 16 findings
+... the 17 findings
 ```
 
 Drop `--show` and the same command reports **15**. The bundle adds two
 from its own `watch.json`, which nothing on the command line named: its
 `Kick` condition fires (`CH 1 "Kick" is not muted`), and its
 `main-fader-floor` condition adds a note that it read `Main` as
-`MAIN 1`. It also takes one away: with the bundle's plan, L002 is
-quiet about CH 7's fader at the floor, because the plan puts that fader
-there. See [Watch conditions](watch-conditions.md) for what those findings
+`MAIN 1`. Its plan adds one more, `CV018`: the capture has BUS 1
+"Drums" routed to Main 1, and the rebuilt plan's bus 1 is a monitor
+bus with no Main route. It also takes one away: with the bundle's plan,
+L002 is quiet about CH 7's fader at the floor, because the plan puts that
+fader there. See [Watch conditions](watch-conditions.md) for what those findings
 mean.
 
 ## An explicit flag always beats the bundle

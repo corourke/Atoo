@@ -206,9 +206,11 @@ plan instead: `CV015 FX Bus Effect Contradicts Plan` is a WARNING when
 its insert is switched off, names another engine, or the engine holds
 another effect than the bus preset's ([Bus presets](bus-presets.md)).
 `audit` runs it when given the plan, and Watch runs it from the open
-show's plan, with two more plan checks: a channel cut off from every
-planned route (CV016) and a mute the plan does not have (CV017)
-([Watching from the command line](watch.md)). On that bus E001 and E003 then stay quiet in `audit`,
+show's plan, with more plan checks: a channel cut off from every
+planned route (CV016), a mute the plan does not have (CV017), and the
+plan's sends and Main routes (CV006, CV007, CV018)
+([Watching from the command line](watch.md); the last three are
+[below](#a-send-or-route-you-did-not-plan-cv018-cv006-cv007)). On that bus E001 and E003 then stay quiet in `audit`,
 so the problem is said once.
 
 ## The band cannot hear talkback: `T001`
@@ -275,6 +277,55 @@ change the assign on the desk. If channel 40 in the plan *is* the talk
 mic, name it so: an entry whose name or source starts with "talk"
 (`Talkback`, `Talk Mic`), or is `TB` or `T/B`, is taken as the talk mic
 and says nothing.
+
+## A send or route you did not plan: `CV018`, `CV006`, `CV007`
+
+With the plan, `audit` and Watch also check the desk's sends and Main
+routes against what the plan built. Three rules, all WARNINGs:
+
+- **`CV018 Send Or Route Not In Plan`** is a send or route that is *on*
+  and that the plan does not have: a channel sending to a bus the plan
+  gave it no send to (or to any Matrix), above the floor, or a bus routed
+  to a Main its plan entry does not list. It is how a click mic opened
+  into a bus that feeds the PA, or a wedge summed into Main, is caught.
+- **`CV006 Bus Send Contradicts Plan`** is a send the plan states that is
+  off, in the other pre/post mode, or (in `audit` only) at another level.
+- **`CV007 Main Route Contradicts Plan`** is a channel's route to a Main
+  the plan lists but the desk has off, or one the plan does not list but
+  the desk has on.
+
+```
+$ atoo audit --state touched.state.json --plan show.plan.json
+Audit findings: 3 warning.
+
+[WARNING] CV006 Bus Send Contradicts Plan
+  CH 1 "Kick": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST.
+
+[WARNING] CV007 Main Route Contradicts Plan
+  CH 2 "Click": plan lists no direct route from this channel to Main 1, live console reads on.
+
+[WARNING] CV018 Send Or Route Not In Plan
+  CH 2 "Click": a send to BUS 2 "Drums" is on at 0dB; the plan has no send from this channel to that bus.
+
+Physical sockets read: in none; out LCL 1-3.
+...
+```
+
+A desk left exactly as `atoo apply` set it raises none of them. If the
+send or route is what you want, leave the row (it is a WARNING and
+`audit` exits `0`) or put it in your conventions and rebuild, so the
+plan has it. Two things to know:
+
+- **Watch compares the switch and pre/post, not the send level.** A level
+  is what you ride at soundcheck. `audit --plan` still reports a send
+  more than 0.5 dB from the plan's.
+- **The plan cannot say that a channel feeds a Matrix.** A send from a
+  strip to a Matrix therefore always reads as outside the plan, until you
+  switch it off or take it to the floor.
+
+If every planned send of a channel is off, that is one row, `CV016`,
+naming each; `CV006` and `CV007` do not repeat it. A send or route that
+did not answer is not reported.
 
 ## `audit` or `watch` says rules "could not be checked"
 

@@ -399,13 +399,17 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions house.watch
 ```
 
 **Leave out what the built-in rules already watch**, or each fault comes
-up twice. Three of those rules run only when Watch has the show's plan
+up twice. Some of those rules run only when Watch has the show's plan
 (`--show`, or the Watch screen with a show open); the example above has
 none, so they did not run there:
 
 - **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
   write `muted` `==` `false` on the channel that matters.
+- **A send switched off or flipped to post-fader, a Main route that is
+  wrong, or a send or route that is on and not in the plan** are `CV006`,
+  `CV007` and `CV018`, with the plan. They cover the plan's sends and Main
+  routes, so a condition for them would say the same thing twice.
 - **Something muted that the plan leaves unmuted** is `CV017`, with
   the plan, at WARNING. If you always watch with the plan, write a mute
   condition only where the mute should be an ERROR, as the PA and the

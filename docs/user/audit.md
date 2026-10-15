@@ -287,11 +287,14 @@ what actually disconnects one; the audit only reports it.
 
 `--plan` covers mute, fader level, DCA and mute-group membership, patch,
 bus sends, direct-to-Main routes, and a narrow trim/balance/invert/
-head-amp-gain slice of processing. Two of its checks are about drift and
+head-amp-gain slice of processing. Some of its checks are about drift and
 are what [Watch](watch.md) runs from the plan too: a channel whose every
-planned send and Main route is off (CV016), and a channel, bus, DCA,
+planned send and Main route is off (CV016), a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
-(CV017). The filter family, the parametric EQ
+(CV017), a planned send switched off or flipped between pre and post
+(CV006) or a Main route that disagrees with the plan (CV007), and a send
+or route that is on although the plan does not have it (CV018). Watch
+leaves the send level to `audit`, where CV006 compares it too. The filter family, the parametric EQ
 and the compressor are **not** diffed yet. `--plan` also works with `--console`, and with
 `--show` it comes from the [show bundle](show-bundles.md).
 

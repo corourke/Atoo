@@ -54,7 +54,15 @@ at the top of each. Here on the [Demo show](demo.md):
 - Rules starting `WATCH:` are your **watch conditions** (below). The
   rules named by a code such as `R005` are built in. An info row is a note, in quieter type: a
   screen holding only info still looks calm.
-- The show's plan adds three rules, each a warning:
+- The show's plan adds six rules, each a warning. Three are about the
+  desk's sends and routes: **CV006 Bus Send Contradicts Plan** (a planned
+  send switched off, or flipped between pre and post; the level is not
+  compared here), **CV007 Main Route Contradicts Plan** (a channel's
+  direct Main route the plan lists, off, or one it does not list, on)
+  and **CV018 Send Or Route Not In Plan** (a send to a bus or Matrix, or
+  a bus's route to a Main, that is on and that the plan does not have:
+  *CH 2 "Click": a send to BUS 2 "Drums" is on at 0dB; the plan has no
+  send from this channel to that bus*). The other three:
   **CV016 Planned Routes All Off** (a channel whose every planned
   send and Main route is off or at the floor: *CH 1 "Kick": the plan
   sends it to Drums and Drums Comp; neither send is on*),
