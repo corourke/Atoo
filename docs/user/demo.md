@@ -133,13 +133,14 @@ rows amber. Rules starting `WATCH:` are the
 show's own watch conditions, listed as text under **Watch conditions**
 below the table, with **Save** locked since the show is read-only; rules
 named by a code such as `R005` are built-in checks. The **This watch**
-block, also below the table, reads *Resolved at Start: DCA Band → DCA 2,
-BUS Drum IEM → BUS 4, BUS Drums → BUS 5, MAIN PA → MAIN 1, ...*: which
-bus, DCA and Main each condition's name was matched to when the watch
-started. The show watches Lead Vox muted; the PA (Main 1) muted or below
--40 dB; the Drums, Vocals and Vox Verb busses and the Drum IEM and Vox
-Wedge mixes muted, and the three mix and FX busses below -40 dB; and any
-DCA muted or below -30 dB, with the Band DCA held above -20 dB. When the
+block, also below the table, reads *Resolved at Start: DCA Band → DCA 2*:
+which DCA the condition that names one by its name was matched to when
+the watch started. The show watches Lead Vox muted; the PA (Main 1)
+muted or below -40 dB; the four monitor busses muted; the three mix and
+FX busses muted or below -40 dB; and DCAs 1 to 5 muted or below -30 dB,
+with the Band DCA held above -20 dB. The busses and the DCAs are one
+condition on a range each, and a strip that breaks one is reported by its
+number and its name (`DCA 2 "Band"`). When the
 Band DCA goes to the floor, the show's conditions and the built-in
 CH002 all catch it: the conditions' rows, with CH002 named under
 the first. The house conventions start every channel fader at the floor,

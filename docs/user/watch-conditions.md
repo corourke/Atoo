@@ -353,17 +353,22 @@ Things to know:
 
 A handful of mistakes ruin a show, and the same handful turns up at most
 gigs. The [Demo show](demo.md)'s `watch.json` carries a set worth
-starting from:
+starting from. **A rule about a kind of strip is one condition on a
+range**, not one per strip: the report still names every strip that
+breaks it, by number and by its name on the desk.
 
 | Watch for | Condition | Severity |
 |---|---|---|
 | the PA muted | `MAIN 1`, `muted` `==` `false` | error |
 | the PA fader pulled down | `MAIN 1`, `fader_db` `>=` `-40` | error |
-| a monitor or in-ear mix muted | `BUS Vox Wedge`, `BUS Drum IEM`: `muted` `==` `false` | error, or warning for a wedge |
-| a mix bus muted or at the floor | `BUS Drums`, `BUS Vocals`: `muted` `==` `false`, and `fader_db` `>=` `-40` | error |
-| an FX bus muted or at the floor | `BUS Vox Verb`: the same two | warning: the vocals go dry, not silent |
+| a monitor or in-ear mix muted | `BUS 1-4`, `muted` `==` `false` | error |
+| a mix or FX bus muted or at the floor | `BUS 5-7`: `muted` `==` `false`, and `fader_db` `>=` `-40` | error |
 | a DCA muted or pulled down | `DCA 1-5`: `muted` `==` `false`, and `fader_db` `>=` `-30` | error for the mute, warning for the fader |
 | the one channel the room hears | `Lead Vox`, `muted` `==` `false` | error |
+
+Write each description as the rule and nothing more (*No DCA is muted.*):
+the report adds the strip and what was read, as in
+`DCA 2 "Band" has its fader at -144 dB -- No DCA fader is below -30 dB.`
 
 Here is the start of a house set, as a file of your own,
 `house.watch.json`:
@@ -371,11 +376,11 @@ Here is the start of a house set, as a file of your own,
 ```json
 {
   "watch_conditions": [
-    {"id": "pa-muted", "description": "The PA must never be muted mid-show.", "channel": "MAIN 1", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "pa-fader-low", "description": "The PA fader must stay above -40 dB.", "channel": "MAIN 1", "field": "fader_db", "operator": ">=", "value": -40, "severity": "error"},
-    {"id": "monitor-muted", "description": "A monitor mix must stay unmuted, or someone on stage loses their wedge.", "channel": "BUS 1-2", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "dca-muted", "description": "No DCA may be muted: it silences every strip it rides.", "channel": "DCA 1-8", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "dca-fader-low", "description": "A DCA below -30 dB takes its strips out of the mix.", "channel": "DCA 1-8", "field": "fader_db", "operator": ">=", "value": -30, "severity": "warning"}
+    {"id": "pa-muted", "description": "The PA stays unmuted.", "channel": "MAIN 1", "field": "muted", "operator": "==", "value": false, "severity": "error"},
+    {"id": "pa-fader-low", "description": "The PA fader stays above -40 dB.", "channel": "MAIN 1", "field": "fader_db", "operator": ">=", "value": -40, "severity": "error"},
+    {"id": "monitor-muted", "description": "No monitor bus is muted.", "channel": "BUS 1-2", "field": "muted", "operator": "==", "value": false, "severity": "error"},
+    {"id": "dca-muted", "description": "No DCA is muted.", "channel": "DCA 1-8", "field": "muted", "operator": "==", "value": false, "severity": "error"},
+    {"id": "dca-fader-low", "description": "No DCA fader is below -30 dB.", "channel": "DCA 1-8", "field": "fader_db", "operator": ">=", "value": -30, "severity": "warning"}
   ]
 }
 ```
@@ -388,8 +393,8 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions house.watch
 
 ```
 ...
-[WARNING] WATCH:dca-fader-low A DCA below -30 dB takes its strips out of the mix.
-  DCA 1 "Drums" has its fader at -144 dB -- A DCA below -30 dB takes its strips out of the mix.
+[WARNING] WATCH:dca-fader-low No DCA fader is below -30 dB.
+  DCA 1 "Drums" has its fader at -144 dB -- No DCA fader is below -30 dB.
 ...
 ```
 

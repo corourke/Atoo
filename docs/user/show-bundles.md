@@ -288,6 +288,15 @@ records everything that has ever been proposed, which is what makes a
 deletion stick. Without it, a rule you removed on purpose would look
 exactly like one that was never drafted.
 
+**A build does not add a rule you already have**, however the draft
+spells it. Two conditions are the same when they cover the same strips
+(a name is looked up in the plan, so `MAIN PA` and `MAIN 1` are one
+strip, and a `DCA 1-5` covers `DCA Vocals`) and ask the same field,
+operator and value. The id, the wording and the severity do not matter.
+The build says which drafted condition it left out and which of yours
+already says the same. A different threshold on the same strip is not
+the same rule: it is added, and the build notes that the two overlap.
+
 Two things a watch-conditions draft will not do: fail your build (a plan
 that built and a draft that did not is a warning, not an error), and write
 anything it cannot validate. Each drafted condition is checked on its
