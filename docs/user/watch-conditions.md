@@ -403,6 +403,9 @@ up twice. Some of those rules run only when Watch has the show's plan
 (`--show`, or the Watch screen with a show open); the example above has
 none, so they did not run there:
 
+- **A channel patched from a bus, Main or Matrix that sends back to it**
+  is `R009` (an error), or `R010` while one step of the loop is off or at
+  the floor. No condition is needed for it.
 - **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
   write `muted` `==` `false` on the channel that matters.

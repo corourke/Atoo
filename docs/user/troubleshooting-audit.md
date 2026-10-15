@@ -110,6 +110,55 @@ Atoo does not read those slots, so a strip that goes only to a recorder
 that way is reported. If that is deliberate, the strip is working as
 set up.
 
+## A channel feeds itself and howls, or could: `R009`, `R010`
+
+A channel or aux does not have to take its signal from a microphone. Its
+input can be a **bus, a Main or a Matrix**: the desk's own mix patched back
+in, for an effects return, a recording feed or a mix-minus. That is safe
+until the strip also sends to, or routes to, the thing it takes. A channel
+patched from Bus 3 that sends to Bus 3, or an aux patched from Main 1 that
+is routed to Main 1, hears itself and howls, loud enough to hurt people and
+drivers. It can go through other busses, Mains, Matrices and other strips
+too.
+
+```
+$ atoo audit --state feedback.state.json
+Audit findings: 2 error, 1 warning.
+
+[ERROR] R009 Feedback Loop (2)
+  AUX 3 "Return" takes MAIN 1 (patched from MAIN 1, its left side); AUX 3 routes to MAIN 1. The signal comes back round to what the strip takes, so this feeds back as soon as there is audio in it. Switch off the send or route that closes it, or patch AUX 3 from another source.
+  CH 12 "FX Return" takes BUS 3 "Reverb" (patched from BUS 5, its left side); CH 12 sends to BUS 3. The signal comes back round to what the strip takes, so this feeds back as soon as there is audio in it. Switch off the send or route that closes it, or patch CH 12 from another source.
+
+[WARNING] R010 Feedback Loop Held Closed
+  CH 13 "Verb Return" takes BUS 4 "Plate" (patched from BUS 7, its left side); CH 13 sends to BUS 4 (switched off). This is silent only because of the closed leg marked above, and feeds back the moment it is opened. Remove the send or route, or patch CH 13 from another source.
+...
+```
+
+The finding names the loop one step at a time, so you can see which send or
+route closes it. **R009 is an error**: every step is open, so it feeds back
+the moment there is audio in it, and `audit` exits `1`. Switch off the send
+or the route it names, or patch the channel from something else.
+
+**R010 is a warning**: the loop is there, but one step is off (a send
+switched off with a level set) or pulled to the floor, so it is silent
+today and howls the moment someone opens it. In Watch the warning is
+replaced by the error when the last step is opened, and cleared when the
+loop is taken apart.
+
+A strip that takes a bus and sends somewhere else is not a loop, and a
+send that is off with no level (the desk's own state) is not a step: the
+check only calls it a loop where the path really comes back to what the
+strip takes. A route to a Main has no level in the read, so an off route is
+not counted. The check cannot see a strip fed through a *user signal*, or
+one on its alternate input (`C004` says that); it says nothing for them.
+
+**What the patch means is inferred.** Each bus, Main and Matrix has two
+input sockets, left and right, as it has two output slots, so `BUS 5` as a
+channel's input is the left side of Bus 3 and `BUS 6` its right. The finding
+quotes the socket it read (`patched from BUS 5, its left side`) so you can
+see at a glance if that is not what the desk shows. This has not yet been
+confirmed on a desk.
+
 ## A channel is on and named, but nothing is patched to it: `C006`
 
 The other end of the same path. `R008` asks where a channel's signal

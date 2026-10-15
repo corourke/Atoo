@@ -24,6 +24,7 @@ Find the symptom, then go to its page.
 | `audit` or `watch` says `C003` | [audit](troubleshooting-audit.md#audit-or-watch-says-c003) |
 | A channel is silent but its patch is right: `C004` | [audit](troubleshooting-audit.md#a-channel-is-silent-but-its-patch-is-right-c004) |
 | A channel is on, named and up, but you hear nothing: `R008` | [audit](troubleshooting-audit.md#a-channel-is-on-named-and-up-but-you-hear-nothing-r008) |
+| A channel feeds itself and howls, or could: `R009`, `R010` | [audit](troubleshooting-audit.md#a-channel-feeds-itself-and-howls-or-could-r009-r010) |
 | A channel is on and named, but nothing is patched to it: `C006` | [audit](troubleshooting-audit.md#a-channel-is-on-and-named-but-nothing-is-patched-to-it-c006) |
 | A channel is silent and nothing on it is muted: `C007` | [audit](troubleshooting-audit.md#a-channel-is-silent-and-nothing-on-it-is-muted-c007) |
 | A whole group of channels is silent and every one is up: `CH004` | [audit](troubleshooting-audit.md#a-whole-group-of-channels-is-silent-and-every-one-is-up-ch004) |
