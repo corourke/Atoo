@@ -70,7 +70,7 @@ your conventions that asked for it. Nothing is sent to a console.
 
 It needs to know which desk the plan is for (`--console-model
 wing-compact`), and a model provider
-([Setting up Atoo](configuration.md)). This is the one stage that
+([Setting up an AI provider](ai-provider.md)). This is the one stage that
 uses a language model. Everything after it is ordinary code and runs
 with no model at all.
 

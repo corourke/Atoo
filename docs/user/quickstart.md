@@ -18,7 +18,7 @@ Run everything below from that folder.
 
 **Installed with pipx, and no checkout?** `docs/user/demo/` is not in
 the install. [`atoo init
---demo`](install.md#a-copy-of-the-demo-show-init---demo) writes the
+--demo`](change-the-demo.md#1-make-a-copy-of-the-demo-show) writes the
 smaller Demo show to `~/Documents/Atoo/demo-show/`. Run the steps
 from `~/Documents/Atoo` with `demo-show` wherever this page says
 `touringband`, and step 2 as `atoo build --show demo-show
@@ -43,7 +43,7 @@ Two things carry over from show to show, so you set them once:
 
 - **Which model writes the plan**, in your shell environment. Claude is
   the default, and with no API key `build` stops and says so. See
-  [Choosing the model](configuration.md#choosing-the-model); you can
+  [Setting up an AI provider](ai-provider.md); you can
   leave it until step 2.
 - **Your house conventions, your presets and your desk**, in
   `~/.atoo.config`. Once one is set, the matching `--conventions`,
@@ -201,7 +201,7 @@ If it does not answer, the usual cause is OSC remote control switched
 off on the desk; see
 [Troubleshooting](troubleshooting.md#atoo-cannot-reach-the-console).
 To stop typing the address, see
-[The console, per session](configuration.md#the-console-per-session).
+[The console](configuration.md#the-console).
 
 ---
 
@@ -302,7 +302,7 @@ something teaches more than one that finds nothing.
 |---|---|
 | write the input list for my own show | [Writing an input list](input-lists.md) |
 | write down how I set up a desk | [Writing conventions](conventions.md) |
-| set my house files, my desk or my model once | [Setting up Atoo](configuration.md) |
+| set my house files, my desk or my model once | [Configuring Atoo](configuration.md), [Setting up an AI provider](ai-provider.md) |
 | understand what `apply` guarantees | [Applying a plan](applying.md) |
 | keep one show's files together | [Show bundles](show-bundles.md) |
 | check a desk that is already set up | [Checking a desk](audit.md) |

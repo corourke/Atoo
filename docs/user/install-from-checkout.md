@@ -9,6 +9,10 @@ install is `rm -rf .venv` away from gone.
 `venv` is in the standard library. Only Debian and Ubuntu split it out,
 as `apt install python3-venv`.
 
+This needs Python 3.11 or newer: [step 3 of Installing
+Atoo](install.md#3-python-311-or-newer) gets one with Homebrew, and
+[Installing without Homebrew](install-without-homebrew.md) without.
+
 ```bash
 git clone https://github.com/corourke/Atoo.git
 cd Atoo
@@ -37,34 +41,7 @@ git pull
 python3 -m pip install '.[ui]'
 ```
 
-Then carry on from [First run](install.md#first-run-atoo-init).
-
-## Upgrading Python on macOS
-
-The 3.9 at `/usr/bin/python3` belongs to Apple's Command Line Tools.
-**Leave it alone**: parts of the system use it. Install a newer Python
-alongside it; they coexist by version-suffixed name (`python3.12` vs
-`python3.9`).
-
-*With Homebrew* (`brew --version` to check; if missing, get it from
-[brew.sh](https://brew.sh)):
-
-```bash
-brew install python@3.12
-python3.12 --version         # confirm it is on PATH
-```
-
-If `python3.12: command not found` right after a successful install, the
-Homebrew prefix is not on your `PATH`. On Apple Silicon that is
-`/opt/homebrew/bin`, on Intel `/usr/local/bin`:
-
-```bash
-echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc && exec zsh
-```
-
-*Without Homebrew*: the installer from
-[python.org/downloads](https://www.python.org/downloads/) puts
-`python3.12` in `/usr/local/bin` and needs no package manager.
+Then carry on from [First run](install.md#6-first-run-atoo-init-then-atoo-ui).
 
 ## When the install fails
 

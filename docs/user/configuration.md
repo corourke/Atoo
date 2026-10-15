@@ -1,29 +1,29 @@
-# Setting up Atoo
+# Configuring Atoo
 
-Do this once, before your first show. Atoo takes its settings from
-two places, and each one holds different things:
+Your house conventions, your presets and your desk are the same from
+show to show, so you should not have to type them every time. Set them
+once here. Which AI model writes your plans is the other half:
+[Setting up an AI provider](ai-provider.md).
+
+Atoo takes its settings from two places:
 
 | Where | What goes there | Why there |
 |---|---|---|
-| `~/.atoo.config` | your house conventions file, your preset library, your watch conditions, your usual desk, your working folder | These are **your** files and your desk. They stay the same from show to show, so you should not have to retype them. |
-| environment variables | which AI model writes the plan, and its API key | A key is a secret, so it does not belong in a file you might copy or share. Switching models is a per-session choice. |
+| `~/.atoo.config` | your house conventions file, your preset library, your watch conditions, your usual desk, your working folder | These are **your** files and your desk, the same from show to show. |
+| environment variables | a desk for this session only ([below](#the-console)), and the AI model and its key ([Setting up an AI provider](ai-provider.md)) | A key is a secret, so it does not belong in a file you might copy or share, and a venue's desk is for one session. |
 
 Neither is required. Without the config file, every command takes its
-paths and console as flags. Without the environment variables, `build`
-uses Claude, which needs an API key, and stops with a one-line message
-if it has none (see [Choosing the model](#choosing-the-model)).
-
-Every command-line flag beats both, so `--conventions`, `--presets` or
-`--console` always wins for that one run.
+paths and console as flags. Every flag beats both, so `--conventions`,
+`--presets` or `--console` always wins for that one run.
 
 ---
 
 ## The config file
 
 `~/.atoo.config` is a small TOML file in your home directory.
-**`atoo init` writes its `[conventions]`, `[presets]` and `[workspace]` sections for you** -- see
-[First run](install.md#first-run-atoo-init). Here it is with every
-section filled in:
+**`atoo init` writes its `[conventions]`, `[presets]` and `[workspace]`
+sections for you** ([First run](install.md#6-first-run-atoo-init-then-atoo-ui)).
+Here it is with every section filled in:
 
 ```toml
 [conventions]
@@ -58,9 +58,8 @@ and then ignored, as if it were not there. It does not stop the command.
 
 **A house conventions file is the one to set first.** It is house style,
 the same for every show, which is why it lives outside any show's own
-folder. With
-`[conventions] default` set, you can drop `--conventions` from `build`.
-A show's own `instructions.md` still layers on top of it
+folder. With `[conventions] default` set, you can drop `--conventions`
+from `build`. A show's own `instructions.md` still layers on top of it
 ([show bundles](show-bundles.md)).
 
 **`[workspace]` is the folder you keep your shows in.** `atoo init`
@@ -129,109 +128,24 @@ for a one-line complaint about the config file just above it.
 
 ---
 
-## Choosing the model
+## The console
 
-Only `atoo build` calls a model (and `atoo resolve`, the step
-a build runs for you when your conventions change), and so does a build
-started from Build in `atoo ui`. `patch` uses one too when you type the change in words.
-`verify`, `apply`, `audit` and `watch` never do.
+Every command that talks to a desk (`ping`, `apply`, `patch`, `amend`,
+`undo`, `audit`, `watch`) takes `--console <ip>`. There are three ways
+to give it, and the first one found wins:
 
-The model is chosen by environment variables. Put the `export` lines in
-your shell's startup file (`~/.zshrc` on a Mac, `~/.bashrc` on most
-Linux) so every new terminal has them. Start `atoo ui` from a
-terminal that has them too: the browser's builds run on the settings of
-the terminal that started the UI.
+1. `--console 192.0.2.16` on the command line, for that one run;
+2. `export ATOO_CONSOLE=192.0.2.16`, for this terminal: a venue's desk,
+   for one session;
+3. `[console]` in `~/.atoo.config`, for the desk you always use.
 
-### Claude (what Atoo is tuned against)
-
-```bash
-export ATOO_AI_PROVIDER=claude
-export ANTHROPIC_API_KEY=sk-ant-...     # or ATOO_AI_API_KEY
-```
-
-That is all a Claude build needs. By default every call runs on
-`claude-sonnet-5-5`: the plan, the `--critic` review, the
-watch-conditions draft and the resolve step. `ATOO_AI_MODEL` changes the first;
-`ATOO_AI_CRITIC_MODEL`, `ATOO_AI_WATCHLIST_MODEL` and
-`ATOO_AI_RESOLVE_MODEL` change the other three.
-
-**Never put the key in a file in a repository.** A shell startup file in
-your home directory is fine. `~/.atoo.config` is the wrong place:
-it has no key setting, on purpose.
-
-### A local model with Ollama
-
-Claude is the default. With `ATOO_AI_PROVIDER=ollama`, `build` asks
-an Ollama server on this machine (`http://localhost:11434`) for
-`llama3.1` instead. This is the only setup that works with no network at
-all. Plans from small local models have not
-been shown to be good enough for a real show, so check them hard. To
-choose the model:
-
-```bash
-export ATOO_AI_PROVIDER=ollama
-export ATOO_AI_MODEL=qwen2.5-coder:7b
-```
-
-### Any OpenAI-compatible host
-
-```bash
-export ATOO_AI_PROVIDER=api
-export ATOO_AI_API_KEY=...
-export ATOO_AI_MODEL=gpt-4o-mini
-export ATOO_AI_BASE_URL=https://api.openai.com   # the host, without /v1
-```
-
-### Check it took
-
-A build names the model before it sends anything. On a Claude build the
-plan's call looks like this:
-
-```
-claude-sonnet-5-5 (generator, effort medium): sending, waiting for the first reply...
-```
-
-and with `ATOO_AI_PROVIDER=ollama` like this:
-
-```
-llama3.1 (generator): sending, waiting for the first reply...
-```
-
-The first build after your conventions change makes one call before
-that, to resolve them. It is named the same way, as
-`(resolve, effort medium)` on Claude, and the line above it says why.
-
-With no key, a build stops before it sends anything, and says both ways
-forward:
-
-```
-generation failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead
-```
-
-The effort levels, token limits, thinking budget and timeouts are in the
-full table in the
-[CLI reference](cli-reference.md#choosing-and-tuning-the-model). You do
-not need any of them to get started.
-
----
-
-## The console, per session
-
-`[console]` above is for the desk you always use. For one session, such
-as a venue's desk, use the environment instead:
-
-```bash
-export ATOO_CONSOLE=198.51.100.9
-```
-
-That beats the config file, and `--console` beats both. See
-[Pointing it at your console](install.md#pointing-it-at-your-console) for
-the line each command prints about which address it used, and why you
-should read it before an `apply --confirm`.
+A command that was not given `--console` says which address it used, and
+where it came from ([Testing on your desk](testing-on-your-desk.md#1-before-you-start-10-minutes)).
+Read that line before a write.
 
 ---
 
 ## Next
 
-[Command-line quickstart](quickstart.md): an input list to a plan on a console, end
-to end.
+[Setting up an AI provider](ai-provider.md): the model that writes your
+plans.

@@ -367,7 +367,7 @@ conventions file `build` finds in the current directory, always wins
 without the config file even being read. A missing `~/.atoo.config`
 is normal and silent; one that is wrong prints one line saying what is
 wrong with it and is then ignored. The browser page can write the
-`[conventions]` line for you: see [Setting up Atoo](configuration.md#the-config-file).
+`[conventions]` line for you: see [Configuring Atoo](configuration.md#the-config-file).
 
 ## See also
 

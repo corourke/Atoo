@@ -11,7 +11,7 @@ conventions file or model; a plan is optional and asks a second question
 loop during a show, see [Watching from the command line](watch.md).
 
 Every transcript on this page runs against a captured state file, with
-no console attached. [`atoo init`](install.md#first-run-atoo-init) copies
+no console attached. [`atoo init`](install.md#6-first-run-atoo-init-then-atoo-ui) copies
 the captures into your Atoo folder, as `audit-demo/` (run it again if
 yours was made before they existed; it adds what is missing and touches
 nothing you have changed):

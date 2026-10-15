@@ -213,5 +213,6 @@ next to **Show bundle**.
 
 ## Next
 
-- [Build a show](build-a-show.md) of your own.
-- [Why Atoo](why.md), if you are still deciding.
+- [Testing on your desk](testing-on-your-desk.md): the same, on your own
+  WING.
+- [Why Atoo?](why.md), if you are still deciding.

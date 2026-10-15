@@ -16,7 +16,7 @@ exists. The last line names the cause. There are three common ones.
 generation failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead
 ```
 
-Set it, as in [Setting up Atoo](configuration.md#choosing-the-model):
+Set it, as in [Setting up an AI provider](ai-provider.md):
 
 ```bash
 export ANTHROPIC_API_KEY=...        # or ATOO_AI_API_KEY
@@ -154,4 +154,4 @@ is the lever. In the browser the same sentence ends Build step 04 as
 
 - [Troubleshooting](troubleshooting.md) — every symptom, and the page it is on
 - [How a show gets built](pipeline.md) — the stages, and what each model call is for
-- [Setting up Atoo](configuration.md#choosing-the-model) — choosing and setting up the model
+- [Setting up an AI provider](ai-provider.md) — choosing and setting up the model

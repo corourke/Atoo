@@ -14,39 +14,60 @@ sending.
   are proven on a WING Compact only. A full-size WING has been read and
   watched on a real desk.
 
-You need Atoo [installed](install.md), and for steps 2 and 3 a
-laptop on the same network as the desk, with its OSC remote on. The
+Do [Try the Demo show](demo.md) first: it is the same screens with no
+desk. Then you need a laptop on the same network as the desk. The
 examples use `192.0.2.16` for the desk: type your own.
 
-## 1. No desk (15 minutes)
+## 1. Before you start (10 minutes)
 
-Nothing here touches a console.
+1. **Find the desk's address.** On the desk, it is in the network
+   settings under **Setup**. If the desk is not in front of you,
+   WING-EDIT on a laptop on the same network shows the address of each
+   desk it finds.
+2. **Save the show that is on the desk**: **Library**, **Snap**,
+   **Save**; set **Scope** to **All**; **Save**. This is your way back
+   if everything else fails.
+3. **Ping it.** It sends one message, and writes nothing:
 
-1. Run `atoo ui`, and press **Try the Demo show**.
-2. Click through **Build**'s four tiles, then **Apply** (the pre-flight
-   reads **0 errors · 0 warnings**), then **Watch** and **Start
-   watching**: the simulated desk raises faults that come and go.
+   ```bash
+   a2 ping --console 192.0.2.16
+   ```
 
-[Try the Demo show](demo.md) says what each screen shows. Note anything
-you had to guess at.
+   ```
+   Console: WING,192.0.2.16,FOH,wing-compact,SN12345,3.1-0
+   Detected model: WING Compact (wing-compact)
+   ```
+
+   `a2` is Atoo's short spelling: `a2 ping` and `atoo ping` are the
+   same command. Keep both lines for the report (blank out the serial if
+   you like). `Detected model: not recognised` is a finding in itself.
+
+   If nothing answers, Atoo says so:
+
+   ```
+   no reply from 192.0.2.16:2223 -- is the console reachable, and is its OSC remote enabled?
+   ```
+
+   See [Troubleshooting: the desk](troubleshooting-desk.md).
+
+**You do not have to retype the address.** Set it for this terminal
+with `export ATOO_CONSOLE=192.0.2.16`, or for good in
+`~/.atoo.config` ([Configuring Atoo](configuration.md#the-console)). A
+command that was not given `--console` says where it got one:
+
+```
+Using console 192.0.2.16 from ATOO_CONSOLE
+```
+
+Read that line. It is there so that an address left over from last
+week's desk cannot quietly aim a write at the wrong one.
 
 ## 2. Read-only on your desk (15 minutes)
 
-These three never write. They are safe on a desk that is doing a show,
+These two never write. They are safe on a desk that is doing a show,
 though the first time is better done on one that is not.
 
-1. **Ping**. It sends one message:
-
-   ```bash
-   atoo ping --console 192.0.2.16
-   ```
-
-   It prints the desk's identity on a `Console:` line, firmware last,
-   and a `Detected model:` line. Keep both for the report (blank out the
-   serial if you like). `Detected model: not recognised` is a finding in
-   itself.
-
-2. **Audit**. It reads the whole desk and checks it against built-in
+1. **Audit**. It reads the whole desk and checks it against built-in
    rules (a 48V socket nothing is patched to, a DCA at the floor with
    live members, two strips with one name). `--dump-state` keeps what it
    read:
@@ -58,7 +79,7 @@ though the first time is better done on one that is not.
    Check each finding against the desk. A finding that is wrong about
    your desk is the most useful thing you can send.
 
-3. **Watch**, for a few minutes. In `atoo ui`, choose your desk
+2. **Watch**, for a few minutes. In `atoo ui`, choose your desk
    next to **Console** (**Change…**, **Address**), then **Watch**,
    **Start watching** ([Watch the desk during a show](watch-a-show.md)).
    Pull a DCA that has channels in it to the floor: a row appears, and
@@ -95,8 +116,7 @@ cards and your monitor listening are left alone), unpatches the strips
 the plan does not build, then writes the plan
 ([what a full apply changes](what-apply-changes.md)).
 
-1. **On the desk, save the show that is on it**, to the desk or a USB
-   stick. This is your way back if everything else fails.
+1. **Check you saved the desk's show** ([step 1](#1-before-you-start-10-minutes)).
 2. **Copy the Demo show to a folder of your own.** The one Atoo
    ships is read-only.
 
@@ -194,6 +214,12 @@ Attach, zipped, whatever you have of:
 
 A state file holds the desk's names and settings, not audio. Tick
 **Credit** if you are happy to be thanked by name in the release notes.
+
+## Next
+
+[Configuring Atoo](configuration.md): your desk, conventions and
+presets, set once, then [Setting up an AI provider](ai-provider.md), so
+you can build.
 
 ## See also
 

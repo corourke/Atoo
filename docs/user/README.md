@@ -1,20 +1,26 @@
 # Using Atoo
 
-Atoo turns an input list and your own house conventions into a
-complete setup for a Behringer WING, writes it to the desk, reads every
-value back, and watches the desk during the show. Start with the
-browser; everything it does can also be done from the command line.
+Atoo is said "A-two": your A2, the second engineer at the desk.
+
+Atoo turns an input list and your own written conventions into a
+complete show setup for a Behringer WING, writes it to the desk,
+validates every value, and watches the desk for mistakes. A full browser
+UI is included or use it on the command line.
 
 ## Start here
 
+In this order, the first time:
+
 | Page | For |
 |---|---|
-| [Why Atoo](why.md) | whether it is worth your time, against what you already do |
-| [Installing Atoo](install.md) | getting it onto a laptop, and `atoo init` for a folder of your own |
-| [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
-| [Setting up Atoo](configuration.md) | your model and API key, house conventions, presets and desk, set once |
+| [Why Atoo?](why.md) | whether it is worth your time, against what you already do |
+| [Installing Atoo](install.md) | on a Mac, step by step: Homebrew, pipx, Python, Atoo, then `atoo init` and `atoo ui` |
+| [Installing without Homebrew](install-without-homebrew.md) | Python and pipx another way, on a Mac, Linux or Windows |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
-| [Testing on your desk](testing-on-your-desk.md) | trying it on your own WING: the Demo, read-only, then a write and its undo, and how to report |
+| [Testing on your desk](testing-on-your-desk.md) | your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and its undo |
+| [Configuring Atoo](configuration.md) | your house conventions, presets and desk, set once |
+| [Setting up an AI provider](ai-provider.md) | the model that writes your plans, and its API key |
+| [Change the Demo show](change-the-demo.md) | your first build, on a copy of the Demo, then a patch onto the desk |
 
 ## In the browser
 
@@ -65,4 +71,5 @@ browser; everything it does can also be done from the command line.
 | [Checking a desk](audit.md) | `audit`: one read, signal tracing, and checking a desk against its plan |
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
+| [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
 

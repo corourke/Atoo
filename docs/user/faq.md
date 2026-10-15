@@ -53,7 +53,7 @@ Your input list and conventions go to the model you set up, with your
 own key: Claude, which Atoo is built and tested on. A local model
 through Ollama keeps them on your own machine, but local models have not
 worked well so far
-([Choosing the model](configuration.md#choosing-the-model)). There is no
+([Setting up an AI provider](ai-provider.md)). There is no
 Atoo account, and nothing is sent anywhere else.
 
 ## What does a build cost?
@@ -111,6 +111,6 @@ state and gets out of the way.
 
 ## How is it different from what I use now?
 
-[Why Atoo](why.md) compares it with building by hand or in WING
+[Why Atoo?](why.md) compares it with building by hand or in WING
 Edit, copying last month's show, the desk's presets, and a spreadsheet
 input list, and with Wing Tools.

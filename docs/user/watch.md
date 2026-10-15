@@ -64,7 +64,7 @@ monitor busses on it are not called unrouted: `R007 Output Route Not
 Checked` says, at INFO, which outputs were not read.
 
 Every transcript on this page runs against a captured state file, with
-no console attached. [`atoo init`](install.md#first-run-atoo-init) copies
+no console attached. [`atoo init`](install.md#6-first-run-atoo-init-then-atoo-ui) copies
 the captures into your Atoo folder, as `audit-demo/` (run it again if
 yours was made before they existed; it adds what is missing and touches
 nothing you have changed):

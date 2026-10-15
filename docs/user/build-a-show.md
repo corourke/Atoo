@@ -7,9 +7,9 @@ before anything goes near the desk.
 
 - `atoo init` makes `~/Documents/Atoo` with a starter house
   conventions file and a preset library, and points Atoo at them
-  ([First run](install.md#first-run-atoo-init)).
+  ([First run](install.md#6-first-run-atoo-init-then-atoo-ui)).
 - A build needs a model: a Claude API key, or a local model through
-  Ollama ([Choosing the model](configuration.md#choosing-the-model)).
+  Ollama ([Setting up an AI provider](ai-provider.md)).
 
 ## 1. Make the show
 
@@ -154,7 +154,7 @@ build** says what it changed.
 - **BUILD FAILED, with** `build.failed` **in the Findings panel** saying
   *a build needs a model: the default is Claude, which needs an API key
   in ANTHROPIC_API_KEY*. Set up a model
-  ([Choosing the model](configuration.md#choosing-the-model)), restart
+  ([Setting up an AI provider](ai-provider.md)), restart
   `atoo ui`, and build again.
 
 Next: [Apply it to the desk](apply-to-desk.md).

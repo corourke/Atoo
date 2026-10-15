@@ -47,7 +47,7 @@ a real one:
 - **A build needs your own AI API key**, which you pay for. Atoo is
   built and tested on Claude. A local model through Ollama can be set
   up, but local models have not worked well so far. A build takes
-  minutes, and a large show costs more than a small one ([Choosing the model](configuration.md#choosing-the-model)).
+  minutes, and a large show costs more than a small one ([Setting up an AI provider](ai-provider.md)).
 - **The plan is only as good as your conventions.** Where they are
   silent, it makes the usual choice and says so at INFO, folded under
   **Choices** in the Findings panel. Stating more in your conventions
@@ -91,7 +91,7 @@ a real one:
 ## Your laptop
 
 Tested on macOS and Linux with Python 3.11 or newer. Windows has not
-been tried: [Installing](install.md#windows) says what to expect.
+been tried: [Installing](install-without-homebrew.md#windows) says what to expect.
 
 ## Telling us
 
