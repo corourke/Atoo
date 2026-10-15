@@ -12,9 +12,10 @@ or one that just cleared.
 runs behind **Start watching**: see [Watch the desk during a show](watch-a-show.md),
 or try it on the [Demo show](demo.md) with no desk.
 
-**With `--show`, it also watches the desk drift from your plan.** Seven
+**With `--show`, it also watches the desk drift from your plan.** Nine
 rules come from the bundle's plan, each a WARNING that clears itself
-when the desk is put back:
+when the desk is put back, and a tenth, an INFO, says what one of them
+took for a monitor mix:
 
 - `CV006 Bus Send Contradicts Plan`: a send the plan states, switched
   off, or in the other pre/post mode. *CH 1 "Kick": plan says send to
@@ -58,6 +59,23 @@ when the desk is put back:
   Matrix's width are not compared. Without a plan,
   [`R011`](troubleshooting-audit.md#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)
   notes a stereo bus, Main or Matrix patched on one side only.
+
+- `CV021 Talkback Misses A Monitor Mix`: talkback is assigned and reaches
+  something, but not a monitor mix the plan builds. *Talkback is assigned
+  to CH40 and reaches other mixes, but not BUS 4 "Drum IEM", a monitor mix
+  the plan builds: neither TALK A nor TALK B is routed to it, so whoever
+  listens to that mix cannot hear you.* One row per mix, so each clears
+  when its own switch is back on. The plan says which busses are monitor
+  mixes, never a bus's name: a bus the plan feeds to an output socket and
+  to no Main, unless the sends the plan lists into it are all post-fader.
+  `CV022 Monitor Mixes Talkback Was Checked Against` is the INFO that names
+  them (*Talkback reaches 3 of the 4 monitor mixes the plan builds: BUS 1
+  "Vox Wedge", ...*), so a mix it did not take for one is easy to spot. Both
+  say nothing when talkback is `OFF`, when the plan builds no monitor mix, and
+  when talkback is routed nowhere at all, which
+  [`T001`](troubleshooting-audit.md#the-band-cannot-hear-talkback-t001) says
+  once. Reading them costs nothing: the destination switches are read
+  whenever talkback is assigned.
 
 - `CV016 Planned Routes All Off`: a channel whose every send and Main
   route the plan built is switched off or pulled to the floor. *CH 1

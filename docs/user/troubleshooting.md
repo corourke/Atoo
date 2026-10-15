@@ -33,6 +33,7 @@ Find the symptom, then go to its page.
 | A high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008` | [audit](troubleshooting-audit.md#a-high-pass-hi-cut-tilt-or-eq-is-not-what-the-plan-says-cv008) |
 | An effect is on the strip but you cannot hear it: `E001`, `E002` | [audit](troubleshooting-audit.md#an-effect-is-on-the-strip-but-you-cannot-hear-it-e001-e002) |
 | The band cannot hear talkback: `T001` | [audit](troubleshooting-audit.md#the-band-cannot-hear-talkback-t001) |
+| One monitor mix cannot hear talkback: `CV021`, `CV022` | [audit](troubleshooting-audit.md#talkback-that-misses-one-monitor-mix-cv021-cv022) |
 | Talkback and a band input on one strip: `CV014` | [audit](troubleshooting-audit.md#talkback-and-a-band-input-on-one-strip-cv014) |
 | `audit` or `watch` says rules "could not be checked" | [audit](troubleshooting-audit.md#audit-or-watch-says-rules-could-not-be-checked) |
 | `audit` says "No findings" on a console that is visibly wrong | [audit](troubleshooting-audit.md#audit-says-no-findings-on-a-console-that-is-visibly-wrong) |

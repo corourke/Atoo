@@ -530,6 +530,49 @@ this, so the exemption is never silent:
   CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ```
 
+## Talkback that misses one monitor mix: `CV021`, `CV022`
+
+`T001` only catches talkback that reaches nobody. Talkback can reach the
+PA and two of three wedges and still leave the drummer in the dark, and
+the desk cannot say which busses are monitor mixes: that is your plan.
+With `--plan` (or `--show`, or in [Watch](watch.md)), `audit` takes a
+**monitor mix** to be a bus the plan feeds to an output socket and to no
+Main, unless every send the plan lists into it is post-fader. It then
+checks that TALK A or TALK B reaches each one. The plan here builds
+three monitor mixes, and TALK A reaches two of them:
+
+```
+$ atoo audit --state talk-monitors.state.json --plan plan.json
+Audit findings: 1 warning, 1 info.
+
+[WARNING] CV021 Talkback Misses A Monitor Mix
+  Talkback is assigned to CH40 and reaches other mixes, but not BUS 2 "Gtr Wedge", a monitor mix the plan builds: neither TALK A nor TALK B is routed to it, so whoever listens to that mix cannot hear you. Switch B2 on in TALK A's (or TALK B's) destinations on the desk's talkback page.
+
+[INFO] CV022 Monitor Mixes Talkback Was Checked Against
+  Talkback reaches 2 of the 3 monitor mixes the plan builds: BUS 1 "Vox Wedge", BUS 2 "Gtr Wedge", BUS 3 "Drum IEM". A bus is taken for a monitor mix when the plan feeds it to an output socket and to no Main, and does not send into it post-fader only; a mix the plan builds another way is not checked.
+...
+```
+
+There is one `CV021` row for each mix it misses, so each goes when its own
+switch is turned on, on either button. Turn on `B2` on TALK A's page and
+the warning is gone; the `CV022` note stays, now saying 3 of the 3.
+
+- **`CV022` is how you check the choice.** Which busses count as
+  monitor mixes is inferred from the plan, so the note names the ones it
+  took. A monitor mix it did not take (a bus the plan feeds only
+  post-fader, say) is not checked, and is not in the list.
+- **A warning, not an error.** The show goes on without talkback to one
+  wedge, but whoever listens to it cannot hear you, and you find out when
+  they do not answer.
+- **Silent** when talkback is `OFF`, when the plan builds no monitor mix,
+  for a mix whose switches were not read, and when talkback is routed
+  nowhere at all, which is the single `T001` row above.
+- **Only busses.** Talkback destinations are busses `B1` to `B16`,
+  Matrices and Mains; a monitor mix the plan builds on a Matrix is not
+  checked.
+- **It costs nothing extra.** The switches are read whenever talkback is
+  assigned, for `T001`, and a Watch pass is no longer.
+
 ## Talkback and a band input on one strip: `CV014`
 
 With `--plan`, `audit` also checks that talkback's strip is free. When
