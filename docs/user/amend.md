@@ -1,6 +1,6 @@
 # Patching from a rebuilt plan: `atoo amend`
 
-*From the command line. In the browser, it is **From a rebuilt plan** on the Patch screen ([Patch a show](patch-a-show.md)).*
+*From the command line only. The Patch screen in the browser takes a typed change ([Patch a show](patch-a-show.md)); it does not take a rebuilt plan.*
 
 `atoo patch --amended-plan FILE`, or `atoo amend`, takes a
 **rebuilt plan** as the change instead of typed words — for a permanent change made
@@ -32,8 +32,7 @@ atoo amend --show touringband --amended-plan touringband/rebuilt.plan.json \
 ```
 
 Both paths are relative to **where you run the command**, not to the
-bundle, so the bundle's name is part of them. (The browser's Patch
-screen looks inside the open bundle, for its `rebuilt.plan.json`.)
+bundle, so the bundle's name is part of them.
 
 ## The four stages, and the first three change nothing
 
@@ -219,9 +218,9 @@ finding on a running strip the amend does not write — which is why
 write past with `apply --skip-verify` is still in every rebuild of that
 show, and without the flag the show could never be amended at all.
 
-**In the browser** it refuses the same way: the review shows the
-refusal word for word and the write cannot be armed. `--skip-verify` is
-command-line only for an amend.
+**In the browser** a typed change is refused the same way: the review
+shows the refusal word for word and the write cannot be armed.
+`--skip-verify` is command-line only for an amend.
 
 ## A channel the rebuild dropped
 

@@ -66,7 +66,7 @@ In this order, the first time:
 | [The journal](journals.md) | what every write leaves behind, and how far back undo reaches |
 | [Undoing a write](undo.md) | `undo`: step back one write, keeping everything changed since |
 | [Patching a running show](patch.md) | `patch`: a typed change onto a desk already in use |
-| [Patching from a rebuilt plan](amend.md) | `amend`: the difference between two plans, onto a desk already in use |
+| [Patching from a rebuilt plan](amend.md) | `amend`, from the command line: the difference between two plans, onto a desk already in use |
 | [One plan, two desks](two-desks.md) | a primary and a backup, or a plan for a different WING |
 | [Checking a desk](audit.md) | `audit`: one read, signal tracing, and checking a desk against its plan |
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |

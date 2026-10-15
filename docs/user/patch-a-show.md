@@ -21,8 +21,7 @@ Patch shares Apply's four numbered steps: **What will be written**,
 **Preview**, **Arm and write** and **History**.
 
 1. Click **Apply**, then the **Patch** switch at the top.
-2. In step 1, leave **Type a change** chosen, and type what changed, naming the
-   sockets you have cabled:
+2. In step 1, type what changed, naming the sockets you have cabled:
 
    > trumpet, sax and trombone on A 21-23 for tonight, in the Horns DCA,
    > sent to MON2
@@ -98,10 +97,10 @@ its short name and the words you typed.
 - **A strip someone else is using** is never written over. To reuse one
   on purpose, open **Options** in step 1, tick **Allow the change to
   reuse one occupied strip**, and type its label (`ch:20`).
-- **From a rebuilt plan** is the other way in: build the show again with
-  the new inputs, and patch the difference onto the desk.
 - **A full apply after a patch** replaces the patch. The pre-flight warns
   you.
 
 The command-line version is
-[`atoo patch`](patch.md).
+[`atoo patch`](patch.md). Building the show again with the new inputs and
+patching the difference onto the desk is a command-line route too:
+[`atoo amend`](amend.md); the Patch screen takes a typed change only.

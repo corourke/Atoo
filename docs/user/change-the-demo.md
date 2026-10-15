@@ -97,7 +97,7 @@ Now the desk is set, and a rebuild would write the whole plan again.
 A patch writes only what changed.
 
 1. In **Apply**, click the **Patch** switch at the top.
-2. Under **Type a change**, type:
+2. In step 1, type:
 
    > trumpet, sax and trombone on LCL 21-23, Band DCA
 
