@@ -12,7 +12,7 @@ or one that just cleared.
 runs behind **Start watching**: see [Watch the desk during a show](watch-a-show.md),
 or try it on the [Demo show](demo.md) with no desk.
 
-**With `--show`, it also watches the desk drift from your plan.** Six
+**With `--show`, it also watches the desk drift from your plan.** Seven
 rules come from the bundle's plan, each a WARNING that clears itself
 when the desk is put back:
 
@@ -39,6 +39,16 @@ when the desk is put back:
   and rebuild. The plan has no way to say that a channel feeds a Matrix,
   so a Matrix you feed from a strip on purpose stays a row until the
   send is off.
+
+- `CV019 Phantom Contradicts Plan`: 48V on an input socket that is not
+  what the plan states for the channel patched to it. *CH 1 "Kick": the
+  plan has 48V on at AES50-A 1; the desk has it off, so a condenser
+  patched there is silent.* The other way round is a warning too: *CH 2
+  "Snare": the plan has no 48V at AES50-A 2; the desk has it on, which can
+  damage a source that does not want it.* A stereo pair is two sockets,
+  each with its own value. Only the local inputs and the AES50 ports
+  have 48V to compare; a channel patched from a card or USB is not
+  checked.
 
 - `CV016 Planned Routes All Off`: a channel whose every send and Main
   route the plan built is switched off or pulled to the floor. *CH 1

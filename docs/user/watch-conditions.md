@@ -410,6 +410,9 @@ none, so they did not run there:
   wrong, or a send or route that is on and not in the plan** are `CV006`,
   `CV007` and `CV018`, with the plan. They cover the plan's sends and Main
   routes, so a condition for them would say the same thing twice.
+- **A condenser with its 48V off, or 48V on where the plan has none** is
+  `CV019`, with the plan. Without it, `C001` covers only 48V on a socket
+  nothing is patched to.
 - **Something muted that the plan leaves unmuted** is `CV017`, with
   the plan, at WARNING. If you always watch with the plan, write a mute
   condition only where the mute should be an ERROR, as the PA and the

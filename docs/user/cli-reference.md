@@ -1245,7 +1245,8 @@ when the desk is put back: a channel whose every planned send and Main route is 
 channel's Main route off that the plan lists or on that it does not (CV007), a send
 to a bus or Matrix, or a bus's route to a Main, that is on and the plan does not have
 (CV018), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted
-(CV017), and an FX bus's effect bypassed or changed (CV015). The plan's output
+(CV017), 48V that is on where the plan has none or off where it has it (CV019), and an
+FX bus's effect bypassed or changed (CV015). The plan's output
 sockets are read too, and the outputs of any AES50 stage box the desk reports.
 
 --watch-conditions PATH adds operator-authored alerts on top of the built-in

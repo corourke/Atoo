@@ -167,6 +167,42 @@ the rule says nothing for them rather than guess. A channel on its
 alternate input is reported by `C004` instead, the talkback strip is left out, and with no input sockets
 read the run says that `C007` could not be checked.
 
+## A condenser is silent, or 48V is on where it should not be: `CV019`
+
+Phantom power is set per input socket, and the plan states it for every
+channel: 48V for a condenser, none for a dynamic mic or a line source.
+`atoo apply` writes it. With the plan, `audit` and Watch compare the desk
+with it, on the socket each channel is patched to now. Two faults go
+unreported without it. A condenser with 48V off is silent and looks like
+any other channel. 48V on at a source the plan says must not have it can
+damage a ribbon mic. (`C001` covers only 48V on a socket nothing is
+patched to.)
+
+```
+$ atoo audit --state touched.state.json --plan show.plan.json
+Audit findings: 3 warning.
+
+[WARNING] CV019 Phantom Contradicts Plan (3)
+  CH 1 "Kick": the plan has 48V on at AES50-A 1; the desk has it off, so a condenser patched there is silent.
+  CH 2 "Snare": the plan has no 48V at AES50-A 2; the desk has it on, which can damage a source that does not want it.
+  CH 3 "OH": the plan has 48V on at AES50-A 6; the desk has it off, so a condenser patched there is silent.
+
+Physical sockets read: in AES50-A 1-6; out LCL 1.
+```
+
+The last is a stereo pair: each of its two sockets is its own source with
+its own 48V, so the plan can power one and not the other. Switch the 48V
+on or off on the desk's input page, or, if the desk is right, say so in
+your conventions or the input list and rebuild.
+
+It is a warning either way, so `audit` exits `0`. It says nothing about a
+channel the plan states no phantom for, a channel patched from a group that
+has no 48V (a card, a module, USB, StageConnect), a socket that was not
+read, or a channel that is not patched. In Watch it is one of the rules the
+show's plan adds ([Watching from the command line](watch.md)), and it
+clears when the desk is put back. A socket this rule judges is not also
+reported by `C001`.
+
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 
 A WING effect is heard only through an **insert**: the strip's pre- or
@@ -207,8 +243,10 @@ its insert is switched off, names another engine, or the engine holds
 another effect than the bus preset's ([Bus presets](bus-presets.md)).
 `audit` runs it when given the plan, and Watch runs it from the open
 show's plan, with more plan checks: a channel cut off from every
-planned route (CV016), a mute the plan does not have (CV017), and the
-plan's sends and Main routes (CV006, CV007, CV018)
+planned route (CV016), a mute the plan does not have (CV017), 48V that
+is not what the plan states (CV019,
+[above](#a-condenser-is-silent-or-48v-is-on-where-it-should-not-be-cv019)),
+and the plan's sends and Main routes (CV006, CV007, CV018)
 ([Watching from the command line](watch.md); the last three are
 [below](#a-send-or-route-you-did-not-plan-cv018-cv006-cv007)). On that bus E001 and E003 then stay quiet in `audit`,
 so the problem is said once.
