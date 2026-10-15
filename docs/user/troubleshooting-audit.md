@@ -348,6 +348,46 @@ show's plan adds ([Watching from the command line](watch.md)), and it
 clears when the desk is put back. A socket this rule judges is not also
 reported by `C001`.
 
+## A high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008`
+
+With `--plan`, `audit` compares the processing the plan states for a
+channel or aux with what the desk holds: the high-pass, hi-cut and tilt, and
+the EQ's bands. A filter the plan asks for is asking for it to be *on*, so a
+filter that is off is reported on its own, before its frequency.
+
+```
+$ atoo audit --state filters.state.json --plan filters.plan.json
+Audit findings: 3 warning.
+
+[WARNING] CV008 Processing Contradicts Plan (3)
+  CH 2 "Vox": plan says the high-pass is on at 120Hz; live console has it off. (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
+  CH 2 "Vox": EQ band 2: plan says frequency 2500Hz but 1800Hz live (tolerance 2%). (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
+  CH 3 "Bass": plan says the high-pass is 40Hz, live console reads 80.2Hz (tolerance 2%). (plan provenance: Processing: 'Bass gets a high-pass at 40Hz')
+...
+```
+
+In that capture the Kick's high-pass reads 59.7Hz against a plan of 60Hz,
+and says nothing. A frequency or a Q is a stepped control: the desk holds
+the nearest step of what was written, so Atoo allows **2%** (and 0.02 for a
+value at or near zero, such as a tilt of 0dB), the same tolerance `apply`
+uses when it reads a write back. A hi-cut written as 4000Hz that reads
+4012Hz is the next step, and a Q of 1.4 that reads 0.998 is ten steps away
+and is reported. The tilt moves in coarse steps (a desk reads 1.25dB and -0.25dB), so a
+plan that asks for 1.1dB is reported, with the numbers on both sides.
+
+An EQ band is one finding naming every value that differs (frequency, gain,
+Q, and the shape of the two shelf bands); the EQ's own switch, model and mix
+are another. Stating any band implies the EQ is on, as `apply` writes it; a
+plan that says the EQ is off asks for it bypassed.
+
+It says nothing for a value that was not read (a capture taken before this
+check has none of these values, and a live run with `--plan` reads exactly the
+ones the plan states, at no extra request), for an aux strip's filters (an
+aux has no filter node), or for what a plan does not state. These are
+warnings, so `audit` exits `0`. Watch does not run this one: a filter is set
+up, not something that moves during a show. The compressor, a bus's or
+Main's EQ and a channel's PreSend EQ are not compared.
+
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 
 A WING effect is heard only through an **insert**: the strip's pre- or

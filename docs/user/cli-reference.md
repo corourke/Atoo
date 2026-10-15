@@ -448,11 +448,12 @@ copies into your working folder, ~/Documents/Atoo/audit-demo/audit_demo_state.js
 
 --plan adds the conventions-diff audit: compare live state against what a
 plan (a `atoo build` JSON output) says a channel's mute, fader level,
-DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow
-trim/balance/invert/head-amp-gain slice of processing should be, so a finding can cite
-the plan's own provenance text instead of just a structural fact. `processing`'s filter
-family (hpf_hz/hi_cut_hz/tilt_db), the parametric EQ and the compressor are still not
-diffed. --plan also flags (CV009) any
+DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and the
+trim/balance/invert/head-amp-gain, high-pass/hi-cut/tilt and EQ a channel states should
+be, so a finding can cite the plan's own provenance text instead of just a structural
+fact. A filter or an EQ band is compared within 2%, the desk holding the nearest step of
+the control; the compressor, a bus's EQ and a channel's PreSend EQ are not diffed.
+--plan also flags (CV009) any
 physical output socket --output-sockets read that's patched to something the plan
 never routes there at all -- catches stray/leftover routing an apply run never wrote,
 same finding `apply --clean-output-sockets` can act on. --plan is independent of

@@ -286,9 +286,9 @@ this plan never routes to. `atoo apply --clean-output-sockets` is
 what actually disconnects one; the audit only reports it.
 
 `--plan` covers mute, fader level, DCA and mute-group membership, patch,
-bus sends, direct-to-Main routes, and a narrow trim/balance/invert/
-head-amp-gain slice of processing, and the 48V on each input socket
-(CV019). Some of its checks are about drift and
+bus sends, direct-to-Main routes, the trim, balance, invert and head-amp
+gain, the high-pass, hi-cut and tilt and the EQ of a channel or aux a plan
+states (CV008), and the 48V on each input socket (CV019). Some of its checks are about drift and
 are what [Watch](watch.md) runs from the plan too: a channel whose every
 planned send and Main route is off (CV016), a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
@@ -296,8 +296,12 @@ Main or Matrix the plan leaves unmuted that is muted on the desk
 (CV006) or a Main route that disagrees with the plan (CV007), a send
 or route that is on although the plan does not have it (CV018), and 48V
 on a socket that is not what the plan states (CV019). Watch
-leaves the send level to `audit`, where CV006 compares it too. The filter family, the parametric EQ
-and the compressor are **not** diffed yet. `--plan` also works with `--console`, and with
+leaves the send level to `audit`, where CV006 compares it too. It leaves the
+filters and the EQ to `audit` as well: they are set-up values that do not
+drift mid-show, and
+[a filter that is not what the plan says](troubleshooting-audit.md#a-high-pass-hi-cut-tilt-or-eq-is-not-what-the-plan-says-cv008)
+is a `--plan` finding. The compressor, a bus's or Main's EQ and a channel's
+PreSend EQ are **not** diffed. `--plan` also works with `--console`, and with
 `--show` it comes from the [show bundle](show-bundles.md).
 
 ### What `--plan` stops saying, and why it tells you
