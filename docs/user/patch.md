@@ -21,7 +21,7 @@ reload.
 On a WING, "patch" already means routing a socket to a channel, and
 Atoo's findings and plan fields use it only that way. So **what you
 type is a *change***, and it is called that in messages, in the journal
-and on the page: `change 3: horns for tonight`.
+and on the page: `change 3: Add horns on A 21-23`.
 
 ## What it is for
 
@@ -80,7 +80,7 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.
 ```
   INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
 
-Change: horns for tonight
+Change: Add Trumpet, Sax and Trombone on LCL 21-23
   INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
 48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
@@ -184,7 +184,7 @@ A change can also edit what is running; see
 
   ```
   Reversing the newest entry in touringband/journals on this desk:
-    2026-09-26T00:45:16.925926+00:00  patch  change 1: Horns for tonight  APPLIED: 51 address(es) evaluated, 39 written, 0 mismatch(es).  (scope: ch:21, ch:22, ch:23)  [on FOH-A (wing-compact) serial S2203A1, at 198.51.100.9:2223]
+    2026-09-26T00:45:16.925926+00:00  patch  change 1: Add Trumpet, Trombone and T.Sax on A 21-23  APPLIED: 51 address(es) evaluated, 39 written, 0 mismatch(es).  (scope: ch:21, ch:22, ch:23)  [on FOH-A (wing-compact) serial S2203A1, at 198.51.100.9:2223]
   ```
 - **A full apply warns before it replaces changes** that are not in
   `plan.json` — in `atoo apply`'s output and in the Apply screen's
@@ -193,7 +193,7 @@ A change can also edit what is running; see
   ```
   WARNING  plan.json: a full apply replaces 1 change(s) on this desk (FOH-A
            (wing-compact) serial S2203A1, at 198.51.100.9:2223) that are not in
-           plan.json: change 1: Horns for tonight. The apply writes the plan as
+           plan.json: change 1: Add Trumpet, Trombone and T.Sax on A 21-23. The apply writes the plan as
            built: a channel a change dropped comes back, and a channel a change
            added stays on its strip but is no longer tracked -- the next patch
            treats that strip as somebody else's.
@@ -269,45 +269,45 @@ atoo patch --show touringband --promote 1
 `1` is the change's number (`change 1` works too), or give its short name
 or its journal entry. The run below is Atoo's own test desk and a
 stubbed model standing in for the WING and the change compile — the
-change was *"congas on A 21 and 22 for tonight, in the Drums DCA and the
+change was *"congas on A 21 and 22, in the Drums DCA and the
 Drums bus"*, written to that desk first:
 
 ```
-Promote change 1: Congas tonight into the show:
+Promote change 1: Add Conga Hi and Conga Lo on A 21-22 into the show:
 
   instructions.md gains:
     | ## Promoted changes
     |
     | Changes typed at the desk with `atoo patch` and kept in the show with `--promote`. Each is an instruction for every rebuild from now on.
     |
-    | ### 2026-09-28: change 1: Congas tonight
+    | ### 2026-09-28: change 1: Add Conga Hi and Conga Lo on A 21-22
     |
     | <!-- atoo: promoted 20260928T215445.655174Z-patch-192.0.2.16.json -->
     |
-    | congas on A 21 and 22 for tonight, in the Drums DCA and the Drums bus
+    | congas on A 21 and 22, in the Drums DCA and the Drums bus
 
   input.csv gains 2 row(s):
     socket,name,category,type,model,phantom,notes
-    AES50-A 21,Conga Hi,drums,Mic,,FALSE,promoted from change 1: Congas tonight
-    AES50-A 22,Conga Lo,drums,Mic,,FALSE,promoted from change 1: Congas tonight
+    AES50-A 21,Conga Hi,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
+    AES50-A 22,Conga Lo,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
 
   plan.json is not touched -- rebuild the show to put the change in it (only a build writes plan.json).
   INFO 'Conga Hi': category 'drums' -- the category of 'Kick', which shares its DCA 'Drums'
   INFO 'Conga Lo': category 'drums' -- the category of 'Kick', which shares its DCA 'Drums'
 
-Nothing was written -- this was a preview. Re-run with --confirm to keep change 1: Congas tonight in the show.
+Nothing was written -- this was a preview. Re-run with --confirm to keep change 1: Add Conga Hi and Conga Lo on A 21-22 in the show.
 ```
 
 `--confirm` writes both files, and then **a normal rebuild owns the
 change**:
 
 ```
-Written: instructions.md, input.csv. change 1: Congas tonight is in the show now: rebuild (`atoo build --show touringband`) and the next plan.json carries it.
+Written: instructions.md, input.csv. change 1: Add Conga Hi and Conga Lo on A 21-22 is in the show now: rebuild (`atoo build --show touringband`) and the next plan.json carries it.
 ```
 
-- **The change's words go into `instructions.md` as you typed them** —
-  "for tonight" included. Edit the instruction afterwards if the words do
-  not suit a permanent show.
+- **The change's words go into `instructions.md` as you typed them.**
+  Edit the instruction afterwards if the words describe a one-off rather
+  than a permanent show.
 - **Each input the change added gets a row in `input.csv`**, at the socket
   it is on now, keeping the file's own header and column order. A stereo
   channel is two rows. Its category and type are inferred and said at

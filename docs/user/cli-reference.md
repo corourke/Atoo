@@ -314,7 +314,7 @@ readback mismatch, or an unrelated address that moved.
 
 | Option | What it does |
 |---|---|
-| `--amended-plan` `FILE` | The rebuild: the same show, built again from the same conventions with tonight's change in it (three horn rows added to input.csv, a line in instructions.md). `atoo build` produces it; amend works out what is new in it and writes only that. The same as `atoo patch --amended-plan`. |
+| `--amended-plan` `FILE` | The rebuild: the same show, built again from the same conventions with the change in it (three horn rows added to input.csv, a line in instructions.md). `atoo build` produces it; amend works out what is new in it and writes only that. The same as `atoo patch --amended-plan`. |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan that is ALREADY on the desk. Normally left out: with --show, it is the plan the desk's own newest journal entry left on it, else the bundle's plan.json. |
 | `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
@@ -727,14 +727,14 @@ Change a console that already has a show on it -- or nothing yet -- and move
 nothing else.
 
   atoo patch --show ./touringband --console 192.0.2.16 \
-      "trumpet, sax and trombone on A 21-23 for tonight, Horns DCA, send to MON2"
+      "trumpet, sax and trombone on A 21-23, Horns DCA, send to MON2"
   ... --confirm --change-set horns.json      (write exactly what the preview showed)
   atoo patch --show ./touringband --console 192.0.2.16 "HPF 100 on the vocals"
   atoo patch --show ./touringband --promote 3 --confirm
   atoo patch --show ./touringband --amended-plan ./touringband/rebuilt.plan.json ...
 
 What you type is a CHANGE, and it is called that in messages, the journal and
-the page ("change 3: horns for tonight"). "Patch" in findings and plan fields
+the page ("change 3: Add horns on A 21-23"). "Patch" in findings and plan fields
 keeps meaning socket routing only; the command is called patch because it is
 the word for a small change on top of something that exists.
 

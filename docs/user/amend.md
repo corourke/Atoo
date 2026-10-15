@@ -17,7 +17,7 @@ speakers dropped from the rider.
 
 You give it two plans. The **applied** plan is what is running. The
 **amended** plan is the same show built again, from the same conventions
-and instructions, with tonight's change in it — three horn rows added to
+and instructions, with the change in it — three horn rows added to
 `input.csv`, a line added to `instructions.md`, `atoo build` run
 again. `amend` works out what is new between them.
 

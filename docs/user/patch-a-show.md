@@ -23,8 +23,7 @@ Patch shares Apply's four numbered steps: **What will be written**,
 1. Click **Apply**, then the **Patch** switch at the top.
 2. In step 1, type what changed, naming the sockets you have cabled:
 
-   > trumpet, sax and trombone on A 21-23 for tonight, in the Horns DCA,
-   > sent to MON2
+   > trumpet, sax and trombone on A 21-23, in the Horns DCA, sent to MON2
 
    Leave a socket out and one is chosen for you, and the review says
    which.
@@ -90,7 +89,7 @@ its short name and the words you typed.
   desk again.
 - **Keep this in the show** writes it into the show's `input.csv` and
   `instructions.md`, so the next build includes it. Until you press it,
-  the change is for tonight only and the show's files do not change.
+  the change is on the desk only and the show's files do not change.
 
 ## Edge cases
 
