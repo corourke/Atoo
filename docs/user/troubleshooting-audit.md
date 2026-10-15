@@ -167,6 +167,50 @@ the rule says nothing for them rather than guess. A channel on its
 alternate input is reported by `C004` instead, the talkback strip is left out, and with no input sockets
 read the run says that `C007` could not be checked.
 
+## A whole group of channels is silent and every one is up: `CH004`
+
+A DCA has a mute button as well as a fader. Mute the Band DCA and every
+channel in it goes silent, while each channel's own mute is off and its
+fader is up. `CH002` reports a DCA pulled down; `CH004` reports one that
+is muted, with the channels it is silencing.
+
+```
+$ atoo audit --state dcamute.state.json
+Audit findings: 1 info.
+
+[INFO] CH004 DCA Muted, Silencing Active Members
+  DCA 2 "Band" is muted and is silencing 2 active member(s): CH 2 "Bass", CH 3 "Gtr".
+...
+```
+
+Unmute the DCA on the desk if that was not the idea. It is a note, so
+`audit` exits `0`: pressing a DCA's mute is deliberate and the DCA's own
+button shows it lit, so this says what the press is silencing and does not
+call it a fault. (A mute group, `CH003`, is reported the same way.) A DCA
+that is muted and also pulled to the floor is two findings, `CH004` and
+`CH002`, because unmuting one does not bring the band back while the other
+holds. It says nothing for a DCA with no channel in use under it, and
+nothing when the DCA's mute was not read.
+
+With `--plan` (and in Watch, with a show), a DCA the plan lists is judged
+against the plan instead, so a mute is reported once:
+
+```
+$ atoo audit --state dcamute.state.json --plan show.plan.json
+Audit findings: 1 warning, 1 info.
+
+[WARNING] CV017 Muted Against Plan
+  DCA 2 "Band" is muted on the desk; the plan leaves it unmuted.
+
+[INFO] S001 Findings Withheld From This Report
+  1 finding(s) are not listed above because a plan was supplied: 1 CH004 (1 about a parameter the plan states). Re-run the same audit with no plan to see every finding the rules produced.
+...
+```
+
+`CV017` is a warning because the plan said otherwise. A DCA the plan lists
+as muted is as you asked, and neither rule reports it. A DCA the plan does
+not mention is still `CH004`'s.
+
 ## A condenser is silent, or 48V is on where it should not be: `CV019`
 
 Phantom power is set per input socket, and the plan states it for every

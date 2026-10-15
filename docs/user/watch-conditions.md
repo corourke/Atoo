@@ -421,6 +421,9 @@ none, so they did not run there:
 - **A DCA at -20 dB or lower with live strips in it** is `CH002`. A
   DCA fader condition still earns its place when you want your own
   threshold and severity. A send left on at -100 dB is `L001`.
+- **A DCA muted with live strips in it** is `CH004`, a note; with the plan,
+  a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when
+  you want it as a warning or an error.
 - **48V on an empty socket, two strips with one name** are `C001` and
   `N001`. **An effect bypassed on an FX bus** is `CV015`, with the
   plan.
