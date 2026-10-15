@@ -35,11 +35,15 @@ when the desk is put back:
   insert switched off (the effect bypassed, so the bus returns nothing),
   pointing at another engine, or its engine holding another effect.
 
-The plan also quiets one rule: `L002 Active Strip Fader At Floor`
+The plan also quiets two rules. `L002 Active Strip Fader At Floor`
 (INFO) is not raised for a fader the plan itself puts at the floor --
 under conventions that start every fader down, that is every channel
 until you bring it up. A fader the plan puts anywhere else, found at the
-floor on the desk, is still reported.
+floor on the desk, is still reported. `R008 Strip Reaches Nothing`
+(WARNING: a channel in use with no send or Main route on) is not raised
+for a channel the plan routes somewhere, because `CV016` above says it
+with the plan's own words; it still speaks for a channel the plan does
+not route.
 
 **Clips are listened for too.** With `--console`, a watch also listens
 to the desk's meters, on one more connection (port 2222) that only reads,
@@ -189,7 +193,7 @@ A watch reads every strip, bus, DCA, mute-group and input-socket name on
 its **first pass** — the baseline Start takes — and then **every fifth
 pass** (`--name-refresh 5`, the default). The passes in between carry the
 names the last refresh read, so every rule still has them: the in-use
-rules (R001, R002, L002 and the CH rules), the duplicate-name
+rules (R001, R002, R008, C006, L002 and the CH rules), the duplicate-name
 rules N001 and N002, a watch condition that names a strip, and DCA
 and mute-group membership by group name.
 

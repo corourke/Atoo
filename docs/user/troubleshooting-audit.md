@@ -69,6 +69,74 @@ strip set to follow it without any strip's own switch changing, so
 `C004` cannot see it. Switch it off on the desk; `apply` never writes
 it.
 
+## A channel is on, named and up, but you hear nothing: `R008`
+
+Most checks start at a bus or a Main and ask whether it reaches the
+PA. `R008` starts at the channel. A channel can have a source patched, a
+name and its fader up, and still go nowhere: no send to a bus, no send to
+a Matrix, no route to a Main. Nothing on the strip looks wrong, and a
+scene recall or a stray tap on the Main button is all it takes.
+
+```
+$ atoo audit --state cut.state.json
+Audit findings: 1 warning.
+
+[WARNING] R008 Strip Reaches Nothing
+  CH 3 "Hat" is in use, unmuted and above the floor, but it has no bus send, no Matrix send and no Main route switched on, so its signal goes nowhere. Switch a send or a Main route on, or mute the strip if it is not wanted.
+...
+```
+
+Switch a send or a Main route on for it, or mute the strip if it is
+meant to be out of the mix. It is a warning, so `audit` exits `0`.
+
+What it leaves alone, on purpose:
+
+- **A strip that is muted, or whose fader is at the floor.** Both are
+  silent already, and a fader at the floor has its own
+  [`L002`](reading-findings.md) finding.
+- **A strip that sends somewhere that goes nowhere.** The bus (`R002`),
+  Main (`R005`) or Matrix (`R006`) that reaches no output is reported
+  once, as itself; the channels feeding it are not listed again.
+- **The talkback strip, and an aux a monitor output listens to.**
+- **A strip it could not read in full.** If any of a strip's sends or
+  routes was not read, the check says nothing rather than guess.
+- **A strip you have given a plan.** With `--plan`, and in Watch with a
+  show, a channel the plan routes somewhere is checked by `CV016
+  Planned Routes All Off` instead, so the same fault is not said twice.
+
+One thing it cannot see: a channel can also leave the desk through a
+*user signal* (a direct tap to a recorder, say) with no send or route.
+Atoo does not read those slots, so a strip that goes only to a recorder
+that way is reported. If that is deliberate, the strip is working as
+set up.
+
+## A channel is on and named, but nothing is patched to it: `C006`
+
+The other end of the same path. `R008` asks where a channel's signal
+goes; `C006` asks whether it has one. A channel that is named, or has
+sends on, with nothing patched to its input carries silence, and its
+overview strip looks finished.
+
+```
+$ atoo audit --state nosource.state.json
+Audit findings: 1 warning.
+
+[WARNING] C006 Strip In Use Has No Source
+  CH 3 "Hat" is in use (named) but nothing is patched to it, so it has no source. Patch an input to it on the desk, or pull its fader down and clear its name and sends if the strip is not wanted.
+...
+```
+
+Patch an input to it on the desk, or clear it if the strip is not
+wanted. It is a warning, so `audit` exits `0`.
+
+It does not wait for the fader: a show built from your conventions
+starts every fader at the floor, and a strip with no source is as dead
+at the floor as it is at unity. It stays quiet for a strip on its
+alternate input (`C004` already says so) and for the talkback strip. With `--plan`, a patch the plan
+states is checked by `CV005`, so `C006` leaves that strip to it. A
+capture taken without the patch readings cannot answer, and the check
+says nothing then.
+
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 
 A WING effect is heard only through an **insert**: the strip's pre- or
@@ -140,12 +208,13 @@ and no more.
 **The talk mic's own strip is left out of the mix checks.** A talk mic
 is normally kept out of the mix: fader down, in no DCA. So when
 talkback is assigned, `audit` does not report that strip as "in no DCA"
-(`CH001`) or "fader at floor" (`L002`). It says once that it did
+(`CH001`), "fader at floor" (`L002`), "sends nowhere" (`R008`) or
+"nothing patched" (`C006`). It says once that it did
 this, so the exemption is never silent:
 
 ```
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001) and 'fader at floor' (L002) are not reported for it.
+  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008) and 'nothing patched' (C006) are not reported for it.
 ```
 
 ## Talkback and a band input on one strip: `CV014`
@@ -164,7 +233,7 @@ Audit findings: 1 warning, 1 info.
   Talkback is assigned to CH40, and the plan puts 'Tom 3' on ch 40, so the talk mic and that input share one strip. Move the input off ch 40, or set talkback's assign to OFF or the other strip on the desk's talkback page.
 
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001) and 'fader at floor' (L002) are not reported for it.
+  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008) and 'nothing patched' (C006) are not reported for it.
 ...
 ```
 

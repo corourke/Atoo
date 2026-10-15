@@ -23,6 +23,8 @@ Find the symptom, then go to its page.
 | `undo` says "nothing more to undo on this desk" | [desk](troubleshooting-desk.md#undo-says-nothing-more-to-undo-on-this-desk) |
 | `audit` or `watch` says `C003` | [audit](troubleshooting-audit.md#audit-or-watch-says-c003) |
 | A channel is silent but its patch is right: `C004` | [audit](troubleshooting-audit.md#a-channel-is-silent-but-its-patch-is-right-c004) |
+| A channel is on, named and up, but you hear nothing: `R008` | [audit](troubleshooting-audit.md#a-channel-is-on-named-and-up-but-you-hear-nothing-r008) |
+| A channel is on and named, but nothing is patched to it: `C006` | [audit](troubleshooting-audit.md#a-channel-is-on-and-named-but-nothing-is-patched-to-it-c006) |
 | An effect is on the strip but you cannot hear it: `E001`, `E002` | [audit](troubleshooting-audit.md#an-effect-is-on-the-strip-but-you-cannot-hear-it-e001-e002) |
 | The band cannot hear talkback: `T001` | [audit](troubleshooting-audit.md#the-band-cannot-hear-talkback-t001) |
 | Talkback and a band input on one strip: `CV014` | [audit](troubleshooting-audit.md#talkback-and-a-band-input-on-one-strip-cv014) |
