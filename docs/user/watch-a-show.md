@@ -135,7 +135,10 @@ is the only sign.
 - Watch listens to the desk's meters on one more connection (port 2222,
   one of the desk's 24 client slots) and writes nothing. If it cannot, or
   the connection drops, **This watch** says **Clip detection: off** and
-  why, and the rest of Watch carries on. On the [Demo show](demo.md)
+  why, and the rest of Watch carries on. The meter data comes back to
+  the laptop by UDP, so clip detection needs the laptop on the desk's
+  own network: over a routed link, such as a VPN, it stays off. On the
+  [Demo show](demo.md)
   the clips are simulated: one strip clips now and then, and one that
   clips again shows its count rise.
 
@@ -255,8 +258,11 @@ has the full reference: matching by position, range or name.
 
 - **This watch says Clip detection: off.** The desk's metering
   connection could not be opened (it uses one of its 24 client slots),
-  no meter data arrived (a firewall blocking UDP back to this computer
-  stops it), or the connection dropped. Nothing else is affected.
+  no meter data arrived, or the connection dropped. Nothing else is
+  affected. *No meter data* means the desk's UDP meter packets are not
+  reaching this computer: a firewall, or a laptop that reaches the desk
+  through a router or VPN (a Tailscale subnet router, say) rather than on
+  the desk's own network. Put the laptop on that network.
   **Stop** and **Start watching** to try again.
 - **The header reads a red Error**, with the reason under the word over
   the table: check the address with **Ping**, and see

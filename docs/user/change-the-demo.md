@@ -67,6 +67,11 @@ is skipped, so the build leaves it out.
    CHANGES** tag comes up.
 3. Press **Save**.
 
+The **Order** cell of the Guest Vox row is empty now, where it read
+`-`. The build will note that it built the guest's channel from a row
+with no order number; if the band gives the guest a number, type it
+there.
+
 The tile now reads **17 input rows**, and **04 Plan** reads **STALE**:
 the plan no longer matches its files. The verdict under **Findings**
 reads **STALE** too, where it said **READY TO APPLY**, with a **Rebuild**
@@ -76,13 +81,17 @@ button.
 
 1. Click the **04 Plan** tile. Under **Options**, choose your desk's
    model under **Console model**.
-2. Press **Rebuild plan**.
+2. Press **Rebuild plan** (on the tile, or in the **STALE** banner). Under
+   **Options** the same button reads **Build plan**.
 
 A build takes a few minutes. When it lands, the tile reads **PLAN
-CURRENT**, and **Changed since the last build** says what changed: Guest
-Vox is on a channel of its own now. Check where it went, and what it
-sends to, in the **Channels** table, and read the **Findings** panel
-([Build a show](build-a-show.md#6-read-the-findings) says how).
+CURRENT**. The starter conventions put playback last, so Guest Vox takes
+channel 13 and Playback moves along to 14. **Changed since the last
+build** is folded, and reads *2 strips: 1 added, 1 moved*; open it for
+the two strips by name. In the **Channels** table they carry **ADDED**
+and **MOVED** by their numbers. Check what Guest Vox sends to, and read
+the **Findings** panel ([Build a show](build-a-show.md#6-read-the-findings)
+says how).
 
 ## 5. Apply it to the desk
 
@@ -106,13 +115,16 @@ initialized state before it wrote the plan, which takes the mix off it.
 A patch writes only what changed, and moves nothing else.
 
 1. In **Apply**, choose **Patch** in the **Full build | Patch** control at the top.
-2. In step 1, type:
+2. In step 1, under **CHANGE**, type in the box:
 
    > trumpet, sax and trombone on LCL 21-23, Band DCA
 
 3. Press **Preview**, and read what it will write: three new channels
-   on free strips, and nothing already on the desk moving.
-4. Tick **Arm**, and write it.
+   on free strips and a new **Horns** bus, with nothing already on the
+   desk moving. The pre-flight shows one warning,
+   `reconcile.not-checked`: a patch is not checked against the input
+   list. It does not block the write.
+4. Tick **Arm**, and press **Write changes to console**.
 
 [Patch a show that is already on the desk](patch-a-show.md) explains
 each step, and how to keep the change or take it off.

@@ -148,7 +148,9 @@ older rows have no button, and a row written to another desk has only an
    result, under the button, says so in yellow: **517 put back**, **1 was
    left as it is**.
 
-To go back to the write, press **Preview write** in step 2: the write's
+When the undo lands, step 2 goes back to the write's preview by itself,
+and step 3 keeps the undo's result. To go back to the write before you
+undo, press **Preview write** in step 2: the write's
 preview returns, step 3 reads **Arm and write** again, and the **Arm** tick
 is cleared. An undo preview goes out of date, and **Undo** locks again,
 when a write or an undo lands, or the console in the bar or the newest row

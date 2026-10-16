@@ -90,6 +90,9 @@ though the first time is better done on one that is not.
    **Start watching** ([Watch the desk during a show](watch-a-show.md)).
    Pull a DCA that has channels in it to the floor: a row appears, and
    clears when you push it back up.
+   Clip detection needs the laptop on the desk's own network; through a
+   VPN or router it reports *Clip detection: off* and the rest of Watch
+   still works.
    From the command line, three readings:
 
    ```bash
