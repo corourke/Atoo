@@ -192,7 +192,8 @@ sent to the desk.
 
 - **One finding:** press **Hide** beside its severity tag. The row moves
   to **Suppressed**, folded under the table with its count beside the
-  title. Open it and press **Show** on the row to bring it back.
+  title. Press **Open the hidden list** to open it, then **Show** on the
+  row to bring that finding back.
 - **Every warning, or every info:** click its count at the head of the
   table. The count is struck through and reads, for example, *0 Warning
   (4 hidden)*. Click it again to show them. Errors cannot be hidden this

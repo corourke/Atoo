@@ -148,13 +148,16 @@ older rows have no button, and a row written to another desk has only an
    result, under the button, says so in yellow: **517 put back**, **1 was
    left as it is**.
 
-When the undo lands, step 2 goes back to the write's preview by itself,
-and step 3 keeps the undo's result. To go back to the write before you
-undo, press **Preview write** in step 2: the write's
-preview returns, step 3 reads **Arm and write** again, and the **Arm** tick
-is cleared. An undo preview goes out of date, and **Undo** locks again,
-when a write or an undo lands, or the console in the bar or the newest row
-changes: press **Preview undo again**.
+When the undo lands, step 2 goes back to the write's box by itself, and
+its button reads plain **Preview** again (it reads **Preview write** only
+while an undo preview is on show). The **Arm** tick is cleared, step 3
+keeps the undo's result, and nothing can be written until you preview the
+write again: press **Preview** in step 2, and step 3 reads **Arm and
+write** once it is ready. To go back to the write *before* you undo, press
+**Preview write** in step 2 instead: the write's preview returns and the
+**Arm** tick is cleared. An undo preview goes out of date, and **Undo**
+locks again, when a write or an undo lands, or the console in the bar or
+the newest row changes: press **Preview undo again**.
 
 With no row to undo on this desk, **Preview undo** is locked on the
 empty History line, and **Locked: nothing has been written from this
