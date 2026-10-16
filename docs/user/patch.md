@@ -174,10 +174,13 @@ A change can also edit what is running; see
   read as empty*. The same holds for a file given to `--change-set`.
   An answer Atoo cannot use at all is kept as `change.partial.json` in
   the show bundle, and the error says why.
-- **A reference to something that is not there refuses the change**
-  (`REFUSED`, exit `2`): *"it names bus 'MON9', which is neither on the
-  desk nor added by this change"*. Say it again naming what is there, or
-  add the missing object in the same change.
+- **Something the plan or the desk cannot take refuses the change**
+  (`REFUSED`, exit `2`): a reference to something that is not there
+  (*"it names bus 'MON9', which is neither on the desk nor added by this
+  change"*), a field a running object does not carry, or a value out of
+  range. Say it again naming what is there, or add the missing object in
+  the same change. The browser heads the review "Refused: cannot be
+  written as asked", and each line says which it is.
 - **Each change's text and short name are recorded** in the desk's
   journal entry, numbered in the order they are written, so the journal
   stack reads as a list of changes. `atoo undo --show DIR` pops a
@@ -228,6 +231,15 @@ the model:
   a bus's index), the whole change with it. Only the addresses whose
   value moves are written; the rest of the strip is in the before/after
   read that proves nothing unrelated moved.
+- **A show built with presets edits like any other.** A channel or bus
+  that carries a preset's values (see [Presets](presets.md)) is renamed,
+  moved, muted or given a new fader like any other, and the preset's
+  values on it are left exactly as they were: they are not among the
+  fields the change names, so none of them is written. A change cannot
+  set those values themselves, and asking a running channel or bus for a
+  *different* preset is shown as `MODIFIED`, not written (the values on
+  it are the old preset's); set the processing fields themselves, or
+  rebuild.
 - **The review shows old -> new for every field**, as an `EDITED` line, in
   the "fields changed" block of the summary, and at INFO:
   `ch:9: the change edits bus_sends: MON3 level -144 -> -10.0`.

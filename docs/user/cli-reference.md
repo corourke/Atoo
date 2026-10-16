@@ -52,7 +52,7 @@ which code carries it depends on the command:
 | `verify` | `2` | one or more errors. Warnings alone are still `0` |
 | `compare` | `2` | the snapshot differs from the plan on a field the plan states |
 | `apply` | `2` | something did not land, or it refused to proceed before writing anything |
-| `patch` | `2` | the change named something that is not there (refused), a channel could not be placed, the pre-flight refused, something did not land, or an address belonging to a strip the change does not own moved across the write. A model that could not be reached, or answered with something that is not a change set, is `1` |
+| `patch` | `2` | the change was refused (it named something that is not there, a field the object does not carry, or a value out of range), a channel could not be placed, the pre-flight refused, something did not land, or an address belonging to a strip the change does not own moved across the write. A model that could not be reached, or answered with something that is not a change set, is `1` |
 | `amend` | `2` | a channel could not be placed, the rebuild tried to renumber a running strip, something did not land, or an address belonging to a strip the amend does not own moved across the write |
 | `audit` | **`1`** | a finding at error severity. Warnings and info alone are still `0` |
 | `watch` | **`1`** | the last pass had a finding at error severity -- an audit rule or one of your own [watch conditions](watch-conditions.md) |
@@ -789,8 +789,9 @@ Each run prints how long it took: the desk read and the model call. A preview
 compiles the change; a --confirm run compiles it again unless given
 --change-set, so save the one you reviewed with --save-change-set. --state FILE
 reviews offline against a saved capture. Exit 2 means it ran and found
-problems: a refused reference, a channel with no free strip, a pre-flight
-refusal, a readback mismatch, or an unrelated address that moved.
+problems: a refused change (a reference, field or value the plan cannot take),
+a channel with no free strip, a pre-flight refusal, a readback mismatch, or an
+unrelated address that moved.
 
 On a desk Atoo did not set up, a change can only name the groups its
 starting plan knows (the desk's journal, else plan.json, else an empty board):
