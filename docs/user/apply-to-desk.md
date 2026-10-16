@@ -18,8 +18,8 @@ the desk.
 ## 1. Point it at the desk
 
 1. In the bar at the top, next to **Console**, press **Change…**.
-2. Choose **Address** (if the console is the Demo, **Demo** is chosen),
-   type the desk's IP address (the port is
+2. Choose **Address** in the **Address | Demo** control (if the console is the
+   Demo, **Demo** is chosen), type the desk's IP address (the port is
    `2223` unless you changed it on the desk), and press **Use this
    console**.
 3. Press **Ping**.

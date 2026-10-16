@@ -103,7 +103,7 @@ Now the desk is set. A full build would put the desk back to its
 initialized state before it wrote the plan, which takes the mix off it.
 A patch writes only what changed, and moves nothing else.
 
-1. In **Apply**, click the **Patch** switch at the top.
+1. In **Apply**, choose **Patch** in the **Full build | Patch** control at the top.
 2. In step 1, type:
 
    > trumpet, sax and trombone on LCL 21-23, Band DCA

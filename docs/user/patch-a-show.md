@@ -20,7 +20,7 @@ model set up, as for a build.
 Patch shares Apply's four numbered steps: **What will be written**,
 **Preview**, **Arm and write** and **History**.
 
-1. Click **Apply**, then the **Patch** switch at the top.
+1. Click **Apply**, then choose **Patch** in the **Full build | Patch** control at the top.
 2. In step 1, type what changed, naming the sockets you have cabled:
 
    > trumpet, sax and trombone on A 21-23, in the Horns DCA, sent to MON2

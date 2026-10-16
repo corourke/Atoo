@@ -154,14 +154,14 @@ watch too.
 A channel on its alternate input (`C004`) and the desk's global alternate
 switch (`C005`) are warnings, because a show never starts on them. During a
 virtual soundcheck they are the right setting, and warnings you learn to
-ignore are worse than none. **Virtual soundcheck: Off** in the header is the
-switch that says so. Press it and it reads **On**, a **Virtual soundcheck** tag
-appears beside the connection, and those two rules are shown as info, not
+ignore are worse than none. The **Virtual soundcheck** switch in the header
+says so. Turn it on (it reads **On**, and a **Virtual soundcheck** tag
+appears beside the connection) and those two rules are shown as info, not
 warnings: every channel on its alternate is still named, each row says
 *Virtual soundcheck is on, so this is expected*, and **This watch** says
 *Virtual soundcheck: on, alternate inputs at INFO*.
 
-Press it again when soundcheck ends and any channel still on its alternate is
+Turn it off when soundcheck ends and any channel still on its alternate is
 a warning again by the next reading, a new one, so **Flash on new** takes
 it as new. It is yours for this session only: it is off at every Start, is
 not remembered between watches or on this device, and Stop turns it off. You
@@ -170,8 +170,8 @@ is [`--virtual-soundcheck`](watch.md).
 
 ### Flash on new
 
-**Flash on new** in the header is off until you turn it on, and this
-browser remembers your choice. When it is on, a new warning or error
+The **Flash on new** switch in the header is off until you turn it on, and
+this browser remembers your choice. When it is on, a new warning or error
 flashes the whole screen once, in its colour, for less than half a
 second. It does not repeat while the fault stands, and an info never
 flashes. If your computer is set to reduce motion, the screen's edges
