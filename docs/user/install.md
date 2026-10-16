@@ -94,7 +94,13 @@ that are the same command: `atoo`, and `a2`, its short spelling
 (`a2 ui` is `atoo ui`). Check:
 
 ```bash
-atoo --help
+atoo --version
+```
+
+Its first line names the copy you just installed:
+
+```text
+atoo 0.1.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
 ```
 
 ## 6. First run: `atoo init`, then `atoo ui`

@@ -209,7 +209,7 @@ The **Watch conditions** panel holds this show's own rules, saved in its
 `watch.json`. It is open when no watch is running; during one, click its
 line under the table to open it.
 
-![The Watch conditions panel on the Demo show: sixteen conditions, six of them drafted by the build and not yet reviewed](img/watch-conditions.png)
+![The Watch conditions panel on the Demo show: nine conditions, six of them drafted by the build and not yet reviewed](img/watch-conditions.png)
 
 Each row is one check on one channel, bus or DCA:
 

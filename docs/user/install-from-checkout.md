@@ -63,7 +63,7 @@ line before anything else, and the page shows it at the bottom. The
 version number alone never tells branches apart. What you want to see is
 your clone's folder and the branch you checked out.
 
-The pipx copy answers differently, and has no branch to name:
+The pipx copy's first line is different, and names no branch:
 
 ```text
 atoo 0.1.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
