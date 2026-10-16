@@ -19,6 +19,14 @@ drift. For how to *use* these together, start at
 `a2` is a short spelling of `atoo`: the same program, so `a2 build`
 and `atoo build` are one command. This page writes `atoo` throughout.
 
+`atoo --version` (or `a2 --version`) prints which copy of Atoo is
+running, and exits `0`: the version, the folder the code runs from and,
+for a git checkout, its branch, short commit and whether tracked files
+have uncommitted changes, then the Python it runs on. It is not an option
+of any command, so it is not in the tables below.
+[Which atoo am I running?](install-from-checkout.md#3-which-atoo-am-i-running)
+reads it.
+
 ## Exit codes
 
 This is the canonical statement; everywhere else in the docs points here.

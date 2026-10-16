@@ -4,8 +4,9 @@
 
 A healthy start prints where to point a browser and then sits there:
 
-```
+```text
 $ atoo ui --plan touringband/plan.json
+atoo 0.1.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
@@ -14,7 +15,8 @@ Console: none configured -- set one in the bundle bar (Change…) before Ping, A
 Working folder: ~/Documents/Atoo -- Open… and New show… start here.
 ```
 
-One URL, and it is the whole UI: Build, Apply and Watch are three modes
+The first line says which copy of Atoo this is ([`atoo --version`](install-from-checkout.md#3-which-atoo-am-i-running)
+prints the same), and the page repeats it at the bottom. One URL, and it is the whole UI: Build, Apply and Watch are three modes
 of the one page at `/`. The `Plan:` line appears only with `--plan` (or
 `--show` on a bundle that has a `plan.json`); the plan is on Build step
 04, which can also open one from a path. The `Console:` line is always
@@ -28,18 +30,27 @@ made; before `init` it says there is none, and how to make one.
 
 Three causes, and each names itself:
 
-**`the web UI needs the 'ui' extra -- install it with:` / `  python3 -m
-pip install -e ".[ui]"`** — the server is an optional dependency, so the
-engine installs without FastAPI and uvicorn. Exits `1`. Install it again
-with `[ui]`: [Installing Atoo](install.md#when-it-does-not-work) for
-pipx, [Installing from a checkout](install-from-checkout.md#when-the-install-fails)
-for a clone. From a clone, check first that the `atoo` that ran is the
-clone's ([Which atoo am I running?](install-from-checkout.md#3-which-atoo-am-i-running)).
-If that `pip install` answers `error: externally-managed-environment`
-(Homebrew's Python, on a Mac), it was run outside a virtualenv: make one
-in the clone and install into it ([Installing from a
-checkout](install-from-checkout.md#1-make-the-virtualenv-in-the-clone)),
-never with `--break-system-packages`.
+**`the web UI needs the 'ui' extra`** — the server is an optional
+dependency, so the engine installs without FastAPI and uvicorn. Exits
+`1`. The message names the fix for where Atoo is running:
+
+- **A clone, outside a virtualenv** (Homebrew's Python, on a Mac): it
+  gives the four steps, `cd` into the clone, `python3 -m venv .venv`,
+  `source .venv/bin/activate`, `python3 -m pip install -e ".[ui]"`. Run
+  them in that order. A `pip install` on its own is refused there with
+  `error: externally-managed-environment`; never work round it with
+  `--break-system-packages`.
+- **A clone, inside its virtualenv**: just `python3 -m pip install -e
+  ".[ui]"`.
+- **The pipx install**: `pipx install --force "atoo[ui] @
+  git+https://github.com/corourke/Atoo.git"`
+  ([Installing Atoo](install.md#when-it-does-not-work)).
+
+From a clone, check first that the `atoo` that ran is the clone's
+(`atoo --version`, [Which atoo am I
+running?](install-from-checkout.md#3-which-atoo-am-i-running)); the
+steps are in [Installing from a
+checkout](install-from-checkout.md#1-make-the-virtualenv-in-the-clone).
 
 **`couldn't read plan file 'x.json': No such file or directory`**, and
 the same for `--watch-conditions` — both files are loaded before the

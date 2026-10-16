@@ -45,7 +45,47 @@ found `atoo`.
 
 **Check this before you test anything.** If you also have the pipx
 install, there are two `atoo` commands on your laptop, and the terminal
-runs whichever it finds first. Nothing on screen says which.
+runs whichever it finds first. Ask the one you are about to use:
+
+```bash
+atoo --version
+```
+
+```text
+atoo 0.1.0 (running from ~/Atoo/atoo; branch my-branch, a1b2c3d, clean)
+Python 3.13.16 at ~/Atoo/.venv/bin/python3
+```
+
+The first line is the answer: the version, the folder the code runs from,
+and, for a clone, the **branch**, the short **commit**, and `clean` or
+`uncommitted changes` (to files git tracks). `atoo ui` prints the same
+line before anything else, and the page shows it at the bottom. The
+version number alone never tells branches apart. What you want to see is
+your clone's folder and the branch you checked out.
+
+The pipx copy answers differently, and has no branch to name:
+
+```text
+atoo 0.1.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
+```
+
+That is a private copy of a release, which never follows `git checkout`.
+If you see it while testing a branch, the virtualenv is not active in
+this terminal: run the `source` line from step 1 in the clone. Without
+`git` on the machine, a clone says `a git checkout, but git is not
+installed` in place of the branch.
+
+There are three ways to run a branch, and `atoo --version` tells you which
+one you are in:
+
+| How you run it | What runs |
+|---|---|
+| `atoo`, with the clone's virtualenv active (`which atoo` ends in `.venv/bin/atoo`) | the clone's current branch, from the editable install in step 2 |
+| `python3 -m atoo.cli`, from the clone's top folder | the clone's code, with no install at all; the packages it needs must be in that Python (`atoo ui` needs the `ui` extra, so on a Mac use the virtualenv) |
+| `atoo` with no virtualenv active | whichever `atoo` is first on your `PATH`: usually `~/.local/bin/atoo`, the pipx copy, which ignores the clone |
+
+`which -a atoo` lists every `atoo` on your `PATH`; the first one wins.
+The same check from outside Atoo:
 
 ```bash
 which atoo
@@ -53,19 +93,9 @@ python3 -c "import atoo; print(atoo.__file__)"
 ```
 
 Both must be inside the clone: `which atoo` ending in `.venv/bin/atoo`,
-and the second a path under the clone's `atoo/` folder. If they are not,
-the virtualenv is not active in this terminal: run the `source` line from
-step 1 in the clone.
+and the second a path under the clone's `atoo/` folder.
 
-`which -a atoo` lists every `atoo` on your `PATH`; the first one wins.
-What each one is:
-
-| Path | What it runs |
-|---|---|
-| `…/Atoo/.venv/bin/atoo` (in your clone) | the branch the clone has checked out |
-| `~/.local/bin/atoo` | the pipx install: a private copy of a release, which never follows `git checkout` |
-
-To see what the pipx copy is, and where it was installed from:
+To see where the pipx copy was installed from:
 
 ```bash
 ls -l ~/.local/bin/atoo
@@ -110,7 +140,10 @@ how to tell, and the fix.
 **`the web UI needs the 'ui' extra` from `atoo ui`.** Either the clone was
 installed without `[ui]`, or the `atoo` that ran is not the clone's. Check
 [step 3](#3-which-atoo-am-i-running) first, then, with the virtualenv
-active, run `python3 -m pip install -e ".[ui]"` again in the clone.
+active, run `python3 -m pip install -e ".[ui]"` again in the clone. The
+message itself says which of these you need: outside a virtualenv it gives
+the steps to make one (the `pip install` alone would fail there), and
+inside one, just the `pip install`.
 
 ## See also
 

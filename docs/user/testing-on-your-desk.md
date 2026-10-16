@@ -18,8 +18,10 @@ Do [Try the Demo show](demo.md) first: it is the same screens with no
 desk. Then you need a laptop on the same network as the desk. The
 examples use `192.0.2.16` for the desk: type your own.
 
-**Testing a branch from a clone?** Before anything else, check that the
-`atoo` you run is the clone's and not the pipx install: [Which atoo am I
+**Testing a branch from a clone?** Before anything else, run
+`atoo --version`: its first line must name your clone's folder and the
+branch you checked out, not an `installed copy` (the pipx install, which
+never follows a branch). [Which atoo am I
 running?](install-from-checkout.md#3-which-atoo-am-i-running)
 
 ## 1. Before you start (10 minutes)
