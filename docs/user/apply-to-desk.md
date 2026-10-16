@@ -38,7 +38,9 @@ in `~/.atoo.config` ([Setting up](configuration.md)).
 
 Click **Apply**, and leave **Full build** chosen. The screen is four
 numbered steps, done in order: **What will be written**, **Preview**,
-**Arm and write** and **History**. Each step's title sits above its box,
+**Arm and write** and **History**. (Step 3 reads **Arm and undo** while an
+undo is previewed; see [Undo the last write](#undo-the-last-write).)
+Each step's title sits above its box,
 with a short grey note of what it does (**Reads the desk · writes
 nothing**). Its number is gold while it is the next thing to do and
 green once it is done, and a green tag on the right, such as **Pre-flight
@@ -117,23 +119,38 @@ appears at the top of **History**, step 4, highlighted.
 
 ## Undo the last write
 
-**History** lists every write from this show, newest first. The row
-marked **top** is the newest write still standing on this desk.
+**History** lists every write from this show, newest first. The newest
+write still standing on this desk has **Preview undo** in its last cell;
+older rows have no button, and a row written to another desk has only an
+**Other desk** tag.
 
 1. Press **Preview undo**. It reads the desk and writes nothing, and it
-   needs no **Arm**. Directly under the button it says which write it would
-   reverse, whether it is **safe to undo**, and lists the addresses: for
-   each one the strip, the value that write set, the value on the desk now,
-   and the value Undo would put back. Anything that has been **changed
-   since** the write, by hand or by another run, is listed first and marked:
-   Undo leaves it exactly as it is. Step 3's account of the last write
-   stays where it is.
-2. Tick **Arm** in step 3, then press **Undo newest write**. If it had to
-   leave addresses behind, the result says **Partly undone** in yellow and
-   lists them.
+   needs no **Arm**. The page scrolls up to step 2, **Preview**, which shows
+   the undo preview in place of the write's (one box, whichever you asked
+   for last), and the button now reads **Preview undo again**. The preview
+   says which write it would reverse and gives a verdict: green **Ready to
+   undo**, yellow **1 will stay**, or red **Can't undo**. Anything that has
+   been **changed since** the write, by hand or by another run, is listed
+   first under **Stays as it is**, with the value the desk holds now: Undo
+   leaves it exactly as it is. A control that had no earlier value to go
+   back to is named in an **Info** note. **Goes back** lists, strip by
+   strip, each control with the value it has now and the value it goes back
+   to.
+2. Step 3 now reads **Arm and undo**. Tick **Arm**, then press the red
+   **Undo newest write**, directly under the **Undo** heading. If some
+   controls had changed since, the undo goes ahead for the rest and the
+   result, under the button, says so in yellow: **517 put back**, **1 was
+   left as it is**.
 
-With no row to undo on this desk, both buttons are locked, and
-**Locked: nothing to undo on this desk** says so.
+To go back to the write, press **Preview write** in step 2: the write's
+preview returns, step 3 reads **Arm and write** again, and the **Arm** tick
+is cleared. An undo preview goes out of date, and **Undo** locks again,
+when a write or an undo lands, or the console in the bar or the newest row
+changes: press **Preview undo again**.
+
+With no row to undo on this desk, **Preview undo** is locked on the
+empty History line, and **Locked: nothing has been written from this
+show** says so.
 
 Undo puts back only the addresses that write changed, and only where
 nothing has written over them since. Undo again to step back one more.

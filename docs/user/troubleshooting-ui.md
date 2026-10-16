@@ -154,6 +154,10 @@ says why, and it is one of these:
   verify** under **Options** in step 1.
 - **Tick Arm first**: the **Arm** checkbox in step 3. It clears
   itself after each write, and Undo needs it too.
+- **Preview the undo first**, or **Preview the undo again**: Undo is
+  only offered for an undo you have just previewed. Press **Preview undo**
+  on the newest row of History; do it again if a write, an undo, the
+  console or the newest row has changed since.
 
 ### Another computer can open the page, but only to watch
 

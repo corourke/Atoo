@@ -85,8 +85,8 @@ many were written and confirmed, and names anything that did not land.
 The change appears at the top of **History**, step 4, highlighted, under
 its short name and the words you typed.
 
-- **Undo newest write** (armed by the same **Arm**) takes it off the
-  desk again.
+- **Preview undo** on its row, then **Undo newest write** in step 3
+  (armed by the same **Arm**), takes it off the desk again.
 - **Keep this in the show** writes it into the show's `input.csv` and
   `instructions.md`, so the next build includes it. Until you press it,
   the change is on the desk only and the show's files do not change.

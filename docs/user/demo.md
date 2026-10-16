@@ -112,9 +112,9 @@ hold.
 
 ![Apply on the Demo show: the desk drawn as scribble strips after a preview](img/apply-demo-preview.png)
 
-**Write to console** and **Undo newest write** stay locked, drawn
-without colour, and each says why beside it, after **Locked:**: writing
-is switched off in the Demo show.
+**Write to console** and **Preview undo** (on the empty History line)
+stay locked, drawn without colour, and each says why beside it, after
+**Locked:**: writing is switched off in the Demo show.
 **Patch** previews a typed change too, when a model is set up, as for a
 build; without one, its box says so and the Demo previews a Full build
 only.

@@ -115,9 +115,9 @@ preview contacts no desk, so it previews the newest entry on the whole
 stack and says a confirmed run may pick a different one.
 
 The Apply screen's **History** step (the journal stack) has a **Desk** column. A row written to
-another desk is drawn dimmed and tagged *other desk -- left alone*, and
-the row marked *top* — the one **Undo newest write** reverses — is the
-newest on the desk in the bundle bar. Rows are matched to that desk by
+another desk is drawn dimmed and tagged **Other desk**, and the newest
+row on the desk in the bundle bar is the one with **Preview undo** — the
+write **Undo newest write** reverses. Rows are matched to that desk by
 address until you **Ping** it; the ping reads its serial. (The Undo button
 itself always asks the desk, so it never depends on that.)
 

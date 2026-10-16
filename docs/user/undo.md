@@ -184,7 +184,8 @@ which is the whole question the guard asks.
 
 ## The same preview, as data
 
-The browser's **Preview undo** draws this same list. `--result-json FILE`
+The browser's **Preview undo** draws this same list, in the Preview box
+(step 2 of Apply). `--result-json FILE`
 writes it as data, for a preview and for a confirmed run alike: one row
 per address, with the strip it belongs to, the value the journalled run
 wrote, the value on the desk now, the value an undo puts back, and
