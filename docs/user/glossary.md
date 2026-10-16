@@ -36,7 +36,7 @@ A label in **bold** is what you see on screen; `code` is what you type.
 | Console | the one desk address the page uses | **Console** and **Change…** in the bar; `--console` |
 | Ping | one round trip to the desk, for its name and model; changes nothing | **Ping**; `atoo ping` |
 | Pre-flight verify | the plan checked again against this desk's model, just before a write | **Pre-flight verify** in Apply step 1 |
-| Full build | the whole plan written to a desk you are setting up | **Full build**, **Write to console**; `atoo apply` ([Apply a plan to the desk](apply-to-desk.md)) |
+| Full build | the whole plan set on a desk you are setting up; only the addresses where the desk differs are written | **Full build**, **Write to console**; `atoo apply` ([Apply a plan to the desk](apply-to-desk.md)) |
 | Patch | a change to a show already on the desk, nothing else moved | **Patch**, **Write changes to console**; `atoo patch` ([Patch a show](patch-a-show.md)) |
 | Preview | reads the desk and shows what a write would change; writes nothing | **Preview**, **Preview undo**; `apply`, `patch` or `undo` without `--confirm` |
 | Arm | the one control that lets a write happen; it clears after each write | **Arm** in Apply step 3; `--confirm` |

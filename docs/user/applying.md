@@ -59,14 +59,21 @@ stderr.
    last show carries over (`--no-init` skips it). See [What a full apply
    changes on the desk](what-apply-changes.md).
 5. **Every address is read** for its current value, the baseline the
-   journal keeps.
+   journal keeps. A preview does exactly this, so what it counted as
+   "will change" is what the write finds again.
 6. **Values that already agree are not written.** Many of the desk's
    values are stepped, so a low-cut asked for at 100Hz that reads back
    as 100.237Hz already agrees. The exception is a value whose
    [selector](what-apply-changes.md#a-selector-is-written-before-the-values-it-governs)
    this run changes.
-7. **Everything else is written and read back.** On each strip, the
-   selectors go first, then the values, then the on-switches.
+7. **Everything else is written and read back**, and only that. The
+   number written is the number the preview said would change, so a
+   plan with one more channel in it writes that channel and nothing
+   else. If the desk moved after the preview, the write goes by what it
+   reads now, not by what the preview read: a value that was changed
+   since is written back, and one that was put right is left alone. On
+   each strip, the selectors go first, then the values, then the
+   on-switches.
 8. **The journal is written**, and the summary printed.
 
 ### While it runs
@@ -84,15 +91,19 @@ run against a test desk (so the times are tiny):
   every address answered.
   resetting to initialized, reading each back 1/1 (100%) 0s -- /ch/30/name
   resetting to initialized, reading each back: 1 of 1 settings in 0.0s
-  writing, reading each back 139/2787 (4%) 0s -- /ch/14/in/conn/grp
+  checking each setting, writing what differs 139/2788 (4%) 0s -- /ch/14/in/conn/grp
   ...
+  checking each setting, writing what differs: 2788 of 2788 settings in 0.1s -- 1189 written and read back
 ```
 
-A preview shows `reading the desk for the preview` in place of the
-writes. If some readbacks disagree, `reading back again what disagreed`
-follows the writes. In a terminal the line is rewritten in place; in a
-log it is a plain line about twenty times per step. `--no-progress`
-turns it off. stdout and the journal are the same either way.
+The count in `checking each setting, writing what differs` is of the
+settings it looks at, 2788 here, and the end of the line says how many of
+them it wrote: 1189. The rest already held what the plan says. A preview
+shows `reading the desk for the preview` in place of the writes. If some
+readbacks disagree, `reading back again what disagreed` follows the
+writes. In a terminal the line is rewritten in place; in a log it is a
+plain line about twenty times per step. `--no-progress` turns it off.
+stdout and the journal are the same either way.
 
 Steps 1 and 2 need no console: point `apply` at an address where nothing
 is listening and the verdict still prints first. Here it is on the Demo
@@ -146,6 +157,11 @@ Every address ends in one of five states:
 - **`skipped_no_change` is proof, not a gap.** The plan states it and
   the desk already satisfies it. It is why "written" is smaller than
   "evaluated": above, 294 of 631 were already correct.
+- **"Written" is the preview's "would change".** A preview and a write
+  count the same thing, the addresses whose value differs from the
+  plan's, so a plan applied to a desk that did not move in between writes
+  exactly the number the preview gave. Undo reverses those, and only
+  those: a `skipped_no_change` row has nothing to reverse.
 - **An `UNREADABLE` line is not a pass.** Nothing was written there, and
   the run cannot vouch for it.
 - **Mismatches exit `2`** and are repeated on stderr by address. A

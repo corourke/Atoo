@@ -1,12 +1,15 @@
 # Apply a plan to the desk
 
-Write the whole show to the desk, and know which values landed, before
-the band walks in.
+Set the desk to the whole show, and know which values landed, before the
+band walks in.
 
-A full apply is for a desk you are setting up: it writes every value in
-the plan, every fader included. **If the show is already on the desk and
-someone is using it, do not do this.** [Patch it](patch-a-show.md)
-instead.
+A full apply is for a desk you are setting up: it puts the desk back to
+its initialized state and sets everything the plan says, every fader
+included. It writes only the addresses where the desk differs, as many as
+the preview says will change, so applying a plan again after one more
+channel was added sends that channel and nothing else. **If the show is
+already on the desk and someone is using it, do not do this.** [Patch
+it](patch-a-show.md) instead.
 
 **Before you start:** a plan that reads **PLAN CURRENT** on Build step 04
 ([Build a show](build-a-show.md)), and the laptop on the same network as
@@ -63,7 +66,9 @@ sockets each has, such as `LCL=8,A=48`; its **?** says why you would.
 ## 3. Step 2: Preview
 
 Press **Preview**. It reads every address the plan would write, and
-writes nothing; it needs no arming. Step 2 then draws the desk as the
+writes nothing; it needs no arming. (After a rebuild, **Apply the
+difference** on **Build** does this step for you: it opens Apply with
+**Full build** chosen and runs the preview.) Step 2 then draws the desk as the
 plan will leave it: every channel, aux, bus, main, matrix, DCA and mute
 group as a scribble strip, in its colour, with its name and number.
 Strips the plan does not use are dimmed, and a strip the write would
@@ -92,13 +97,17 @@ The command's own output runs under the button as it goes. A full write
 first puts the desk back to its initialized state, writing only what
 differs from it; on a WING Compact the read for that took about 35
 seconds when reads went one request at a time, and should now be
-shorter. It then writes the plan, and reads every value back.
+shorter. It then goes through the plan, reads each address, writes only
+those that differ, and reads every value it wrote back. The progress line
+counts the settings it looks at; when it ends it says how many it wrote.
 
 ## 5. Read the result
 
-The result is in the same step: for example **496 written · 496 read
+The result is in the same step: for example **52 written · 52 read
 back and confirmed**, then **Nothing failed to land. The desk now
-matches the plan.** When something did not land, it says how many and
+matches the plan. 1715 addresses were already right and left alone.**
+The 52 is the number the preview said would change; if the desk moved
+after the preview, the write goes by what it reads now. When something did not land, it says how many and
 names them: each value the desk holds differently from the one written,
 and each address that could not be read back. **The journal** under it
 has every address, with the ones that did not land opened first.

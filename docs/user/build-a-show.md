@@ -103,6 +103,10 @@ box gains two more parts:
   against the plan this one replaced, one line per strip. It is open
   when a change was not asked for, and folded otherwise.
   [What a rebuild changed](pipeline.md#what-a-rebuild-changed) explains it.
+  Above the counts, a rebuild that changed something also shows a line
+  with **Apply the difference**: it takes you to **Apply** with **Full
+  build** chosen and the preview already run, so the next thing you read
+  is how many addresses will change. It writes nothing.
 
 Below the box, the plan is three tables: **Channels**, one row per input
 (channel, patch, phantom, DCAs, mute groups), then **Busses** and
@@ -145,7 +149,10 @@ a link to the row it is about.
 Save an edit to any of the three files and the **04 Plan** tile reads
 **STALE**. So does **Build output**, which lists which file changed.
 Press **Rebuild plan**. When the rebuild lands, **Changed since the last
-build** says what it changed.
+build** says what it changed, and **Apply the difference** takes you to
+the preview of it. A full build writes only the addresses where the desk
+differs from the plan, so applying the rebuilt plan sends just the
+change.
 
 ## When it does not work
 

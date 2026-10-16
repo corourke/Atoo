@@ -346,7 +346,10 @@ Write a plan to a console, then read every value back.
 
 The first form changes nothing: it reads the console's current value for every
 address the plan would touch and shows you the before/after. Writing requires
---confirm, and is journalled with each prior value so it can be reversed.
+--confirm. It reads each address again just before writing it and sends only
+those that differ, so the number written is the number the preview said would
+change (unless the console moved in between); each is journalled with its prior
+value so it can be reversed.
 
 Every address written is read back afterwards -- remote console writes can fail
 silently, so an acknowledgement is not proof. Anything that didn't land is

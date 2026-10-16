@@ -85,16 +85,23 @@ sends to, in the **Channels** table, and read the **Findings** panel
 ## 5. Apply it to the desk
 
 1. Choose your desk next to **Console**: **Change…**, **Address**.
-2. Click **Apply**, and follow [Apply a plan to the
-   desk](apply-to-desk.md): **Preview**, then tick **Arm** and write.
+2. On **Build**, press **Apply the difference**, under **Build output**.
+   It opens **Apply** with **Full build** chosen and runs the preview.
+   (Or click **Apply** and press **Preview** yourself.)
+3. Read the counts: the addresses read, how many **will change**, and
+   how many already match. Then follow [Apply a plan to the
+   desk](apply-to-desk.md): tick **Arm** and write.
 
-Every value is read back. Look at the desk: the guest's channel is
-there, named, coloured and patched.
+A full build writes only the addresses that differ, so after one new
+channel it writes that channel and what it touches, not the whole desk.
+Every value written is read back. Look at the desk: the guest's channel
+is there, named, coloured and patched.
 
 ## 6. The 6pm change: a patch
 
-Now the desk is set, and a rebuild would write the whole plan again.
-A patch writes only what changed.
+Now the desk is set. A full build would put the desk back to its
+initialized state before it wrote the plan, which takes the mix off it.
+A patch writes only what changed, and moves nothing else.
 
 1. In **Apply**, click the **Patch** switch at the top.
 2. In step 1, type:

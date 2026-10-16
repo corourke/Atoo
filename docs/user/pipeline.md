@@ -138,6 +138,11 @@ Each change is graded by what the strip is made from:
   your edit was not about. The plan may still be right; check it. It is
   never an error.
 
+A rebuild that changed something also offers **Apply the difference** in
+Build output. It opens Apply with Full build chosen and the preview run.
+A full build writes only the addresses where the desk differs from the
+plan, so the preview's "will change" is the difference.
+
 Which lines are "about" a strip is read from their words, so a line
 that calls a strip by another name is not seen, and the section says so
 at INFO. A changed line that names no strip at all ("monitor sends are

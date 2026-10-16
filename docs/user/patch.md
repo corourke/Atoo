@@ -4,7 +4,8 @@
 
 The horn section has turned up during the setup window. The show is
 already applied, there is a mix on the desk, and you cannot re-run
-`apply`: it writes the whole plan, every fader included. You type what
+`apply`: it resets the desk to its initialized state and sets the whole
+plan, every fader included, so the mix on the desk is lost. You type what
 changed, and `atoo patch` writes only that:
 
 ```bash
@@ -350,7 +351,7 @@ provider and the model and has not yet been timed against a real one.
 
 While it runs, each read and write of the desk says what it is doing on
 stderr: `occupancy read`, `reading the untouched strips, before writing`,
-`writing, reading each back`, then the same proof read after. The lines
+`checking each setting, writing what differs`, then the same proof read after. The lines
 are the ones [`apply` prints](applying.md#while-it-runs);
 `--no-progress` turns them off.
 
