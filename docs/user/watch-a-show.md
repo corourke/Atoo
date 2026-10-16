@@ -18,7 +18,8 @@ no desk, use the [Demo show](demo.md).
 
 With no console in the bar, **Start watching** is locked and says so:
 *Locked: no console. Choose one in the bar*. Set one there (or choose
-Demo) and it unlocks.
+Demo) and it unlocks. Beside a chosen Demo, the header's state reads
+**Demo ready** until you press Start.
 
 The header names the console (*DEMO RIG*, or the desk's address), its
 state turns a green **Watching** with the desk's name, and the table
@@ -35,8 +36,8 @@ table, in large capitals:
 - **WARNING**, in yellow, with warnings and no error;
 - **ALL OK**, in green, with neither. An info is a note, not trouble.
 
-Beside the word is the first thing that is wrong (*CH 10 "Lead Vox" is
-muted*), and on the right the three counts: errors, warnings and info.
+Beside the word is the first thing that is wrong, as the strip, a colon
+and the claim (*CH 10 "Lead Vox": is muted*), and on the right the three counts: errors, warnings and info.
 A count lights in its colour only when it is not zero. Before you press
 Start the word is a grey **NOT WATCHING**; until the first reading
 arrives, **STARTING**.
@@ -50,7 +51,10 @@ at the top of each. Here on the [Demo show](demo.md):
 
 - **Where** is the strip the row is about, as the desk names it:
   `CH 10 "Lead Vox"`. Beside it is the claim, in large type (*is muted*,
-  or a built-in rule's name), with the reason under it.
+  or a built-in rule's name), with the reason under it. Watch writes a
+  built-in rule's name in sentence case so it reads like your own
+  conditions (*Main not patched*); the audit and the Findings panel
+  spell it *Main Not Patched*.
 - Rules starting `WATCH:` are your **watch conditions** (below). The
   rules named by a code such as `R005` are built in. An info row is a note, in quieter type: a
   screen holding only info still looks calm.
@@ -90,8 +94,8 @@ at the top of each. Here on the [Demo show](demo.md):
 - **One fault, one row.** When one of your conditions and a built-in
   rule catch the same thing (your `DCA Band` fader condition and CH002
   both see the Band DCA at the floor), the row is yours, at your
-  severity, with the built-in named under it: *Also CH002 DCA Fader
-  Low With Active Members*.
+  severity, with the built-in named under it: *Also CH002 DCA fader
+  low with active members*.
 - **A row clears itself** when the fault is fixed on the desk: the table
   is the desk as it is now, not a log. To hide one you have already seen,
   [suppress it](#suppress-what-you-have-seen).
@@ -183,9 +187,9 @@ A warning you know about and cannot fix tonight should not take the eye
 from the next one. Hiding a finding only changes this page; nothing is
 sent to the desk.
 
-- **One finding:** tick the box at the start of its row. The row moves to
-  **Suppressed**, folded under the table with its count beside the
-  title. Open it and untick the box to bring the row back.
+- **One finding:** press **Hide** beside its severity tag. The row moves
+  to **Suppressed**, folded under the table with its count beside the
+  title. Open it and press **Show** on the row to bring it back.
 - **Every warning, or every info:** click its count at the head of the
   table. The count is struck through and reads, for example, *0 Warning
   (4 hidden)*. Click it again to show them. Errors cannot be hidden this
@@ -195,7 +199,7 @@ A hidden finding is left out of the counts (they show what is in the
 table, with the hidden number beside them), does not change the word
 over the table, and does not set off **Flash on new**. The Error and Warning counts take
 their colour only for rows still in the table; the Info count stays blue
-while any info is hidden by its box (*0 Info (3 hidden)*), as it is in
+while any info is hidden by its **Hide** button (*0 Info (3 hidden)*), as it is in
 **Suppressed**.
 
 A suppression lasts while the same fault stands. If the fault clears and
