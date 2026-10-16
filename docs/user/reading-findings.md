@@ -91,9 +91,14 @@ error, red **Blocked** with the number of errors beside it, or grey **No
 plan yet** when there are findings but nothing has been built. Under it
 are three counts: the things to check, the critic's advice and the notes
 on choices the build made. A count that is not zero is in bold. If the
-plan is older than its files, the verdict says so once, with a yellow
-**Stale** tag and a **Rebuild** button: the build's and the critic's
-notes are about the plan as it was built.
+plan is older than the files it was built from, the tag is a yellow
+**Stale** instead of **Ready to apply**: *The input list changed since
+the last build: rebuild before applying.* A **Rebuild** button sits
+beside it, and the build's and the critic's notes are about the plan as it
+was built. A plan with errors still reads **Blocked**, with the same
+note under it. Nothing stops you applying a stale plan, and the Apply
+screen says it beside the plan; it is the plan as it was built, without
+your edit.
 
 The number beside **Findings**, also on the panel's tab when it is
 folded away, counts the errors and warnings. It is grey at 0, yellow

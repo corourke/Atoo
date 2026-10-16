@@ -57,6 +57,12 @@ too; **show in Findings** picks them out there.
 
 - An **error** stops the write. Fix it on **Build** and rebuild.
 - **Warnings** and notes do not stop it. Read them anyway.
+- A plan older than the files it was built from, say an input list you
+  edited after the last build, is said so under the plan's line (a yellow
+  **Stale** tag and what changed), in a warning, and in the **Findings**
+  verdict, which reads **Stale** instead of **Ready to apply**. It does not
+  stop the write: apply it as it is if the edit is not meant for the desk,
+  or rebuild on **Build** step 04 first.
 
 **Options** holds two things you rarely need: **Skip the pre-flight
 verify**, and **Disconnect output sockets the plan doesn't use**. Ticking

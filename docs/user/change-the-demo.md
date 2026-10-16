@@ -68,7 +68,9 @@ is skipped, so the build leaves it out.
 3. Press **Save**.
 
 The tile now reads **17 input rows**, and **04 Plan** reads **STALE**:
-the plan no longer matches its files.
+the plan no longer matches its files. The verdict under **Findings**
+reads **STALE** too, where it said **READY TO APPLY**, with a **Rebuild**
+button.
 
 ## 4. Rebuild the plan
 

@@ -57,7 +57,9 @@ such as `AES50-A 1`). Name, Category and Type are required: until they
 are filled in they read *required* and are outlined. Leave **Patch** blank and the build chooses a
 socket and tells you which. A socket the desk does not have is refused as
 you type it. Once you change a cell, a yellow **UNSAVED CHANGES** tag
-comes up with **Discard changes** and **Save**. Press **Save**.
+comes up at the top of the step with **Discard changes** and **Save**,
+where steps 01 and 03 have theirs, and they stay there as the list
+scrolls. Press **Save**.
 
 The tile now reads **LOADED** and counts the rows: *20 input rows*.
 [Writing an input list](input-lists.md) covers the columns and stereo

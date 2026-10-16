@@ -396,7 +396,8 @@ wherever it is used. The two useful moments:
   Alt+↑ / Alt+↓. See [Build a show](build-a-show.md). On a read-only
   show, the [Demo](demo.md), the table is plain text: no boxes to type
   in, no handles or row buttons, and **Save** and **Discard changes**
-  are locked with *Locked: the Demo show is read-only* beside them.
+  (at the top of the table, as in the other editors) are locked with
+  *Locked: the Demo show is read-only* beside them.
 
 ## See also
 

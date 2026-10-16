@@ -21,10 +21,10 @@ A label in **bold** is what you see on screen; `code` is what you type.
 | Word | What it is | Where you meet it |
 |---|---|---|
 | Build | a model drafts the plan, and code checks every value | **Build plan**, **Rebuild plan**; `atoo build` ([Build a show](build-a-show.md)) |
-| Stale | the plan is older than a file it was built from | the **Stale** badge on step 04 |
+| Stale | the plan is older than a file it was built from | the **Stale** badge on step 04, and the **Stale** verdict under **Findings** |
 | Critic | a second model's opinion of the plan; it never blocks | **Run the critic pass**, **Advice**; `--critic` |
 | Finding | one line a check reports, at ERROR, WARNING or INFO | **Findings**; `verify` ([Reading findings](reading-findings.md)) |
-| Verdict | whether the plan can be written | **Ready to apply** or **Blocked** (**No plan yet** before a build); `VERIFIED:`, `APPLICABLE:` or `BLOCKED:` |
+| Verdict | whether the plan can be written | **Ready to apply**, **Stale** or **Blocked** (**No plan yet** before a build); `VERIFIED:`, `APPLICABLE:` or `BLOCKED:` |
 | To check | the errors and warnings, read before writing | **To check** under **Findings** |
 | Choices | what the build decided where your files were silent, said at INFO | **Choices** under **Findings** |
 | Build details | how the model's reply was read, at INFO | **Build details** under **Findings** |

@@ -210,7 +210,10 @@ reviewer, looking for omissions first (a channel with no DCA, a monitor
 bus with nothing in it, a name that does not match the input list) and
 at the conventions themselves. Like the build's own notes, every
 finding must quote your lines, and one whose quote is not in your files
-is marked untrusted.
+is marked untrusted. It reads each strip's starting fader and mute as the
+desk will hold them: where the plan states none, unity and unmuted, which
+is what Apply writes. So it does not point at an unset mute when your
+conventions say "unmuted", and it still does when they say "muted".
 
 **It is advisory, and it gates nothing.** Its findings are printed and
 kept in the plan, and no later stage reads them. Routing is not its job:
