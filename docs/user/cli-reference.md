@@ -778,7 +778,9 @@ A change may also EDIT something already running -- "move the sax to MON3 at
 it names. Code writes exactly the addresses those fields change, shows old -> new
 for each at INFO, and keeps every other address of the strip in the untouched
 proof. A fader moves only when the change says "fader"; a repatch of a running
-strip is marked MOVES AUDIO LIVE. Undo puts the old values back.
+strip is marked MOVES AUDIO LIVE, and switching its 48V phantom power SWITCHES 48V
+LIVE. A strip's source can be changed in its phantom, type and model, not in
+which input it is or whether it is stereo. Undo puts the old values back.
 
 plan.json is never touched: only a build writes it, and a full apply warns
 before it replaces changes that are not in it. To keep a change for good,

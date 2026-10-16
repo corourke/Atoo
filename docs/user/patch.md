@@ -240,6 +240,34 @@ the model:
   *different* preset is shown as `MODIFIED`, not written (the values on
   it are the old preset's); set the processing fields themselves, or
   rebuild.
+- **A running strip's 48V and mic model can be set; which input it is
+  cannot.** *"48V on the snare"* and *"the vocal mic is an SM58"* are edits
+  of the strip's `source.phantom` and `source.model` (and `source.type`,
+  and `source.pair_phantom` for the second half of a stereo pair). The
+  source's input, the second row of a pair and whether it is stereo say
+  which source the strip is, so a change that sets them is refused: drop
+  the channel and add the new source instead.
+- **Switching 48V on a running strip is live**, so it is said first and
+  on its own, beside a repatch (from Atoo's test desk and a stubbed
+  model):
+
+  ```
+  !! 1 PHANTOM POWER CHANGE(S) ON SOMETHING ALREADY RUNNING -- 48V is switched the moment it is written:
+  !!   SWITCHES 48V LIVE -- channel 'Snare' on ch:2: source.phantom false -> true
+  ```
+
+  It is written to the socket's own phantom address the moment you
+  confirm. No console address carries a mic model or type, so nothing
+  is written to the desk for them: it is kept (in the plan the desk's journal
+  entry holds) only when the same change writes something else, and a
+  change that is only a model writes nothing and leaves no entry; set it
+  in the input list and rebuild. A change that leaves a passive ribbon
+  microphone with 48V on is refused, because that destroys the microphone;
+  switch the 48V off in the same change:
+
+  ```
+  REFUSED          channel 'Snare' -> ch:2: the change edits it, and 'Royer R-121' is a passive ribbon microphone and the change leaves it with phantom power on -- 48V destroys a ribbon element and switching it off again does not undo the damage; set source.phantom false in the same change -- refused rather than half-written
+  ```
 - **The review shows old -> new for every field**, as an `EDITED` line, in
   the "fields changed" block of the summary, and at INFO:
   `ch:9: the change edits bus_sends: MON3 level -144 -> -10.0`.
