@@ -100,7 +100,7 @@ atoo --version
 Its first line names the copy you just installed:
 
 ```text
-atoo 0.2.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.1 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
 ```
 
 ## 6. First run: `atoo init`, then `atoo ui`
@@ -153,7 +153,7 @@ atoo ui
 ```
 
 ```text
-atoo 0.2.0 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.1 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
