@@ -299,9 +299,9 @@ on a socket that is not what the plan states (CV019), a bus that is mono or ster
 states the other (CV020), and talkback that misses a monitor mix the plan builds
 ([CV021](troubleshooting-audit.md#talkback-that-misses-one-monitor-mix-cv021-cv022)). Watch
 leaves the send level to `audit`, where CV006 compares it too. It leaves the
-filters and the EQ to `audit` as well: they are set-up values that do not
+trim, gain, filters and the EQ to `audit` as well: they are set-up values that do not
 drift mid-show, and
-[a filter that is not what the plan says](troubleshooting-audit.md#a-high-pass-hi-cut-tilt-or-eq-is-not-what-the-plan-says-cv008)
+[processing that is not what the plan says](troubleshooting-audit.md#trim-gain-a-high-pass-hi-cut-tilt-or-eq-is-not-what-the-plan-says-cv008)
 is a `--plan` finding. The compressor, a bus's or Main's EQ and a channel's
 PreSend EQ are **not** diffed. `--plan` also works with `--console`, and with
 `--show` it comes from the [show bundle](show-bundles.md).

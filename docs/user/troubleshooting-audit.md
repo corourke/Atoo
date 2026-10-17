@@ -415,12 +415,13 @@ exits `0`; in Watch it is one of the rules the show's plan adds
 ([Watching from the command line](watch.md)), and it clears when the desk is
 put back.
 
-## A high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008`
+## Trim, gain, a high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008`
 
 With `--plan`, `audit` compares the processing the plan states for a
-channel or aux with what the desk holds: the high-pass, hi-cut and tilt, and
-the EQ's bands. A filter the plan asks for is asking for it to be *on*, so a
-filter that is off is reported on its own, before its frequency.
+channel or aux with what the desk holds: the trim, balance, invert and
+head-amp gain, the high-pass, hi-cut and tilt, and the EQ's bands. A filter
+the plan asks for is asking for it to be *on*, so a filter that is off is
+reported on its own, before its frequency.
 
 ```
 $ atoo audit --state filters.state.json --plan filters.plan.json
@@ -441,6 +442,21 @@ uses when it reads a write back. A hi-cut written as 4000Hz that reads
 4012Hz is the next step, and a Q of 1.4 that reads 0.998 is ten steps away
 and is reported. The tilt moves in coarse steps (a desk reads 1.25dB and -0.25dB), so a
 plan that asks for 1.1dB is reported, with the numbers on both sides.
+
+The trim and the balance are compared within 0.5dB. The head-amp gain is a
+coarser control (as few as 20 steps on a local input, about 2.4dB each), so
+it is compared within 3dB, and it is read at the socket the strip is patched
+to, since the gain belongs to the input, not the strip:
+
+```
+$ atoo audit --state trim.state.json --plan trim.plan.json
+Audit findings: 2 warning, 2 info.
+
+[WARNING] CV008 Processing Contradicts Plan (2)
+  CH 2 "Snare": plan says trim is 0dB, live console reads 4.5dB (tolerance 0.5dB).
+  CH 2 "Snare": plan says head-amp gain on LCL 2 is 20dB, live console reads 9.5dB (tolerance 3dB).
+...
+```
 
 An EQ band is one finding naming every value that differs (frequency, gain,
 Q, and the shape of the two shelf bands); the EQ's own switch, model and mix
@@ -742,9 +758,8 @@ these, in this order:
 
 - **The plan does not state it.** The comparison covers what a plan
   states: patch, mute, fader, DCA and mute-group membership, bus sends,
-  routes to Main, and trim, balance, invert and head-amp gain. It does
-  not cover the filters, the parametric EQ or the compressor yet
-  (`atoo audit --help` names them), so a wrong EQ passes.
+  routes to Main, and trim, balance, invert, head-amp gain, the filters and
+  the EQ. It does not cover the compressor, so a wrong compressor passes.
 - **The finding was withheld.** With `--plan`, a finding about a strip
   the plan never mentions is left out, unless its rule matters on any
   desk. `S001 Findings Withheld From This Report`, at the end of the
