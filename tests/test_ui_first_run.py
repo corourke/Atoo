@@ -208,7 +208,7 @@ def test_ui_with_no_show_and_no_workspace_suggests_init(home, stub_ui_server, ca
 
 
 def test_the_page_starts_its_file_browser_in_the_workspace():
-    """The Python suite cannot run the page (CLAUDE.md, web/static): this
+    """The Python suite cannot run the page (`web/static/`): this
     is the served-asset check that the blob key is what the page reads,
     and that each no-bundle start falls back to it."""
     fastapi_testclient = require_fastapi_testclient()

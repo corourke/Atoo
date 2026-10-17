@@ -1,7 +1,7 @@
 """Preset expansion: a named channel preset, resolved INTO the plan at build
 time -- an earlier change.
 
-The design is the maintainer's, settled on an earlier change on 2026-09-21:
+The design was settled on an earlier change on 2026-09-21:
 
 - **`build` expands a named preset into the plan**, as resolved values
   carrying their provenance (which preset, which file). `apply` writes
@@ -9,7 +9,7 @@ The design is the maintainer's, settled on an earlier change on 2026-09-21:
   `preset: "Kick In"` and nothing else would be a plan that cannot be
   reviewed -- you would be approving a filename.
 - **The plan always wins over the preset**, and says so out loud when it
-  overrides one (an INFO naming both values, per CLAUDE.md).
+  overrides one (an INFO naming both values).
 - **Merge by ADDRESS, not by appending.** A preset's `eq/1g` and the
   plan's own EQ band 1 gain are the same parameter on the desk, so they
   produce ONE resolved value -- the plan's -- rather than two write
@@ -54,20 +54,20 @@ which: `eq.3g: 0` is a float knob that happens to be whole, and
 built from the evidence already in this repository, and each entry says
 which:
 
-- **map** -- `docs/reference/wing-compact-parameter-map.json`, a walk of a
+- **map** -- the Compact parameter map, a walk of a
   real Compact's own parameter descriptions (firmware 3.1): `int` -> `i`,
   `lin`/`log` -> `f`, `list` -> `s`. This is the console describing itself,
   and it is the primary source.
 - **JSON** -- the value types in four WING snapshots
   (`tests/fixtures/console-runs/Initialized-Compact.snap`,
   `tests/fixtures/Initialized-Full.snap`, `tests/fixtures/console-runs/Church-Full.snap`,
-  `archive/examples/console-runs/session-2026-09-23-0928/A8-initialized.snap`) and
+  and the A8 initialized snapshot) and
   in every `.chn` in `tests/fixtures/presets/` and
   `tests/fixtures/channel_presets/`. A bool agrees with `i`; a float or a whole
   number agrees with `f`; a string agrees with `s`.
 - **hw** -- written by `apply` and read back as a match on a real desk:
-  A3 (`archive/examples/console-runs/2026-09-21-2104/A3-eq-journal.json`) for the
-  EQ and PreSend EQ leaves, A1 (`2026-09-21-2100/A1-apply-journal.json`)
+  A3 (the EQ journal of 2026-09-21) for the
+  EQ and PreSend EQ leaves, A1 (the apply journal of 2026-09-21)
   for the high-pass.
 
 `confirmed=True` means the map and every JSON type seen agree.
@@ -319,7 +319,7 @@ def ordered(addresses) -> list[str]:
 # that are neither a selector nor a switch (`write_order` VALUE): the
 # `/on` of a node is not reinterpreted by a model change, and a second
 # selector in the same node is ordered by its own class. The parameter map
-# (`docs/reference/wing-compact-parameter-map.md`, "Instance variance")
+# ("Instance variance")
 # records per-model variants of exactly these: `dyn.thr/att/ratio/rel/
 # hld/in/out`, `gate.thr` and `in/set.dly` -- every one inside a family
 # above. It also records `/mtx/{n}/dly.dly`, governed by `/mtx/{n}/dly.
@@ -529,7 +529,7 @@ def expand_channel(channel: dict, library) -> list[Diagnostic]:
 
     bank = channel.get("bank", "ch")
     # Keyed by name, as every other check is: a number alone does not
-    # say whether it is ch 2 or aux 2 (the maintainer, 2026-10-09).
+    # say whether it is ch 2 or aux 2.
     where = f"channels[{channel.get('name') or (channel.get('bank', 'ch') + ' ' + str(channel.get('channel', '?')))}]"
     label = _strip_label(channel)
     findings: list[Diagnostic] = []

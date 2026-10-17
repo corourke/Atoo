@@ -10,7 +10,7 @@ all three, and the generator built none ("not in the input list ...
 nothing invented"). Now the resolve step writes them as a JSON block and
 code builds them.
 
-Every file read here is frozen under `tests/fixtures/` (CLAUDE.md):
+Every file read here is frozen under `tests/fixtures/`:
 the conventions and resolved conventions as of c04dd25, that resolved file
 with the block a resolve call now writes appended, sixpiece's input list
 and instructions, and its reply reconstructed from the committed plan.

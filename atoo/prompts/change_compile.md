@@ -9,7 +9,7 @@
        {schema}    the plan format, from plan_schema.py. The objects a change
                    set adds are those same shapes.
 
-     Words (the maintainer, 2026-09-26): what the engineer types is a CHANGE; what
+     Words (2026-09-26): what the engineer types is a CHANGE; what
      this prompt asks for is the change's CHANGE SET. "Patch" in the plan
      format means socket routing, and nothing else -- never call the change
      set "the patch".
@@ -35,8 +35,11 @@ the desk. Everything you leave out stays exactly as it is on the desk.
 
 Emit exactly one JSON object, no prose and no fence:
 
-  name     a short name for this change, a few words ("Horns for tonight",
-           "Lose the MD vocal"). It names the change in the journal.
+  name     a short name for this change, a few words, that states what it
+           does ("Add Trumpet, Sax and Trombone on LCL 21-23", "Lose the MD
+           vocal"). It names the change in the journal. Do not state or
+           imply when or why the change is wanted: no time, occasion or
+           reason, only the change.
   add      {"channels": [...], "busses": {...}, "dcas": {...},
             "mute_groups": {...}, "outputs": {...}}
            Each entry is the SAME shape as in the plan format above: a
@@ -94,10 +97,12 @@ this change is the only new source of inputs.
                                      entry per horn channel)
      "move the bass to A 30"        {"patch": {"group": "A", "sockets": [30],
                                      "stated": true}}
+     "48V on the sax"               {"source.phantom": true}
+     "the vocal mic is an SM58"     {"source.model": "SM58"}
    A list is replaced whole, so copy it from the desk plan and change only
    what was asked. NEVER set `fader` unless the change says "fader" (or
    "mute" for `fader.muted`) -- a send level is not the fader. Never set
-   `channel`, `bank`, `source.input` or an `index`, and never rename a bus,
+   `channel`, `bank`, `source.input`, `source.stereo` or an `index`, and never rename a bus,
    DCA or mute group (its name is how everything refers to it). Never put a
    changed copy of a running object in `add`: it would be refused.
 
@@ -118,6 +123,10 @@ this change is the only new source of inputs.
 7. DROPPING. "Lose the MD vocal", "the keyboard player went home": name the
    channel(s) in `drop.channels`. The code returns each strip to free only
    if the desk still reads as the strip the show built.
+   MOVING. "Move Playback to Aux 8" is a drop and an add: name the channel
+   in `drop.channels`, and add it again on its new strip with the same name
+   and source, and the same sockets unless the change names others. The
+   code returns the old strip to free and builds the new one.
 
 8. Names are at most 16 characters, because that is what the console shows.
 

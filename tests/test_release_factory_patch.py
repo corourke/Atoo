@@ -1,4 +1,4 @@
-"""What a released strip's input patch goes back to (the maintainer, 2026-09-24).
+"""What a released strip's input patch goes back to.
 
 At the Compact session of 2026-09-24 a channel returned to free did not
 look like an initialized one: *"A truly initialized channel 19 would be

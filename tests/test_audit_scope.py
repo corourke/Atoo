@@ -396,7 +396,8 @@ def _stated_bus_fader_case():
     })
     plan = {
         "channels": [_channel(channel=1)],
-        "busses": {"MON1": {"index": 1, "fader": {"fader_db": -144}}},
+        "busses": {"MON1": {"index": 1, "fader": {"fader_db": -144},
+                            "destination": {"type": "main", "index": 1}}},
     }
     return state, plan
 
@@ -404,7 +405,7 @@ def _stated_bus_fader_case():
 def test_a_bus_fader_the_plan_states_stands_down_now_that_sp_cv011_diffs_it():
     """An earlier change, the inversion of a test that used to assert the gap.
 
-    The "because" in the general rule is load-bearing, and until #161 it
+    The "because" in the general rule is load-bearing, and until an earlier change it
     was unsatisfied for a bus: a plan states a bus fader, `diff_against_plan`
     walked only `plan["channels"]`, so standing L002 down on a bus would
     have meant nobody checked that fader at all. `CV011 Bus Fader Level
@@ -436,7 +437,7 @@ def test_the_bus_fader_sp_l002_stopped_reporting_is_the_one_sp_cv011_picks_up():
 
 
 def test_a_dca_fader_the_plan_states_stands_down_now_that_sp_cv013_diffs_it():
-    """The second half of #161, and the one that needed a schema change
+    """The second half, and the one that needed a schema change
     first: a plan had nowhere to state a DCA fader at all, so CH002
     could never stand down -- seven of the A5 run's surviving warnings
     were DCAs at the floor on a desk set up exactly as its conventions
@@ -463,7 +464,7 @@ def test_a_dca_fader_the_plan_states_stands_down_now_that_sp_cv013_diffs_it():
 
 
 def test_a_dca_fader_the_plan_does_not_state_is_still_reported():
-    """The gap #161 closed is a stated fader. A plan that declares a DCA
+    """The gap an earlier change closed is a stated fader. A plan that declares a DCA
     and says nothing about its fader states nothing, so CH002 keeps
     its voice -- which is the whole reason `plan_scope` reports stated
     parameters rather than plan membership."""

@@ -8,6 +8,7 @@ never writes over a file you have changed.
 |---|---|
 | `conventions.md` | Your **house conventions**: how you set up a desk, the same for every show. Plain English under fixed headings. `~/.atoo.config` names it as your default, so every build reads it. It starts as a working band/club house style that states the usual choices (stereo pairs, monitor widths, colours, presets by source), so a first build has little to guess. Start by making it describe your own house style. It names channel presets by source ("Kick In", "Vocal"...), the starter presets in `presets/`: when you replace a preset with your own, use its name here, or a build says it is not there and builds the strip without it. |
 | `presets/` | Your **preset library**: WING channel presets (`.chn`). Name one in an input list's `preset` column, or in your conventions, and a build puts its processing on that channel. `~/.atoo.config` names this folder as your preset library. It starts with the starter set: twenty channel presets, one per common source, that the starter conventions name, plus three bus presets (`.bus`): "Mix Bus", a compressor for every mix bus, and two that put a reverb on the FX bus the conventions give them to. Export your own from the desk into it, under the names your conventions use; `atoo presets` lists what each is called. |
+| `audit-demo/` | Three small, hand-built console captures for trying `atoo audit` and `atoo watch` with no console attached: `audit_demo_state.json` (a small rig with faults seeded on purpose), `audit_demo_state_before.json` (the same rig with every fault fixed) and `audit_demo_plan.json` (a plan to audit against). `atoo audit --help` and `atoo watch --help` name them. |
 
 There is no show here yet: which show you start with is yours to choose.
 To see a finished one first, `atoo ui`'s **Try the demo show** opens
@@ -31,4 +32,4 @@ Build's four steps.
 
 A build calls an AI model, which you choose with environment variables
 before starting `atoo ui`. See the user documentation's "Setting up
-Atoo" page (`docs/user/configuration.md`) for how.
+Atoo" page (https://docs.atoo.app/getting-started/configuration/) for how.

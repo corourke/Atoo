@@ -7,7 +7,7 @@ from atoo.render import render_plan
 FIXTURES = Path(__file__).parent / "fixtures"
 
 # These tests used to compile a plan on the spot to have something to
-# render. The deterministic compile path was retired in #29, so the exact
+# render. The deterministic compile path was retired, so the exact
 # plans (and the warning lists that went with them) are checked in --
 # generated from the compiler at `origin/main` immediately before deletion,
 # so every assertion here is still made against the same bytes. `render.py`

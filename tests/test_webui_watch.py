@@ -1,6 +1,6 @@
 """An earlier change, UI phase 6: Watch moves into the shell, and the shell moves to `/`.
 
-Three halves, and the third is the one `CLAUDE.md` warns about:
+Three halves, and the third is the one that is easy to forget:
 
 * **The routes.** `/` is the shell; `/app` (where it lived) redirects
   there; the old Watch page's `index.html` and `app.js` are gone.
@@ -236,7 +236,7 @@ def test_every_id_watch_js_reads_is_on_the_served_page(client):
     ids = set(re.findall(r'\bel\("([^"]+)"\)', js))
     # The regex found the lookups at all. 20, not 25: the connect form's
     # IP/port boxes and their two seed tags went when the console became
-    # the bundle bar's alone (the maintainer, 2026-09-24), and one read-only
+    # the bundle bar's alone, and one read-only
     # readout came in their place.
     assert len(ids) >= 20, ids
     missing = sorted(i for i in ids if f'id="{i}"' not in page)
@@ -296,7 +296,14 @@ def test_the_relational_fields_offer_only_the_two_equality_operators(client):
     assert set(_js_array(js, "WC_BOOL_OPERATORS")) == wc._BOOL_COMPATIBLE_OPERATORS
     assert set(_js_array(js, "WC_FIELDS")) == wc._ALLOWED_FIELDS
     assert set(_js_array(js, "WC_OPERATORS")) == set(wc._OPERATORS)
-    assert 'const WC_EQUALITY_ONLY_FIELDS = ["muted"].concat(WC_TEXT_FIELDS);' in js
+    assert set(_js_array(js, "WC_BOOL_FIELDS")) == wc._BOOLEAN_FIELDS
+    assert set(_js_array(js, "WC_SEND_FIELDS")) == wc._SEND_FIELDS
+    assert _js_array(js, "WC_SEND_MODES") == list(wc._SEND_MODES)
+    assert ('const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(WC_TEXT_FIELDS, ["send_mode"]);'
+            in js)
+    # ... and that is exactly the set the loader holds to `==` and `!=`.
+    assert (set(_js_array(js, "WC_BOOL_FIELDS")) | set(_js_array(js, "WC_TEXT_FIELDS"))
+            | {"send_mode"}) == wc._BOOLEAN_FIELDS | wc._EQUALITY_ONLY_FIELDS
     # The narrowing itself, at the two places it happens: when a row is
     # drawn, and when its field changes under an ordering operator.
     assert ("const opOptions = WC_EQUALITY_ONLY_FIELDS.includes(cond.field)\n"
@@ -325,7 +332,8 @@ def test_watch_js_rereads_watch_json_on_entering_watch_but_never_over_edits(clie
     js = client.get("/static/watch.js").text
     shell = client.get("/static/shell.js").text
     assert 'SP.onModeChange((mode) => { if (mode === "watch") wcRefresh(); });' in js
-    assert "SP.onBundleChange(() => wcRefresh());" in js
+    bundle_change = js[js.index("SP.onBundleChange(() => {"):]
+    assert "wcRefresh();" in bundle_change[:bundle_change.index("});")]
     assert "onModeChange: (fn) =>" in shell
     refresh = js[js.index("async function wcRefresh()"):js.index("async function wcInit()")]
     dirty = refresh.index("if (wcDirty) {")
@@ -442,8 +450,10 @@ def test_a_stopped_session_replays_nothing_to_a_new_page(client):
     Every wait below ends on a frame that arrives with or without the
     fix (a status on connect, or the next session's baseline), so a
     regression fails here rather than hanging the suite."""
-    running = {"type": "status", "running": True, "label": "Demo", "error": None}
-    stopped = {"type": "status", "running": False, "label": "Demo", "error": None}
+    running = {"type": "status", "running": True, "label": "Demo", "error": None,
+               "virtual_soundcheck": False}
+    stopped = {"type": "status", "running": False, "label": "Demo", "error": None,
+               "virtual_soundcheck": False}
 
     def until_baseline(ws):
         frames = []
@@ -489,7 +499,7 @@ def test_watch_js_does_not_take_an_event_as_proof_of_running(client):
 
 
 # ======================================================================
-# Scoped names (`BUS Drums`), resolved once at Start (the maintainer, 2026-10-01)
+# Scoped names (`BUS Drums`), resolved once at Start
 # ======================================================================
 
 
@@ -565,7 +575,7 @@ def test_console_start_reads_main_names_only_when_a_scoped_main_needs_them(
 
 
 # ======================================================================
-# The maintainer, 2026-10-01: a saved list reaches a running watch; Start and
+# a saved list reaches a running watch; Start and
 # Stop leave nothing of the last session behind; the Watch page has no
 # findings dock; findings sort by severity, newest first.
 # ======================================================================
@@ -705,8 +715,8 @@ def test_last_updated_ages_and_turns_stale_when_readings_stop(client):
     start = js[js.index('startBtn.addEventListener("click"'):js.index('stopBtn.addEventListener("click"')]
     reset = start[:start.index('fetch("/api/watch/start"')]
     assert "lastReadingAt = null;" in reset and "waitingSince = Date.now();" in reset
-    css = client.get("/static/styles.css").text
-    assert "#last-updated.is-stale" in css
+    # Stale, the label is a warning state (ui-style.md §6).
+    assert '"state is-warn"' in render
 
 
 def test_a_clearing_row_collapses_rather_than_leaving_a_blank_gap(client):

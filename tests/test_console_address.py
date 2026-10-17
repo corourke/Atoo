@@ -20,10 +20,12 @@ here rather than described:
 
 from __future__ import annotations
 
+import socket
 from pathlib import Path
 
 import pytest
 
+from atoo import cli as cli_module
 from atoo.cli import main
 from atoo.console import OscReply
 
@@ -271,9 +273,9 @@ def test_build_is_untouched_by_the_console_environment(connected, fake_home, mon
 
 # ------------------------------------------- the Watch page's field
 #
-# #128 shipped the resolution for the CLI and deliberately left the
+# An earlier change shipped the resolution for the CLI and deliberately left the
 # browser out, which made `atoo ui` the one way to reach a console
-# that still made you retype the address. #137 closes that, and the trap
+# that still made you retype the address. An earlier change closes that, and the trap
 # it has to walk past is the one `test_the_ui_port_is_not_a_console_port`
 # above guards: `ui`'s `--port` is the WEB SERVER's. So `ui_cmd` calls
 # `resolve_console_defaults()` -- which touches no args at all -- rather
@@ -317,7 +319,7 @@ def test_resolve_console_defaults_with_nothing_set_has_nothing_to_announce(
 def test_the_environment_still_beats_the_config_file_for_the_page(
         connected, fake_home, monkeypatch):
     """Same precedence the CLI gets, from the same function -- this is
-    the whole reason #137 reuses it instead of writing a second copy."""
+    the whole reason an earlier change reuses it instead of writing a second copy."""
     monkeypatch.setenv("ATOO_CONSOLE", "192.0.2.17")
     _write_config(fake_home, '[console]\ndefault = "192.0.2.18"\n')
     from atoo.cli import resolve_console_defaults
@@ -327,7 +329,7 @@ def test_the_environment_still_beats_the_config_file_for_the_page(
 
 def test_ui_seeds_the_page_without_moving_its_own_web_port(
         connected, fake_home, monkeypatch, stub_ui_server, capsys):
-    """The #137 half of `test_the_ui_port_is_not_a_console_port`: with a
+    """The half of `test_the_ui_port_is_not_a_console_port`: with a
     console port in the environment, `atoo ui` still serves on 8420
     and hands the console port to the PAGE. A resolver that mutated args
     here would have served the UI on 9999 -- somewhere nobody is
@@ -341,16 +343,22 @@ def test_ui_seeds_the_page_without_moving_its_own_web_port(
     about."""
     monkeypatch.setenv("ATOO_CONSOLE", "192.0.2.17")
     monkeypatch.setenv("ATOO_CONSOLE_PORT", "9999")
+    # The default web port, moved to a free one: a machine that is already
+    # serving the real 8420 (an Atoo UI left open) must not fail this test.
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        default_port = probe.getsockname()[1]
+    monkeypatch.setattr(cli_module, "UI_DEFAULT_PORT", default_port)
 
     assert main(["ui"]) == 0
     assert len(stub_ui_server) == 1
     app, (_host, served_port) = stub_ui_server[0]
-    assert served_port == 8420
+    assert served_port == default_port != 9999
     assert app.state.console_defaults["address"] == "192.0.2.17"
     assert app.state.console_defaults["port"] == 9999
 
     out = capsys.readouterr().out
-    assert "http://127.0.0.1:8420" in out
+    assert f"http://127.0.0.1:{default_port}" in out
     # It announces in the terminal too, not only on the page -- the
     # launching shell is where a stale `export` is likeliest to be spotted.
     assert "192.0.2.17" in out and "ATOO_CONSOLE" in out

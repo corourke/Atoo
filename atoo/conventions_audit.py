@@ -1,6 +1,6 @@
 """FR-6.2, folded into the build: problems in the conventions TEXT itself.
 
-The maintainer, 2026-09-25: no separate pre-compile stage. The audit runs during
+No separate pre-compile stage. The audit runs during
 `atoo build`, over the COMBINATION of the house conventions and the
 show's `instructions.md`, because that combination is what the show is
 built from. Three producers, one rule for what they may claim:
@@ -33,8 +33,8 @@ and says so -- kept rather than dropped, so a real problem described with
 a sloppy quote is not silently lost, but never at a severity that asks
 for action.
 
-Grading follows CLAUDE.md's "an error of judgement is not an error of
-patching": a conflict the plan resolved by picking one reading is INFO --
+Grading follows the principle that an error of judgement is not an error of
+patching: a conflict the plan resolved by picking one reading is INFO --
 a choice was made, and the engineer settles it in his text next time.
 """
 

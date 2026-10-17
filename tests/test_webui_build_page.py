@@ -4,12 +4,10 @@ changed, on step 04 (the browser half).
 Two halves, as in `test_webui_plan_table.py`:
 
 * **What the server adds.** Each change a rebuild made that nobody asked
-  for is one WARNING in the Findings panel (the maintainer, 2026-10-13: it
+  for is one WARNING in the Findings panel (it
   counts under "to check", and never blocks Apply), and the plan payload
   says when the plan it replaced was built.
-* **The served assets.** The Python suite cannot see the browser
-  (CLAUDE.md, "A rename that crosses into atoo/web/static/ is invisible
-  to the test suite"), so the ids, classes and contract names the page
+* **The served assets.** The Python suite cannot see the browser, so the ids, classes and contract names the page
   relies on are pinned here. The page itself was driven in Chromium.
 
 The two plans are the frozen pair under `tests/fixtures/rebuild_diff/`
@@ -123,7 +121,7 @@ def _panel(html: str, panel_id: str) -> str:
 
 
 def test_every_build_step_puts_its_block_headers_outside_the_box(client):
-    """The maintainer, 2026-10-13: a block's header sits outside and above its
+    """A block's header sits outside and above its
     box; nothing is titled inside a border. The step heads went: the
     first block's header names the step."""
     html = client.get("/static/shell.html").text
@@ -242,18 +240,21 @@ def test_styles_carry_the_block_rule_and_the_type_floor(client):
                      ".section-head h3", ".section", "details.fold", "details.fold-details",
                      ".state", ".state.is-ok", ".state.is-warn", ".state.is-live", ".sev",
                      ".sev.sev-error", ".lock-reason", ".empty", ".chg-list", ".ct tr.row-unasked",
-                     ".build-body .btn:disabled"):
+                     ".btn:disabled"):
         assert re.search(re.escape(selector) + r"(?![\w-])", css), selector
     block = css[css.index("/* ---- Build: blocks and sections"):]
     # Nora's §3: five sizes, nothing under 11px, in what this change added.
     sizes = {float(s) for s in re.findall(r"font(?:-size)?:[^;]*?(\d+(?:\.\d+)?)px", block)}
     assert sizes and min(sizes) >= 11, sizes
-    assert sizes <= {11, 12, 13, 14, 16}, sizes
+    # ...and §2's one exception: the Watch verdict word, 22/800 caps, in its own rule and nowhere else.
+    assert sizes - {22} <= {11, 12, 13, 14, 16}, sizes
+    assert re.findall(r"([^{}]*)\{[^}]*font-size: 22px", block) == ["\n.verdict-word "]
     assert re.search(r"\.block-head h2 \{[^}]*font-size: 16px", block)
     assert re.search(r"\.notation \{[^}]*font-size: 11px", block)
     assert re.search(r"\.section-head h3 \{[^}]*font-size: 11px", block)
-    # The locked look is no hue and a dashed edge, never opacity alone.
-    assert re.search(r"\.build-body \.btn:disabled \{[^}]*border: 1px dashed var\(--border-strong\)", block)
+    # The locked look is no hue and a dashed edge, never opacity alone --
+    # app-wide since an earlier change (tests/test_webui.py covers the rule).
+    assert re.search(r"\.btn:disabled, [^{]*\{[^}]*border: 1px dashed var\(--border-strong\)", block)
     for token in ("--border-strong", "--text-off"):
         assert css.count(token + ":") == 3, token  # dark, light by preference, light by choice
 
@@ -332,14 +333,16 @@ def test_the_demo_build_button_is_locked_not_only_labelled(client):
 
 def test_save_and_discard_are_hidden_until_there_is_something_to_save(client):
     """Nora's review (ui-style.md §4): a Save/Discard pair with nothing to
-    save is hidden, not locked, on steps 02 and 04 as on 01 and 03."""
+    save is hidden, not locked, on steps 02 and 04 as on 01 and 03 --
+    except on a read-only show, where step 02's pair stays up, locked,
+    with the reason beside it."""
     html = client.get("/static/shell.html").text
     for element_id in ("input-discard-btn", "input-save-btn", "plan-input-discard-btn",
                        "plan-input-save-btn"):
         tag = re.search(rf'<button [^>]*id="{element_id}"[^>]*>', html).group(0)
         assert " hidden" in tag, element_id
     shell = client.get("/static/shell.js").text
-    assert "if (node) node.hidden = !dirty;" in shell
+    assert "if (node) node.hidden = !inputListLoaded || (!dirty && !locked);" in shell
     assert "if (node) node.hidden = !dirty || !planEditable;" in shell
     js = client.get("/static/setup.js").text
     assert "if (node) node.hidden = !editable || !dirty;" in js

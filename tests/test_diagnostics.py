@@ -178,7 +178,7 @@ def test_sort_is_stable_and_total_so_rendered_output_is_diffable():
 
 
 def test_summary_line_counts_by_severity_not_as_one_total():
-    """A count was what hid #27's two plan-changing drops inside 25."""
+    """A count was what hid the two plan-changing drops inside 25."""
     items = [
         Diagnostic(Severity.ERROR, "a", "m"),
         Diagnostic(Severity.WARNING, "b", "m"),
@@ -237,7 +237,7 @@ def test_the_four_kinds_from_the_issue_render_distinguishably():
 
     The limitation is a warning by severity (the maintainer's call), so what has
     to distinguish it is the tracking-issue line -- and that is exactly
-    what the pre-#18 output had no way to say.
+    what the older output had no way to say.
     """
     text = render([
         Diagnostic(Severity.ERROR, "dca.member-category-unknown",
@@ -338,8 +338,8 @@ def test_render_is_deterministic_for_the_same_input():
 # --------------------------------------------------------------------------
 
 def test_every_migrated_layer_produces_the_same_class():
-    """#29 retired `conventions.py` and `ai_conventions.py`, so two of the
-    five aliases #18 unified are gone with the modules that defined them.
+    """An earlier change retired `conventions.py` and `ai_conventions.py`, so two of the
+    five aliases an earlier change unified are gone with the modules that defined them.
     The ones that survive still have to be the one class."""
     from atoo import audit, generate, verify_plan
     for alias in (audit.Finding, verify_plan.Finding, generate.CriticFinding):

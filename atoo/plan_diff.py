@@ -25,7 +25,7 @@ bookkeeping -- a reworded explanation is not a change to the desk), and a
 preset's expanded values, which are compared as the preset file they come
 from (its name and sha256), not leaf by leaf.
 
-## Grading (CLAUDE.md: "an error of judgement is not an error of patching")
+## Grading (an error of judgement is not an error of patching)
 
 A change is **INFO** when something the strip is made from changed:
 

@@ -128,7 +128,7 @@ def _haiku_readers(monkeypatch) -> None:
 
 
 def test_defaults_every_role_on_sonnet_5_5(wire, tmp_path, capsys):
-    """The maintainer, 2026-10-01: "Use Sonnet 5.5 medium for all stages." Every
+    """"Use Sonnet 5.5 medium for all stages." Every
     role on Sonnet 5.5 at `medium`, so the by-role line has nothing to say."""
     meta = _build(tmp_path)
     assert set(_models(wire).values()) == {"claude-sonnet-5-5"}

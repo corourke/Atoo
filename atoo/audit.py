@@ -1,14 +1,9 @@
 """FR-4/FR-5 proof of concept: audit a console's *live* state against
 deterministic structural rules, and trace a signal path across it.
 
-Prompted by Wing Tools' Snapshot Linter (`docs/product/prior-art.md`'s
-Wing Tools entry) -- a 78-rule deterministic engine, published at their
-own `/linter-rules` page, that lints a snapshot *file* or a partial,
-server-dictated live read. This module is Atoo's own answer, built
-against the console itself rather than an exported file, and grounded
-only in addresses this project has independently confirmed
-(`docs/reference/wing-console-model.md`, `docs/developer/requirements.md`
-FR-1.5) -- never in a channel's name text. FR-4.3 makes that a
+A deterministic rule engine built against the console itself rather than
+an exported file or a partial read, and grounded only in addresses this
+project has independently confirmed (FR-1.5) -- never in a channel's name text. FR-4.3 makes that a
 requirement, not a style choice: "Atoo's audit must not need to
 guess what a channel *is*." A rule that would need to infer "this is
 probably a kick mic" from a name string doesn't belong here; every rule
@@ -19,14 +14,14 @@ substrate, `ConsoleState` -- a flat OSC address -> value mapping. It can
 come from a live console (`read_console_state`, over `atoo.console`)
 or be built by hand / loaded from a JSON fixture, which is how a novice
 operator can try this against a worked example with no console attached
-at all (`docs/user/demo/audit-demo/audit_demo_state.json`, `docs/user/audit.md`).
+at all (`starter/audit-demo/audit_demo_state.json`, which `atoo init` copies; `docs/user/audit.md`).
 
 **A live read is the slowest thing this project does**, and an earlier change is
 what that cost: 6,032 serial OSC round trips for a WING Compact reading
 its own panel, printing nothing at all until it finished. Two things
 came out of it, and `console_read_plan` is the hinge of both -- it builds
 the whole address list *before* anything is fetched. A read that knows
-its own total can report `read 1200/6143 (19%)` while it works
+its own total can report `read 1200/6195 (19%)` while it works
 (`atoo.progress`), and a read that has its addresses in hand can
 fetch them by node instead of by leaf (`read_console_state(bulk=True)`,
 323 requests instead of 6,143 on a Compact, pipelined eight in flight
@@ -50,21 +45,23 @@ added every insert point and what each FX slot holds (E001-003), and
 6,113 since its comms half added `/cfg/talk/assign` (T001), 6,114
 since the global alternate switch `/io/altsw` (C005), and
 6,138 since an earlier change read each phantom-capable socket's width
-(`/io/in/{grp}/{n}/mode`, C001), and 6,143
-read three AES50 link states and two monitor sources. What is left is the real
+(`/io/in/{grp}/{n}/mode`, C001), 6,143
+read three AES50 link states and two monitor sources, 6,167 since each
+local socket's own mute (`/io/in/{grp}/{n}/mute`, C007), and 6,195 since the width of
+each bus, Main and Matrix (`busmono`, R011 and CV020). What is left is the real
 work, and A11 measured that too: **~39s per-leaf, ~4s by node dump** on 2026-09-22, and
 118.8s against 4.8s on 2026-09-24, the run that made the node dump the default. Those 320 were never
 values any rule could have had -- nothing is being read less thoroughly,
-which is the distinction that separates this from #160.
+which is the distinction that matters.
 
 **Proof of concept, not FR-4/FR-5 in full.** Twenty-one rules across
-seven categories, not Wing Tools' seventy-eight across six -- deliberately
-narrower, since every rule here has to be defensible from a confirmed
-address rather than a plausible guess. The sixth, `effects`, is the first half: E001-003 read each strip's insert points and what
-each FX slot holds (`console_facts.INSERT_POINTS`). The seventh,
+seven categories -- deliberately narrow, since every rule here has to be
+defensible from a confirmed address rather than a plausible guess. The
+sixth, `effects`, is the first half: E001-003 read each strip's
+insert points and what each FX slot holds (`console_facts.INSERT_POINTS`). The seventh,
 `communications`, is its other half: T001, talkback assigned to a
 strip and routed nowhere (`console_facts.TALK_*`). Listenback is left
-out on purpose -- see `docs/developer/audit-rules.md`'s "Communications";
+out on purpose (nothing confirmed can tell it from a monitor mix);
 talkback sharing a strip with a band input needs the plan, so it is
 CV014 in the conventions diff.
 
@@ -80,10 +77,11 @@ players, so without them every strip on an untouched desk reads as in use
 and this rule set reports 97 findings on a board nobody has plugged
 anything into. With them it reports **none at all**.
 
-**And "named" means named where the desk puts a name**. A WING strip is linked to its source socket out of the box
+**And "named" means named where the desk puts a name**. A WING strip is
+*linked to its source socket out of the box
 (`clink`, protocol PDF p.48), so a name a human types on the channel
 screen lands on `/io/in/{grp}/{n}/name` and the strip's own `name` stays
-empty. The maintainer named channel 20 "Podium" by hand and `/ch/20/name` read
+empty. A channel 20 named "Podium" by hand left `/ch/20/name` reading
 blank; sitting on its factory patch, the strip classified as *free*.
 `is_in_use()` reads the socket too now -- discounting the labels the desk
 ships with, `'USB 1/2'` on USB and `'2TR'` on PLAY, or an untouched
@@ -123,18 +121,16 @@ convention" instead of just a structural fact) is now PARTIALLY
 covered, not done: `diff_against_plan()` compares eight plan-channel
 fields that already have a direct live-state counterpart -- mute,
 fader level, DCA membership, mute-group membership, patch, bus sends
-(on/level/mode), direct-to-Main routes, and a narrow slice of
-processing (trim, balance, invert, head-amp gain) -- plus, a bus's and a DCA's own fader and mute, which nothing compared at
-all until `plan_schema.DCA_SCHEMA` gave a DCA somewhere to state one.
-Deliberately still
-NOT diffed: `processing`'s filter family (`hpf_hz`/`hi_cut_hz`/
-`tilt_db`, the `{base}/flt/*` addresses -- the unconfirmed
-GET-reply shape makes them too risky to diff, see `diff_against_plan`'s
-own comment), the parametric EQ (an earlier change gave it a schema and
-apply-time writes, but `eq.{n}f`/`.q` are the same log-type parameters
-as `flt.lcf`, so the same unconfirmed-readback doubt applies), and the
-compressor (no schema yet -- see
-docs/developer/audit-rules.md).
+(on/level/mode), direct-to-Main routes, and a channel's or aux's processing
+(trim, balance, invert, head-amp gain, and the high-pass, hi-cut, tilt and
+EQ the plan states) -- plus a bus's and a DCA's own fader and mute,
+which nothing compared at all until `plan_schema.DCA_SCHEMA`
+gave a DCA somewhere to state one. The filters and the EQ are `log`
+controls, compared with `apply`'s own readback tolerance (2%) rather than the
+fader's half a decibel, and read only when `audit --plan` states them
+(`plan_processing_read_addresses`). Deliberately still NOT diffed: the
+compressor (no schema), a bus's, Main's or Matrix's EQ, and a channel's
+PreSend EQ.
 """
 
 from __future__ import annotations
@@ -159,9 +155,12 @@ from typing import Callable, Mapping
 # module's own audit fixtures don't have to hold, so pulling in the
 # entire write path here would make an audit crash on exactly the kind
 # of partial/unresolved plan an audit is often run against.
-from atoo import console_facts, diagnostics
+from atoo import console_facts, diagnostics, inferred
 from atoo.diagnostics import Diagnostic, Severity
-from atoo.apply import _SEND_MODE_TO_WING, _VPH_CAPABLE_GROUPS, _declared_output_patches
+from atoo.apply import (
+    _SEND_MODE_TO_WING, _VPH_CAPABLE_GROUPS, _channel_processing_targets, _declared_output_patches,
+    _values_equal, eq_band_leaves,
+)
 from atoo.input_list import format_socket
 # "which console is this plan for" has one answer, `verify_plan`'s, and an
 # audit given a plan needs the same one: the factory-patch table is keyed
@@ -177,13 +176,12 @@ FADER_FLOOR_DB = -144.0
 
 # A send left "on" but pulled to within 44dB of the floor without actually
 # being at the floor reads as forgotten, not a deliberate near-silent mix
-# choice -- the same shape as Wing Tools' W004 (a threshold this project
-# chose independently; nothing here reuses their implementation, only the
-# same "on but essentially dead" idea their rationale names).
+# choice. The threshold is this project's own: the idea is a send that is
+# "on" but essentially dead.
 NEAR_SILENT_THRESHOLD_DB = -100.0
 
-# CH002's "low". `docs/developer/audit-rules.md`: *"A DCA's fader is set
-# low (<= -20dB) while it controls at least one active member."* It was
+# CH002's "low": a DCA's fader is set
+# low (<= -20dB) while it controls at least one active member. It was
 # the floor (-144dB) until 2026-09-23, which only ever caught a DCA pulled
 # all the way off; a DCA sitting 20dB down is already inaudible in the mix
 # it controls, and the members underneath it look perfectly normal. Named
@@ -218,9 +216,9 @@ DCA_LOW_FADER_DB = -20.0
 # `console_facts.FACTORY_INPUT_PATCHES`** -- the module where measured
 # hardware facts belong, beside the panel counts. It used to be the
 # `LCL n` identity written into this file, which left the two auxes above
-# reading as in use on an untouched Compact; the maintainer, 2026-09-23, chose to
-# broaden the rule rather than name a third default: *"Go with your
-# recommended B"* -- any factory-default patch, whatever the source, so a
+# reading as in use on an untouched Compact; the rule was broadened
+# (2026-09-23) rather than naming a third default: any factory-default
+# patch, whatever the source, so a
 # Full or a Rack with different defaults cannot bring the noise back.
 
 # The Main a factory WING routes every strip and half its busses to. A
@@ -240,8 +238,8 @@ class RuleScope(str, Enum):
     reports what it finds. That is right with no plan in hand, and wrong
     the moment there is one: an INFO about an aux strip belonging to no
     DCA, on a strip the show never mentions, is a claim about somebody
-    else's mix. The maintainer, 2026-09-22, from the A5 run: *"We don't need to
-    report on channels that are not in the plan."*
+    else's mix. From the A5 run: there is no need to
+    report on channels that are not in the plan.
 
     A `str` mixin for the same reason `Severity` is one -- `RuleScope.
     HAZARD == "hazard"` is True, and `json.dumps` needs no encoder.
@@ -336,6 +334,13 @@ class ConsoleState:
     # is what `watch.watch` turns into the one INFO, W001, that tells
     # the engineer a rename waits for the next refresh.
     name_refresh: int | None = None
+    # The strips whose clip ERROR stands, and what the clip
+    # monitor says about itself. Not values either -- they come from the
+    # console's meter stream (`atoo.metering`), not from a read. Empty and
+    # None for every state but a live watch's, so `audit` and every
+    # captured state are untouched, and L003 says nothing about them.
+    clips: tuple = ()
+    clip_status: object = None
 
     def get(self, address: str, default=None):
         return self.values.get(address, default)
@@ -425,6 +430,11 @@ class ConsoleState:
     def input_phantom(self, group: str, socket: int) -> bool | None:
         return self.flag(f"/io/in/{group}/{socket}/vph")
 
+    def input_muted(self, group: str, socket: int) -> bool | None:
+        """Is this input socket's own mute on (`/io/in/{grp}/{n}/mute`)?
+        None if it was never read."""
+        return self.flag(f"/io/in/{group}/{socket}/mute")
+
     def input_mode(self, group: str, socket: int) -> str | None:
         """The source's own width (`/io/in/{grp}/{n}/mode`: `M`, `ST` or
         `M/S`), or None if it was never read."""
@@ -499,9 +509,9 @@ def output_patch_was_read(state: ConsoleState) -> bool:
     physical output", and both answer it from `/io/out/*` -- so on a state
     with no `/io/out/*` in it at all they were not finding a dead bus,
     they were asserting a negative from addresses nobody requested.
-    The maintainer saw both of them, as a WARNING and an ERROR, on a correctly
+    Both were seen, as a WARNING and an ERROR, on a correctly
     patched full-size WING on 2026-09-24, because the desk states
-    `wing-fullsize` and (until #243) no socket groups were derived for it.
+    `wing-fullsize` and no socket groups were derived for it.
 
     **Not the same as "every socket was read".** A read that covered LCL
     but not A/B/C can still miss a route, and this deliberately says True
@@ -517,7 +527,7 @@ def input_sockets(state: ConsoleState) -> list[tuple[str, int]]:
     """Every physical input socket this state read anything about.
 
     `USR` is excluded: its 56 entries are the console's own user
-    signal/patch layer, not jacks (`docs/reference/wing-console-model.md`).
+    signal/patch layer, not jacks (the console model notes).
     They live in the `/io/in` address space and `read_console_state` reads
     them for C001, but they carry no 48V and counting them would have
     `render_coverage` claim the audit read thirty-two sockets that do not
@@ -537,7 +547,7 @@ def output_source_object(state: ConsoleState, group: str, socket: int) -> tuple[
 
     `ConsoleState.output_source` returns the raw pair the desk stores, and
     the number in it is a SLOT, not an object index: an earlier change, confirmed
-    on the maintainer's console and again by the factory snapshot, gives every
+    on a real console and again by the factory snapshot, gives every
     internal object a fixed two-slot pair, `2*index - 1` for its L/mono
     feed and `2*index` for its R. `apply._output_slot` is where that math
     is written down for the write path; this is its inverse, for the read
@@ -569,24 +579,74 @@ def _output_node(state: ConsoleState, group: str, socket: int) -> str | None:
     return {"BUS": f"bus:{src[1]}", "MAIN": f"main:{src[1]}", "MTX": f"mtx:{src[1]}"}.get(src[0])
 
 
+@dataclass(frozen=True)
+class _Leg:
+    """One hop of the signal graph: a switch that carries `source`'s signal
+    on to `target` (node ids, `bus:3`, or a strip's base address for the
+    first hop of a path).
+
+    `state` is `open` (switched on, and above the floor where the level is
+    read), `floor` (switched on and pulled to the floor) or `off` (switched
+    off with a level set, which is what a send somebody built and switched
+    off looks like: a send is off at the floor from the factory). A switch
+    that is off with no level is not a leg at all."""
+
+    source: str
+    target: str
+    state: str
+    addresses: tuple[str, ...]
+
+    @property
+    def on(self) -> bool:
+        return self.state != "off"
+
+
+def _leg(state: ConsoleState, source: str, target: str, switch: str,
+         level: str | None = None) -> _Leg | None:
+    """The leg `switch` makes between `source` and `target`, or None when
+    there is none or it was not read. `level` is the send's level address;
+    a route to a Main has none in the read, so it passes None and is a leg
+    only when it is on."""
+    on = state.flag(switch)
+    if on is None:
+        return None
+    lvl = state.number(level) if level else None
+    at_floor = lvl is not None and lvl <= FADER_FLOOR_DB
+    addresses = (switch, level) if level else (switch,)
+    if on:
+        return _Leg(source, target, "floor" if at_floor else "open", addresses)
+    if lvl is not None and not at_floor:
+        return _Leg(source, target, "off", addresses)
+    return None
+
+
+def _routing_legs(state: ConsoleState) -> list[_Leg]:
+    """Where each bus/Main can send its signal next -- bus -> Main, bus ->
+    Matrix, Main -> Matrix -- with each leg's state kept, so that a loop
+    can be told open from one a switch or a floor is holding closed."""
+    legs: list[_Leg] = []
+    for idx in bus_indices(state):
+        base = f"/bus/{idx}"
+        for m in main_route_targets(state, base):
+            legs.append(_leg(state, f"bus:{idx}", f"main:{m}", f"{base}/main/{m}/on"))
+        for x in matrix_send_targets(state, base):
+            legs.append(_leg(state, f"bus:{idx}", f"mtx:{x}", f"{base}/send/MX{x}/on",
+                             f"{base}/send/MX{x}/lvl"))
+    for idx in _referenced_main_indices(state):
+        base = f"/main/{idx}"
+        for x in matrix_send_targets(state, base):
+            legs.append(_leg(state, f"main:{idx}", f"mtx:{x}", f"{base}/send/MX{x}/on",
+                             f"{base}/send/MX{x}/lvl"))
+    return [leg for leg in legs if leg is not None]
+
+
 def _routing_edges(state: ConsoleState) -> dict[str, set[str]]:
     """Where each bus/Main can send its signal next, counting only routing
     that is switched ON -- bus -> Main, bus -> Matrix, Main -> Matrix."""
     edges: dict[str, set[str]] = {}
-    for idx in bus_indices(state):
-        base = f"/bus/{idx}"
-        targets = {f"main:{m}" for m in main_route_targets(state, base)
-                   if state.flag(f"{base}/main/{m}/on")}
-        targets |= {f"mtx:{x}" for x in matrix_send_targets(state, base)
-                    if state.flag(f"{base}/send/MX{x}/on")}
-        if targets:
-            edges[f"bus:{idx}"] = targets
-    for idx in _referenced_main_indices(state):
-        base = f"/main/{idx}"
-        targets = {f"mtx:{x}" for x in matrix_send_targets(state, base)
-                   if state.flag(f"{base}/send/MX{x}/on")}
-        if targets:
-            edges[f"main:{idx}"] = targets
+    for leg in _routing_legs(state):
+        if leg.on:
+            edges.setdefault(leg.source, set()).add(leg.target)
     return edges
 
 
@@ -636,7 +696,7 @@ def matrix_feed_bases(state: ConsoleState) -> list[str]:
     a Main for every matrix this project's plans build. Rules that asked
     "is this matrix fed" used to walk `strip_bases()` alone, which is the
     one source a plan here never uses, so the answer was always no.
-    The maintainer's own house conventions are the case: *"Matrix 1 takes its
+    The case is a house convention such as *"Matrix 1 takes its
     feed from Main"*.
     """
     return (strip_bases(state)
@@ -676,10 +736,10 @@ def _is_active_name(name: str | None) -> bool:
 # Where a name a human typed actually lives
 # --------------------------------------------------------------------------
 #
-# The maintainer named channel 20 "Podium" on his Compact by hand, on 2026-09-22,
-# and photographed the screen showing it. Our own read came back with
+# Channel 20 was named "Podium" by hand on a Compact on 2026-09-22,
+# and the screen showed it. Our own read came back with
 # `/ch/20/name` **empty**. The snapshot taken in the same session
-# (`archive/examples/console-runs/2026-09-22-2139/A13-board-with-podium.snap`) says
+# (A13, board with Podium) says
 # where the name went:
 #
 #     /io/in/LCL/20/name = 'Podium'
@@ -800,22 +860,21 @@ def custom_link_addresses(state: ConsoleState,
     this existed the audit simply never took one, so it was permanently
     in the "unread, assume ON, but never let the assumption overrule a
     name we did read on the strip" branch. That branch is right for the
-    case #206 wrote it for and wrong on a desk somebody else named, where
+    case it was written for and wrong on a desk somebody else named, where
     the strip leaf can be stale and the socket is what the surface shows:
 
         /ch/4  name='Acoustic'  clink=1  ->  A 11, named 'Acoustic'
         /ch/7  name='Acoustic'  clink=1  ->  A  9, named 'Acoustic 2'
 
-    (`archive/examples/console-runs/2026-09-23-1921/A17-wing-full.snap`, the desk
-    the maintainer was watching.) With `clink` unread those are two strips called
+    (the A17 full-size capture of 2026-09-23.) With `clink` unread those are two strips called
     'Acoustic' and N001 reports a collision that is not on the desk.
 
     **Per PATCHED strip, not per strip.** `source_is_named` answers False
     for an unpatched strip without ever looking at `clink`, so an
     unpatched strip's flag is an address whose answer no rule can use.
     That makes this 26 addresses on a factory Compact rather than 48
-    (5,834 -> 5,860, +0.45%), and 42 on the full-size WING above. #206
-    costed it at one address per strip *whether patched or not* and
+    (5,834 -> 5,860, +0.45%), and 42 on the full-size WING above. It was first
+    costed at one address per strip *whether patched or not* and
     declined; scoped to the patched ones it is the cheaper half of a
     second pass this read already makes.
 
@@ -898,7 +957,7 @@ def aes50_ports_in_use(state: ConsoleState) -> dict[str, str]:
     from it. Either is enough: the status leaf (`OK`, `ERR`
     or `UPD`; `-` is an empty port) is the desk's own word, and a strip patched from AES50-A is a stage box on AES50-A
     whatever the status leaf said (or if it was never read, as in every
-    capture before #606)."""
+    capture)."""
     used: dict[str, str] = {}
     for port in console_facts.AES50_PORTS:
         status = state.text(console_facts.aes50_status_address(port))
@@ -945,14 +1004,14 @@ def aes50_output_addresses(state: ConsoleState) -> list[tuple[str, str]]:
 
 def unread_output_groups_in_use(state: ConsoleState) -> dict[str, str]:
     """AES50 ports the DESK reports a device on whose outputs this reading
-    does not hold: the groups a route could go to that nobody looked at. Empty after any live read since #606, which reads them
+    does not hold: the groups a route could go to that nobody looked at. Empty after any live read, which reads them
     in its second pass.
 
     The desk's own status only, not a strip patched from the port, which
-    the read follows anyway. A capture from before #606 holds no status,
+    the read follows anyway. A capture from before that read holds no status,
     and holds inputs from stage boxes whose outputs nobody read; standing
     R002 down on all of those would hide the real fault it exists for
-    on every old capture (the argument: a partial read is declared,
+    on every old capture (a partial read is declared,
     not used to silence a rule). So those keep the verdict they had."""
     used = aes50_ports_in_use(state)
     return {port: why for port, why in used.items()
@@ -996,7 +1055,7 @@ def source_is_named(state: ConsoleState, base: str) -> bool | None:
     socket rather than to skip the check. A full read
     takes the reading rather than leaning on that assumption -- but the
     assumption stays, because a state assembled by hand, a capture taken
-    before #246, and `amend`'s own scoped plans all still reach here
+    before that, and `amend`'s own scoped plans all still reach here
     without it.
     """
     address = source_name_address(state, base)
@@ -1037,7 +1096,7 @@ def effective_name(state: ConsoleState, base: str) -> str | None:
     - A socket carrying the desk's own label (`'USB 1/2'`) is not a name
       and never wins.
 
-    **The rule is unchanged since #206; what changed in an earlier change is that
+    **The rule is unchanged; what changed in an earlier change is that
     the audit now takes a reading.** `read_console_state` reads `clink`
     for every patched strip in its second pass
     (`custom_link_addresses`), so an audit lands in the second or third
@@ -1133,9 +1192,8 @@ def is_in_use(state: ConsoleState, base: str) -> bool:
     human types lands on `/io/in/{grp}/{n}/name` and `{base}/name` stays
     empty -- see `source_is_named`, which is the arm that reads it and the
     one thing standing between this function and calling somebody's live
-    "Podium" channel free. `amend.py` carried that arm privately until
-    #206; this is now the single definition and `amend.strip_occupancy`
-    calls it here.
+    "Podium" channel free. `amend.py` carried that arm privately; this is now the single
+    definition and `amend.strip_occupancy` calls it here.
 
     An unread socket name is **not** evidence of an unnamed strip. This
     function has only a bool to say it with, so a caller for whom the
@@ -1252,7 +1310,7 @@ def _referenced_matrix_indices(state: ConsoleState) -> list[int]:
 # Both come from atoo.diagnostics now: an audit finding
 # and a build-time diagnostic are the same kind of object -- severity, a
 # stable code, the thing it concerns, a message -- and the Setup UI
-#  has to show both streams in one view. `Finding` stays as the
+# has to show both streams in one view. `Finding` stays as the
 # name this module and its three consumers (`watch.py`,
 # `watch_conditions.py`, `webui.py`) were written against; it is the
 # canonical type, not a parallel one. Constructions go through
@@ -1277,7 +1335,7 @@ class AuditRule:
 
     `judges` names the parameter this rule's verdict rests on, as address
     suffixes relative to the object the finding is about -- `"fdr"`,
-    `"tags#D"`. It exists for the second, independent half of #138: **a
+    `"tags#D"`. It exists for the second, independent half: **a
     structural rule stands down where the plan STATES the parameter it is
     complaining about**, because a conventions-diff rule (CV*) already
     checks that parameter against what was asked for, and the plan is the
@@ -1367,7 +1425,7 @@ def _rule_bus_no_output(state: ConsoleState) -> list[Finding]:
     # One hop was not enough. The catalogue asks for *"no route to a
     # physical output (either directly, through a Main bus or through a
     # Matrix bus or any other indirect combination)"* -- the same class of
-    # blindness #145 fixed in R005 and #160 in R003, and the same
+    # blindness fixed in R005 and in R003, and the same
     # rig trips all three: a monitor bus into Main, Main into Matrix 1,
     # Matrix 1 out to the XLRs.
     # Every answer this rule can give rests on `/io/out/*`,
@@ -1401,11 +1459,7 @@ def _mains_reaching_nothing(state: ConsoleState) -> list[str]:
     reaching = objects_reaching_a_physical_output(state)
     out = []
     for idx in _referenced_main_indices(state):
-        fed = any(
-            idx in main_route_targets(state, b) and state.flag(f"{b}/main/{idx}/on")
-            for b in strip_bases(state) + [f"/bus/{i}" for i in bus_indices(state)]
-        )
-        if fed and f"main:{idx}" not in reaching:
+        if _main_is_fed(state, idx) and f"main:{idx}" not in reaching:
             out.append(f"/main/{idx}")
     return out
 
@@ -1424,10 +1478,10 @@ def _rule_route_unchecked(state: ConsoleState) -> list[Finding]:
 
     *"Reaches no physical output"* is a claim about every output, and a
     reading that holds none of AES50-A's, with a stage box on AES50-A,
-    cannot make it: the maintainer's six monitor busses were patched there. The
+    cannot make it: a rig's six monitor busses were patched there. The
     three rules stand down and this says, once per object, that the route
     could not be checked and where it might be. INFO, because nothing is
-    known to be wrong. Every live read since #606 reads those ports in its
+    known to be wrong. Every live read since then reads those ports in its
     second pass, so this fires on a capture or a hand-built state, not on
     a desk read today.
     """
@@ -1452,6 +1506,105 @@ def _rule_route_unchecked(state: ConsoleState) -> list[Finding]:
     return findings
 
 
+def monitored_strips(state: ConsoleState) -> set[str]:
+    """The aux strips a monitor output listens to (`/cfg/mon/{1,2}/src` is
+    `AUX.n`): heard on the phones or the monitor speakers with no send or
+    route of their own."""
+    found = set()
+    for address in console_facts.MONITOR_SOURCES:
+        m = console_facts.MONITOR_SOURCE_RE.match(state.text(address) or "")
+        if m is not None and m.group(1) == "AUX":
+            found.add(f"/aux/{int(m.group(2))}")
+    return found
+
+
+_STRIP_ROUTE_RE = re.compile(r"^(/(?:ch|aux)/\d+)/(?:send/(MX)?(\d+)|main/(\d+))/on$")
+
+
+def strip_route_addresses(state: ConsoleState) -> dict[str, list[str] | None]:
+    """Every strip's switches that send its signal on -- a send to each
+    bus, a send to each Matrix and a route to each Main -- as `{strip:
+    addresses}`; a strip any of whose switches was never read maps to
+    None.
+
+    The switches expected are what the desk has (every bus, Matrix and
+    Main this state knows) joined with whatever the strip itself carries.
+    All three kinds have to be present: a state with no Main in it has not
+    been asked where the strip goes, and "nothing is switched on" would be
+    a claim about switches nobody looked at. One pass over the state, not
+    one per strip."""
+    carried: dict[str, tuple[set[int], set[int], set[int]]] = {
+        base: (set(), set(), set()) for base in strip_bases(state)}
+    for address in state.values:
+        m = _STRIP_ROUTE_RE.match(address)
+        if m is None or m.group(1) not in carried:
+            continue
+        buses, matrices, mains = carried[m.group(1)]
+        if m.group(4) is not None:
+            mains.add(int(m.group(4)))
+        elif m.group(2):
+            matrices.add(int(m.group(3)))
+        else:
+            buses.add(int(m.group(3)))
+    desk_buses = set(bus_indices(state))
+    desk_matrices = set(matrix_indices(state))
+    desk_mains = set(main_indices(state))
+    routes: dict[str, list[str] | None] = {}
+    for base, (buses, matrices, mains) in carried.items():
+        buses, matrices, mains = buses | desk_buses, matrices | desk_matrices, mains | desk_mains
+        if not (buses and matrices and mains):
+            routes[base] = None
+            continue
+        addresses = ([f"{base}/send/{i}/on" for i in sorted(buses)]
+                     + [f"{base}/send/MX{i}/on" for i in sorted(matrices)]
+                     + [f"{base}/main/{i}/on" for i in sorted(mains)])
+        routes[base] = None if any(a not in state.values for a in addresses) else addresses
+    return routes
+
+
+def _rule_strip_reaches_nothing(state: ConsoleState,
+                                planned_routed: frozenset = frozenset()) -> list[Finding]:
+    """R008: a channel or aux that is in use, unmuted and above the floor,
+    with no bus send, Matrix send or Main route switched on.
+
+    This is where a path starts. R002, R005 and R006 name the bus, Main or
+    Matrix whose signal reaches no output, and count the strip's send as
+    what feeds it, so a strip that feeds only such an object is theirs and
+    is not repeated here. This reports the strip with nothing on at all.
+
+    Not reported, because another rule or a decision owns it: a muted strip
+    (silent on purpose), a strip at the floor (L002), the talk mic (T002),
+    an aux a monitor output listens to, and a strip in `planned_routed`
+    (the plan routes it, so CV016 judges it). A strip any of whose switches
+    was never read is left alone.
+
+    A USER SIGNAL can take a strip out of the desk with no send or route;
+    those slots are not read, which is why the finding says what it
+    checked -- no bus, Matrix or Main -- and not that no output is reached.
+    """
+    findings = []
+    talk = talkback_strip(state)
+    heard = monitored_strips(state)
+    for base, addresses in strip_route_addresses(state).items():
+        if addresses is None or base == talk or base in planned_routed or base in heard:
+            continue
+        if state.mute(base) or any(state.flag(a) for a in addresses):
+            continue
+        fdr = state.fader_db(base)
+        if fdr is not None and fdr <= FADER_FLOOR_DB:
+            continue
+        if not is_in_use(state, base):
+            continue
+        findings.append(Diagnostic.audit(
+            "R008", Severity.WARNING, "routing", "Strip Reaches Nothing",
+            f"{strip_label(state, base)} is in use, unmuted and above the floor, but it has no "
+            f"bus send, no Matrix send and no Main route switched on, so its signal goes "
+            f"nowhere. Switch a send or a Main route on, or mute the strip if it is not wanted.",
+            tuple(addresses),
+        ))
+    return findings
+
+
 def _rule_matrix_orphan(state: ConsoleState) -> list[Finding]:
     findings = []
     outputs = output_sockets(state)
@@ -1464,7 +1617,7 @@ def _rule_matrix_orphan(state: ConsoleState) -> list[Finding]:
         # is how a matrix is normally fed, not an edge case.
         # This walked `strip_bases()` only, which no plan this project
         # builds ever uses as a matrix source, so the rule was one hop
-        # short in exactly the way R005 below was before #145.
+        # short in exactly the way R005 below was.
         if not _matrix_is_fed(state, idx):
             findings.append(Diagnostic.audit(
                 "R003", Severity.WARNING, "routing", "Matrix Orphan",
@@ -1487,7 +1640,7 @@ def _rule_matrix_unpatched(state: ConsoleState) -> list[Finding]:
     """R003's mirror image -- a Matrix that IS fed and has
     lost its output.
 
-    The live-desk half of #232. `verify` refuses a plan that patches two
+    The live-desk half. `verify` refuses a plan that patches two
     objects to one output, but a desk never records that two things
     wanted a socket: each `/io/out/{group}/{n}` holds one source, so by
     the time `audit` reads it only the winner is there. A bus that lost
@@ -1560,7 +1713,7 @@ def _rule_main_unpatched(state: ConsoleState) -> list[Finding]:
         # A Main can reach the PA through a Matrix instead of going
         # straight out, and that is standard practice rather than an edge
         # case: it is how you EQ for the room without touching the mix you
-        # are recording. The maintainer's house conventions say exactly that --
+        # are recording. A typical house convention says exactly that --
         # *"Main should be the full mix, EQed so it sounds good for a
         # recording. Send to Matrix 1. Matrix 1 takes its feed from Main
         # and gets EQed to correct for the room. Patch output to internal
@@ -1580,17 +1733,272 @@ def _rule_main_unpatched(state: ConsoleState) -> list[Finding]:
     return findings
 
 
+# A strip's input can be an internal signal: `in/conn/grp` reads `BUS`,
+# `MAIN` or `MTX`, and `in/conn/in` the socket. Each object has two sockets,
+# as it has two output slots (`output_source_object`): `2N-1` is object N's
+# left side and `2N` its right.
+_INTERNAL_INPUT_KINDS = {"BUS": "bus", "MAIN": "main", "MTX": "mtx"}
+
+
+def internal_input_source(state: ConsoleState, base: str) -> tuple[str, str, int] | None:
+    """`(node id, group, socket)` for a channel or aux whose live main input
+    is a bus, Main or Matrix (`bus:3`, `main:1`, `mtx:2`), or None.
+
+    A strip on its alternate input, or one that may be following the engaged
+    global alternate switch, is not judged: the alternate's socket is not
+    read."""
+    patch = state.patch(base)
+    if patch is None or patch[0] not in _INTERNAL_INPUT_KINDS or state.on_alternate_input(base):
+        return None
+    if state.flag(console_facts.GLOBAL_ALT_SWITCH) and state.alternate_group(base) is not None:
+        return None
+    group, socket = patch
+    return f"{_INTERNAL_INPUT_KINDS[group]}:{(socket + 1) // 2}", group, socket
+
+
+def _strip_legs(state: ConsoleState, base: str) -> list[_Leg]:
+    """Each bus send, Matrix send and Main route of a strip, as legs."""
+    legs = [_leg(state, base, f"bus:{b}", f"{base}/send/{b}/on", f"{base}/send/{b}/lvl")
+            for b in send_targets(state, base)]
+    legs += [_leg(state, base, f"mtx:{x}", f"{base}/send/MX{x}/on", f"{base}/send/MX{x}/lvl")
+             for x in matrix_send_targets(state, base)]
+    legs += [_leg(state, base, f"main:{m}", f"{base}/main/{m}/on")
+             for m in main_route_targets(state, base)]
+    return [leg for leg in legs if leg is not None]
+
+
+@dataclass(frozen=True)
+class FeedbackLoop:
+    """A cycle in the signal graph: `hops` runs from the strip that takes an
+    internal signal, through everything that carries it on, back to that
+    signal. A hop is `("takes", strip, node, group, socket)` or a `_Leg`."""
+
+    strip: str
+    hops: tuple
+
+    @property
+    def legs(self) -> list[_Leg]:
+        return [hop for hop in self.hops if isinstance(hop, _Leg)]
+
+    @property
+    def open(self) -> bool:
+        return all(leg.state == "open" for leg in self.legs)
+
+
+def feedback_loops(state: ConsoleState) -> list[FeedbackLoop]:
+    """Every feedback loop on the desk, each once.
+
+    A loop is a strip patched from a bus, Main or Matrix whose signal comes
+    back to that object: through its own send or route, or through other
+    busses, Mains, Matrices and strips that take an internal signal. It is
+    found on the graph R002, R005 and R006 walk (`_routing_legs`), with each
+    such strip an edge from the object it takes to everything it feeds.
+
+    Per strip and per leg it feeds, the shortest path back along open legs
+    is the loop if there is one, otherwise the shortest along any legs. A
+    loop reached from each strip that takes part is reported once."""
+    takers = {base: source for base in strip_bases(state)
+              if (source := internal_input_source(state, base)) is not None}
+    if not takers:
+        return []
+    strip_legs = {base: _strip_legs(state, base) for base in takers}
+    edges: dict[str, list[tuple[tuple, _Leg]]] = {}
+    for leg in _routing_legs(state):
+        edges.setdefault(leg.source, []).append(((), leg))
+    for base, (node, group, socket) in takers.items():
+        for leg in strip_legs[base]:
+            edges.setdefault(node, []).append((("takes", base, node, group, socket), leg))
+
+    def back_to(start: str, goal: str, allowed: tuple[str, ...]):
+        queue = deque([(start, ())])
+        seen = {start}
+        while queue:
+            node, path = queue.popleft()
+            if node == goal:
+                return path
+            for via, leg in edges.get(node, ()):
+                if leg.state in allowed and leg.target not in seen:
+                    seen.add(leg.target)
+                    queue.append((leg.target, path + ((via,) if via else ()) + (leg,)))
+        return None
+
+    loops: dict[frozenset, FeedbackLoop] = {}
+    for base, (node, group, socket) in takers.items():
+        first = ("takes", base, node, group, socket)
+        for leg in strip_legs[base]:
+            tail = None
+            for allowed in (("open",), ("open", "floor", "off")):
+                if leg.state in allowed:
+                    tail = back_to(leg.target, node, allowed)
+                if tail is not None:
+                    break
+            if tail is None:
+                continue
+            hops = (first, leg) + tail
+            key = frozenset(hop if isinstance(hop, _Leg) else hop[:2] for hop in hops)
+            loops.setdefault(key, FeedbackLoop(base, hops))
+    return sorted(loops.values(), key=lambda loop: (loop.strip, _loop_addresses(loop)))
+
+
+def _loop_text(state: ConsoleState, loop: FeedbackLoop) -> str:
+    """The loop hop by hop: `CH 12 "FX Return" takes BUS 3 (patched from BUS
+    5, its left side); CH 12 sends to BUS 3`. A closed leg says what is
+    holding it closed."""
+    mentioned: set[str] = set()
+
+    def name(node: str) -> str:
+        if node.startswith("/"):
+            base = node
+        else:
+            kind, number = node.split(":")
+            base = f"/{kind}/{number}"
+        text = (position_label(base) if base in mentioned or base.startswith(("/main/", "/mtx/"))
+                else strip_label(state, base))
+        mentioned.add(base)
+        return text
+
+    parts = []
+    for hop in loop.hops:
+        if isinstance(hop, _Leg):
+            verb = "routes to" if hop.target.startswith("main:") else "sends to"
+            note = {"off": " (switched off)", "floor": " (at the floor)"}.get(hop.state, "")
+            parts.append(f"{name(hop.source)} {verb} {name(hop.target)}{note}")
+        else:
+            _tag, strip, node, group, socket = hop
+            side = "left" if socket % 2 else "right"
+            parts.append(f"{name(strip)} takes {name(node)} (patched from {group} {socket}, "
+                         f"its {side} side)")
+    return "; ".join(parts)
+
+
+def _loop_addresses(loop: FeedbackLoop) -> tuple[str, ...]:
+    addresses: list[str] = []
+    for hop in loop.hops:
+        if isinstance(hop, _Leg):
+            addresses.extend(hop.addresses)
+        else:
+            addresses.extend((f"{hop[1]}/in/conn/grp", f"{hop[1]}/in/conn/in"))
+    return tuple(dict.fromkeys(addresses))
+
+
+def _rule_feedback_loop(state: ConsoleState) -> list[Finding]:
+    """R009: a feedback loop with every leg open. ERROR: it howls the moment
+    there is audio in it, and no setting makes it work."""
+    return [Diagnostic.audit(
+        "R009", Severity.ERROR, "routing", "Feedback Loop",
+        f"{_loop_text(state, loop)}. The signal comes back round to what the strip takes, "
+        f"so this feeds back as soon as there is audio in it. Switch off the send or route "
+        f"that closes it, or patch {position_label(loop.strip)} from another source.",
+        _loop_addresses(loop),
+    ) for loop in feedback_loops(state) if loop.open]
+
+
+def _rule_feedback_loop_held_closed(state: ConsoleState) -> list[Finding]:
+    """R010: the same loop as R009 with a leg switched off or at the floor.
+    WARNING: it is silent today and feeds back the moment the leg is opened."""
+    return [Diagnostic.audit(
+        "R010", Severity.WARNING, "routing", "Feedback Loop Held Closed",
+        f"{_loop_text(state, loop)}. This is silent only because of the closed leg marked "
+        f"above, and feeds back the moment it is opened. Remove the send or route, or patch "
+        f"{position_label(loop.strip)} from another source.",
+        _loop_addresses(loop),
+    ) for loop in feedback_loops(state) if not loop.open]
+
+
 # --------------------------------------------------------------------------
-# Rules -- configuration (4)
+# Rules -- configuration (6)
 # --------------------------------------------------------------------------
 
 
 # A USER PATCH takes a physical jack straight into the console's own
-# routing layer with no strip in between (`docs/reference/wing-console-
-# model.md`: USR 1..24 are USER SIGNALS, whose source is a strip; USR
-# 25..56 are USER PATCHES, whose source is a jack). Only the second half
+# routing layer with no strip in between (USR 1..24 are USER SIGNALS,
+# whose source is a strip; USR 25..56 are USER PATCHES, whose source is
+# a jack). Only the second half
 # consumes a socket, so only the second half answers C001's question.
 USER_PATCH_SLOTS = range(25, 57)
+
+
+# --------------------------------------------------------------------------
+# R011: a stereo bus, Main or Matrix heard on one side
+# --------------------------------------------------------------------------
+#
+# Each bus, Main and Matrix owns two output slots, `2N-1` for its left side and
+# `2N` for its right (`output_source_object` is the inverse of the slot math).
+# A stereo object puts a different signal on each, so when every output it is
+# patched to uses the same slot, whatever is panned to the other side goes
+# nowhere. A stereo object into one speaker is a one-sided mix, so this is a
+# WARNING; the finding says how to dismiss it when the mono feed is meant.
+
+_WIDTH_KINDS = (("BUS", "bus"), ("MAIN", "main"), ("MTX", "mtx"))
+_WIDTH_PREFIX = dict(_WIDTH_KINDS)
+
+
+def _main_is_fed(state: ConsoleState, idx: int) -> bool:
+    """Does a strip or a bus route to Main `idx`, switched on?"""
+    return any(
+        idx in main_route_targets(state, b) and state.flag(f"{b}/main/{idx}/on")
+        for b in strip_bases(state) + [f"/bus/{i}" for i in bus_indices(state)]
+    )
+
+
+def output_patch_sides(state: ConsoleState) -> dict[tuple[str, int], list[tuple[str, int, str]]]:
+    """`(kind, index)` -> `(group, socket, "L" or "R")` for every output
+    socket the state read that a bus, Main or Matrix feeds: the left side of
+    object N is slot `2N-1`, the right `2N`."""
+    sides: dict[tuple[str, int], list[tuple[str, int, str]]] = {}
+    for group, socket in output_sockets(state):
+        raw = state.output_source(group, socket)
+        if raw is None or raw[0] not in _WIDTH_PREFIX:
+            continue
+        kind, slot = raw
+        sides.setdefault((kind, (slot + 1) // 2), []).append(
+            (group, socket, "L" if slot % 2 else "R"))
+    return sides
+
+
+def _width_object_in_use(state: ConsoleState, kind: str, idx: int) -> bool:
+    if kind == "BUS":
+        return is_in_use(state, f"/bus/{idx}")
+    if kind == "MAIN":
+        return _main_is_fed(state, idx)
+    return _matrix_is_fed(state, idx)
+
+
+def _rule_stereo_one_side(state: ConsoleState, declared: frozenset = frozenset()) -> list[Finding]:
+    """R011. `declared` is the output sockets a plan states (`(group, socket)`
+    pairs), which it leaves to the plan: an object is skipped when every
+    socket it is patched to is one of them."""
+    # "The other side is not patched" is a claim about every output socket,
+    # so a reading that never asked for the output patch, or left an AES50
+    # port in use unread, has no standing to make it.
+    if not output_patch_was_read(state) or unread_output_groups_in_use(state):
+        return []
+    sides = output_patch_sides(state)
+    read = summarise_sockets(output_sockets(state))
+    findings = []
+    for kind, idx in sorted(sides, key=lambda key: ([k for k, _ in _WIDTH_KINDS].index(key[0]), key[1])):
+        base = f"/{_WIDTH_PREFIX[kind]}/{idx}"
+        if state.flag(f"{base}/busmono") is not False:
+            continue
+        patches = sides[(kind, idx)]
+        used = {side for _g, _s, side in patches}
+        if len(used) != 1 or not _width_object_in_use(state, kind, idx):
+            continue
+        if all((g, s) in declared for g, s, _side in patches):
+            continue
+        heard, lost = ("left", "right") if used == {"L"} else ("right", "left")
+        where = ", ".join(format_socket(g, s) for g, s, _side in sorted(patches))
+        addresses = tuple(a for g, s, _side in sorted(patches)
+                          for a in (f"/io/out/{g}/{s}/grp", f"/io/out/{g}/{s}/in"))
+        findings.append(Diagnostic.audit(
+            "R011", Severity.WARNING, "routing", "Stereo Output Patched On One Side",
+            f"{strip_label(state, base)} is stereo but is patched on its {heard} side only "
+            f"({where}), among the output sockets read ({read}), so anything panned {lost} is "
+            f"not heard on an output. If a mono feed is meant, set it mono and this goes away; "
+            f"if not, patch its {lost} side as well.",
+            addresses,
+        ))
+    return findings
 
 
 def user_patch_sources(state: ConsoleState) -> set[tuple[str, int]]:
@@ -1617,7 +2025,36 @@ def user_patch_sources(state: ConsoleState) -> set[tuple[str, int]]:
 TWO_SOCKET_INPUT_MODES = frozenset({"ST", "M/S"})
 
 
-def _rule_phantom_unpatched(state: ConsoleState) -> list[Finding]:
+def input_pair_sockets(state: ConsoleState, group: str, socket: int) -> list[int]:
+    """The sockets a strip patched to `socket` hears: that one, and the next
+    when the source is stereo. A stereo strip names only the odd socket of
+    its pair in `in/conn/in`; the even one is taken because the source width
+    (`/io/in/{grp}/{n}/mode`) is a two-socket one. WING pairs are always
+    odd-even, so only an odd socket carries its neighbour."""
+    legs = [socket]
+    if socket % 2 == 1 and state.input_mode(group, socket) in TWO_SOCKET_INPUT_MODES:
+        legs.append(socket + 1)
+    return legs
+
+
+def strip_source_sockets(state: ConsoleState, base: str) -> list[tuple[str, int]]:
+    """The physical input sockets the strip hears now, `(group, socket)`
+    each: its patch and, for a stereo source, the next socket. Empty when the
+    strip is unpatched, is switched to its alternate input, or may be
+    following the engaged global alternate switch: the alternate's socket is
+    not read, so what the strip hears is not known."""
+    patch = state.patch(base)
+    if patch is None or state.on_alternate_input(base):
+        return []
+    if state.flag(console_facts.GLOBAL_ALT_SWITCH) and state.alternate_group(base) is not None:
+        return []
+    group, socket = patch
+    return [(group, leg) for leg in input_pair_sockets(state, group, socket)]
+
+
+def _rule_phantom_unpatched(state: ConsoleState, judged: frozenset = frozenset()) -> list[Finding]:
+    """C001. `judged` is the sockets a plan comparison already speaks for
+    (`phantom_judgements`), which it leaves to that comparison."""
     findings = []
     patched = {state.patch(b) for b in strip_bases(state)}
     patched.discard(None)
@@ -1628,9 +2065,8 @@ def _rule_phantom_unpatched(state: ConsoleState) -> list[Finding]:
     # (`console_facts.STEREO_PAIR_RULE`), so only an odd socket can carry its
     # neighbour. Without this the right-hand mic of every stereo condenser
     # pair read as 48V on an unpatched socket on a correctly applied desk.
-    patched |= {(group, socket + 1) for group, socket in patched
-                if socket % 2 == 1
-                and state.input_mode(group, socket) in TWO_SOCKET_INPUT_MODES}
+    patched |= {(group, leg) for group, socket in patched
+                for leg in input_pair_sockets(state, group, socket)}
     # *"Phantom power is enabled on a physical input that is patched to no
     # channel or user patch."* A condenser feeding a USER PATCH slot --
     # straight into a Matrix, a monitor feed or a recording leg with no
@@ -1638,7 +2074,8 @@ def _rule_phantom_unpatched(state: ConsoleState) -> list[Finding]:
     # channel, and the rule used to call it a fault.
     patched |= user_patch_sources(state)
     for group, socket in input_sockets(state):
-        if state.input_phantom(group, socket) and (group, socket) not in patched:
+        if (state.input_phantom(group, socket) and (group, socket) not in patched
+                and (group, socket) not in judged):
             findings.append(Diagnostic.audit(
                 "C001", Severity.WARNING, "configuration", "Phantom Power On Unpatched Socket",
                 f"48V is on for {format_socket(group, socket)} but nothing is patched to it -- "
@@ -1673,7 +2110,7 @@ def _rule_shared_input(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_patched_from_empty_bay(state: ConsoleState) -> list[Finding]:
-    """An earlier change, the deferred half of #115. *"A channel is patched from,
+    """An earlier change, the deferred half. *"A channel is patched from,
     or an output routed to, an expansion bay the desk reports empty."*
 
     `apply` refuses to create this (`apply.unfitted_bays_the_plan_needs`);
@@ -1683,8 +2120,8 @@ def _rule_patched_from_empty_bay(state: ConsoleState) -> list[Finding]:
     (`console_facts.UNFITTED_BAY_PATCH_IS_ACCEPTED`), so nothing else says
     so.
 
-    ERROR because it is a physical setting that cannot work: `CLAUDE.md`
-    names "a patch into an empty bay" as its example of one. **Silent, not
+    ERROR because it is a physical setting that cannot work: "a patch
+    into an empty bay" is the standard example of one. **Silent, not
     clean, when the bay was never read** -- `bay_is_empty` says "empty"
     only on the literal `NONE`, so a state without the reading, or with a
     card name this table has never met, produces nothing here.
@@ -1714,7 +2151,7 @@ def _rule_patched_from_empty_bay(state: ConsoleState) -> list[Finding]:
     return findings
 
 
-def _rule_on_alternate_input(state: ConsoleState) -> list[Finding]:
+def _rule_on_alternate_input(state: ConsoleState, virtual_soundcheck: bool = False) -> list[Finding]:
     """A WING channel carries two input patches and a
     per-channel switch between them (`console_facts.ALT_PATCH_*`,
     A7 on hardware, 2026-09-21). The alternate is how virtual soundcheck
@@ -1730,6 +2167,10 @@ def _rule_on_alternate_input(state: ConsoleState) -> list[Finding]:
     loud rather than left to INFO. A hazard, reported on any strip: whose
     strip it is does not change what it hears.
 
+    With `virtual_soundcheck` (Watch's switch, `virtual_soundcheck_rules`)
+    the engineer has said the alternate is on purpose, so every strip is
+    still named but at INFO, with that as the reason.
+
     Silent when the switch was never read (any capture made before this
     rule), rather than calling the channel clean.
     """
@@ -1742,17 +2183,24 @@ def _rule_on_alternate_input(state: ConsoleState) -> list[Finding]:
         alt = state.alternate_group(base)
         alt_text = (f"its alternate patch from {alt}" if alt else
                     "its alternate patch, which is set to OFF")
+        if virtual_soundcheck:
+            severity = Severity.INFO
+            advice = ("Virtual soundcheck is on, so this is expected; if the show is live, "
+                      "switch it back on the desk and turn virtual soundcheck off.")
+        else:
+            severity = Severity.WARNING
+            advice = ("After a virtual soundcheck this is a channel that does "
+                      "not hear the stage; switch it back on the desk if the show is live.")
         findings.append(Diagnostic.audit(
-            "C004", Severity.WARNING, "configuration", "Channel On Its Alternate Input",
+            "C004", severity, "configuration", "Channel On Its Alternate Input",
             f"{strip_label(state, base)} is listening to {alt_text}, not its main patch "
-            f"({main_text}). After a virtual soundcheck this is a channel that does "
-            f"not hear the stage; switch it back on the desk if the show is live.",
+            f"({main_text}). {advice}",
             (f"{base}/in/set/altsrc", f"{base}/in/conn/altgrp"),
         ))
     return findings
 
 
-def _rule_global_alternate_switch(state: ConsoleState) -> list[Finding]:
+def _rule_global_alternate_switch(state: ConsoleState, virtual_soundcheck: bool = False) -> list[Finding]:
     """The console's GLOBAL alternate switch (`/io/altsw`) is
     engaged: every strip set to follow it is on its alternate input, with
     no strip's own `altsrc` saying so -- which is why C004 cannot see
@@ -1760,21 +2208,285 @@ def _rule_global_alternate_switch(state: ConsoleState) -> list[Finding]:
 
     What 1 means is INFERRED, not measured (`console_facts.
     GLOBAL_ALT_SWITCH`): the only snapshot reading `true` was saved after
-    the maintainer flipped the switch, and nothing has shown which strips then
+    the switch was flipped, and nothing has shown which strips then
     moved. Which strips follow it (`in/set/srcauto`, inferred) is not
     understood either, so the finding does not name any. Silent when the
     switch was never read.
+
+    With `virtual_soundcheck` it is reported at INFO, as C004 is.
     """
     if not state.flag(console_facts.GLOBAL_ALT_SWITCH):
         return []
+    if virtual_soundcheck:
+        severity = Severity.INFO
+        advice = ("Virtual soundcheck is on, so this is expected; if the show is live, "
+                  "switch it back on the desk and turn virtual soundcheck off.")
+    else:
+        severity = Severity.WARNING
+        advice = "After a virtual soundcheck, switch it back on the desk if the show is live."
     return [Diagnostic.audit(
-        "C005", Severity.WARNING, "configuration", "Global Alternate Switch Engaged",
+        "C005", severity, "configuration", "Global Alternate Switch Engaged",
         "The console's global alternate-input switch is engaged (/io/altsw = 1). Every strip "
-        "set to follow it (Input Select: Global) is listening to its alternate input, which "
-        "no strip's own switch shows. After a virtual soundcheck, switch it back on the desk "
-        "if the show is live. (What 1 means is inferred from one flip, not measured.)",
+        f"set to follow it (Input Select: Global) is listening to its alternate input, which "
+        f"no strip's own switch shows. {advice} "
+        "(What 1 means is inferred from one flip, not measured.)",
         (console_facts.GLOBAL_ALT_SWITCH,),
     )]
+
+
+#: The rules a virtual soundcheck turns down to INFO.
+VIRTUAL_SOUNDCHECK_RULE_IDS = ("C004", "C005")
+
+
+def virtual_soundcheck_rules(rules) -> list[AuditRule]:
+    """`rules` with C004 and C005 reporting at INFO: the engineer has said
+    the alternate inputs are on purpose (a virtual soundcheck). Every strip
+    on its alternate is still named, and the finding says why it is not a
+    warning; the other rules are untouched. Watch swaps these in while its
+    Virtual soundcheck switch is on and the originals back when it is off,
+    so a strip left on its alternate is a WARNING again at once."""
+    out = []
+    for rule in rules:
+        if rule.id == "C004":
+            rule = replace(rule, severity=Severity.INFO,
+                           check=lambda state: _rule_on_alternate_input(state, True))
+        elif rule.id == "C005":
+            rule = replace(rule, severity=Severity.INFO,
+                           check=lambda state: _rule_global_alternate_switch(state, True))
+        out.append(rule)
+    return out
+
+
+def _rule_strip_has_no_source(state: ConsoleState) -> list[Finding]:
+    """C006: a channel or aux that is in use -- named, or sending somewhere
+    other than the factory's Main 1 -- with nothing patched to its main
+    input (`in/conn/grp` is `OFF`).
+
+    The other end of R008's path: R008 asks where a strip's signal goes,
+    this asks whether the strip has one. A named strip with its fader up
+    and its sends on carries silence when no socket feeds it, and its
+    overview looks finished.
+
+    Left to others: a strip on its alternate input (C004 says so, whether
+    the alternate is a group or `OFF`), a strip that may be following the
+    engaged global alternate switch (C005) and has an alternate patch, and
+    the talk mic (T002). Muted and at the floor are not exemptions: a show
+    built from conventions starts every fader at the floor, and a patch
+    lost before the faders come up is the fault this exists to catch.
+    Silent when the group was never read.
+    """
+    findings = []
+    talk = talkback_strip(state)
+    global_alternate = bool(state.flag(console_facts.GLOBAL_ALT_SWITCH))
+    for base in strip_bases(state):
+        if base == talk:
+            continue
+        if state.text(f"{base}/in/conn/grp") not in ("OFF", ""):
+            continue  # patched, or never read
+        if state.on_alternate_input(base) or (
+                global_alternate and state.alternate_group(base) is not None):
+            continue
+        if not is_in_use(state, base):
+            continue
+        why = ("named" if _is_active_name(state.name(base))
+               else "sending somewhere")
+        findings.append(Diagnostic.audit(
+            "C006", Severity.WARNING, "configuration", "Strip In Use Has No Source",
+            f"{strip_label(state, base)} is in use ({why}) but nothing is patched to it, "
+            f"so it has no source. Patch an input to it on the desk, or pull its fader down "
+            f"and clear its name and sends if the strip is not wanted.",
+            (f"{base}/in/conn/grp",),
+        ))
+    return findings
+
+
+def _rule_input_socket_muted(state: ConsoleState) -> list[Finding]:
+    """C007: a channel or aux in use whose source socket is muted at the
+    socket (`/io/in/{grp}/{n}/mute`), or -- for a stereo source -- one of
+    whose two sockets is muted and the other is not.
+
+    A WING input socket has a mute of its own. A muted socket silences
+    every strip patched to it and nothing on the strip shows it: the
+    strip's own mute is off and its fader is up. WARNING: it is a mute
+    somebody made, so it is not a setting that cannot work, but it is
+    invisible where the engineer looks and the strip is in use.
+
+    A stereo source is two sockets, the odd one named by the patch and the
+    next one taken with it (the pairing C001 uses). Silent for a socket
+    whose mute was never read, for a strip on its alternate input (C004
+    speaks) and for one that may be following the engaged global alternate
+    switch (C005). The talk mic is skipped (T002).
+    """
+    findings = []
+    talk = talkback_strip(state)
+    for base in strip_bases(state):
+        sockets = strip_source_sockets(state, base)
+        if base == talk or not sockets:
+            continue
+        group, socket = sockets[0]
+        legs = [leg for _group, leg in sockets]
+        muted = [state.input_muted(group, leg) for leg in legs]
+        if any(flag is None for flag in muted) or not any(muted):
+            continue
+        if not is_in_use(state, base):
+            continue
+        label = strip_label(state, base)
+        if all(muted):
+            where = (format_socket(group, socket) if len(legs) == 1
+                     else f"{format_socket(group, socket)}-{legs[-1]}")
+            verb = "is" if len(legs) == 1 else "are both"
+            message = (f"{label} is fed from {where}, which {verb} muted at the socket. "
+                       f"Nothing on the strip shows it; unmute the input on the desk.")
+        else:
+            silent = format_socket(group, next(leg for leg, flag in zip(legs, muted) if flag))
+            message = (f"{label} is a stereo source on {format_socket(group, socket)}-{legs[-1]}, "
+                       f"and {silent} is muted at the socket while the other is not, so one "
+                       f"side of it is silent. Unmute the input on the desk.")
+        findings.append(Diagnostic.audit(
+            "C007", Severity.WARNING, "configuration", "Strip's Input Socket Muted",
+            message,
+            (f"{base}/in/conn/grp",
+             *(f"/io/in/{group}/{leg}/mute" for leg in legs)),
+        ))
+    return findings
+
+
+def _number_runs(numbers: list[int]) -> str:
+    """[1, 2, 3, 5] -> "1-3, 5": a list of socket numbers, as a person
+    would read it off a patch bay."""
+    runs: list[list[int]] = []
+    for n in sorted(set(numbers)):
+        if runs and n == runs[-1][1] + 1:
+            runs[-1][1] = n
+        else:
+            runs.append([n, n])
+    return ", ".join(str(a) if a == b else f"{a}-{b}" for a, b in runs)
+
+
+def aes50_port_dependents(state: ConsoleState) -> dict[str, tuple[list[str], list[int]]]:
+    """AES50 port -> (the strips taking their input from it, the output
+    sockets on it that carry a source), for every port something depends on.
+
+    A strip counts by its main patch, so one switched to its alternate input
+    (C004 speaks) or one that may be following the engaged global alternate
+    switch (C005) is left out: the alternate's socket number is not read, so
+    where such a strip listens is not known. An output counts only when a
+    source is patched to it, as for an empty expansion bay. Every strip is
+    counted, the talk mic's included: a talk mic on a dead stage box is as
+    silent as any other."""
+    global_alternate = bool(state.flag(console_facts.GLOBAL_ALT_SWITCH))
+    found: dict[str, tuple[list[str], list[int]]] = {}
+    for base in strip_bases(state):
+        patch = state.patch(base)
+        if patch is None or patch[0] not in console_facts.AES50_PORTS:
+            continue
+        if state.on_alternate_input(base):
+            continue
+        if global_alternate and state.alternate_group(base) is not None:
+            continue
+        found.setdefault(patch[0], ([], []))[0].append(base)
+    for group, socket in output_sockets(state):
+        if group in console_facts.AES50_PORTS and state.output_source(group, socket) is not None:
+            found.setdefault(group, ([], []))[1].append(socket)
+    return found
+
+
+def _dependents_text(state: ConsoleState, strips: list[str], outputs: list[int]) -> str:
+    """"CH 1 "Kick" and CH 2 "Snare" take their input from it, and
+    outputs 1-6 on it carry a source" -- what a dead AES50 port takes down."""
+    parts = []
+    if strips:
+        shown = [strip_label(state, base) for base in strips[:6]]
+        if len(strips) > 6:
+            shown.append(f"{len(strips) - 6} more")
+        who = shown[0] if len(shown) == 1 else ", ".join(shown[:-1]) + f" and {shown[-1]}"
+        parts.append(f"{who} {'takes its' if len(strips) == 1 else 'take their'} input from it")
+    if outputs:
+        parts.append(f"output{'' if len(outputs) == 1 else 's'} {_number_runs(outputs)} on it "
+                     f"{'carries' if len(outputs) == 1 else 'carry'} a source")
+    return " and ".join(parts)
+
+
+def _aes50_link(state: ConsoleState, port: str) -> str | None:
+    """The status the desk read for an AES50 port, or None when it was never
+    read or is a word the desk's list does not have: the rules about the
+    link say nothing for a port they have no word on."""
+    status = state.text(console_facts.aes50_status_address(port))
+    return status if status in ("-", *console_facts.AES50_DEVICE_STATES) else None
+
+
+def _rule_aes50_cannot_carry_patch(state: ConsoleState) -> list[Finding]:
+    """C008: an AES50 port whose link carries no audio -- it reads `-` (no
+    stage box on it) or `ERR` (a link error) -- while a strip takes its
+    input from it or an output on it carries a source.
+
+    A stage box whose link has failed silences every input and output on it
+    at once, and nothing on the strips shows it: the patch is as it was
+    set. ERROR, as C003 is for an empty expansion bay: the desk accepts the
+    patch and no audio passes, so it is a setting that cannot work. A port
+    nothing depends on is not reported here (C009 reports one in error).
+    Silent when the port's status was never read -- a live read takes it
+    whenever it reads output sockets -- and for a status the desk's list
+    does not have. One finding per port, naming what is on it.
+    """
+    findings = []
+    dependents = aes50_port_dependents(state)
+    for port in console_facts.AES50_PORTS:
+        link = _aes50_link(state, port)
+        if link not in ("-", "ERR") or port not in dependents:
+            continue
+        strips, outputs = dependents[port]
+        what = _dependents_text(state, strips, outputs)
+        address = console_facts.aes50_status_address(port)
+        if link == "-":
+            message = (f"AES50-{port} reads '-', so no stage box is on "
+                       f"it, but {what}. No audio can pass: connect the stage box, or "
+                       f"patch these elsewhere.")
+        else:
+            message = (f"AES50-{port} reports a link error (ERR), and "
+                       f"{what}. No audio passes while the link is in error: check the cable "
+                       f"and the stage box.")
+        findings.append(Diagnostic.audit(
+            "C008", Severity.ERROR, "configuration", "AES50 Port Cannot Carry Its Patch",
+            message, (address,),
+        ))
+    return findings
+
+
+def _rule_aes50_link_not_ok(state: ConsoleState) -> list[Finding]:
+    """C009: a stage box on an AES50 port whose link is not `OK` and which
+    C008 does not already report: one reading `UPD` (updating), or one in
+    error (`ERR`) that nothing is patched from or to.
+
+    WARNING: neither is a setting that cannot work. An update finishes on
+    its own, and a link in error with nothing on it loses nothing yet; but
+    a stage box that passes no audio is worth knowing about before doors,
+    and the strips patched to one that is updating are silent until it is
+    done. What `ERR` and `UPD` mean is the desk's own wording, read from
+    the status list and not yet confirmed against a stage box. Silent when
+    the status was never read and for a port that reads `OK` or `-`.
+    """
+    findings = []
+    dependents = aes50_port_dependents(state)
+    for port in console_facts.AES50_PORTS:
+        link = _aes50_link(state, port)
+        if link not in ("UPD", "ERR") or (link == "ERR" and port in dependents):
+            continue
+        name = f"AES50-{port}"
+        what = _dependents_text(state, *dependents.get(port, ([], [])))
+        if link == "UPD":
+            message = (f"{name} reports UPD: the stage box on it is updating"
+                       + (f", and {what}. Those carry no audio until it finishes."
+                          if what else ". Nothing is patched from it or to it yet."))
+        else:
+            message = (f"{name} reports a link error (ERR) on a stage box that nothing is "
+                       f"patched from or to. Nothing in the show is lost yet, but the link "
+                       f"will not carry audio: check the cable and the stage box.")
+        findings.append(Diagnostic.audit(
+            "C009", Severity.WARNING, "configuration", "AES50 Stage Box Link Not OK",
+            message, (console_facts.aes50_status_address(port),),
+        ))
+    return findings
 
 
 # --------------------------------------------------------------------------
@@ -1829,7 +2541,7 @@ def _rule_insert_on_empty_slot(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_fx_not_inserted(state: ConsoleState) -> list[Finding]:
-    """An earlier change, Wing Tools' E002. An FX slot with an effect loaded that
+    """An FX slot with an effect loaded that
     no insert point on the desk names. WING has no FX send/return: an
     effect nobody inserts is an effect nobody hears.
 
@@ -1864,10 +2576,10 @@ def _rule_fx_not_inserted(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_insert_switched_off(state: ConsoleState) -> list[Finding]:
-    """An earlier change, Wing Tools' I016 ("Insert Enabled, FX Bypassed"),
-    grounded the other way round: the bypass is the STRIP's insert switch,
-    not a field on the slot -- `/fx/{n}` has none. A strip naming a slot
-    with an effect loaded, with its insert switched off.
+    """An effect bypassed from the strip: the bypass is the
+    STRIP's insert switch, not a field on the slot -- `/fx/{n}` has none.
+    A strip naming a slot with an effect loaded, with its insert switched
+    off.
 
     INFO, and a convention rather than a hazard: bypassing an effect is
     something an engineer does on purpose, mid-show, all the time. Before
@@ -1897,7 +2609,7 @@ def _rule_insert_switched_off(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_talkback_goes_nowhere(state: ConsoleState) -> list[Finding]:
-    """An earlier change, Wing Tools' C002 ("Talkback Dead"). Talkback is assigned
+    """Talkback is assigned
     to a strip (`/cfg/talk/assign` is `CH40` or `AUX8`), and neither TALK
     A nor TALK B is routed to a single bus, Matrix or Main. Somebody set
     talkback up, and pressing either button reaches nobody -- which the
@@ -1939,14 +2651,14 @@ def talkback_strip(state: ConsoleState) -> str | None:
     `/aux/8`), or None when talkback is OFF or `assign` was never read.
 
     That strip is the talk mic, and a talk mic is kept out of the mix on
-    purpose: fader down, in no DCA. CH001 and L002 skip it, and
-    T002 says so once (the maintainer, 2026-09-25, after T001's first run
+    purpose: fader down, in no DCA, no send or route, no jack patched.
+    CH001, L002, R008, C006 and C007 skip it, and T002 says so once (T001's first run
     on the Compact flagged both on ch 40 "TALKBACK")."""
     return _TALKBACK_BASES.get(state.text(console_facts.TALK_ASSIGN))
 
 
 def _rule_talkback_strip_exempt(state: ConsoleState) -> list[Finding]:
-    """T002: the talkback strip is in use, so CH001 and L002
+    """T002: the talkback strip is in use, so CH001, L002, R008, C006 and C007
     would have judged it as a band strip. They skip it; this is the one
     line that says they did, rather than the exemption being silent."""
     base = talkback_strip(state)
@@ -1956,13 +2668,14 @@ def _rule_talkback_strip_exempt(state: ConsoleState) -> list[Finding]:
         "T002", Severity.INFO, "communications", "Talkback Strip Left Out Of Mix Checks",
         f"{strip_label(state, base)} is the strip talkback is assigned to "
         f"({state.text(console_facts.TALK_ASSIGN)}), so it is treated as the talk mic: "
-        f"'in no DCA' (CH001) and 'fader at floor' (L002) are not reported for it.",
+        f"'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing "
+        f"patched' (C006) and 'socket muted' (C007) are not reported for it.",
         (console_facts.TALK_ASSIGN, base),
     )]
 
 
 # --------------------------------------------------------------------------
-# Rules -- channels (3)
+# Rules -- channels (4)
 # --------------------------------------------------------------------------
 
 
@@ -2017,6 +2730,50 @@ def _rule_mute_group_silencing(state: ConsoleState) -> list[Finding]:
             findings.append(Diagnostic.audit(
                 "CH003", Severity.INFO, "channels", "Mute Group Active, Silencing Routed Members",
                 f"{strip_label(state, base)} is engaged and is silencing {len(active_members)} "
+                f"active member(s): {', '.join(strip_label(state, m) for m in active_members)}.",
+                (f"{base}/mute",),
+            ))
+    return findings
+
+
+def planned_dca_mutes(plan: dict) -> frozenset:
+    """The DCAs whose mute the plan judges, as console bases: every DCA it
+    declares with an index. A DCA it leaves unmuted is CV017's when it is
+    muted on the desk, and one it states muted is the setting it asked for
+    (CV012 reports the other direction)."""
+    return frozenset(
+        f"/dca/{entry['index']}"
+        for entry in (plan.get("dcas") or {}).values()
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int))
+
+
+def _rule_dca_muted_with_members(state: ConsoleState,
+                                 planned: frozenset = frozenset()) -> list[Finding]:
+    """CH004: a DCA whose own mute is on while it controls at least one
+    active member -- CH002's DCA, but the mute switch rather than the fader.
+
+    A muted DCA silences everything under it, and the members show nothing:
+    each strip's mute is off and its fader is up. INFO, as CH003 is for a
+    mute group: pressing a DCA's mute is a deliberate act, and the DCA strip
+    shows it lit, so this says what the press is silencing rather than
+    calling it a fault. The members are the ones CH002 counts (`_dca_members`
+    and `is_in_use`).
+
+    `planned` is the DCAs a plan judges (`planned_dca_mutes`): under a plan
+    CV017 reports a muted DCA the plan leaves unmuted, and a DCA the plan
+    states muted is as asked, so the rule says nothing about either. A DCA
+    whose mute was never read is not called muted.
+    """
+    findings = []
+    for idx, members in _dca_members(state).items():
+        base = f"/dca/{idx}"
+        if base in planned or not state.mute(base):
+            continue
+        active_members = [m for m in members if is_in_use(state, m)]
+        if active_members:
+            findings.append(Diagnostic.audit(
+                "CH004", Severity.INFO, "channels", "DCA Muted, Silencing Active Members",
+                f"{strip_label(state, base)} is muted and is silencing {len(active_members)} "
                 f"active member(s): {', '.join(strip_label(state, m) for m in active_members)}.",
                 (f"{base}/mute",),
             ))
@@ -2116,9 +2873,8 @@ def _rule_fader_floor_while_active(state: ConsoleState,
     "Active" was "routed anywhere", and on a factory WING that is every
     strip on the desk and half the busses, because `main/1/on` ships on --
     twenty-nine of the A5 run's forty-eight findings were that and nothing
-    else. It is `is_in_use` now, which is the lever the maintainer named: *"the
-    lever is what 'actively routed' is taken to mean, not whether to hide
-    the rule."*
+    else. It is `is_in_use` now: the lever is what 'actively routed' is taken to
+    mean, not whether to hide the rule.
 
     `planned_floor` is the strips the show's plan itself puts
     at the floor (`planned_floor_strips`): a fader down because the
@@ -2147,23 +2903,62 @@ def _rule_fader_floor_while_active(state: ConsoleState,
     return findings
 
 
-# **`docs/developer/audit-rules.md` is the specification for this list,
+def _seconds(value: float) -> str:
+    """`1.2 s`, `48 s`: the clip finding's times."""
+    return f"{value:.1f} s" if value < 10 else f"{value:.0f} s"
+
+
+def _rule_clipped(state: ConsoleState) -> list[Finding]:
+    """L003: a strip clipped within the last minute.
+
+    Product decision, 2026-10-13: *"throw up an ERROR that lasts for about a minute
+    if any channel or bus clips ... Reset the one minute timer if the
+    channel or bus clips again."* Distortion is not a matter of taste; it
+    is the setting that cannot work. The clips come from the console's
+    meter stream (`atoo.metering`), which a live watch reads beside its
+    passes; the rule only words what the clip monitor reports, and is
+    silent on any state that carries none -- `audit` and every captured
+    state. One finding per strip: both sides of a stereo strip, and all
+    four of its level words, are one.
+
+    The finding's key is its rule and strip, so a second clip inside the
+    minute is the same finding with the timer moved on, and the sentence
+    says where the timer stands: that is how the restart is seen."""
+    findings = []
+    for clip in state.clips:
+        label = strip_label(state, clip.base)
+        said = f"{label} clipped"
+        if clip.count > 1:
+            said += f" {clip.count} times"
+            if clip.longest is not None:
+                said += f", the longest for about {_seconds(clip.longest)}"
+        elif clip.longest is not None:
+            said += f" for about {_seconds(clip.longest)}"
+        findings.append(Diagnostic.audit(
+            "L003", Severity.ERROR, "levels", "Clipped",
+            f"{said}; the last was {_seconds(clip.ago)} ago. This clears in "
+            f"{_seconds(max(clip.remaining, 0.0))} unless it clips again.",
+            (f"{clip.base}/clip",),
+        ))
+    return findings
+
+
+# **The audit-rule catalogue is the specification for this list,
 # and this list follows it** -- id, severity, scope and title are pinned
-# together by `tests/test_audit_catalogue.py`, so a row edited there and
+# together by the catalogue test, so a row edited in the catalogue and
 # not here is a failing test rather than a quiet disagreement. The
 # one-line rationale for each scope sits next to it here as well, because
 # the next person to add a rule reads this list.
 #
-# `scope` itself is under review: the maintainer, 2026-09-23, *"I
-# don't think the 'scope' column is the right solution to the problem of
-# seeing unhelpful errors."* The alternative is a predicate precise enough
+# `scope` itself is under review: it may not be the right
+# solution to the problem of seeing unhelpful errors. The alternative is a predicate precise enough
 # that it does not fire on a console nobody has touched -- R001 below
 # is the worked example.
 DEFAULT_RULES: list[AuditRule] = [
-    # NOT a convention, though it was until 2026-09-23. The maintainer: "on an
-    # initialized console, the busses are not named, so we should indeed
-    # be checking that any bus with a name has inputs. We should not
-    # supress this." The predicate is "in use" now rather than "named",
+    # NOT a convention, though it was until 2026-09-23: on an
+    # initialized console the busses are not named, so we should indeed
+    # be checking that any bus with a name has inputs, and not
+    # suppress this. The predicate is "in use" now rather than "named",
     # which is wider and still keeps it off a factory desk.
     AuditRule("R001", Severity.WARNING, "routing", "Bus No Inputs",
               "An in-use bus receives no channel/aux sends.", _rule_bus_no_inputs,
@@ -2197,6 +2992,33 @@ DEFAULT_RULES: list[AuditRule] = [
               "A bus, Main or Matrix reaches none of the output sockets read, and an AES50 "
               "port in use was not read, so the route could not be checked.",
               _rule_route_unchecked, scope=RuleScope.HAZARD),
+    # The start of the path: R002, R005 and R006 name the object whose
+    # signal reaches no output, and this names the strip whose own switches
+    # send it nowhere. A hazard, as they are; under a plan it stands down
+    # for a strip whose planned routes CV016 judges, the way the "plan
+    # states the parameter" half of the scope works.
+    AuditRule("R008", Severity.WARNING, "routing", "Strip Reaches Nothing",
+              "A channel or aux that is in use, unmuted and up has no bus send, Matrix send or "
+              "Main route switched on.",
+              _rule_strip_reaches_nothing, scope=RuleScope.HAZARD, judges=("routes",)),
+    # A loop does not care whose strip it is, and no plan states one. Two ids
+    # because the catalogue gives a rule one severity, and because Watch
+    # should say a loop opened: the WARNING clears and the ERROR appears.
+    AuditRule("R009", Severity.ERROR, "routing", "Feedback Loop",
+              "A channel or aux takes a bus, Main or Matrix as its input and its signal comes "
+              "back round to it, every leg open.",
+              _rule_feedback_loop, scope=RuleScope.HAZARD),
+    AuditRule("R010", Severity.WARNING, "routing", "Feedback Loop Held Closed",
+              "The same loop with a leg switched off or at the floor: silent today, feeding "
+              "back the moment it is opened.",
+              _rule_feedback_loop_held_closed, scope=RuleScope.HAZARD),
+    # A one-sided mix is worth a warning, and the finding says how to dismiss
+    # it when the mono feed is meant. A hazard-scope rule that cites the
+    # output sockets it judged, so a plan that declares them stands it down.
+    AuditRule("R011", Severity.WARNING, "routing", "Stereo Output Patched On One Side",
+              "A stereo bus, Main or Matrix in use whose output patches all use the same side of "
+              "its pair, so anything panned to the other side is not heard.",
+              _rule_stereo_one_side, scope=RuleScope.HAZARD),
     # 48V does not care whose strip it is -- the issue's own example of
     # why this is not simply "filter by plan membership".
     AuditRule("C001", Severity.WARNING, "configuration", "Phantom Power On Unpatched Socket",
@@ -2231,6 +3053,28 @@ DEFAULT_RULES: list[AuditRule] = [
     AuditRule("C005", Severity.WARNING, "configuration", "Global Alternate Switch Engaged",
               "The console's global alternate-input switch is engaged.",
               _rule_global_alternate_switch, scope=RuleScope.HAZARD),
+    # The other end of R008's path: a strip in use that nothing is patched to.
+    # A hazard for the same reason. `judges` is the strip's patch, which a
+    # plan that states it asked for and CV005 compares against the desk.
+    AuditRule("C006", Severity.WARNING, "configuration", "Strip In Use Has No Source",
+              "A channel or aux that is in use has nothing patched to its main input.",
+              _rule_strip_has_no_source, scope=RuleScope.HAZARD, judges=("in/conn",)),
+    # The socket's own mute, which the strip does not show: a hazard, as a
+    # silent channel does not care whose it is, and no plan states it.
+    AuditRule("C007", Severity.WARNING, "configuration", "Strip's Input Socket Muted",
+              "A channel or aux in use is patched to an input socket that is muted at the "
+              "socket, or to one leg of a stereo source whose other leg is not.",
+              _rule_input_socket_muted, scope=RuleScope.HAZARD),
+    # The AES50 link, which the read takes for every port and which nothing
+    # used. Hazards: a stage box that passes no audio does not care whose
+    # show it is, and no plan states a link's health.
+    AuditRule("C008", Severity.ERROR, "configuration", "AES50 Port Cannot Carry Its Patch",
+              "A strip takes its input from an AES50 port, or an output on it carries a source, "
+              "while the port reads '-' or ERR.",
+              _rule_aes50_cannot_carry_patch, scope=RuleScope.HAZARD),
+    AuditRule("C009", Severity.WARNING, "configuration", "AES50 Stage Box Link Not OK",
+              "A stage box reads UPD, or ERR with nothing patched to it.",
+              _rule_aes50_link_not_ok, scope=RuleScope.HAZARD),
     # Hazards, because a lit insert doing nothing and a loaded
     # effect nobody hears do not care whose strip it is. No plan states an
     # insert, so nothing stands either down.
@@ -2254,7 +3098,7 @@ DEFAULT_RULES: list[AuditRule] = [
     # Not a fault: the one line saying CH001 and L002 skipped the
     # talk mic's strip, so the exemption is never silent.
     AuditRule("T002", Severity.INFO, "communications", "Talkback Strip Left Out Of Mix Checks",
-              "The strip talkback is assigned to is in use; CH001 and L002 skip it.",
+              "The strip talkback is assigned to is in use; CH001, L002, R008, C006 and C007 skip it.",
               _rule_talkback_strip_exempt, scope=RuleScope.HAZARD),
     # The finding that prompted an earlier change: 29 of the A5 run's 30 INFO
     # findings were this rule on strips the show never mentions.
@@ -2269,6 +3113,12 @@ DEFAULT_RULES: list[AuditRule] = [
               scope=RuleScope.HAZARD),
     AuditRule("CH003", Severity.INFO, "channels", "Mute Group Active, Silencing Routed Members",
               "An engaged mute group is silencing active members.", _rule_mute_group_silencing,
+              scope=RuleScope.HAZARD),
+    # CH003's twin for a DCA's mute switch, which CH002 (the fader) does not
+    # read and CV017 reads only against a plan. A hazard, as CH003 is: a DCA
+    # silencing the band does not care whose band it is.
+    AuditRule("CH004", Severity.INFO, "channels", "DCA Muted, Silencing Active Members",
+              "A DCA's mute is on while it controls active members.", _rule_dca_muted_with_members,
               scope=RuleScope.HAZARD),
     # A duplicate name is about a pair, not a strip -- see RuleScope.
     AuditRule("N001", Severity.WARNING, "naming", "Duplicate Channel/Aux Names",
@@ -2301,6 +3151,13 @@ DEFAULT_RULES: list[AuditRule] = [
     AuditRule("L002", Severity.INFO, "levels", "Active Strip Fader At Floor",
               "An unmuted, in-use channel, aux or bus's own fader sits at the floor.",
               _rule_fader_floor_while_active, scope=RuleScope.HAZARD),
+    # The one rule whose evidence is not an address: the console's meter
+    # stream. A hazard about any strip, planned or not -- a
+    # clipped unplanned channel is distorting the PA all the same.
+    AuditRule("L003", Severity.ERROR, "levels", "Clipped",
+              "A channel, aux, bus, main or matrix clipped within the last minute "
+              "(a live watch only; it reads the console's meters).",
+              _rule_clipped, scope=RuleScope.HAZARD),
 ]
 
 
@@ -2317,7 +3174,7 @@ DEFAULT_RULES: list[AuditRule] = [
 #
 # **2. Does the plan STATE the parameter the rule is complaining about?**
 # The more valuable half, and not plan membership at all. From the A5 run
-# (`archive/examples/console-runs/2026-09-21-2145/A5-audit-rules.txt`): L002
+# (the A5 audit-rules run of 2026-09-21): L002
 # fired on nineteen planned channels *because the plan asked for it* --
 # the house conventions say "leave all faders all the way down", the
 # plan states `fader_db: -144`, apply wrote it and read it back, and the
@@ -2465,6 +3322,12 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
             if _SEND_MODE_TO_WING.get(send.get("mode")) is not None:
                 state_param(base, f"send/{bidx}/mode")
 
+        # CV016 judges every strip the plan routes somewhere, so R008
+        # stands down for it: the plan, not the structural rule, says
+        # whether that strip's routes are right.
+        if planned_routes(plan, entry):
+            state_param(base, "routes")
+
         # CV007. Every Main, not only the listed ones: the list is the
         # complete statement of a strip's direct Main routing, and apply
         # writes each Main it leaves out as OFF (2026-09-27).
@@ -2477,11 +3340,17 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
                                    ("invert", "in/set/inv")):
             if processing.get(plan_field) is not None:
                 state_param(base, suffix)
+        for target in planned_processing_leaves(entry):         # CV008, filters and EQ
+            state_param(base, target.address[len(base) + 1:])
         if processing.get("gain_db") is not None:
             live_patch = state.patch(base)
             if live_patch is not None and live_patch[0] in _VPH_CAPABLE_GROUPS:
                 state_param(f"/io/in/{live_patch[0]}/{live_patch[1]}", "g")
 
+    # CV019 compares 48V on the socket each strip is patched to, so C001
+    # stands down there rather than say it twice.
+    for _base, group, socket, _wanted in phantom_judgements(state, plan):
+        state_param(f"/io/in/{group}/{socket}", "vph")
     for idx in _plan_group_indices(state, plan.get("busses") or {}, bus_indices(state), "/bus/{}"):
         objects.add(f"/bus/{idx}")
     for idx in _plan_group_indices(state, plan.get("dcas") or {}, dca_indices(state), "/dca/{}"):
@@ -2510,6 +3379,10 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
         state_param(f"/bus/{index}", f"{point}/on")
         state_param(f"/bus/{index}", f"{point}/ins")
         state_param(f"/fx/{engine}", "mdl")
+    # CH004 reports a muted DCA, and CV017 (or the planned mute itself)
+    # already says what the plan wants of every DCA it declares.
+    for dca in planned_dca_mutes(plan):
+        state_param(dca, "mute")
     for idx in _plan_group_indices(state, plan.get("mute_groups") or {}, mute_group_indices(state), "/mgrp/{}"):
         objects.add(f"/mgrp/{idx}")
 
@@ -2543,7 +3416,7 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
 class WithheldFinding:
     """A finding the plan put out of scope, and which of the two
     mechanisms did it. Kept, never dropped -- the caller decides whether
-    to count it, show it behind a flag, or hand it to #136."""
+    to count it, show it behind a flag, or hand it to a dirty-board diff."""
 
     finding: Finding
     reason: str
@@ -2660,14 +3533,11 @@ def apply_plan_scope(
 # be -- distinct from the structural rules above, which never look at a
 # plan at all. Eight plan-channel fields covered here, each of which
 # already has a direct live-state counterpart and an existing accessor
-# above: mute, fader level, DCA membership, mute-group membership, patch, plus bus sends, direct-to-Main routes, and a narrow slice of
-# processing. Still NOT covered: `processing`'s filter family
-# (`hpf_hz`/`hi_cut_hz`/`tilt_db`) -- see the processing block below for
-# why -- the parametric EQ (schema and writes since #35 phase 2a, but the
-# same log-type readback doubt), and the compressor (an earlier change has
-# no schema yet). Left for
-# a follow-up rather than guessed at (docs/developer/audit-rules.md says so
-# explicitly).
+# above: mute, fader level, DCA membership, mute-group membership, patch,
+# plus bus sends, direct-to-Main routes, and processing: trim, balance,
+# invert, head-amp gain, and the filters and EQ.
+# Still NOT covered: the compressor (no plan schema), a bus's EQ and a
+# channel's PreSend EQ. Left for a follow-up rather than guessed at.
 #
 # Same rule as cli.py's expectations-check output ("Only fields the plan
 # actually states are compared -- a null fader is not an assertion about
@@ -2681,7 +3551,7 @@ def apply_plan_scope(
 # --------------------------------------------------------------------------
 
 # WING's fader is a 1024-step quantized control over -oo..10dB
-# (`docs/reference/wing-compact-parameter-map.json`'s `/ch/{n}.fdr`), not
+# (the Compact parameter map's `/ch/{n}.fdr`), not
 # a continuous value -- a plan's `fader_db` and a live readback can differ
 # by a fraction of a dB from quantization/rounding alone even when they
 # mean the same setting. 0.5dB is comfortably wider than that per-step
@@ -2692,7 +3562,7 @@ def apply_plan_scope(
 FADER_TOLERANCE_DB = 0.5
 
 # A channel's send to a bus (`{base}/send/{n}/lvl`) is confirmed in
-# docs/reference/wing-compact-parameter-map.json as the exact same
+# the Compact parameter map as the exact same
 # "fader" type, 1024-step, -oo..10dB parameter as the strip's own fader
 # (`{base}/fdr`) -- so FADER_TOLERANCE_DB's reasoning, and value, applies
 # unchanged; no separate constant for it. Channel trim (`{base}/in/set/
@@ -2712,6 +3582,143 @@ FADER_TOLERANCE_DB = 0.5
 # case across every VPH-capable group) plus margin. Chosen, not derived
 # from a real console reading -- revisit if hardware proves it wrong.
 HEAD_AMP_GAIN_TOLERANCE_DB = 3.0
+
+
+def planned_processing_leaves(entry: dict) -> list:
+    """The filter and EQ leaves a plan channel states, as the write targets
+    `apply` builds from the same fields (`address`, `value_type`,
+    `compute_value`): the high-pass, hi-cut and tilt (each with its on
+    switch) and a channel's or aux strip's EQ. Asking `apply` rather than
+    reading the plan's fields again is what keeps the leaf names, the
+    "a stated value implies the switch is on" rule and the aux strip's
+    missing filter node the same on both sides.
+
+    Trim, balance, invert and head-amp gain are not here: they have their
+    own tolerances above."""
+    bank = entry.get("bank", "ch")
+    if bank not in ("ch", "aux") or not isinstance(entry.get("channel"), int):
+        return []
+    base = f"/{bank}/{entry['channel']}"
+    targets = _channel_processing_targets({"name": "", **entry}, bank, base, [])
+    return [t for t in targets if t.address.startswith((f"{base}/flt/", f"{base}/eq/"))]
+
+
+def plan_processing_read_addresses(plan: dict | None) -> list[tuple[str, str]]:
+    """Every filter and EQ leaf the plan states, with the type each is read
+    as -- what `audit --plan` adds to a read (`console_read_plan(extra=...)`)
+    so `diff_against_plan` has something to compare. They sit in the strip's
+    own node (`/ch/{n}`, `/aux/{n}`), which a node dump already fetches, so
+    this is no extra request; and only the leaves a plan states are asked
+    for, so an audit with no plan, or Watch, reads nothing more."""
+    found: dict[str, str] = {}
+    for entry in (plan or {}).get("channels") or []:
+        if isinstance(entry, dict):
+            for target in planned_processing_leaves(entry):
+                found.setdefault(target.address, target.value_type)
+    return list(found.items())
+
+
+#: The three filters of a channel's `flt` node, each as (name in a finding,
+#: on switch, value leaf, unit).
+_FILTERS = (("high-pass", "flt/lc", "flt/lcf", "Hz"),
+            ("hi-cut", "flt/hc", "flt/hcf", "Hz"),
+            ("tilt", "flt/tf", "flt/tilt", "dB"))
+_EQ_UNITS = {"f": "Hz", "g": "dB", "q": ""}
+
+
+def _shown(value: object, unit: str = "") -> str:
+    """A leaf's value as a finding quotes it: `100.2Hz`, `on`, `PEQ`."""
+    if isinstance(value, str):
+        return value
+    number = float(value)
+    return f"{number:.0f}{unit}" if abs(number) >= 1000 else f"{number:.4g}{unit}"
+
+
+def _differs(state: ConsoleState, address: str, value_type: str, wanted: object) -> object:
+    """The live value at `address` when it is not what the plan wants, by
+    `apply`'s own readback comparison (a float within 2% relative or 0.02
+    absolute -- the desk holds the nearest step of a `log` control -- and a
+    switch or list choice exactly); None when it matches or was not read."""
+    live = state.get(address)
+    if live is None or _values_equal(value_type, wanted, live, address):
+        return None
+    return live
+
+
+def _processing_leaf_findings(state: ConsoleState, entry: dict, base: str, label: str,
+                              provenance: dict) -> list[Finding]:
+    """CV008 for the high-pass, hi-cut, tilt and EQ the plan states on this
+    strip (`planned_processing_leaves`), against the leaves the read took.
+
+    A stated filter implies it is on, as `apply` writes it, so a filter that
+    reads off is a finding of its own and its frequency is not then
+    compared. The EQ is grouped for the reader: one finding per band naming
+    every leaf that differs, and one for the EQ's switch, model and mix.
+    A leaf that was not read is not compared."""
+    wanted = {t.address: (t.value_type, t.compute_value(None))
+              for t in planned_processing_leaves(entry)}
+    if not wanted:
+        return []
+    cite = _cite(provenance, "processing")
+    findings: list[Finding] = []
+
+    def finding(message: str, addresses: list[str]) -> None:
+        findings.append(Diagnostic.audit(
+            "CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
+            f"{label}: {message}{cite}", tuple(addresses)))
+
+    for name, switch, leaf, unit in _FILTERS:
+        value_address = f"{base}/{leaf}"
+        if value_address not in wanted:
+            continue
+        value = wanted[value_address][1]
+        switch_address = f"{base}/{switch}"
+        live_switch = state.get(switch_address)
+        if live_switch is not None and _differs(state, switch_address, "i", 1) is not None:
+            finding(f"plan says the {name} is on at {_shown(value, unit)}; live console has it off.",
+                    [switch_address])
+            continue
+        live = _differs(state, value_address, "f", value)
+        if live is not None:
+            finding(f"plan says the {name} is {_shown(value, unit)}, live console reads "
+                    f"{_shown(live, unit)} (tolerance 2%).", [value_address])
+
+    eq_strip = entry.get("bank", "ch")
+    for band in console_facts.eq_band_ids(eq_strip):
+        freq_leaf, gain_leaf, q_leaf, shape_leaf = eq_band_leaves(band)
+        parts: list[str] = []
+        addresses: list[str] = []
+        for leaf, kind, word in ((freq_leaf, "f", "frequency"), (gain_leaf, "g", "gain"),
+                                 (q_leaf, "q", "Q"), (shape_leaf, "shape", "shape")):
+            address = f"{base}/eq/{leaf}" if leaf else None
+            if address not in wanted:
+                continue
+            value_type, want = wanted[address]
+            live = _differs(state, address, value_type, want)
+            if live is not None:
+                unit = _EQ_UNITS.get(kind, "")
+                parts.append(f"{word} {_shown(want, unit)} but {_shown(live, unit)} live")
+                addresses.append(address)
+        if parts:
+            finding(f"EQ band {band}: plan says {'; '.join(parts)} (tolerance 2%).", addresses)
+
+    parts, addresses = [], []
+    for leaf, word, unit in (("on", "EQ", ""), ("mdl", "model", ""), ("mix", "mix", "%")):
+        address = f"{base}/eq/{leaf}"
+        if address not in wanted:
+            continue
+        value_type, want = wanted[address]
+        live = _differs(state, address, value_type, want)
+        if live is not None:
+            if leaf == "on":
+                parts.append(f"the EQ {'on' if want else 'off'} but it is "
+                             f"{'on' if live else 'off'} live")
+            else:
+                parts.append(f"{word} {_shown(want, unit)} but {_shown(live, unit)} live")
+            addresses.append(address)
+    if parts:
+        finding(f"plan says {'; '.join(parts)}.", addresses)
+    return findings
 
 
 def _cite(provenance: dict | None, field: str) -> str:
@@ -3020,12 +4027,11 @@ def fx_insert_findings(state: ConsoleState, plan: dict) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------
-# CV016 and CV017: drift from the plan that Watch notices (Issues
-# #608, #609)
+# CV016 and CV017: drift from the plan that Watch notices
 # --------------------------------------------------------------------------
 #
-# The maintainer, watching his Compact with the sixpiece plan on 2026-10-12: he
-# took Kick out of its two busses, and muted the Vocals bus, and Watch said
+# Watching a Compact with the sixpiece plan on 2026-10-12: Kick was
+# taken out of its two busses, and the Vocals bus muted, and Watch said
 # nothing. The structural rules judge what is wrong on ANY desk, and a
 # channel sending nowhere or a muted bus is a perfectly good desk state
 # between songs; what makes either worth a row is that the plan said
@@ -3114,7 +4120,14 @@ def _join(names: list[str]) -> str:
 
 
 def route_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
-    """CV016: a channel the plan routes somewhere, every
+    """CV016: see `_route_drift`."""
+    return [finding for _base, _routes, finding in _route_drift(state, plan)]
+
+
+def _route_drift(state: ConsoleState, plan: dict) -> list[tuple[str, list, Finding]]:
+    """`(base, planned routes, finding)` for each strip CV016 reports.
+
+    CV016: a channel the plan routes somewhere, every
     one of whose planned routes is off or at the floor on the desk.
 
     *"Kick: the plan sends it to Drums and Drums Comp; neither send is
@@ -3168,18 +4181,26 @@ def route_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
                 if elsewhere else " Its signal reaches nothing the plan routes it to.")
         addresses = tuple(f"{base}/main/{idx}/on" if kind == "main" else f"{base}/send/{idx}/on"
                           for kind, _name, idx in routes)
-        findings.append(Diagnostic.audit(
+        findings.append((base, routes, Diagnostic.audit(
             "CV016", Severity.WARNING, "conventions", "Planned Routes All Off",
             f"{strip_label(state, base)}: the plan {' and '.join(what)}; {verdict}." + tail,
             addresses,
-        ))
+        )))
     return findings
+
+
+def _routes_cv016_names(drift: list[tuple[str, list, Finding]]) -> dict[str, frozenset]:
+    """For each strip CV016 reports, the `(kind, plan index)` of the routes
+    its finding names: the ones CV006 and CV007 leave to it, so a strip
+    cut off from everything is one row."""
+    return {base: frozenset((kind, idx) for kind, _name, idx in routes)
+            for base, routes, _finding in drift}
 
 
 def planned_unmuted(state: ConsoleState, plan: dict) -> list[tuple[str, str]]:
     """`(base, plan name)` for every object the plan leaves unmuted: each
     plan channel, bus and DCA whose `fader.muted` is not true (apply
-    writes such an object unmuted, `apply.MUTED_DEFAULT`), and each Main
+    writes such an object unmuted, `console_facts.MUTED_DEFAULT`), and each Main
     and Matrix the plan routes into or declares as an output, unless its
     output entry says muted. The talk mic is not in it: it is muted by
     design between talks (T002), and a plan has no way to say so."""
@@ -3280,6 +4301,409 @@ def mute_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
     return findings
 
 
+# --------------------------------------------------------------------------
+# CV019: 48V against the plan
+# --------------------------------------------------------------------------
+#
+# The plan states phantom for every channel and `apply` writes it, on the
+# socket each of the strip's patch sockets names. C001 says 48V is on where
+# nothing is patched; this says it is wrong where something is: a condenser
+# with 48V off is silent, and 48V on at a source the plan says must not
+# have it can damage one. It is bound to the plan like CV015 to CV017, and
+# run by `audit --plan`, `atoo watch` and the Watch page.
+
+PHANTOM_RULE_ID = "CV019"
+PHANTOM_TITLE = "Phantom Contradicts Plan"
+
+
+def phantom_judgements(state: ConsoleState, plan: dict) -> list[tuple[str, str, int, bool]]:
+    """`(base, group, socket, 48V wanted)` for each socket CV019 compares.
+
+    A plan channel that states a boolean `source.phantom`, patched on the
+    desk to a group with a head amp: its first socket takes `source.phantom`
+    and, where the plan puts the strip on two sockets (a stereo pair), the
+    next socket takes the pair's own value (`inferred.socket_phantom`, which
+    is what `apply` writes). The socket is the one the strip is patched to
+    now, because that is what it hears; a strip moved off the plan's patch
+    is CV005's as well. Nothing for an unpatched strip or one patched to a
+    group with no `vph`."""
+    out: list[tuple[str, str, int, bool]] = []
+    for entry in plan.get("channels") or []:
+        if not isinstance(entry, dict) or entry.get("bank") not in ("ch", "aux"):
+            continue
+        source = entry.get("source")
+        if (not isinstance(entry.get("channel"), int) or not isinstance(source, dict)
+                or not isinstance(source.get("phantom"), bool)):
+            continue
+        base = f"/{entry['bank']}/{entry['channel']}"
+        live = state.patch(base)
+        if live is None or live[0] not in console_facts.PHANTOM_CAPABLE_GROUPS:
+            continue
+        group, first = live
+        for offset, (_socket, wanted) in enumerate(inferred.socket_phantom(entry)[:2]):
+            out.append((base, group, first + offset, wanted))
+    return out
+
+
+def phantom_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV019: 48V on the desk against the plan, one finding per socket.
+
+    A WARNING either way. A condenser without 48V is silent, a patch that
+    does not work; 48V on at a source the plan says must not have it can
+    damage a ribbon mic. The plan states which is which, so nothing here is
+    guessed from a name and there is nothing to announce at INFO. Silent
+    for a socket whose `vph` was not read."""
+    findings = []
+    for base, group, socket, wanted in phantom_judgements(state, plan):
+        live = state.input_phantom(group, socket)
+        if live is None or live == wanted:
+            continue
+        where = format_socket(group, socket)
+        if wanted:
+            message = (f"{strip_label(state, base)}: the plan has 48V on at {where}; the desk has it "
+                       "off, so a condenser patched there is silent.")
+        else:
+            message = (f"{strip_label(state, base)}: the plan has no 48V at {where}; the desk has it "
+                       "on, which can damage a source that does not want it.")
+        findings.append(Diagnostic.audit(
+            "CV019", Severity.WARNING, "conventions", "Phantom Contradicts Plan",
+            message, (f"/io/in/{group}/{socket}/vph",),
+        ))
+    return findings
+
+
+# --------------------------------------------------------------------------
+# CV020: a bus's width against the plan
+# --------------------------------------------------------------------------
+#
+# The plan decides every bus's width (`busses[*].mono`) and `apply` writes it to
+# `/bus/{n}/busmono`. The width changes what an output jack carries, so a bus
+# left at the other width is a patch that does not do what the plan meant.
+# Bound to the plan like CV019, and run by `audit --plan`, `atoo watch` and the
+# Watch page. A plan states a width for a bus and for nothing else.
+
+BUS_WIDTH_RULE_ID = "CV020"
+BUS_WIDTH_TITLE = "Bus Width Contradicts Plan"
+
+
+def bus_width_judgements(plan: dict) -> list[tuple[str, int, bool]]:
+    """`(plan name, desk index, planned mono)` for each bus the plan gives an
+    index and a boolean `mono`."""
+    out = []
+    for name, entry in (plan.get("busses") or {}).items():
+        if (isinstance(entry, dict) and isinstance(entry.get("index"), int)
+                and isinstance(entry.get("mono"), bool)):
+            out.append((name, entry["index"], entry["mono"]))
+    return out
+
+
+def bus_width_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV020: a bus whose width on the desk is not the plan's, one finding
+    per bus. A WARNING: the plan states the width, so nothing is inferred,
+    and the wrong one changes the signal on a jack. Silent for a width that
+    was not read."""
+    findings = []
+    for name, index, planned_mono in bus_width_judgements(plan):
+        base = f"/bus/{index}"
+        live_mono = state.flag(f"{base}/busmono")
+        if live_mono is None or live_mono == planned_mono:
+            continue
+        label = f'{position_label(base)} "{_desk_bus_label(state, index, name)}"'
+        if planned_mono:
+            message = (f"{label}: the plan has this bus mono; the desk has it stereo, so an output "
+                       "patched to its left side carries only the left of the mix and anything "
+                       "panned right is lost.")
+        else:
+            message = (f"{label}: the plan has this bus stereo; the desk has it mono, so its left "
+                       "and right outputs carry the same signal and the panning is lost.")
+        findings.append(Diagnostic.audit(
+            "CV020", Severity.WARNING, "conventions", "Bus Width Contradicts Plan",
+            message, (f"{base}/busmono",),
+        ))
+    return findings
+
+
+# --------------------------------------------------------------------------
+# CV021 and CV022: talkback against the plan's monitor mixes
+# --------------------------------------------------------------------------
+#
+# T001 says talkback reaches nobody. It cannot say talkback reaches some mixes
+# and not others, because a desk read does not say which busses are monitor
+# mixes and the audit never guesses that from a name. The plan does say: it
+# feeds a monitor mix to an output socket and to no Main, and sends into it
+# pre-fader. TALK A and TALK B each have one destination switch per bus
+# (`/cfg/talk/{A,B}/B1..B16`), so whether talkback reaches a mix is two
+# switches already read when talkback is assigned.
+
+TALKBACK_MONITOR_RULE_ID = "CV021"
+TALKBACK_MONITOR_TITLE = "Talkback Misses A Monitor Mix"
+TALKBACK_MONITORS_NOTE_RULE_ID = "CV022"
+TALKBACK_MONITORS_NOTE_TITLE = "Monitor Mixes Talkback Was Checked Against"
+
+#: A plan send mode that is not pre-fader.
+_NOT_PRE_FADER = frozenset({"post", "group"})
+
+#: The talkback destinations that are busses (`B1..B16`).
+_TALK_BUSSES = tuple(d for d in console_facts.TALK_DESTINATIONS if d.startswith("B"))
+
+
+def planned_monitor_busses(plan: dict) -> list[tuple[str, int]]:
+    """`(plan name, desk index)` for each bus the plan builds as a monitor mix.
+
+    A monitor mix is how the plan builder already recognises one
+    (`inferred._is_monitor_bus`): the bus feeds an output socket and no Main.
+    It is not one when the plan lists sends into it and every one of them is
+    stated post-fader (or in group mode): a feed on its own output that
+    follows the fader is a sub or a recording feed, not a mix a performer
+    listens to. A send whose mode is not stated is read as the plan builder
+    decides it for such a bus, pre-fader. Only busses talkback can reach
+    (B1..B16) are returned."""
+    modes: dict[str, set] = {}
+    for entry in plan.get("channels") or []:
+        if not isinstance(entry, dict):
+            continue
+        for send in entry.get("bus_sends") or []:
+            if isinstance(send, dict) and send.get("bus"):
+                modes.setdefault(send["bus"], set()).add(send.get("mode"))
+    found = []
+    for name, bus in (plan.get("busses") or {}).items():
+        if not (isinstance(bus, dict) and isinstance(bus.get("index"), int)
+                and 1 <= bus["index"] <= len(_TALK_BUSSES) and inferred._is_monitor_bus(bus)):
+            continue
+        stated = modes.get(name, set())
+        if stated and stated <= _NOT_PRE_FADER:
+            continue
+        found.append((name, bus["index"]))
+    return sorted(found, key=lambda item: item[1])
+
+
+def _talk_reaches(state: ConsoleState, index: int) -> bool | None:
+    """Whether TALK A or TALK B is routed to bus `index`: True when either
+    switch is on, False when both are off, None when either was not read and
+    neither is on."""
+    flags = [state.flag(console_facts.talk_destination(button, f"B{index}"))
+             for button in console_facts.TALK_BUTTONS]
+    if any(flags):
+        return True
+    return None if any(flag is None for flag in flags) else False
+
+
+def _talkback_nowhere(state: ConsoleState) -> bool:
+    """T001's case: every destination switch was read and none is on."""
+    flags = [state.flag(console_facts.talk_destination(button, dest))
+             for button in console_facts.TALK_BUTTONS
+             for dest in console_facts.TALK_DESTINATIONS]
+    return all(flag is not None for flag in flags) and not any(flags)
+
+
+def _talkback_monitor_judgements(state: ConsoleState, plan: dict) -> list[tuple[str, int, bool]]:
+    """`(plan name, desk index, reached)` for each planned monitor mix talkback
+    can be judged against. Empty when talkback is unassigned or unread, when
+    the plan builds no monitor mix, and when talkback reaches nowhere at all
+    (T001 says that once)."""
+    assign = state.text(console_facts.TALK_ASSIGN)
+    if assign is None or assign == console_facts.TALK_OFF or _talkback_nowhere(state):
+        return []
+    out = []
+    for name, index in planned_monitor_busses(plan):
+        reached = _talk_reaches(state, index)
+        if reached is not None:
+            out.append((name, index, reached))
+    return out
+
+
+def talkback_monitor_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV021: talkback is assigned and reaches some destination, but a monitor
+    mix the plan builds has neither TALK A's nor TALK B's switch on. One
+    finding per mix, so each clears when its own switch is put right.
+
+    A WARNING like T001: the show goes on, but whoever listens to that mix
+    cannot hear the engineer, which is found out when the band does not
+    answer. Which busses are monitor mixes is the plan's (`planned_monitor_busses`),
+    never a bus's name, and CV022 says which were taken."""
+    findings = []
+    assign = state.text(console_facts.TALK_ASSIGN)
+    for name, index, reached in _talkback_monitor_judgements(state, plan):
+        if reached:
+            continue
+        base = f"/bus/{index}"
+        label = f'{position_label(base)} "{_desk_bus_label(state, index, name)}"'
+        findings.append(Diagnostic.audit(
+            "CV021", Severity.WARNING, "conventions", "Talkback Misses A Monitor Mix",
+            f"Talkback is assigned to {assign} and reaches other mixes, but not {label}, a "
+            f"monitor mix the plan builds: neither TALK A nor TALK B is routed to it, so whoever "
+            f"listens to that mix cannot hear you. Switch B{index} on in TALK A's (or TALK B's) "
+            f"destinations on the desk's talkback page.",
+            (console_facts.talk_destination("A", f"B{index}"),
+             console_facts.talk_destination("B", f"B{index}")),
+        ))
+    return findings
+
+
+def talkback_monitors_note_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV022: the one line saying which busses CV021 took for monitor mixes
+    and why, because that is an inference from the plan and not something the
+    desk states. INFO; silent whenever CV021 has nothing to judge."""
+    judged = _talkback_monitor_judgements(state, plan)
+    if not judged:
+        return []
+    names = ", ".join(
+        f'{position_label(f"/bus/{index}")} "{_desk_bus_label(state, index, name)}"'
+        for name, index, _reached in judged)
+    reached = sum(1 for *_rest, ok in judged if ok)
+    return [Diagnostic.audit(
+        "CV022", Severity.INFO, "conventions", "Monitor Mixes Talkback Was Checked Against",
+        f"Talkback reaches {reached} of the {len(judged)} monitor mixes the plan builds: {names}. "
+        f"A bus is taken for a monitor mix when the plan feeds it to an output socket and to no "
+        f"Main, and does not send into it post-fader only; a mix the plan builds another way is "
+        f"not checked.",
+        (console_facts.TALK_ASSIGN,),
+    )]
+
+
+# --------------------------------------------------------------------------
+# CV006, CV007 and CV018 in Watch: the plan's sends and routes
+# --------------------------------------------------------------------------
+#
+# CV006 and CV007 compare what the plan states for a channel's sends and
+# Main routes with the desk, and had run only in `audit --plan`: a monitor
+# send flipped post-fader mid-show, or one IEM's click send switched off,
+# went unreported. Watch binds them to the plan as it binds CV016. CV018 is
+# their twin, the route the plan does NOT have.
+
+
+def _plan_strips(plan: dict):
+    """`(entry, base)` for every plan channel and aux with a position."""
+    for entry in plan.get("channels") or []:
+        if (isinstance(entry, dict) and entry.get("bank") in ("ch", "aux")
+                and isinstance(entry.get("channel"), int)):
+            yield entry, f"/{entry['bank']}/{entry['channel']}"
+
+
+def bus_send_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV006 as Watch runs it: a send the plan states that is off on the
+    desk, or in the other pre/post mode. Not the level (`level=False`):
+    it is what the engineer rides at soundcheck, and `audit --plan` keeps
+    comparing it."""
+    cut_off = _routes_cv016_names(_route_drift(state, plan))
+    findings: list[Finding] = []
+    for entry, base in _plan_strips(plan):
+        findings.extend(_diff_bus_sends(
+            state, entry, base, strip_label(state, base), entry.get("provenance") or {},
+            level=False, spoken_for=cut_off.get(base, frozenset())))
+    return findings
+
+
+def main_route_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV007 as Watch runs it: a listed Main route that is off, and a Main
+    the plan does not list that is on."""
+    cut_off = _routes_cv016_names(_route_drift(state, plan))
+    findings: list[Finding] = []
+    for entry, base in _plan_strips(plan):
+        findings.extend(_diff_main_routes(
+            state, entry, base, strip_label(state, base), entry.get("provenance") or {},
+            spoken_for=cut_off.get(base, frozenset())))
+    return findings
+
+
+def _planned_send_indices(state: ConsoleState, plan: dict, entry: dict) -> set[int]:
+    """The busses a plan channel lists a send to, as live indices: the
+    plan's own `index` for the bus, and whatever its name resolves to on
+    the desk. Both, as `plan_scope` takes both -- an ambiguity keeps a
+    send out of CV018 rather than putting it in."""
+    busses = plan.get("busses") or {}
+    found: set[int] = set()
+    for send in entry.get("bus_sends") or []:
+        name = send.get("bus") if isinstance(send, dict) else None
+        if not name:
+            continue
+        bus = busses.get(name)
+        if isinstance(bus, dict) and isinstance(bus.get("index"), int):
+            found.add(bus["index"])
+        live = _resolve_single_index_by_name(state, name, bus_indices(state), "/bus/{}")
+        if live is not None:
+            found.add(live)
+    return found
+
+
+def _live_send_level(state: ConsoleState, send_base: str) -> float | None:
+    """The level of a send that is on and above the floor; None when it is
+    off, at the floor, or either leaf was not read."""
+    if not state.flag(f"{send_base}/on"):
+        return None
+    level = state.number(f"{send_base}/lvl")
+    return level if level is not None and level > FADER_FLOOR_DB else None
+
+
+def planned_bus_mains(entry: dict) -> set[int]:
+    """The Mains a plan bus lists a route to: its `destinations`, else the
+    single `destination` (a main destination without an index is Main 1,
+    as `apply` writes it)."""
+    destinations = entry.get("destinations") or []
+    if not destinations and isinstance(entry.get("destination"), dict):
+        destinations = [entry["destination"]]
+    return {d.get("index", 1) for d in destinations
+            if isinstance(d, dict) and d.get("type") == "main"}
+
+
+def unplanned_route_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV018: a send or route that is on, which the plan does
+    not have. A planned channel's send to a bus its `bus_sends` does not
+    name, or to any Matrix (the plan states no strip-to-Matrix send), that
+    is on and above the floor; and a planned bus's route to a Main its
+    destinations do not list. A channel's unlisted Main route is CV007's.
+
+    A WARNING, a judgement: the engineer may have added the send on
+    purpose after the build, and a row costs nothing when it was meant. It
+    is not an INFO because a send nobody listed is how a click reaches the
+    PA, and not an ERROR because adding a send is an ordinary act. Silent
+    for whatever was not read."""
+    findings: list[Finding] = []
+    for entry, base in _plan_strips(plan):
+        label = strip_label(state, base)
+        planned = _planned_send_indices(state, plan, entry)
+        for idx in send_targets(state, base):
+            send_base = f"{base}/send/{idx}"
+            level = _live_send_level(state, send_base)
+            if idx in planned or level is None:
+                continue
+            findings.append(Diagnostic.audit(
+                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+                f"{label}: a send to {strip_label(state, f'/bus/{idx}')} is on at {level:g}dB; "
+                "the plan has no send from this channel to that bus.",
+                (f"{send_base}/on",),
+            ))
+        for idx in matrix_send_targets(state, base):
+            send_base = f"{base}/send/MX{idx}"
+            level = _live_send_level(state, send_base)
+            if level is None:
+                continue
+            findings.append(Diagnostic.audit(
+                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+                f"{label}: a send to {position_label(f'/mtx/{idx}')} is on at {level:g}dB; "
+                "the plan has no send from this channel to a Matrix.",
+                (f"{send_base}/on",),
+            ))
+    for name, bus in (plan.get("busses") or {}).items():
+        if not isinstance(bus, dict) or not isinstance(bus.get("index"), int):
+            continue
+        base = f"/bus/{bus['index']}"
+        planned_mains = planned_bus_mains(bus)
+        label = strip_label(state, base)
+        if effective_name(state, base) is None:
+            label = f'{position_label(base)} "{name}"'
+        for main_index in main_route_targets(state, base):
+            if main_index in planned_mains or not state.flag(f"{base}/main/{main_index}/on"):
+                continue
+            findings.append(Diagnostic.audit(
+                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+                f"{label}: routed to {position_label(f'/main/{main_index}')} on the desk; "
+                "the plan lists no route from this bus to it.",
+                (f"{base}/main/{main_index}/on",),
+            ))
+    return findings
+
+
 def planned_floor_strips(plan: dict) -> frozenset:
     """The channels, auxes and busses `plan` puts at the floor
     (`fader_db` at or below `FADER_FLOOR_DB`), as console bases:
@@ -3308,6 +4732,33 @@ def fader_floor_rule(plan: dict) -> AuditRule:
     return replace(base, check=lambda state: _rule_fader_floor_while_active(state, floor))
 
 
+def planned_routed_strips(plan: dict) -> frozenset:
+    """The channels and auxes `plan` routes somewhere (`planned_routes`),
+    as console bases: the strips CV016 judges."""
+    out = set()
+    for entry in plan.get("channels") or []:
+        if (isinstance(entry, dict) and entry.get("bank") in ("ch", "aux")
+                and isinstance(entry.get("channel"), int) and planned_routes(plan, entry)):
+            out.add(f"/{entry['bank']}/{entry['channel']}")
+    return frozenset(out)
+
+
+def strip_reaches_nothing_rule(plan: dict) -> AuditRule:
+    """R008 bound to `plan`: silent on a strip the plan routes, where
+    CV016 says it, the same rule on every other."""
+    base = next(rule for rule in DEFAULT_RULES if rule.id == "R008")
+    routed = planned_routed_strips(plan)
+    return replace(base, check=lambda state: _rule_strip_reaches_nothing(state, routed))
+
+
+def dca_muted_rule(plan: dict) -> AuditRule:
+    """CH004 bound to `plan`: silent on a DCA the plan judges, where CV017
+    says it, the same rule on every other."""
+    base = next(rule for rule in DEFAULT_RULES if rule.id == "CH004")
+    planned = planned_dca_mutes(plan)
+    return replace(base, check=lambda state: _rule_dca_muted_with_members(state, planned))
+
+
 def _read_plan(plan_path) -> "dict | None":
     import json as _json
     from pathlib import Path as _Path
@@ -3320,20 +4771,30 @@ def _read_plan(plan_path) -> "dict | None":
 
 
 def with_plan_rules(rules, plan_path) -> list[AuditRule]:
-    """`rules` as Watch runs them on a show whose bundle has a plan: L002
-    bound to the plan (`fader_floor_rule`), then the plan-bound rules
-    (`plan_watch_rules`). An unreadable plan leaves `rules` as they are."""
+    """`rules` as Watch runs them on a show whose bundle has a plan: L002,
+    R008, C001, CH004 and R011 bound to the plan (`fader_floor_rule`,
+    `strip_reaches_nothing_rule`, `phantom_unpatched_rule`, `dca_muted_rule`,
+    `stereo_one_side_rule`),
+    then the plan-bound rules (`plan_watch_rules`). An unreadable plan leaves
+    `rules` as they are."""
     plan = _read_plan(plan_path)
     if plan is None:
         return list(rules)
-    bound = [fader_floor_rule(plan) if rule.id == "L002" else rule for rule in rules]
+    bound = [fader_floor_rule(plan) if rule.id == "L002"
+             else strip_reaches_nothing_rule(plan) if rule.id == "R008"
+             else phantom_unpatched_rule(plan) if rule.id == "C001"
+             else stereo_one_side_rule(plan) if rule.id == "R011"
+             else dca_muted_rule(plan) if rule.id == "CH004"
+             else rule for rule in rules]
     return bound + plan_watch_rules(plan_path)
 
 
 def plan_watch_rules(plan_path) -> list[AuditRule]:
     """The plan-bound rules Watch adds when its show bundle has a plan:
     CV015 when the plan loads an effect, CV016 when it
-    routes a channel anywhere, and CV017. An unreadable
+    routes a channel anywhere, CV017, the
+    send and route checks CV006, CV007 and CV018, and CV021 and CV022 when it
+    builds a monitor mix. An unreadable
     plan adds none -- Watch watches a console, and a broken plan.json is
     Build's to report."""
     import json as _json
@@ -3345,7 +4806,10 @@ def plan_watch_rules(plan_path) -> list[AuditRule]:
         return []
     if not isinstance(plan, dict):
         return []
-    rules = [fx_insert_rule(plan), route_drift_rule(plan), mute_drift_rule(plan)]
+    rules = [fx_insert_rule(plan), route_drift_rule(plan), mute_drift_rule(plan),
+             bus_send_drift_rule(plan), main_route_drift_rule(plan),
+             unplanned_route_rule(plan), phantom_drift_rule(plan), bus_width_rule(plan),
+             talkback_monitor_rule(plan), talkback_monitors_note_rule(plan)]
     return [rule for rule in rules if rule is not None]
 
 
@@ -3370,6 +4834,104 @@ def mute_drift_rule(plan: dict) -> AuditRule:
         lambda state: mute_drift_findings(state, plan), scope=RuleScope.CONVENTION)
 
 
+def phantom_drift_rule(plan: dict) -> AuditRule | None:
+    """CV019 as a rule Watch can run, bound to `plan`; None when no plan
+    channel states a phantom."""
+    if not any(isinstance(e, dict) and isinstance((e.get("source") or {}).get("phantom"), bool)
+               for e in plan.get("channels") or []):
+        return None
+    return AuditRule(
+        PHANTOM_RULE_ID, Severity.WARNING, "conventions", PHANTOM_TITLE,
+        "48V on a socket is not what the plan states for the channel patched to it.",
+        lambda state: phantom_drift_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def stereo_one_side_rule(plan: dict) -> AuditRule:
+    """R011 bound to `plan`: silent on an object whose every output socket
+    the plan declares (the plan asked for the patch), the same rule on every
+    other. `audit --plan` does this through the plan's scope; Watch has no
+    scope, so it is bound here as C001 is."""
+    base = next(rule for rule in DEFAULT_RULES if rule.id == "R011")
+    declared = frozenset(_declared_output_patches(plan))
+    return replace(base, check=lambda state: _rule_stereo_one_side(state, declared))
+
+
+def phantom_unpatched_rule(plan: dict) -> AuditRule:
+    """C001 bound to `plan`: silent on a socket CV019 judges, the same rule
+    on every other."""
+    base = next(rule for rule in DEFAULT_RULES if rule.id == "C001")
+    return replace(base, check=lambda state: _rule_phantom_unpatched(
+        state, frozenset((g, s) for _b, g, s, _w in phantom_judgements(state, plan))))
+
+def bus_width_rule(plan: dict) -> AuditRule | None:
+    """CV020 as a rule Watch can run, bound to `plan`; None when the plan
+    states no bus width."""
+    if not bus_width_judgements(plan):
+        return None
+    return AuditRule(
+        BUS_WIDTH_RULE_ID, Severity.WARNING, "conventions", BUS_WIDTH_TITLE,
+        "A bus is mono or stereo on the desk where the plan states the other.",
+        lambda state: bus_width_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def talkback_monitor_rule(plan: dict) -> AuditRule | None:
+    """CV021 as a rule Watch can run, bound to `plan`; None when the plan
+    builds no monitor mix."""
+    if not planned_monitor_busses(plan):
+        return None
+    return AuditRule(
+        TALKBACK_MONITOR_RULE_ID, Severity.WARNING, "conventions", TALKBACK_MONITOR_TITLE,
+        "Talkback is assigned and reaches some destination, but a monitor mix the plan builds "
+        "has neither TALK A's nor TALK B's switch on.",
+        lambda state: talkback_monitor_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def talkback_monitors_note_rule(plan: dict) -> AuditRule | None:
+    """CV022 as a rule Watch can run, bound to `plan`; None when the plan
+    builds no monitor mix."""
+    if not planned_monitor_busses(plan):
+        return None
+    return AuditRule(
+        TALKBACK_MONITORS_NOTE_RULE_ID, Severity.INFO, "conventions",
+        TALKBACK_MONITORS_NOTE_TITLE,
+        "Which busses talkback was checked against, taken from the plan.",
+        lambda state: talkback_monitors_note_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def bus_send_drift_rule(plan: dict) -> AuditRule | None:
+    """CV006 as a rule Watch can run, bound to `plan`; None when the plan
+    states no send."""
+    if not any(isinstance(e, dict) and e.get("bus_sends") for e in plan.get("channels") or []):
+        return None
+    return AuditRule(
+        "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+        "A send the plan states is off on the desk, or in the other pre/post mode.",
+        lambda state: bus_send_drift_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def main_route_drift_rule(plan: dict) -> AuditRule | None:
+    """CV007 as a rule Watch can run, bound to `plan`; None when the plan
+    has no channel."""
+    if not any(True for _ in _plan_strips(plan)):
+        return None
+    return AuditRule(
+        "CV007", Severity.WARNING, "conventions", "Main Route Contradicts Plan",
+        "A channel's direct Main route the plan lists is off, or one it does not list is on.",
+        lambda state: main_route_drift_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def unplanned_route_rule(plan: dict) -> AuditRule | None:
+    """CV018 as a rule Watch can run, bound to `plan`; None when the plan
+    has no channel and no bus."""
+    if not any(True for _ in _plan_strips(plan)) and not plan.get("busses"):
+        return None
+    return AuditRule(
+        "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+        "A send to a bus or Matrix, or a bus's route to a Main, is on and the plan does not "
+        "have it.",
+        lambda state: unplanned_route_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
 def fx_insert_rule(plan: dict) -> AuditRule | None:
     """CV015 as a rule Watch can run, bound to `plan`; None when the
     plan loads no effect."""
@@ -3380,6 +4942,122 @@ def fx_insert_rule(plan: dict) -> AuditRule | None:
         "An FX bus whose insert is off, names another engine, or whose engine holds another "
         "model than its bus preset planned.",
         lambda state: fx_insert_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+def _diff_bus_sends(
+    state: ConsoleState, entry: dict, base: str, label: str, provenance: dict,
+    *, level: bool, spoken_for: frozenset = frozenset(),
+) -> list[Finding]:
+    """CV006 for one plan channel: each send the plan states,
+    against the desk's switch, level and pre/post mode.
+
+    Each entry names a bus by NAME (the plan is name-based, the console is
+    index-based), so it goes through the same `_resolve_single_index_by_name`
+    every DCA/mute-group name uses -- an unresolved or ambiguous bus name is
+    skipped silently, not reported as a name mismatch.
+
+    `level=False` is what Watch runs: a send level is what the engineer
+    rides at soundcheck, so only the switch and pre/post can be a row.
+    A value that was not read is not a contradiction. `spoken_for` is the
+    `(kind, plan index)` of routes CV016 already names for this strip, whose
+    off switch is then said once, by it."""
+    findings: list[Finding] = []
+    for send in entry.get("bus_sends") or []:
+        bus_name = send.get("bus") if isinstance(send, dict) else None
+        if not bus_name:
+            continue
+        bidx = _resolve_single_index_by_name(state, bus_name, bus_indices(state), "/bus/{}")
+        if bidx is None:
+            continue
+        send_base = f"{base}/send/{bidx}"
+
+        # A stated send implies it should be on -- apply.py always
+        # writes on=1 for any stated send (there's no "stated but off"
+        # concept in the plan), so a live "off" reading contradicts the
+        # plan regardless of what mode/level say.
+        if state.flag(f"{send_base}/on") is False and ("bus", bidx) not in spoken_for:
+            findings.append(Diagnostic.audit(
+                "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                f"{label}: plan states a send to {bus_name}, live console reads off."
+                + _cite(provenance, "bus_sends"),
+                (f"{send_base}/on",),
+            ))
+
+        level_db = send.get("level_db")
+        if level and level_db is not None:
+            live_lvl = state.number(f"{send_base}/lvl")
+            if live_lvl is not None and abs(float(level_db) - live_lvl) > FADER_TOLERANCE_DB:
+                findings.append(Diagnostic.audit(
+                    "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                    f"{label}: plan says send to {bus_name} is {level_db:g}dB, live console "
+                    f"reads {live_lvl:g}dB (tolerance {FADER_TOLERANCE_DB:g}dB)."
+                    + _cite(provenance, "bus_sends"),
+                    (f"{send_base}/lvl",),
+                ))
+
+        mode = send.get("mode")
+        if mode is not None:
+            # apply.py's own source of truth for this mapping
+            # (_SEND_MODE_TO_WING), imported rather than re-derived --
+            # an unrecognized plan mode resolves to None here exactly
+            # as it does there, and is skipped rather than compared
+            # against nothing.
+            wing_mode = _SEND_MODE_TO_WING.get(mode)
+            live_mode = state.text(f"{send_base}/mode")
+            if wing_mode is not None and live_mode is not None and live_mode != wing_mode:
+                findings.append(Diagnostic.audit(
+                    "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                    f"{label}: plan says send to {bus_name} mode is {mode!r} "
+                    f"({wing_mode}), live console reads {live_mode}."
+                    + _cite(provenance, "bus_sends"),
+                    (f"{send_base}/mode",),
+                ))
+    return findings
+
+
+def _diff_main_routes(
+    state: ConsoleState, entry: dict, base: str, label: str, provenance: dict,
+    *, spoken_for: frozenset = frozenset(),
+) -> list[Finding]:
+    """CV007 for one plan channel: each direct Main route the
+    plan lists, against the desk, and each Main it does not list.
+
+    The route is already a live index, so no name resolution step is
+    needed, unlike `bus_sends`. `spoken_for` is as in `_diff_bus_sends`."""
+    findings: list[Finding] = []
+    for route in entry.get("main_routes") or []:
+        route_index = route.get("index") if isinstance(route, dict) else None
+        if route_index is None or ("main", route_index) in spoken_for:
+            continue
+        main_base = f"{base}/main/{route_index}"
+        if state.flag(f"{main_base}/on") is False:
+            findings.append(Diagnostic.audit(
+                "CV007", Severity.WARNING, "conventions", "Main Route Contradicts Plan",
+                f"{label}: plan says this channel routes directly to Main {route_index}, "
+                f"live console reads off." + _cite(provenance, "main_routes"),
+                (f"{main_base}/on",),
+            ))
+    # And the other half: `main_routes` is the COMPLETE
+    # statement of a strip's direct Main routing, and apply switches
+    # every unlisted Main off. A factory WING ships every strip on
+    # Main 1, so a planned channel still reading ON at a Main the plan
+    # does not list is a desk that was never told -- the click on the
+    # PA, or a drum on Main twice, directly and through its bus. Only
+    # a live ON is reported: a Main that did not answer says nothing.
+    listed_mains = {r.get("index") for r in entry.get("main_routes") or []
+                    if isinstance(r, dict)}
+    for main_index in main_route_targets(state, base):
+        if main_index in listed_mains:
+            continue
+        main_base = f"{base}/main/{main_index}"
+        if state.flag(f"{main_base}/on"):
+            findings.append(Diagnostic.audit(
+                "CV007", Severity.WARNING, "conventions", "Main Route Contradicts Plan",
+                f"{label}: plan lists no direct route from this channel to Main "
+                f"{main_index}, live console reads on." + _cite(provenance, "main_routes"),
+                (f"{main_base}/on",),
+            ))
+    return findings
 
 
 def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
@@ -3395,6 +5073,8 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
     mismatch plausibly mattering more than a 0.6dB fader gap, is left for
     later rather than invented here)."""
     findings: list[Finding] = []
+    drift = _route_drift(state, plan)
+    cut_off = _routes_cv016_names(drift)
     for entry in plan.get("channels", []):
         base = f"/{entry['bank']}/{entry['channel']}"
         if state.name(base) is None:
@@ -3470,126 +5150,17 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
                     (f"{base}/in/conn/grp", f"{base}/in/conn/in"),
                 ))
 
-        # Bus sends. Each entry names a bus by NAME (the plan is
-        # name-based, the console is index-based), so it goes through the
-        # same `_resolve_single_index_by_name` every DCA/mute-group name
-        # above uses -- an unresolved or ambiguous bus name is skipped
-        # silently, same discipline, not reported as a name mismatch.
-        for send in entry.get("bus_sends", []):
-            bus_name = send.get("bus")
-            if not bus_name:
-                continue
-            bidx = _resolve_single_index_by_name(state, bus_name, bus_indices(state), "/bus/{}")
-            if bidx is None:
-                continue
-            send_base = f"{base}/send/{bidx}"
+        # Bus sends and direct Main routes (FR-1.11).
+        findings.extend(_diff_bus_sends(
+            state, entry, base, label, provenance, level=True,
+            spoken_for=cut_off.get(base, frozenset())))
+        findings.extend(_diff_main_routes(
+            state, entry, base, label, provenance,
+            spoken_for=cut_off.get(base, frozenset())))
 
-            # A stated send implies it should be on -- apply.py always
-            # writes on=1 for any stated send (there's no "stated but off"
-            # concept in the plan), so a live "off"/unread reading
-            # contradicts the plan regardless of what mode/level say.
-            live_on = state.flag(f"{send_base}/on")
-            if not live_on:
-                live_text = "unread" if live_on is None else "off"
-                findings.append(Diagnostic.audit(
-                    "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
-                    f"{label}: plan states a send to {bus_name}, live console reads "
-                    f"{live_text}." + _cite(provenance, "bus_sends"),
-                    (f"{send_base}/on",),
-                ))
-
-            level_db = send.get("level_db")
-            if level_db is not None:
-                live_lvl = state.number(f"{send_base}/lvl")
-                if live_lvl is None or abs(float(level_db) - live_lvl) > FADER_TOLERANCE_DB:
-                    live_text = "unread" if live_lvl is None else f"{live_lvl:g}dB"
-                    findings.append(Diagnostic.audit(
-                        "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
-                        f"{label}: plan says send to {bus_name} is {level_db:g}dB, live console "
-                        f"reads {live_text} (tolerance {FADER_TOLERANCE_DB:g}dB)."
-                        + _cite(provenance, "bus_sends"),
-                        (f"{send_base}/lvl",),
-                    ))
-
-            mode = send.get("mode")
-            if mode is not None:
-                # apply.py's own source of truth for this mapping
-                # (_SEND_MODE_TO_WING), imported rather than re-derived --
-                # an unrecognized plan mode resolves to None here exactly
-                # as it does there, and is skipped rather than compared
-                # against nothing.
-                wing_mode = _SEND_MODE_TO_WING.get(mode)
-                if wing_mode is not None:
-                    live_mode = state.text(f"{send_base}/mode")
-                    if live_mode != wing_mode:
-                        live_text = "unread" if live_mode is None else live_mode
-                        findings.append(Diagnostic.audit(
-                            "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
-                            f"{label}: plan says send to {bus_name} mode is {mode!r} "
-                            f"({wing_mode}), live console reads {live_text}."
-                            + _cite(provenance, "bus_sends"),
-                            (f"{send_base}/mode",),
-                        ))
-
-        # Direct-to-Main routes (FR-1.11). Already a live
-        # index, not a name -- no resolution step needed, unlike bus_sends.
-        for route in entry.get("main_routes", []):
-            route_index = route.get("index")
-            if route_index is None:
-                continue
-            main_base = f"{base}/main/{route_index}"
-            live_on = state.flag(f"{main_base}/on")
-            if not live_on:
-                live_text = "unread" if live_on is None else "off"
-                findings.append(Diagnostic.audit(
-                    "CV007", Severity.WARNING, "conventions", "Main Route Contradicts Plan",
-                    f"{label}: plan says this channel routes directly to Main {route_index}, "
-                    f"live console reads {live_text}." + _cite(provenance, "main_routes"),
-                    (f"{main_base}/on",),
-                ))
-        # And the other half (2026-09-27): `main_routes` is the COMPLETE
-        # statement of a strip's direct Main routing, and apply switches
-        # every unlisted Main off. A factory WING ships every strip on
-        # Main 1, so a planned channel still reading ON at a Main the plan
-        # does not list is a desk that was never told -- the click on the
-        # PA, or a drum on Main twice, directly and through its bus. Only
-        # a live ON is reported: a Main that did not answer says nothing.
-        listed_mains = {r.get("index") for r in entry.get("main_routes") or []
-                        if isinstance(r, dict)}
-        for main_index in main_route_targets(state, base):
-            if main_index in listed_mains:
-                continue
-            main_base = f"{base}/main/{main_index}"
-            if state.flag(f"{main_base}/on"):
-                findings.append(Diagnostic.audit(
-                    "CV007", Severity.WARNING, "conventions", "Main Route Contradicts Plan",
-                    f"{label}: plan lists no direct route from this channel to Main "
-                    f"{main_index}, live console reads on." + _cite(provenance, "main_routes"),
-                    (f"{main_base}/on",),
-                ))
-
-        # Processing -- a DELIBERATELY NARROW slice of
-        # channel["processing"]. Only trim_db, balance_db, invert and
-        # gain_db are diffed here.
-        #
-        # Excluded for the same reason: `eq`. Its
-        # frequency and Q leaves are `log` parameters exactly like
-        # `flt.lcf`, so a plan/live diff over them would rest on the same
-        # unconfirmed GET-reply shape the filter family is excluded for.
-        # Permanently excluded: hpf_hz, hi_cut_hz and tilt_db -- the
-        # `{base}/flt/*` family (lcf, hcf, tilt). apply.py's own module
-        # docstring (~line 100) flags `/ch/{n}/flt/lcf` as a "log"-type
-        # parameter whose GET-reply shape is NOT hardware-confirmed
-        # (open, blocked on physical-hardware access) -- hcf and
-        # tilt are the same parameter family/type, so the same doubt
-        # applies even though #3 only names lcf literally. This project
-        # has already shipped two rounds of false-mismatch bugs from
-        # trusting an unconfirmed readback shape (#75, #76, both open,
-        # both about apply.py's routing writes) -- diffing an
-        # unconfirmed-shape address here risks manufacturing the exact
-        # same class of false finding, so this check leaves the whole
-        # flt/* family alone until #3 is resolved. Fixing #3 is not this
-        # task's job.
+        # Processing: trim, balance, invert and head-amp gain, each with
+        # its own tolerance below. The high-pass, hi-cut, tilt and EQ are
+        # compared after this block, by `_processing_leaf_findings`.
         processing = entry.get("processing") or {}
 
         trim_db = processing.get("trim_db")
@@ -3650,18 +5221,28 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
                         (f"/io/in/{group}/{socket}/g",),
                     ))
 
+        # The filters and the EQ: a `log` parameter holds the nearest step
+        # of its control, so each leaf is compared with `apply`'s own
+        # readback tolerance rather than the fader's.
+        findings.extend(_processing_leaf_findings(state, entry, base, label, provenance))
+
     findings.extend(_diff_group_faders(state, plan))
     findings.extend(_diff_talkback_strip(state, plan))
     findings.extend(fx_insert_findings(state, plan))
-    findings.extend(route_drift_findings(state, plan))
+    findings.extend(finding for _base, _routes, finding in drift)
     findings.extend(mute_drift_findings(state, plan))
+    findings.extend(unplanned_route_findings(state, plan))
+    findings.extend(phantom_drift_findings(state, plan))
+    findings.extend(bus_width_findings(state, plan))
+    findings.extend(talkback_monitor_findings(state, plan))
+    findings.extend(talkback_monitors_note_findings(state, plan))
 
     # Undeclared/stray physical output patches. Not per-channel
     # like everything above -- a single global pass over every output
     # socket `state` actually read (only sockets the caller told
     # `read_console_state` about via `output_sockets=`, per that
     # function's own "no confirmed default" reasoning). Confirmed real on
-    # the maintainer's own console: two busses (Drums/Drums Comp) patched to
+    # a real console: two busses (Drums/Drums Comp) patched to
     # local outputs 5/6 that neither `apply.py` nor the plan itself ever
     # asked for -- this rule is what would have caught that the moment it
     # happened instead of days later in a `.snap` diff.
@@ -3783,7 +5364,7 @@ def build_signal_graph(state: ConsoleState) -> SignalGraph:
         same shape and the same gating as the strip sends above. Without
         these edges `--trace` could not follow a mix to a PA hung off a
         matrix -- which is how you EQ for a room, and what
-        the maintainer's house conventions describe."""
+        house conventions describe."""
         for mtx_idx in matrix_send_targets(state, base):
             send_addr = f"{base}/send/MX{mtx_idx}"
             send_on = bool(state.flag(f"{send_addr}/on"))
@@ -4005,8 +5586,8 @@ def render_trace(result: TraceResult) -> str:
 # fixed, vendor-dictated list. Physical input/output socket counts vary by
 # console and cabling, so they're passed in explicitly rather than guessed
 # -- pass what your show's input list / conventions actually reference
-# (or, on a full walk, whatever `docs/reference/wing-compact-parameter-
-# map.json` reports for this hardware).
+# (or, on a full walk, whatever the Compact parameter map
+# reports for this hardware).
 # --------------------------------------------------------------------------
 
 
@@ -4143,23 +5724,26 @@ def render_coverage(state: ConsoleState, *, from_capture: bool = False) -> str:
         return "\n".join(bay_note + [
             "Physical sockets read: none. R002 (Bus No Output), R003 (Matrix "
             "Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), "
-            "R006 (Matrix Fed But Not Patched), CV009 (Undeclared Physical "
-            "Output Patch) and C001 (Phantom Power On Unpatched Socket) could not be checked -- with no output patch in hand, "
+            "R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On "
+            "One Side), CV009 (Undeclared Physical "
+            "Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 "
+            "Stage Box Link Not OK), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's "
+            "Input Socket Muted) could not be checked -- with no output patch in hand, "
             "\"reaches no physical output\" is a question nobody asked rather than an "
             "answer.\n" + how])
     lines = [f"Physical sockets read: in {read_in or 'none'}; out {read_out or 'none'}."]
     if not read_out:
         lines.append("With no output sockets read, R002, R003, R004, R005, "
-                     "R006 and CV009 could not be checked. " + how)
+                     "R006, R011, CV009, C008 and C009 could not be checked. " + how)
     elif not read_in:
-        lines.append("With no input sockets read, C001 could not be checked. " + how)
+        lines.append("With no input sockets read, C001 and C007 could not be checked. " + how)
     return "\n".join(bay_note + lines)
 
 
 # Every rule whose verdict is read off `/io/out/*`. R002 and R005
 # are in here: they were the two that fired anyway.
 # R006 was born with the same guard.
-OUTPUT_SIDE_RULE_IDS = ("R002", "R003", "R004", "R005", "R006", "CV009")
+OUTPUT_SIDE_RULE_IDS = ("R002", "R003", "R004", "R005", "R006", "R011", "CV009", "C008", "C009")
 
 
 def unanswerable_rule_ids(state: ConsoleState) -> tuple[str, ...]:
@@ -4173,7 +5757,7 @@ def unanswerable_rule_ids(state: ConsoleState) -> tuple[str, ...]:
     if not output_patch_was_read(state):
         dark.extend(OUTPUT_SIDE_RULE_IDS)
     if not input_sockets(state):
-        dark.append("C001")
+        dark.extend(("C001", "C007"))
     if unread_expansion_bays(state):
         dark.append("C003")
     return tuple(dark)
@@ -4226,7 +5810,7 @@ def coverage_caveat(state: ConsoleState) -> str | None:
 #
 # It also replaced a guess. `cli.ESTIMATED_LIVE_READ_ADDRESSES` was a
 # hand-maintained 5,928 that went stale every time this plan grew; the
-# real number for a Compact reading its own panel is 6,143, and it is
+# real number for a Compact reading its own panel is 6,195, and it is
 # now counted rather than remembered. (It was 6,032 --
 # 320 of those were addresses the desk does not have and has never
 # answered, so the number of VALUES a read came back with did not change
@@ -4236,7 +5820,7 @@ def coverage_caveat(state: ConsoleState) -> str | None:
 # 6,114 until an earlier change added the socket widths, and 6,138 until an earlier change added three AES50 link states and two monitor sources.)
 
 # (address suffix, value_type) -- types confirmed against
-# docs/reference/wing-compact-parameter-map.json ("fader"/"log" types
+# the Compact parameter map ("fader"/"log" types
 # both read as "f" per OscReply.value()'s float-reply handling; plain
 # "int" reads as "i"; "list"/string enums read as "s").
 # `in/conn/altgrp` and `in/set/altsrc` are the alternate input patch's
@@ -4280,7 +5864,7 @@ def send_fields_for(bank: str) -> tuple[tuple[str, str], ...]:
     send `mode`/`pon`, because the desk never returned one to read. That
     distinction matters (an earlier change was the opposite case, an audit
     quietly reading LESS than its rules needed), so it is stated here and
-    in `docs/reference/wing-console-model.md` rather than left to be
+    in the console model notes rather than left to be
     re-derived from a diff.
     """
     return tuple((suffix, value_type) for suffix, value_type in SEND_FIELDS
@@ -4299,6 +5883,7 @@ def console_read_plan(
     fx_slots: int = console_facts.FX_SLOTS,
     input_sockets: dict[str, int] | None = None,
     output_sockets: dict[str, int] | None = None,
+    extra: tuple[tuple[str, str], ...] | list[tuple[str, str]] = (),
 ) -> list[tuple[str, str]]:
     """Exactly the addresses this module's rules and graph consume, with
     the OSC value type each one is read as, in the order they are read.
@@ -4307,6 +5892,11 @@ def console_read_plan(
     `cli.watch_cmd` counts it to tell the user what they are waiting
     for, and desk script A11 (`a11-read-speed.sh`) measures against
     it.
+
+    `extra` is addresses beyond the rules' own, each as `(address, type)`:
+    `plan_processing_read_addresses` gives the filter and EQ leaves a plan
+    states, which `audit --plan` reads for CV008 (the strip's own node
+    dump carries them, so they are no extra request). Nothing, by default.
 
     **Not quite all of them.** A read has a second pass
     this list cannot contain: the name of each socket a strip turns out to
@@ -4324,7 +5914,7 @@ def console_read_plan(
     pass it is one per *patched* strip, which is the only kind whose flag
     any rule can use (`custom_link_addresses`, and `source_is_named`,
     which answers False for an unpatched strip without consulting it).
-    Leaving it unread was costed at 48 addresses and declined in #206;
+    Leaving it unread was costed at 48 addresses and declined;
     scoped this way it is 26 on a factory Compact, and what it buys is
     `effective_name` getting out of its "assume ON, but never overrule
     the strip leaf" branch -- the branch that reported two differently
@@ -4351,7 +5941,8 @@ def console_read_plan(
     bus_send_fields = send_fields_for("bus")
     for idx in range(1, buses + 1):
         base = f"/bus/{idx}"
-        for suffix, value_type in (("name", "s"), ("mute", "i"), ("fdr", "f")):
+        for suffix, value_type in (("name", "s"), ("mute", "i"), ("fdr", "f"),
+                                   ("busmono", "i")):
             plan.append((f"{base}/{suffix}", value_type))
         for main_idx in range(1, mains + 1):
             plan.append((f"{base}/main/{main_idx}/on", "i"))
@@ -4377,6 +5968,7 @@ def console_read_plan(
     for idx in range(1, mains + 1):
         plan.append((f"/main/{idx}/mute", "i"))
         plan.append((f"/main/{idx}/fdr", "f"))
+        plan.append((f"/main/{idx}/busmono", "i"))
         for mtx_idx in range(1, matrices + 1):
             for suffix, value_type in main_send_fields:
                 plan.append((f"/main/{idx}/send/MX{mtx_idx}/{suffix}", value_type))
@@ -4384,6 +5976,7 @@ def console_read_plan(
     for idx in range(1, matrices + 1):
         plan.append((f"/mtx/{idx}/mute", "i"))
         plan.append((f"/mtx/{idx}/fdr", "f"))
+        plan.append((f"/mtx/{idx}/busmono", "i"))
         plan.extend(insert_fields("mtx", f"/mtx/{idx}"))
     for idx in range(1, dcas + 1):
         plan.append((f"/dca/{idx}/name", "s"))
@@ -4405,8 +5998,8 @@ def console_read_plan(
     # The global alternate-input switch (C005): one leaf.
     plan.append((console_facts.GLOBAL_ALT_SWITCH, "i"))
 
-    # USER PATCHES (`/io/in/USR/{25..56}/user`, docs/reference/wing-console-
-    # model.md): which physical jack feeds each user-patch slot, with no
+    # USER PATCHES (`/io/in/USR/{25..56}/user`): which physical jack feeds each user-patch
+    # slot, with no
     # strip in between. C001 needs them -- a jack feeding a user patch
     # is a jack in use, and the rule called its 48V a fault until it could
     # see them.
@@ -4440,6 +6033,10 @@ def console_read_plan(
             # In the same `/io/in/{grp}/{n}` node as `vph`, so a dump
             # read costs nothing more.
             plan.append((f"/io/in/{group}/{n}/mode", "s"))
+            # The socket's own mute (C007): a muted socket silences every
+            # strip patched to it, and the strip shows nothing. In the same
+            # node as `vph` and `mode`, so a dump read asks nothing more.
+            plan.append((f"/io/in/{group}/{n}/mute", "i"))
     for group, count in (output_sockets or {}).items():
         for n in range(1, count + 1):
             plan.append((f"/io/out/{group}/{n}/grp", "s"))
@@ -4455,6 +6052,15 @@ def console_read_plan(
             plan.append((console_facts.aes50_status_address(port), "s"))
         for address in console_facts.MONITOR_SOURCES:
             plan.append((address, "s"))
+
+    # What a plan states that no rule reads without one (`extra`): the filter
+    # and EQ leaves `audit --plan` compares. Appended after everything else,
+    # and never an address already in the plan.
+    known = {address for address, _ in plan}
+    for address, value_type in extra:
+        if address not in known:
+            known.add(address)
+            plan.append((address, value_type))
 
     return plan
 
@@ -4521,8 +6127,8 @@ def group_plan_by_node(plan: list[tuple[str, str]]) -> tuple[
 # A family of addresses the desk does not answer
 # --------------------------------------------------------------------------
 #
-# #195 (320 phantom send leaves on a Compact) and #249 (eight AUX `vph` on
-# a full-size) are one shape: a whole family of sibling addresses the
+# Two earlier failures -- 320 phantom send leaves on a Compact and eight
+# AUX `vph` on a full-size -- are one shape: a whole family of sibling addresses the
 # model does not have, each costing `(retries + 1) x timeout` -- 3s at the
 # defaults. Both were fixed by correcting the read plan, which stays the
 # real fix. This is the backstop for the next model we meet, whose
@@ -4541,7 +6147,7 @@ def group_plan_by_node(plan: list[tuple[str, str]]) -> tuple[
 # because a single dropped datagram on a busy network must not cost a
 # family; three in a row, with the desk answering its neighbours, is a
 # pattern. It bounds a missing family at 9s instead of 3s per member:
-# the 320 would have been 3 x 4 families = 12 timeouts, 36s rather
+# The 320 would have been 3 x 4 families = 12 timeouts, 36s rather
 # than 960s.
 #
 # **What it never does:** skip a family any member of which has answered
@@ -4655,6 +6261,7 @@ def read_console_state(
     progress=None,
     bulk: bool = False,
     names: Mapping[str, object] | None = None,
+    extra: tuple[tuple[str, str], ...] | list[tuple[str, str]] = (),
 ) -> ConsoleState:
     """Walk exactly the addresses this module's rules/graph consume, over
     an already-connected `atoo.console.WingConsole`. Confirmed WING
@@ -4700,7 +6307,7 @@ def read_console_state(
     to per-leaf for that node.
 
     A11 has run that comparison three times. The first
-    (`archive/examples/console-runs/2026-09-22-2008/`) found eight disagreements,
+    (2026-09-22) found eight disagreements,
     all `/aux/{n}/in/conn/in`, and the second 32, all
     `/io/in/USR/{n}/user/in` -- both the per-leaf read one low, both now
     in `console_facts._READBACK_INDEX_OFFSETS`. The third
@@ -4736,7 +6343,7 @@ def read_console_state(
         channels=channels, aux=aux, buses=buses, mains=mains,
         matrices=matrices, dcas=dcas, mute_groups=mute_groups,
         fx_slots=fx_slots,
-        input_sockets=input_sockets, output_sockets=output_sockets)
+        input_sockets=input_sockets, output_sockets=output_sockets, extra=extra)
     if names is not None:
         # The names in hand go straight into the reading and
         # out of the plan, so neither path asks for them nor counts them.

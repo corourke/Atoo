@@ -1,8 +1,8 @@
 """FX engines: what each engine can hold, how a plan's effects are given
 engines, and how an effect's parameters are typed -- an earlier change.
 
-The maintainer, 2026-10-12: *"It's important to me that we are able to set up
-buses with effects."* The effects come from bus presets saved on the desk
+Setting up
+buses with effects has to be possible. The effects come from bus presets saved on the desk
 (`presets.BusPreset`): a `.bus` file carries the effect model and every
 one of its parameters (`preins_data`), and the engine it was saved from
 (`target_fx`).
@@ -10,15 +10,15 @@ one of its parameters (`preins_data`), and the engine it was saved from
 ## What the WING offers
 
 Sixteen engines, `/fx/1`..`/fx/16`. An engine is heard only when a strip
-inserts it (`docs/reference/wing-console-model.md`, "Effects are inserts,
-not sends"). **Which models an engine offers is not the same for all
+inserts it (effects are inserts,
+not sends). **Which models an engine offers is not the same for all
 sixteen**: the walk of a real Compact (firmware 3.1) lists 65 models on
 engines 1-8 and 39 on 9-16 -- every reverb, every delay and the
 modulation effects (chorus, flanger, pitch) are offered by 1-8 only.
 That table is frozen in `initialized/fx_models.json` by
-`tools/freeze_initialized_capture.py fx`, from the walk itself, so this
-module never carries a hand-typed list of "reverbs";
-`tests/test_fx_engines.py` re-derives it and fails if they drift.
+a script in the development repository, from the walk itself, so this
+module never carries a hand-typed list of "reverbs"; a test there
+re-derives it and fails if they drift.
 
 ## Allocation (code, not the model)
 
@@ -55,7 +55,7 @@ parameter have no such entry, and take the type of the value as saved
 Both are said at INFO (`fx.parameter-typed-from-value`), and every write
 is read back, so a wrong tag is a readback mismatch in the journal, never
 a silently mis-set desk. **None of this is confirmed on a desk until
-the maintainer's desk tests**.
+the desk tests**.
 """
 
 from __future__ import annotations

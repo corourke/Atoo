@@ -2,14 +2,14 @@
 
 This scores the second model pass: given a plan with known gaps in it,
 here is what the critic is expected to notice. It is a **research
-instrument** for `experiments/generator/`, not part of any show
+instrument** for the generator experiments, not part of any show
 workflow -- nothing a user runs reads one of these files.
 
 Note the name. A now-retired feature called *expectations*
 made the same kind of hand-authored TOML assertion about a *plan*; this
 module is a different thing that survives it, and the shared word is the
-only thing they had in common. Its file is a `.critic-expect.toml` under
-`experiments/generator/`, never a bundle slot, and its question is "did
+only thing they had in common. Its file is a `.critic-expect.toml` in the experiments tree,
+never a bundle slot, and its question is "did
 the critic see this gap", not "is this the show the engineer asked for".
 That question has no deterministic answer, which is why it is
 hand-authored.
@@ -58,34 +58,12 @@ gaps means two entries.
 
 from __future__ import annotations
 
+import tomllib as _toml
 from dataclasses import dataclass
 from pathlib import Path
 
 from atoo import diagnostics
 from atoo.diagnostics import SEVERITY_ORDER, Diagnostic, Severity
-
-# tomllib is stdlib from Python 3.11 on. On 3.9/3.10 -- which is what
-# `python3` still is on a stock macOS -- there is no tomllib, so fall
-# back to the `tomli` backport if it happens to be installed and
-# otherwise fail HERE, at the one feature that needs it. Importing
-# tomllib at module scope used to break `import atoo.cli` on 3.9,
-# which took the whole test suite down at collection time over a file
-# most runs never read.
-try:  # Python >= 3.11
-    import tomllib as _toml
-except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.9/3.10
-    try:
-        import tomli as _toml  # type: ignore[no-redef]
-    except ModuleNotFoundError:
-        _toml = None  # type: ignore[assignment]
-
-TOML_UNAVAILABLE = (
-    "critic expectations files are TOML, and this Python has no TOML reader: "
-    "tomllib is stdlib from Python 3.11 on. Either run Atoo on "
-    "Python 3.11+ (recommended -- see docs/user/install.md) or "
-    "`pip install tomli` for this interpreter. Every other Atoo "
-    "command works without it."
-)
 
 EXPECT_KEYS = frozenset({"id", "description", "match_text", "severity_at_least"})
 
@@ -236,8 +214,6 @@ class Scorecard:
 
 
 def parse_critic_expectations(text: str, source: str = "<string>") -> CriticExpectations:
-    if _toml is None:
-        raise CriticExpectationsError(f"{source}: {TOML_UNAVAILABLE}")
     try:
         data = _toml.loads(text)
     except _toml.TOMLDecodeError as exc:

@@ -2,7 +2,7 @@
 
 Two things landed together on 2026-09-25:
 
-* `atoo/inferred.py` -- CLAUDE.md's "an error of judgement is not an
+* `atoo/inferred.py` -- "an error of judgement is not an
   error of patching". A bus width, a send's pre/post, a mix bus's route to
   Main and a stereo pairing are DECIDED where the conventions are silent,
   and each decision announces itself as an INFO. A plan that still arrives
@@ -89,7 +89,7 @@ def test_one_socket_is_mono_a_pair_is_stereo_no_jack_is_factory_stereo():
 
 
 def test_a_fan_out_with_any_pair_is_stereo():
-    # Spelled the pre-#342 way (`socket`/`sockets`) on purpose: a plan on
+    # Spelled the older way (`socket`/`sockets`) on purpose: a plan on
     # disk still says it so, and plan_compat reads it the same.
     bus = {"destinations": [
         {"type": "dedicated_output", "socket": {"group": "LCL", "sockets": [1]}},
@@ -312,7 +312,7 @@ def test_a_critic_conventions_finding_with_real_quotes_keeps_its_severity():
 
 
 def test_the_critic_never_reports_an_error():
-    """The maintainer, 2026-10-02: a "confirm LCL 20/22/23-24 are wired" note came
+    """A "confirm LCL 20/22/23-24 are wired" note came
     back as ERROR. Whether the desk can work is verify's call."""
     reply = json.dumps({"findings": [{"severity": "error", "kind": "intent", "where": "x",
                                       "message": "confirm the sockets are wired"}]})

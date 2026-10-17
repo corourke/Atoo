@@ -26,6 +26,7 @@ from atoo import bundle
 from atoo import build_log as build_log_module
 from atoo import console_facts as facts
 from atoo import conventions_audit
+from atoo import install_info
 from atoo import instructed_channels
 from atoo import conventions_ref
 from atoo import conventions_text
@@ -35,7 +36,7 @@ from atoo import lessons
 from atoo import plan_freshness
 from atoo import plan_diff
 from atoo.config import (
-    config_path, config_value_for, load_console_defaults, load_default_conventions,
+    config_path, config_value_for, expand_home, load_console_defaults, load_default_conventions,
     load_default_presets, load_default_watch_conditions, load_default_workspace,
 )
 from atoo import input_list as input_list_module
@@ -91,7 +92,7 @@ def _note_diagnostic(note) -> diagnostics.Diagnostic:
     arrive as prose with a provenance tag rather than as structured
     diagnostics, and this is where they join the one renderer.
 
-    Before #29 this also had to recover a severity from the compile
+    This once had to recover a severity from the compile
     path's bare strings; that path is gone, and with it the
     prefix-sniffing that did it.
     """
@@ -121,7 +122,7 @@ SHOW_HELP = (
     "no manifest to maintain. Each command takes the pieces it "
     "needs from the directory instead of being handed them one flag at a time, and "
     "everything a run produces is written back into it. An explicit flag always wins over "
-    "the bundle, so --show DIR --plan elsewhere.json reads that plan. See docs/user/show-bundles.md."
+    "the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/"
 )
 
 
@@ -178,8 +179,9 @@ def _fill_from_bundle(args: argparse.Namespace, b, attr: str, slot: str,
     """Point one argument at its bundle slot, unless the user stated it.
 
     **Explicit flags always win** -- the same precedence
-    `--watch-conditions` already has over `~/.atoo.config`'s default, and the reason `--show DIR --plan somewhere-else.json` reads
-    the plan you named rather than the bundle's.
+    `--watch-conditions` already has over `~/.atoo.config`'s default, and
+    the reason `--show DIR --plan somewhere-else.json` reads the plan you
+    named rather than the bundle's.
 
     An absent optional slot leaves the argument alone, so the command's
     own existing fallbacks (auto-detect, the config default) still run
@@ -198,7 +200,7 @@ def _discover_files(directory: Path) -> tuple[list[Path], list[Path]]:
     --input/--conventions given) uses.
 
     `*.rules.json` used to count as a conventions source too; the rules IR
-    was an artifact of the extraction+compile path, retired in #29.
+    was an artifact of the extraction+compile path, retired.
     """
     csv_paths = sorted(directory.glob("*.csv"))
     md_paths = sorted(p for p in directory.glob("*.md") if p.name.lower() != "readme.md")
@@ -222,7 +224,7 @@ def _print_discovery_guidance(directory: Path) -> None:
     if not csv_paths:
         print(f"no --input given, and no .csv input list found in the {where} -- "
               f"pass --input explicitly, or cd to a directory with one "
-              f"(see docs/user/build-a-show.md)", file=sys.stderr)
+              f"(see https://docs.atoo.app/build/build-a-show/)", file=sys.stderr)
         return
     if not md_paths:
         print(f"no --conventions given, and no conventions file (.md) "
@@ -453,17 +455,17 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         print(str(exc), file=sys.stderr)
         return 1
     # A bundle's `instructions.md` is a *layer*, never the conventions
-    # file itself. The maintainer, 2026-09-20: "the show independent
-    # conventions file should always be brought in, as well as a show's
-    # instructions if it is present. Content in the instructions file
-    # overrides the conventions file."
+    # file itself: the show-independent
+    # conventions file is always brought in, as well as a show's
+    # instructions if it is present, and content in the instructions file
+    # overrides the conventions file.
     #
-    # Until #90 this filled `--conventions` from `instructions.md`, which
+    # `instructions.md` once filled `--conventions` directly, which
     # meant a bundle's per-show text either replaced the house file or --
     # when `--conventions` was also given -- was dropped without a word.
     instructions_path = show.optional(bundle.INSTRUCTIONS) if show is not None else None
     # Generated artifacts land in the bundle, not wherever --out happens
-    # to point (#81 point 4) -- the whole reason a bundle is one draggable
+    # to point -- the whole reason a bundle is one draggable
     # thing after a build.
     if show is not None and not args.out:
         args.out = str(show.plan)
@@ -483,7 +485,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             print(f"No --input/--conventions given -- using the only pair found here: "
                   f"{input_path} + {conventions_path}\n")
         else:
-            # #11: nothing unambiguous here. If there is exactly one input
+            # Nothing unambiguous here. If there is exactly one input
             # list and no conventions file at all, the settled house file
             # is worth trying before giving up.
             csv_paths, _md_paths = _discover_files(Path("."))
@@ -500,8 +502,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         return 1
 
     if not conventions_path:
-        # "The show independent conventions file should always be brought
-        # in" (the maintainer, 2026-09-20). Until #90 the house default was
+        # The show-independent conventions file is always brought in. The
+        # house default was once
         # consulted only inside the auto-detect branch above, so
         # `--input x.csv --show DIR` failed even with a settled house file
         # named in the config. It is the fallback for every route now.
@@ -526,11 +528,12 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         return 1
 
     # The stack, worst-to-best precedence, announced rather than applied
-    # silently (the maintainer, 2026-09-19: "yes, make it announce itself"). A
+    # silently. A
     # build that quietly composed a file the command line never named is
     # a build whose output cannot be explained afterwards.
     #
-    # Each layer also carries `conventions_ref.layer_record`'s three keys: the absolute path, the path relative to the bundle (None
+    # Each layer also carries `conventions_ref.layer_record`'s three keys:
+    # the absolute path, the path relative to the bundle (None
     # with no bundle), and a sha256 of the bytes as built -- so the UI
     # can open the file this plan was built from, and say so when it has
     # been edited since. `path` stays exactly what was typed.
@@ -609,8 +612,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # meta.critic_findings below can be None ("didn't run") rather than
     # [] ("ran, found nothing").
     critic_ran = False
-    # #26, and the only way a plan is built since #29 retired the
-    # deterministic compiler: the model lays the show out with the
+    # The only way a plan is built since the deterministic
+    # compiler was retired: the model lays the show out with the
     # conventions AND the input list in front of it, and deterministic
     # code checks the result rather than deriving it.
     if not conventions_path:
@@ -641,8 +644,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         print("pass --console-model, e.g. --console-model wing-compact", file=sys.stderr)
         return 1
 
-    # The maintainer, 2026-10-02: "If we rebuild, we need to clear the current
-    # plan and current findings because none of that is still current."
+    # A rebuild clears the current plan and current findings, because none of
+    # that is still current.
     # A show's plan.json is moved aside the moment its rebuild starts, so a
     # build that fails or is stopped leaves no out-of-date plan for Apply
     # to offer. Kept as plan.previous.json, one generation, for reading.
@@ -708,8 +711,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                 preset_library=_preset_library_choice(args).library)
             if resolve_findings:
                 # The check's per-citation findings are one line here, not
-                # one block each (the maintainer, 2026-09-30, sixty of them before
-                # the generator had started): they are kept in full in
+                # one block each (sixty of them in a long
+                # run): they are kept in full in
                 # meta.build_findings, and `resolve --check` lists them.
                 # A refused or failed resolve still prints in full.
                 per_item = (conventions_resolve.CODE_QUOTE, conventions_resolve.CODE_UNCOVERED)
@@ -793,7 +796,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             category_table=category_table,
             instructed_strips=instructed_strips,
         )
-        # The fix-up round (the maintainer, 2026-09-29): a reply refused by the
+        # The fix-up round: a reply refused by the
         # format check, or a plan refused by verify with ERRORS, goes back
         # to the generator's model once with the exact messages
         # (`generate.fixup_plan`). `fixup` records the one round, if spent.
@@ -861,7 +864,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         """What follows a plan out of the model, for the first reply and a
         fix-up's alike: the conventions audit, preset expansion and verify.
         Returns `(build_findings, audit_findings, preset_findings, verdict)`."""
-        # FR-6.2, folded into the build (the maintainer, 2026-09-25): the problems the
+        # FR-6.2, folded into the build: the problems the
     # generator found in the conventions TEXT -- a conflict it had to pick
     # a side in, something declared that nothing joins -- with every quote
     # checked against the house conventions and the instructions it was
@@ -872,7 +875,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                 conventions_raw, Path(conventions_path).name,
                 instructions_text, Path(instructions_path).name if instructions_path else None,
                 **resolved_layer))
-        # An earlier change (the maintainer's design, 2026-09-21): a named
+        # A named
         # preset is expanded INTO the plan here, so the plan says exactly what
         # will be written and `apply` never opens a .chn. Merged by address;
         # the plan's own processing wins and each override is an INFO. Before
@@ -883,7 +886,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                           + audit_findings + preset_findings)
 
         # Verification runs on EVERY plan, however it was built. It is the one
-        # part of #26 that is proven, and it is not specific to generated plans
+        # part of generation that is proven, and it is not specific to generated plans
         # -- the first thing it ever did was reject the *compiler's* own
         # touringband plan for an output with no socket, which the compiler had
         # downgraded to one warning among three.
@@ -963,8 +966,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # verification a second time just to populate it.
     plan["meta"] = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        # No `strategy` (review 2026-09-28, R14, coordinator decision C5):
-        # it had one value, "generate", since #29 retired the compiler, so
+        # No `strategy` (review 2026-09-28, R14):
+        # it had one value, "generate", once the compiler was retired, so
         # it said nothing. A plan built before carries it and still loads
         # -- `meta` is an open object -- with no warning.
         # Which console this plan was built for, and therefore
@@ -975,7 +978,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         "console_model": console_model,
         # Which conventions texts went into this build, in precedence
         # order. `conventions_file` above names one file and cannot
-        # say "and also"; after #90 "the conventions file" is no longer
+        # say "and also"; now "the conventions file" is no longer
         # one file, so a plan that changed has to be explainable from the
         # plan itself rather than from whoever remembers the command.
         "conventions_stack": conventions_stack,
@@ -1038,8 +1041,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         plan["meta"]["model"] = getattr(provider, "model", None)
         plan["meta"]["effort"] = {role: effort_for(role) for role in ran_roles}
         # `meta.model` stays the generator's. When a role ran on another
-        # model (the critic and the watchlist on Haiku by default,
-        # docs/developer/build-cost-reduction.md), `meta.models` says which,
+        # model (the critic and the watchlist on a cheaper model, say),
+        # `meta.models` says which,
         # so `meta.critic_findings` is read knowing who wrote them.
         model_for = getattr(provider, "model_for", None)
         if callable(model_for):
@@ -1081,9 +1084,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # for a build that FAILED before reaching here still knew the same
     # answer.
 
-    # An earlier change (docs/developer/build-lessons-2026-09-27.md, part C,
-    # revised 2026-09-28: the maintainer -- *"I'm not sure the plan.json is the
-    # best place to keep it"*). Each build writes its OWN log file,
+    # Plan.json is not the best place for a build's log. Each build writes its
+    # OWN log file,
     # `<bundle>/builds/<timestamp>.json` -- the per-role
     # thinking-summary notes and usage a provider records
     # (`ModelCallProgress.build_log_entry()`), plus this build's own
@@ -1114,8 +1116,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         written.append(out_path.name)
         # A partial reply saved by an earlier, failed build is evidence of
         # that failure only; once a plan is written it is out of date
-        # (the maintainer, 2026-10-02: "clear any plan.partial.json after a
-        # successful build").
+        # (clear any plan.partial.json after a
+        # successful build).
         stale_partial = _partial_path(out_path)
         if stale_partial.is_file():
             stale_partial.unlink()
@@ -1166,7 +1168,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # Everything the conventions-reading layers had to say: sanitize
     if warnings and not args.pretty:
         # `warnings` is plan["notes"] -- tagged {text, source} objects, the model's own account of what it could not do.
-        # Before #29 this list could also be the compiler's bare strings,
+        # This list could once also be the compiler's bare strings,
         # and most of the machinery here existed to reconcile the two.
         adapted_notes = [_note_diagnostic(w) for w in warnings]
         # Counted by severity rather than as one number: an error buried
@@ -1177,7 +1179,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         )
 
     # Deliberately its own block rather than merged into the stream
-    # above: a critic is a model, and #26's whole point is that a model's
+    # above: a critic is a model, and the whole point is that a model's
     # opinion must never read as a deterministic finding. Same renderer,
     # separate heading.
     # The comment findings were printed before generation; only the
@@ -1407,7 +1409,9 @@ def _load_state_file(path: str):
     from atoo.audit import ConsoleState
 
     try:
-        with open(path, encoding="utf-8") as f:
+        # `~` is expanded here as well as by the shell: the help examples name
+        # ~/Documents/Atoo/audit-demo/..., and Windows shells pass `~` through.
+        with open(expand_home(path), encoding="utf-8") as f:
             values = json.load(f)
     except OSError as exc:
         print(f"couldn't read state file {path!r}: {exc.strerror}", file=sys.stderr)
@@ -1471,7 +1475,7 @@ def _preset_library_choice(args: argparse.Namespace, plan: "dict | None" = None)
     `build`, `patch` and `amend` share (`atoo/preset_library.py`): explicit `--presets`, else the library `plan` records (or
     the packaged starter presets its files match), else
     `~/.atoo.config`'s `[presets] default`. The library is house-level,
-    never a show-bundle slot (the maintainer, 2026-09-20); a plan only
+    never a show-bundle slot; a plan only
     remembers which one its strips' values came from.
 
     A library that is not there is a note and no library rather than a
@@ -1489,7 +1493,7 @@ def _resolve_preset_library(args: argparse.Namespace, plan: "dict | None" = None
                             announce: bool = False):
     """The `PresetLibrary` `_preset_library_choice` settles on, or None. A
     stated library that is not there is said on stderr; with `announce`,
-    so is which library was used and why (INFO, CLAUDE.md)."""
+    so is which library was used and why (INFO)."""
     choice = _preset_library_choice(args, plan)
     for warning in choice.warnings:
         print(warning, file=sys.stderr)
@@ -1519,7 +1523,7 @@ def _draft_watchlist_into_bundle(show, plan: dict, conventions: str, *, provider
     import json as _json
 
     from atoo.watch_conditions import (
-        DRAFTED_KEY, WatchConditionsError, merge_drafted_conditions,
+        DRAFTED_KEY, MEANING, WatchConditionsError, merge_drafted_conditions,
     )
 
     drafted = generate.draft_watch_conditions(
@@ -1547,7 +1551,7 @@ def _draft_watchlist_into_bundle(show, plan: dict, conventions: str, *, provider
                   f"-- it was left untouched and nothing was written.", file=sys.stderr)
             return
 
-    document, report = merge_drafted_conditions(existing, drafted)
+    document, report = merge_drafted_conditions(existing, drafted, plan)
 
     try:
         # Validate the MERGED document, not just the draft: the merge is
@@ -1581,6 +1585,12 @@ def _draft_watchlist_into_bundle(show, plan: dict, conventions: str, *, provider
     if report.dismissed:
         print(f"  not re-added, you removed {'it' if len(report.dismissed) == 1 else 'them'} "
               f"before: {', '.join(report.dismissed)}", file=sys.stderr)
+    for new_id, existing_id in report.duplicates:
+        print(f"  not added: the draft's {new_id!r} says what your {existing_id!r} already "
+              f"says.", file=sys.stderr)
+    if report.duplicates:
+        print(f"  (two conditions are the same when they have {MEANING}; a name is looked "
+              "up in the plan, and a range covers the strips in it.)", file=sys.stderr)
     for new_id, existing_id in report.overlaps:
         print(f"  note: {new_id!r} and your {existing_id!r} watch the same channel and "
               f"field under different ids -- both will run, and they may disagree.",
@@ -1627,7 +1637,7 @@ def _load_plan_file(path: str):
     ready-to-show error (caller returns 1). Mirrors `_load_state_file`'s
     own error-handling shape."""
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(expand_home(path), encoding="utf-8") as f:
             return json.load(f)
     except OSError as exc:
         print(f"couldn't read plan file {path!r}: {exc.strerror}", file=sys.stderr)
@@ -1725,7 +1735,7 @@ def resolve_console_defaults() -> dict:
 def _resolve_console_settings(args: argparse.Namespace) -> None:
     """Fill in `--console`, `--port` and `--timeout` from the environment
     and `~/.atoo.config`, and say so when they did not come from the
-    command line. An earlier change, the maintainer from a console session.
+    command line. 
 
     **Precedence, matching every other optional input in this CLI:** an
     explicit flag beats `ATOO_CONSOLE*`, which beats the config
@@ -1915,9 +1925,9 @@ def _read_progress(args: argparse.Namespace, read_kwargs: dict, *, names_known: 
     """A `ReadProgress` for one live console read, or None if the user
     asked for silence.
 
-    A live read is 6,143 addresses on a WING Compact -- 323
+    A live read is 6,195 addresses on a WING Compact -- 323
     requests by node dump, pipelined eight in flight by default (`ATOO_CONSOLE_WINDOW`) -- and it used to print nothing at all
-    for the whole of them; the maintainer could not tell it from
+    for the whole of them; it could not be told from
     a hang at the desk, and the last tool that looked hung got killed
     mid-run. The total comes from `audit.console_read_plan`, counted
     rather than estimated, so the percentage is real.
@@ -1951,7 +1961,7 @@ def _phases(args: argparse.Namespace):
     At the desk on 2026-10-12, `apply --confirm` printed its
     verify block and then nothing for the whole of the reset's read (39.6s)
     and the writes after it, and was taken for a hang -- the
-    failure, on the one command #185 did not reach. Each phase now says
+    failure, on the one command that fix did not reach. Each phase now says
     what it is doing on stderr, the way `audit`'s read does, for the same
     reasons (`_read_progress`): stdout stays the run's evidence."""
     if getattr(args, "no_progress", False):
@@ -2105,8 +2115,8 @@ def presets_cmd(args: argparse.Namespace) -> int:
         print()
     for name, found in sorted(duplicates.items()):
         files = ", ".join(preset.source_path.name for preset in found)
-        # `PresetLibrary.get` picks the newest rather than raising
-        # (the maintainer, 2026-09-20), so this is a hygiene report, not a
+        # `PresetLibrary.get` picks the newest rather than raising,
+        # so this is a hygiene report, not a
         # refusal -- but which one wins is decided by mtime, and mtime is
         # not preserved by `git clone`.
         print(f"warning: {len(found)} files share the name "
@@ -2210,9 +2220,9 @@ def audit_cmd(args: argparse.Namespace) -> int:
     # Imported here for the same reason apply_cmd imports console lazily --
     # `atoo build`/`--help` shouldn't pay for the console layer.
     from atoo.audit import (
-        build_signal_graph, diff_against_plan, read_console_state,
-        render_coverage, render_findings, render_trace, run_audit,
-        trace_signal_path, Severity, SEVERITY_ORDER,
+        build_signal_graph, diff_against_plan, plan_processing_read_addresses,
+        read_console_state, render_coverage, render_findings, render_trace,
+        run_audit, trace_signal_path, Severity, SEVERITY_ORDER,
     )
 
     try:
@@ -2263,6 +2273,9 @@ def audit_cmd(args: argparse.Namespace) -> int:
                 return 1
             with console:
                 read_kwargs = _console_read_kwargs(args, plan)
+                # What the plan states about filters and EQ, for CV008: only
+                # `audit` compares them, so only it reads them.
+                read_kwargs["extra"] = plan_processing_read_addresses(plan)
                 progress = _read_progress(args, read_kwargs)
                 if not read_kwargs.get("bulk"):
                     print(PER_LEAF_BANNER, file=sys.stderr, flush=True)
@@ -2300,8 +2313,8 @@ def audit_cmd(args: argparse.Namespace) -> int:
     return 1 if any(f.severity == Severity.ERROR for f in findings) else 0
 
 
-# Both measured on the maintainer's WING Compact by A11 on 2026-09-24
-# (desk run A11, session 2026-09-24-1045, `A11-read-speed.txt`),
+# Both measured on a WING Compact by A11 on 2026-09-24
+# (desk run A11, session 2026-09-24-1045),
 # the run that made the node-dump read the default:
 #
 #   per-leaf:   5,860 requests in 118.8s -> ~20.3 ms a request
@@ -2319,10 +2332,13 @@ def audit_cmd(args: argparse.Namespace) -> int:
 # dropped 320 addresses the desk does not have, 5,808 once an earlier change
 # read each strip's alternate patch, 6,112 once an earlier change read every
 # insert point and FX slot, 6,113 once the comms half read
-# `/cfg/talk/assign`, 6,114 once #109 read `/io/altsw`, 6,138 once #565
-# read each phantom-capable socket's width, and it is 6,143 since an earlier change read three AES50 link states and two monitor sources -- a
-# hand-maintained number that went stale every time the read changed, and that never
-# included the physical sockets at all. `read_addresses()` counts the
+# `/cfg/talk/assign`, 6,114 once `/io/altsw` was read, 6,138 once
+# each phantom-capable socket's width was read, 6,143 once an earlier change
+# read three AES50 link states and two monitor sources, 6,167 once
+# each local socket's own mute was read, and it is 6,195 since the width of each bus,
+# Main and Matrix was read -- a
+# hand-maintained number that went stale every time the read changed, and
+# that never included the physical sockets at all. `read_addresses()` counts the
 # plan instead, for the exact flags this invocation is using.
 PER_LEAF_SECONDS_PER_REQUEST = 118.8 / 5860
 NODE_DUMP_SECONDS_PER_REQUEST = 4.8 / 352
@@ -2462,7 +2478,7 @@ def watch_cmd(args: argparse.Namespace) -> int:
 
     watch_conditions_path = args.watch_conditions
     if not watch_conditions_path:
-        # #71: no --watch-conditions given, and no bundle supplied one --
+        # No --watch-conditions given, and no bundle supplied one --
         # fall back to a settled house
         # watch-conditions file named in ~/.atoo.config's
         # [watch_conditions] section, the same "only when nothing else was
@@ -2487,14 +2503,27 @@ def watch_cmd(args: argparse.Namespace) -> int:
             return 1
         rules = DEFAULT_RULES + build_watch_rules(conditions)
         start_names = start_name_addresses(conditions)
-    # The bundle's plan: FX busses' effects as planned (CV015), channels cut off from every planned route (CV016, #608),
-    # and mutes the plan does not have (CV017, #609); and L002 quiet
+    # The bundle's plan: FX busses' effects as planned (CV015), channels cut off from every planned route (CV016),
+    # mutes the plan does not have (CV017), sends and Main routes
+    # against the plan (CV006, CV007), those it does not have (CV018)
+    # 48V and a bus's width against the plan (CV019, CV020), talkback that
+    # misses a monitor mix the plan builds (CV021, CV022); and L002 quiet
     # on a fader the plan itself puts at the floor.
     if show is not None:
         from atoo.audit import with_plan_rules
         rules = with_plan_rules(rules, show.plan)
+    # --virtual-soundcheck: the alternate inputs are on purpose (C004 and
+    # C005 at INFO), and a note says so for as long as the watch runs.
+    session_notes = None
+    if args.virtual_soundcheck:
+        from atoo.audit import virtual_soundcheck_rules
+        from atoo.watch import virtual_soundcheck_note
+
+        rules = virtual_soundcheck_rules(rules)
+        session_notes = lambda: [virtual_soundcheck_note()]  # noqa: E731
 
     console = None
+    stop_listening = None
     if args.state_sequence:
         paths = [p.strip() for p in args.state_sequence.split(",") if p.strip()]
         states = []
@@ -2556,14 +2585,21 @@ def watch_cmd(args: argparse.Namespace) -> int:
             state_provider = read_names_at_start(state_provider, console_name_reader(console),
                                                  start_names)
 
+        # The console's meters are listened to for clips, on
+        # a thread of its own (L003); if that cannot be had the watch
+        # says so at INFO and carries on.
+        from atoo.metering import with_clip_detection
+
+        state_provider, stop_listening = with_clip_detection(state_provider, args.console)
+
         max_iterations = args.count
         label = f"{args.console}:{args.port}"
 
     # flush= on every print in this command, not as a style: `watch` is a
     # long-running live monitor, and Python block-buffers stdout when it
-    # is redirected to a file. The maintainer ran `watch --console --count 8`
-    # into a log on 2026-09-22 and saw a ZERO-BYTE FILE for minutes, so he
-    # killed it -- reasonably, since nothing else was on screen either.
+    # is redirected to a file. Running `watch --console --count 8`
+    # into a log on 2026-09-22 gave a ZERO-BYTE FILE for minutes, and it was
+    # killed -- reasonably, since nothing else was on screen either.
     # Nothing was wrong: one live read is thousands of addresses, so
     # eight of them is minutes of correct, silent work. A monitor whose
     # output only appears at exit is not a monitor. The
@@ -2592,13 +2628,14 @@ def watch_cmd(args: argparse.Namespace) -> int:
 
     last_findings = []
     try:
-        for event in watch(state_provider, rules=rules, interval=args.interval, max_iterations=max_iterations):
+        for event in watch(state_provider, rules=rules, interval=args.interval,
+                           max_iterations=max_iterations, session_notes=session_notes):
             last_findings = event.all_findings
             # The coverage paragraph has been printed at the
-            # baseline since #160, but it arrived AFTER the findings it
+            # baseline, but it arrived AFTER the findings it
             # qualifies and never again -- so a bare ERROR on pass 47 of
             # a live watch carries no caveat at all, which is how
-            # R002/R005 reached the maintainer on 2026-09-24 looking like
+            # R002/R005 reached an engineer on 2026-09-24 looking like
             # verdicts. `coverage_caveat` is the one-line form, printed
             # ahead of the baseline findings and again with any change
             # event, because that is where an engineer at the desk is
@@ -2631,6 +2668,8 @@ def watch_cmd(args: argparse.Namespace) -> int:
     except KeyboardInterrupt:
         print("\nStopped watching.")
     finally:
+        if stop_listening is not None:
+            stop_listening()
         if console is not None:
             console.close()
 
@@ -2719,7 +2758,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
         _emit_diagnostics([stale_inputs], heading="The plan is older than its inputs:")
 
     journal_path = args.journal
-    # In a bundle the journal belongs in the bundle (#81 point 4), and
+    # In a bundle the journal belongs in the bundle, and
     # only in its `journals/` stack -- named for the desk
     # it reaches, so the path is chosen once the desk has answered, below.
     stack_journal = journal_path is None and args.confirm and show is not None
@@ -2750,7 +2789,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
 
             # Verification above ran against the model the plan
             # states; this is the first moment we can hear the model from
-            # the desk itself. Graded by CLAUDE.md's rule that a judgement
+            # the desk itself. Graded by the rule that a judgement
             # call is not an impossible patch (`apply.check_desk_model`):
             # a different model whose panel has every socket the plan
             # patches is applied, with an INFO and the verify re-run
@@ -2776,7 +2815,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
             # on the same model (or an unmeasured one) nothing did once
             # verify was skipped, so a plan patching a socket this desk
             # does not have would have been written. That is the one case
-            # CLAUDE.md keeps as an error, and `amend` refuses it whatever
+            # kept as an error, and `amend` refuses it whatever
             # --skip-verify says -- apply now matches.
             if args.skip_verify and model_check.outcome != CROSS_MODEL:
                 against = model_check.desk_model or intended
@@ -2825,14 +2864,15 @@ def apply_cmd(args: argparse.Namespace) -> int:
             # silent and the proof says it is fine, which is the one
             # outcome this whole tool exists to prevent.
             #
-            # A stop rather than a warning, for the reason: a plan whose
+            # A stop rather than a warning, for the same reason as the model cross-check:
+            # a plan whose
             # inputs arrive on hardware that is not in the console was
             # never checked against this console, and writing it produces
-            # a desk that looks right. Unlike #13 there is no override
+            # a desk that looks right. Unlike the model cross-check there is no override
             # flag, because there is nothing to override -- the
             # `--console-model` states which of two opinions about the
             # desk is correct, whereas this is the desk's own read-only
-            # inventory of itself. Also unlike the, this check cannot
+            # inventory of itself. Also unlike that, this check cannot
             # fire on an ambiguous reading: only a literal `NONE` counts,
             # so a card whose name we do not know, or a bay that did not
             # answer, carries on (see `facts.bay_is_empty`).
@@ -2954,8 +2994,8 @@ def apply_cmd(args: argparse.Namespace) -> int:
 
 def _partial_path(path: Path) -> Path:
     """Where a failed model call's partial reply is saved, beside the file
-    it was meant to become: `plan.json` -> `plan.partial.json` (the maintainer,
-    2026-09-28), so it still sorts beside it and opens in a JSON viewer.
+    it was meant to become: `plan.json` -> `plan.partial.json`, so it still sorts beside
+    it and opens in a JSON viewer.
     It is often NOT valid JSON -- it is a reply cut off partway."""
     return path.with_name(f"{path.stem}.partial{path.suffix}")
 
@@ -3028,10 +3068,9 @@ def _record_change_on_stack(show, kind: str, journal_path, plan_left: dict, left
     """Record a confirmed patch or amend on the bundle's journal stack, with
     the plan it left on its desk -- and never touch plan.json.
 
-    **plan.json is written only by a build** (the maintainer, 2026-09-25, issue
-    #279), which reverses the plan.json half of #259: *"I don't think we
-    should modify plan.json unless we've modified the input list or the
-    conventions file or the instructions file, the inputs to plan.json."*
+    **plan.json is written only by a build**: it is not
+    modified unless the input list, the conventions file or the
+    instructions file, the inputs to plan.json, have changed.
     What is on the desk is recorded by the desk's own entry
     (`journal_stack.DESK_PLAN_BLOCK`), which is what the next patch or amend
     of THIS desk compares against (`_desk_applied_plan`) -- so a second
@@ -3040,7 +3079,7 @@ def _record_change_on_stack(show, kind: str, journal_path, plan_left: dict, left
 
     `plan_left` is the effective plan for a run that completed (with or
     without mismatches: it is what the run meant to put there), and the
-    plan it started from for one that aborted partway -- #259's reasoning,
+    plan it started from for one that aborted partway -- the reasoning,
     per desk: that at least describes everything that was there before.
     `change` is a patch's `{"number", "name", "text"}`
     (`patch.change_block`); its number is taken now, at record time, so two
@@ -3091,7 +3130,7 @@ def _undo_plan_swap(stack_bundle, source_entry, block, *, only: bool):
     entry)` when the plan goes back, or None -- having said why -- when it
     does not.
 
-    The rule is the one the maintainer's decision implies: put the replaced plan
+    The rule: put the replaced plan
     back **only while plan.json is still the file that run wrote**, judged
     by the sha256 recorded when it wrote it. An operator who has rebuilt
     plan.json since has made a decision this command cannot see; their
@@ -3162,8 +3201,8 @@ def _refuse_out_of_order(stack_dir, journal_file: str, entry, later,
     """Print the refusal for the hazard: a journal that is no
     longer the top of the stack.
 
-    The maintainer: *"I don't see how it makes sense to undo an apply out from
-    under a subsequent amend."* Refusing is the safer reading and is what
+    It makes no sense to undo an apply out from under a subsequent
+    amend. Refusing is the safer reading and is what
     this does by default -- the per-address guard inside `undo` cannot
     see a later journal at all, so every address would pass it and the
     show would come off the desk under the amend.
@@ -3203,7 +3242,7 @@ class _UndoLink:
     files-only and should arrive before anything waits on a desk: "there is
     nothing to undo", and the stack refusal for a named journal that some
     later write on its own desk still stands on. But "which entry is the
-    newest" is now asked of ONE desk (per-desk history, the maintainer 2026-09-24),
+    newest" is now asked of ONE desk (per-desk history),
     so `undo --show` with no journal named has to hear the desk say who it
     is before it can pick -- and a named journal has to be checked against
     the desk on the line before anything is written to it.
@@ -3284,8 +3323,8 @@ def _undo_staleness(stack_bundle, source_entry, undone_by, desk):
 
 def _refuse_other_desk(journal_file: str, source_desk: dict, desk: dict) -> None:
     """The refusal for a journal recorded on a different desk than the one
-    on the line -- the maintainer, 2026-09-24: *"undo can only apply against
-    correct desk / correct journal."* No override: there is no legitimate
+    on the line: undo can only apply against the
+    correct desk and the correct journal. No override: there is no legitimate
     reason to reverse desk A's journal onto desk B. Per address, undo cannot
     tell the two apart (a plan applied to both holds the same value at every
     address on both), so every address would pass the guard and the wrong
@@ -3304,9 +3343,9 @@ def _refuse_other_desk(journal_file: str, source_desk: dict, desk: dict) -> None
 
 
 def _say_desk_moved(recorded: dict, desk: dict) -> None:
-    """The INFO for the same desk (by serial) at a new address -- the maintainer,
-    2026-09-24: the IP changing *"going from home network to gig network"*
-    is the same desk, and allowed. Said, because it was inferred."""
+    """The INFO for the same desk (by serial) at a new address: the IP changing
+    going from a home network to a gig network is the same desk, and
+    allowed. Said, because it was inferred."""
     print(f"  INFO this journal was written to serial {recorded.get('serial')} at "
           f"{recorded.get('address')}; the desk on the line states the same serial at "
           f"{desk.get('address')}. The serial is the desk, so it is the same one -- its "
@@ -3316,7 +3355,7 @@ def _say_desk_moved(recorded: dict, desk: dict) -> None:
 def _journal_desk(journal: dict) -> dict | None:
     """The desk a journal file itself says it was written to -- its own
     `stack_entry.desk` -- for a journal the stack cannot place. None when
-    it names none (written before #272, or never on a stack)."""
+    it names none (written before desks were recorded, or never on a stack)."""
     block = journal.get("stack_entry") if isinstance(journal, dict) else None
     desk = block.get("desk") if isinstance(block, dict) else None
     return desk if isinstance(desk, dict) and desk else None
@@ -3340,14 +3379,14 @@ def undo_cmd(args: argparse.Namespace) -> int:
     is per address and cannot see the later run it would be reaching
     underneath.
 
-    **Per desk** (the maintainer, 2026-09-24: one plan, applied to a primary and a
+    **Per desk** (one plan, applied to a primary and a
     backup). Every entry records the desk it wrote to, so "the top" is the
     newest write standing **on the desk this command reaches**: `--show`
     with no journal pops that desk's newest and leaves the other desk's
     history alone; a named journal is stale only if a later write on THIS
     desk stands on it; and a journal recorded on a different desk is
-    refused, naming both, with no override: *"undo can only apply against
-    correct desk / correct journal"* (the maintainer, 2026-09-24). The desk is its
+    refused, naming both, with no override: undo can only apply against the
+    correct desk and journal. The desk is its
     serial, so the same serial at a new address is the same desk (INFO),
     and a different serial at the same address is not. An entry recorded
     before entries named their desk counts as this desk's, said at INFO.
@@ -3443,7 +3482,7 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
         print(str(exc), file=sys.stderr)
         return 1
 
-    # THE #252 GUARD, and the reason the stack exists -- now asked of the
+    # THE OUT-OF-ORDER GUARD, and the reason the stack exists -- now asked of the
     # desk being written (per-desk history).
     stack_bundle = _stack_bundle_for(journal_file, show)
     source_entry = None
@@ -3501,8 +3540,8 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
                       f"this desk's -- {journal_stack.describe_desk(desk)}. The single-desk "
                       "assumption was true when it was written.")
             elif not journal_stack.same_desk(recorded_on, desk):
-                # Strict, and no override (the maintainer, 2026-09-24: "undo can
-                # only apply against correct desk / correct journal").
+                # Strict, and no override (undo can
+                # only apply against the correct desk and journal).
                 _refuse_other_desk(journal_file, recorded_on, desk)
                 return 1
             elif journal_stack.desk_moved(recorded_on, desk):
@@ -3578,7 +3617,10 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
         return 1
     link.close()
     link.console = link.raw_log = None
-
+    if getattr(args, "result_json", None):
+        # A file that cannot be written is said, and is not a reason to skip
+        # recording a reversal that has already reached the desk.
+        _write_review_json(args.result_json, result.to_dict(), flag="--result-json")
 
     if result.dry_run:
         # The preview is per-address by requirement: a refusal list that
@@ -3600,7 +3642,7 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
 
     # The bundle's plan.json follows the stack. Asked of the
     # entry, not the run, so an apply (which never replaces plan.json)
-    # and an amend recorded before #259 both answer "nothing to do".
+    # and an amend recorded before an earlier change both answer "nothing to do".
     saved_plan = (journal_stack.saved_plan(source_entry)
                   if stack_bundle is not None and source_entry is not None else None)
     if result.aborted:
@@ -3691,13 +3733,14 @@ def _valid_strip_label(label: str) -> bool:
     return bank in ("ch", "aux") and number.isdigit() and int(number) >= 1
 
 
-def _write_review_json(path: str, review: dict) -> bool:
-    """`amend --review-json FILE`: stages 1-3 as data. False,
-    having said why, when the file cannot be written."""
+def _write_review_json(path: str, review: dict, flag: str = "--review-json") -> bool:
+    """`amend --review-json FILE` and `undo --result-json FILE`: a run's
+    review as data. False, having said why, when the file cannot be
+    written."""
     try:
         Path(path).write_text(json.dumps(review, indent=2) + "\n", encoding="utf-8")
     except OSError as exc:
-        print(f"--review-json {path}: {exc}", file=sys.stderr)
+        print(f"{flag} {path}: {exc}", file=sys.stderr)
         return False
     return True
 
@@ -3715,7 +3758,7 @@ def _desk_applied_plan(show, desk: dict | None, bundle_plan: dict | None):
     build -- or, for a patch with no plan.json either, starts from an empty
     base (`patch.empty_base`).
 
-    `infos` always says which it was and why, per `CLAUDE.md`: a choice the
+    `infos` always says which it was and why: a choice the
     engineer did not state is fine, one that does not announce itself is
     not."""
     from atoo import journal_stack
@@ -3782,8 +3825,7 @@ def _claimed_but_empty_warning(strips, from_bundle: bool) -> str | None:
 
 
 def _print_amend_preflight(preflight, what: str = "the amended plan") -> None:
-    """Say what `amend.preflight` found, in `apply_cmd`'s words (issue
-    #274). The refusal itself is printed where the command refuses. `what`
+    """Say what `amend.preflight` found, in `apply_cmd`'s words. The refusal itself is printed where the command refuses. `what`
     names the plan verified: "the amended plan" (a rebuild) or "the changed
     plan" (a typed change merged onto the desk's)."""
     verify = preflight.verify
@@ -3816,7 +3858,7 @@ def _change_conventions(args: argparse.Namespace, show, base: dict):
     its name, instructions text, its name, infos)`.
 
     The house file: `--conventions` if given, else the one the show on the
-    desk was BUILT from (the base plan's recorded layer, #236) -- so a
+    desk was BUILT from (the base plan's recorded layer) -- so a
     change gets the same house treatment as the channels beside it -- else
     `~/.atoo.config`'s default. The bundle's `instructions.md` layers on
     top, exactly as for a build. Each text is passed whole: the model-facing
@@ -3893,8 +3935,8 @@ def patch_cmd(args: argparse.Namespace) -> int:
     Everything after the change is known is amend's back half, unchanged:
     read the desk, work out the delta, show what will and will NOT be
     written, and -- only with `--confirm` -- write, prove, journal. A
-    setup-and-rehearsal operation, not a mid-show one (the maintainer,
-    2026-09-23). `plan.json` is never written: only a build does that.
+    setup-and-rehearsal operation, not a mid-show one.
+    `plan.json` is never written: only a build does that.
     """
     import time
 
@@ -3921,6 +3963,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
 
     change_text = change_set = None
     amended = None
+    compile_infos: list[str] = []
     if mode == "amend" and (getattr(args, "change", None) or getattr(args, "change_file", None)
                             or getattr(args, "change_set", None)):
         print("--amended-plan patches from a rebuilt plan; a typed change (or --change-file, "
@@ -3945,7 +3988,8 @@ def patch_cmd(args: argparse.Namespace) -> int:
             return 1
         if getattr(args, "change_set", None):
             try:
-                change_set, saved_text = patch_engine.load_change_set(args.change_set)
+                change_set, saved_text = patch_engine.load_change_set(
+                    args.change_set, infos=compile_infos)
             except (OSError, ValueError) as exc:
                 print(f"--change-set {args.change_set}: {exc}", file=sys.stderr)
                 return 1
@@ -3955,7 +3999,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
             change_text = change_text or saved_text
         if not change_text and change_set is None:
             print("say what the change is: atoo patch --show DIR \"trumpet and sax on "
-                  "A 21-22 for tonight\" (or --change-file FILE; or --amended-plan FILE to "
+                  "A 21-22\" (or --change-file FILE; or --amended-plan FILE to "
                   "patch from a rebuilt plan)", file=sys.stderr)
             return 1
 
@@ -4025,7 +4069,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
                      or (resolve_console_model(applied) if applied else None))
     if applied is None:
         # A patch on a desk this bundle never wrote, with no plan.json: an
-        # initialized board, and a supported start (the maintainer, 2026-09-25).
+        # initialized board, and a supported start.
         if console_model is None:
             if console is not None:
                 console.close()
@@ -4061,7 +4105,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
                 change_text, applied, provider=provider, console_model=console_model,
                 conventions=conventions, conventions_name=conventions_name,
                 instructions=instructions, instructions_name=instructions_name,
-                constrain=not args.no_constrain)
+                constrain=not args.no_constrain, infos=compile_infos)
         except (AIProviderError, patch_engine.ChangeError, generate.PromptError) as exc:
             if console is not None:
                 console.close()
@@ -4078,8 +4122,12 @@ def patch_cmd(args: argparse.Namespace) -> int:
                     pass
             return 1
         model_s = time.monotonic() - t0
+        for info in compile_infos:
+            print(f"  INFO {info}")
     elif mode == "patch":
         compiled_by = f"--change-set {args.change_set}"
+        for info in compile_infos:
+            print(f"  INFO {info}")
     change = None
     saved = None
     if mode == "patch":
@@ -4141,6 +4189,12 @@ def patch_cmd(args: argparse.Namespace) -> int:
                   "move audio the moment they are written:")
             for edit in live:
                 print(f"!!   {edit.line()}")
+        switched = [e for e in amendment.edits if e.switches_phantom]
+        if switched:
+            print(f"\n!! {len(switched)} PHANTOM POWER CHANGE(S) ON SOMETHING ALREADY RUNNING "
+                  "-- 48V is switched the moment it is written:")
+            for edit in switched:
+                print(f"!!   {edit.line()}")
         for info in amendment.infos:
             print(f"  INFO {info}")
         for warning in amendment.warnings:
@@ -4175,14 +4229,15 @@ def patch_cmd(args: argparse.Namespace) -> int:
                   "total_s": round(time.monotonic() - started, 2)}
         timing_line = _timing_line(timing, compiled_by, mode)
         if mode == "patch":
-            # The question the maintainer asked of a change; an amend
+            # The question asked of a change; an amend
             # carries it in --review-json only, and prints as it always did.
             print(f"\n{timing_line}")
 
         # Before any refusal below, so a blocked review is written too --
         # the reason it is blocked is exactly what a reader needs to see.
         review = amend_engine.review_payload(occupancy, amendment, targets)
-        review["infos"] = source_infos + library_choice.infos + review["infos"]
+        review["infos"] = (source_infos + compile_infos + library_choice.infos
+                           + review["infos"])
         if empty_warning:
             review["warnings"] = [empty_warning] + review["warnings"]
         # Drawn first in the review, as a WARNING, not among the notes.
@@ -4404,8 +4459,7 @@ def amend_cmd(args: argparse.Namespace) -> int:
 
 
 def _timing_line(timing: dict, compiled_by: str | None, mode: str) -> str:
-    """How long this change took, in the two halves the maintainer asked about
-    (*"I just don't know how fast it would be"*): the model
+    """How long this change took, in the two halves an engineer wants to know: the model
     call that compiled it, and the desk read."""
     parts = []
     if timing.get("desk_read_s") is None:
@@ -4517,7 +4571,7 @@ def _add_patch_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument(
         "change", nargs="?", default=None, metavar="CHANGE",
         help="The change, in plain English: what to add and what to drop, e.g. \"trumpet, "
-             "sax and trombone on A 21-23 for tonight, in the Horns DCA\". Quote it.")
+             "sax and trombone on A 21-23, in the Horns DCA\". Quote it.")
     ap.add_argument(
         "--change-file", default=None, metavar="FILE",
         help="Read the change from FILE instead -- for a long one, or one written in an "
@@ -4578,7 +4632,7 @@ def _add_amend_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument(
         "--amended-plan", required=True, metavar="FILE",
         help="The rebuild: the same show, built again from the same conventions with "
-             "tonight's change in it (three horn rows added to input.csv, a line in "
+             "the change in it (three horn rows added to input.csv, a line in "
              "instructions.md). `atoo build` produces it; amend works out what is "
              "new in it and writes only that. The same as `atoo patch --amended-plan`.")
     _add_patch_common_arguments(ap, what="amend")
@@ -4589,14 +4643,14 @@ PATCH_DESCRIPTION = (
     "nothing else.\n"
     "\n"
     "  atoo patch --show ./touringband --console 192.0.2.16 \\\n"
-    "      \"trumpet, sax and trombone on A 21-23 for tonight, Horns DCA, send to MON2\"\n"
+    "      \"trumpet, sax and trombone on A 21-23, Horns DCA, send to MON2\"\n"
     "  ... --confirm --change-set horns.json      (write exactly what the preview showed)\n"
     "  atoo patch --show ./touringband --console 192.0.2.16 \"HPF 100 on the vocals\"\n"
     "  atoo patch --show ./touringband --promote 3 --confirm\n"
     "  atoo patch --show ./touringband --amended-plan ./touringband/rebuilt.plan.json ...\n"
     "\n"
     "What you type is a CHANGE, and it is called that in messages, the journal and\n"
-    "the page (\"change 3: horns for tonight\"). \"Patch\" in findings and plan fields\n"
+    "the page (\"change 3: Add horns on A 21-23\"). \"Patch\" in findings and plan fields\n"
     "keeps meaning socket routing only; the command is called patch because it is\n"
     "the word for a small change on top of something that exists.\n"
     "\n"
@@ -4629,7 +4683,9 @@ PATCH_DESCRIPTION = (
     "it names. Code writes exactly the addresses those fields change, shows old -> new\n"
     "for each at INFO, and keeps every other address of the strip in the untouched\n"
     "proof. A fader moves only when the change says \"fader\"; a repatch of a running\n"
-    "strip is marked MOVES AUDIO LIVE. Undo puts the old values back.\n"
+    "strip is marked MOVES AUDIO LIVE, and switching its 48V phantom power SWITCHES 48V\n"
+    "LIVE. A strip's source can be changed in its phantom, type and model, not in\n"
+    "which input it is or whether it is stereo. Undo puts the old values back.\n"
     "\n"
     "plan.json is never touched: only a build writes it, and a full apply warns\n"
     "before it replaces changes that are not in it. To keep a change for good,\n"
@@ -4640,8 +4696,9 @@ PATCH_DESCRIPTION = (
     "compiles the change; a --confirm run compiles it again unless given\n"
     "--change-set, so save the one you reviewed with --save-change-set. --state FILE\n"
     "reviews offline against a saved capture. Exit 2 means it ran and found\n"
-    "problems: a refused reference, a channel with no free strip, a pre-flight\n"
-    "refusal, a readback mismatch, or an unrelated address that moved.\n"
+    "problems: a refused change (a reference, field or value the plan cannot take),\n"
+    "a channel with no free strip, a pre-flight refusal, a readback mismatch, or an\n"
+    "unrelated address that moved.\n"
     "\n"
     "On a desk Atoo did not set up, a change can only name the groups its\n"
     "starting plan knows (the desk's journal, else plan.json, else an empty board):\n"
@@ -4714,7 +4771,8 @@ AMEND_DESCRIPTION = (
 def _add_apply_arguments(ap: argparse.ArgumentParser) -> None:
     _add_show_argument(ap)
     _add_console_model_argument(ap)
-    # Not `required=True` any more: --show DIR supplies it from the bundle. apply_cmd checks for it after bundle resolution and gives the
+    # Not `required=True` any more: --show DIR supplies it from the bundle.
+    # apply_cmd checks for it after bundle resolution and gives the
     # same "you must say which plan" error argparse used to.
     ap.add_argument("--plan", default=None, help="A plan JSON produced by `atoo build`. Required unless --show supplies it.")
     ap.add_argument(
@@ -4832,6 +4890,13 @@ def _add_undo_arguments(ap: argparse.ArgumentParser) -> None:
         "--raw-log", default=None,
         help="Append every raw OSC request/reply to this file, exactly as `apply --raw-log` "
              "does.")
+    ap.add_argument(
+        "--result-json", default=None, metavar="FILE",
+        help="Write the run as JSON to FILE, for a page to draw: one row per address (the "
+             "strip, the value the journalled run wrote, the value on the desk now, the "
+             "value an undo puts back, and whether it goes back, is already back, has "
+             "changed since, or has no earlier value), the counts, and one word for the "
+             "whole run. Written for a preview and for a confirmed run alike.")
     ap.add_argument(
         "--no-progress", action="store_true",
         help=NO_PROGRESS_WRITE_HELP)
@@ -4975,7 +5040,7 @@ def _add_audit_arguments(ap: argparse.ArgumentParser) -> None:
     source_group.add_argument(
         "--state", default=None,
         help="A JSON object of address -> value (an offline capture, or a hand-built demo -- "
-             "see docs/user/demo/audit-demo/audit_demo_state.json) -- audit that instead of a live console. "
+             "try ~/Documents/Atoo/audit-demo/audit_demo_state.json, which `atoo init` copies) -- audit that instead of a live console. "
              "Lets a novice operator try this with no console attached at all.",
     )
     _add_console_read_arguments(ap)
@@ -5037,7 +5102,7 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
         "--state-sequence", default=None,
         help="Comma-separated JSON state files, played in order and then repeated -- an offline "
              "demo of an operator making changes between polls, with no console attached. "
-             "See docs/user/demo/audit-demo/audit_demo_state_before.json / audit_demo_state.json.",
+             "Try ~/Documents/Atoo/audit-demo/audit_demo_state_before.json and audit_demo_state.json, which `atoo init` copies.",
     )
     _add_console_read_arguments(ap)
     ap.add_argument(
@@ -5045,7 +5110,7 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
         help="Seconds between reads (default: 2.0). Read-only polling -- WING's OSC offers only "
              "a single, network-wide event subscription that expires every 10 seconds, so "
              "nothing here pushes. Note this is the gap BETWEEN reads, not their period: one "
-             "read of a live console is 6,143 addresses, fetched by node dump in about 320 "
+             "read of a live console is 6,195 addresses, fetched by node dump in about 320 "
              "requests and ~5 seconds on a WING Compact, so at the default a pass starts "
              "every seven seconds or so. With --per-leaf a read is about two minutes and an "
              "interval this short changes almost nothing.",
@@ -5075,6 +5140,15 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
              "of the built-in structural rules, e.g. \"the crowd mic must never be unmuted.\" "
              "Optional; without it, only the built-in rules run. See "
              "the watch subcommand's own --help text for the file's shape.",
+    )
+    ap.add_argument(
+        "--virtual-soundcheck", action="store_true",
+        help="Say that a virtual soundcheck is under way, so channels on their alternate "
+             "input (C004) and the global alternate switch (C005) are reported at INFO "
+             "instead of as warnings. Every strip on its alternate is still named, and an "
+             "INFO (W003) says the switch is on. It is for this run only; the next `atoo "
+             "watch` starts with it off, and with it off a channel still on its alternate "
+             "is a warning.",
     )
 
 
@@ -5121,8 +5195,7 @@ def _add_lessons_arguments(ap: argparse.ArgumentParser) -> None:
 
 
 def lessons_cmd(args: argparse.Namespace) -> int:
-    """`atoo lessons` (docs/developer/build-lessons-2026-09-27.md, part
-    C) -- a read-only report over one bundle's `plan.json`, every build's
+    """`atoo lessons` -- a read-only report over one bundle's `plan.json`, every build's
     own log file (`builds/`), and its findings,
     optionally alongside its git history of `plan.json` itself.
 
@@ -5203,9 +5276,9 @@ AUDIT_DESCRIPTION = (
     "by an ID that does not change when the wording does.\n"
     "\n"
     "  atoo audit --console 203.0.113.50\n"
-    "  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json\n"
-    "  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --trace-from input:LCL:3 --trace-to output:LCL:1\n"
-    "  atoo audit --state docs/user/demo/audit-demo/audit_demo_state.json --plan my_show_plan.json\n"
+    "  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json\n"
+    "  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --trace-from input:LCL:3 --trace-to output:LCL:1\n"
+    "  atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --plan ~/Documents/Atoo/audit-demo/audit_demo_plan.json\n"
     "\n"
     "Read-only either way -- nothing here writes to a console. Every finding cites the\n"
     "specific rule it violated (its ID), never an inferred channel type: this audit works\n"
@@ -5213,7 +5286,9 @@ AUDIT_DESCRIPTION = (
     "writes to, and never guesses what a channel is from its name.\n"
     "\n"
     "--state takes a JSON object of OSC address -> value, the same shape a live read\n"
-    "produces -- try it with no console attached at all via docs/user/demo/audit-demo/audit_demo_state.json.\n"
+    "produces -- try it with no console attached at all via the demo state `atoo init`\n"
+    "copies into your working folder, ~/Documents/Atoo/audit-demo/audit_demo_state.json\n"
+    "(run `atoo init` first if it is not there; if you chose another --dir, use that folder).\n"
     "--dump-state FILE writes that shape: a live read saved, to be audited again offline.\n"
     "\n"
     "  atoo audit --console 203.0.113.50 --dump-state tonight.state.json\n"
@@ -5221,11 +5296,12 @@ AUDIT_DESCRIPTION = (
     "\n"
     "--plan adds the conventions-diff audit: compare live state against what a\n"
     "plan (a `atoo build` JSON output) says a channel's mute, fader level,\n"
-    "DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a narrow\n"
-    "trim/balance/invert/head-amp-gain slice of processing should be, so a finding can cite\n"
-    "the plan's own provenance text instead of just a structural fact. `processing`'s filter\n"
-    "family (hpf_hz/hi_cut_hz/tilt_db), the parametric EQ and the compressor are still not\n"
-    "diffed. --plan also flags (CV009) any\n"
+    "DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and the\n"
+    "trim/balance/invert/head-amp-gain, high-pass/hi-cut/tilt and EQ a channel states should\n"
+    "be, so a finding can cite the plan's own provenance text instead of just a structural\n"
+    "fact. A filter or an EQ band is compared within 2%, the desk holding the nearest step of\n"
+    "the control; the compressor, a bus's EQ and a channel's PreSend EQ are not diffed.\n"
+    "--plan also flags (CV009) any\n"
     "physical output socket --output-sockets read that's patched to something the plan\n"
     "never routes there at all -- catches stray/leftover routing an apply run never wrote,\n"
     "same finding `apply --clean-output-sockets` can act on. --plan is independent of\n"
@@ -5249,7 +5325,7 @@ WATCH_DESCRIPTION = (
     "\n"
     "  atoo watch --console 203.0.113.50\n"
     "  atoo watch --console 203.0.113.50 --interval 5\n"
-    "  atoo watch --state-sequence docs/user/demo/audit-demo/audit_demo_state_before.json,docs/user/demo/audit-demo/audit_demo_state.json\n"
+    "  atoo watch --state-sequence ~/Documents/Atoo/audit-demo/audit_demo_state_before.json,~/Documents/Atoo/audit-demo/audit_demo_state.json\n"
     "\n"
     "Polling, not push: WING's OSC offers one event subscription for the whole network, and\n"
     "it dies after 10 seconds unless renewed, so this reads the same address set `audit` does\n"
@@ -5264,15 +5340,32 @@ WATCH_DESCRIPTION = (
     "Between refreshes the rules see the last names read, and a rename shows up at the next\n"
     "refresh -- the findings say so at INFO (W001). --name-refresh 1 reads them every time.\n"
     "\n"
+    "With --console it also listens to the console's meters (a read-only native connection on\n"
+    "port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,\n"
+    "aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. If the\n"
+    "connection cannot be had it says so at INFO (W002) and carries on.\n"
+    "\n"
+    "A channel on its alternate input (C004) and the global alternate switch (C005) are\n"
+    "warnings, since a show never starts on them. During a virtual soundcheck they are\n"
+    "right: --virtual-soundcheck reports them at INFO instead (each strip still named, and W003\n"
+    "saying the switch is on) for this run only. Leave it off when the show is live.\n"
+    "\n"
     "The first read is reported as a baseline, not an alert -- whatever's already wrong when\n"
     "you start watching isn't a change. --state-sequence plays a fixed list of JSON captures\n"
     "in order (then repeats) instead of a live console, so a novice operator can see an alert\n"
     "fire with no hardware at all.\n"
     "\n"
-    "With --show, the bundle's plan adds three drift checks, each a WARNING that clears\n"
+    "With --show, the bundle's plan adds drift checks, each a WARNING that clears\n"
     "when the desk is put back: a channel whose every planned send and Main route is off\n"
-    "(CV016), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted\n"
-    "(CV017), and an FX bus's effect bypassed or changed (CV015). The plan's output\n"
+    "(CV016), a planned send switched off or flipped between pre and post (CV006), a\n"
+    "channel's Main route off that the plan lists or on that it does not (CV007), a send\n"
+    "to a bus or Matrix, or a bus's route to a Main, that is on and the plan does not have\n"
+    "(CV018), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted\n"
+    "(CV017), 48V that is on where the plan has none or off where it has it (CV019), a bus that\n"
+    "is mono or stereo where the plan states the other (CV020), talkback that reaches\n"
+    "some destinations but not a monitor mix the plan builds (CV021; CV022 is the INFO\n"
+    "naming the busses it took for monitor mixes), and an\n"
+    "FX bus's effect bypassed or changed (CV015). The plan's output\n"
     "sockets are read too, and the outputs of any AES50 stage box the desk reports.\n"
     "\n"
     "--watch-conditions PATH adds operator-authored alerts on top of the built-in\n"
@@ -5291,6 +5384,12 @@ WATCH_DESCRIPTION = (
     "e.g. \"Drums\") and \"patch\" (a socket written the way an input list's patch column\n"
     "writes one -- \"AES50-A 12\", \"LCL 3\", \"AES 1\", \"CRD 64\"). Those three take \"==\"/\"!=\"\n"
     "only. Note \"AES 1\" (AES/EBU) and \"AES50-A 1\" are different sockets.\n"
+    "\n"
+    "Sends and 48V: \"send_on\" (bool), \"send_db\" (number) and \"send_mode\" (\"pre\", \"post\" or\n"
+    "\"group\") are about the channel's send to the bus a \"bus\" key names -- written like\n"
+    "\"channel\": a bus's name, \"BUS 5\", \"BUS 5-8\", \"ALL BUS\", \"MTX 3\" or \"MAIN 1\" -- and\n"
+    "\"phantom\" (bool) is the 48V on the socket the strip is patched to (and the next, for\n"
+    "a stereo source).\n"
     "\n"
     "  { \"id\": \"kick-stays-in-drums\", \"description\": \"Kick must stay in the Drums DCA\",\n"
     "    \"channel\": \"Kick\", \"field\": \"dca\", \"operator\": \"==\", \"value\": \"Drums\",\n"
@@ -5313,6 +5412,11 @@ WATCH_DESCRIPTION = (
 )
 
 
+#: The port `atoo ui` serves on unless told otherwise. A name, not a literal in
+#: the parser, so a test can move it to a free port instead of needing 8420.
+UI_DEFAULT_PORT = 8420
+
+
 def ui_cmd(args: argparse.Namespace) -> int:
     try:
         show = _open_bundle(args)
@@ -5324,17 +5428,15 @@ def ui_cmd(args: argparse.Namespace) -> int:
 
     # Imported here, not at module scope, for the same reason apply_cmd
     # keeps atoo.console out of `build`/`--help`'s import path --
-    # fastapi/uvicorn are an extra (`pip install -e ".[ui]"`), not a
+    # fastapi/uvicorn are an extra (`.[ui]`), not a
     # dependency of the engine, and shouldn't be required to run a build.
     try:
         import uvicorn
         from atoo.webui import create_app
     except ImportError:
-        print(
-            "the web UI needs the 'ui' extra -- install it with:\n"
-            "  python3 -m pip install -e \".[ui]\"",
-            file=sys.stderr,
-        )
+        # The command that fixes this depends on where Atoo is running:
+        # `install_info.ui_extra_hint` picks it.
+        print(install_info.ui_extra_hint(), file=sys.stderr)
         return 1
 
     # --plan: the plan Build step 04 shows, loaded up front so a bad
@@ -5365,7 +5467,7 @@ def ui_cmd(args: argparse.Namespace) -> int:
     if watch_conditions_path and _load_watch_conditions_file(watch_conditions_path) is None:
         return 1
 
-    # An earlier change, the deferred half of #128: the Watch page's console
+    # An earlier change, the deferred half: the Watch page's console
     # field seeds from ATOO_CONSOLE / ~/.atoo.config [console],
     # so the browser stops being the one way to reach a desk that still
     # makes you retype its address.
@@ -5403,7 +5505,7 @@ def ui_cmd(args: argparse.Namespace) -> int:
         initial_bundle=str(show.directory) if show is not None else None,
         # The shell's Build step 01 (same mockup, phase 2): the HOUSE
         # conventions file, which is not a bundle slot -- it is reused
-        # across every show, so it lives outside the bundle (#81 point 5)
+        # across every show, so it lives outside the bundle
         # and is named in ~/.atoo.config's [conventions] section.
         # The same fallback `build` uses when no --conventions is given,
         # read through the same loader. `ui` has no --conventions flag,
@@ -5471,9 +5573,11 @@ def ui_cmd(args: argparse.Namespace) -> int:
     # One page -- Build, Apply and Watch all at `/`, so
     # one URL is the whole announcement. (`/app`, where the shell lived
     # before Watch moved in, redirects here.)
+    # Which copy of Atoo this is comes first: it is what a tester running a
+    # branch checks before reading anything else.
+    print(app.state.install["line"])
     print(f"Atoo: http://{args.host}:{port} -- Build, Apply and Watch (Ctrl-C to stop)")
-    # This said "Read-only" until the shell's Apply screen shipped (issue
-    # #192). It is the first thing a run prints about itself, so it is
+    # This said "Read-only" until the shell's Apply screen shipped. It is the first thing a run prints about itself, so it is
     # where a claim that stopped being true had to be corrected -- and
     # what replaces it has to be narrower, not vaguer: which mode writes,
     # and what has to be true before it does.
@@ -5504,6 +5608,11 @@ def ui_cmd(args: argparse.Namespace) -> int:
         # stdout. Not stderr -- nothing is wrong, and nothing is refused.
         print("No show open and no working folder set -- `atoo init` makes "
               "~/Documents/Atoo with house conventions and a preset library.")
+    # Not a terminal (a pipe, a file, `atoo ui | tee`): Python holds stdout
+    # back until a block fills, and the server below blocks this thread, so
+    # the announcement -- the only place the port is said -- would never
+    # arrive. Say it now.
+    sys.stdout.flush()
     # `Server.run(sockets=...)` rather than `uvicorn.run(host=, port=)`:
     # the listener above is already bound and already announced, so
     # uvicorn must serve on THAT socket rather than binding a second time.
@@ -5734,7 +5843,7 @@ def _add_ui_arguments(ap: argparse.ArgumentParser) -> None:
                     "On a network address a second machine may Watch; opening files "
                     "and every write from the page (apply, patch, undo, build, saving a file) "
                     "still answer this machine only")
-    ap.add_argument("--port", type=int, default=8420, help="Port to serve on (default: 8420). "
+    ap.add_argument("--port", type=int, default=UI_DEFAULT_PORT, help="Port to serve on (default: 8420). "
                     "If an Atoo UI is already serving there, that one is opened instead")
     ap.add_argument(
         "--no-browser", action="store_true",
@@ -5936,7 +6045,7 @@ BUILD_DESCRIPTION = (
     "the current directory for exactly one .csv input list and exactly one conventions\n"
     "source and builds that pair into a plan. Given more than one candidate it prints\n"
     "what it found and the exact invocation to use, rather than guessing. See\n"
-    "docs/user/build-a-show.md.\n"
+    "https://docs.atoo.app/build/build-a-show/\n"
     "\n"
     "The plan is written to a file either way -- an\n"
     "<input-stem>+<conventions-stem>.plan.json name unless --out says otherwise; pass\n"
@@ -6015,14 +6124,17 @@ APPLY_DESCRIPTION = (
     "\n"
     "The first form changes nothing: it reads the console's current value for every\n"
     "address the plan would touch and shows you the before/after. Writing requires\n"
-    "--confirm, and is journalled with each prior value so it can be reversed.\n"
+    "--confirm. It reads each address again just before writing it and sends only\n"
+    "those that differ, so the number written is the number the preview said would\n"
+    "change (unless the console moved in between); each is journalled with its prior\n"
+    "value so it can be reversed.\n"
     "\n"
     "Every address written is read back afterwards -- remote console writes can fail\n"
     "silently, so an acknowledgement is not proof. Anything that didn't land is\n"
     "reported by address, and the command exits 2 -- the code build, verify, compare\n"
     "and apply use for \"it ran and found problems\", as against 1 when the command\n"
     "could not run at all. audit and watch report their own findings\n"
-    "with 1, not 2. See the exit-code table in docs/user/cli-reference.md.\n"
+    "with 1, not 2. The exit-code table is at https://docs.atoo.app/reference/cli-reference/\n"
     "\n"
     "Before writing, apply asks the desk what is in its two expansion bays\n"
     "(/cards/$type and /$syscfg/opt_mod) and REFUSES a plan that patches from or to\n"
@@ -6178,8 +6290,10 @@ RESOLVE_DESCRIPTION = (
     "no rule covers is a note, and is given to the generator verbatim. A line of your\n"
     "preset map (- Kick: \"Kick In\", indented under a line that names presets) is\n"
     "covered when your preset library -- [presets] default in ~/.atoo.config -- has\n"
-    "every preset it names, cited or not; one naming a preset the library has not got\n"
-    "is a note saying so. The file is still used with warnings, and refused only when\n"
+    "every preset it names (a bus preset under a line that says bus), cited or not; one\n"
+    "naming a preset the library has not got is a note saying so, and so is one that\n"
+    "also states a rule. A library that cannot be read is said at INFO. The file is\n"
+    "still used with warnings, and refused only when\n"
     "it is empty or none of its citations is found.\n"
     "\n"
     "The file ends with a Category table: one JSON object per category restating its\n"
@@ -6244,6 +6358,9 @@ def resolve_cmd(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     shown = _display_resolved(state.path)
+    # The library the preset map is checked against, and why (INFO):
+    # said here too, not only by the build.
+    preset_library = _resolve_preset_library(args, announce=True)
 
     if args.check:
         if state.text is None:
@@ -6252,7 +6369,7 @@ def resolve_cmd(args: argparse.Namespace) -> int:
             return 1
         result = conventions_resolve.check(state.text, conventions_raw,
                                            conventions_name=name, resolved_name=state.path.name,
-                                           preset_library=_preset_library_choice(args).library)
+                                           preset_library=preset_library)
         table = category_table_module.parse(state.text, resolved_name=state.path.name)
         strips = instructed_channels.drop_unquoted(
             instructed_channels.parse_strips(state.text, resolved_name=state.path.name),
@@ -6295,7 +6412,7 @@ def resolve_cmd(args: argparse.Namespace) -> int:
     try:
         resolved = conventions_resolve.obtain(state, conventions_raw, name, provider=provider,
                                               force=True, findings=findings,
-                                              preset_library=_preset_library_choice(args).library)
+                                              preset_library=preset_library)
     except (KeyboardInterrupt, BuildStopped):
         print("resolve: stopped -- nothing was written", file=sys.stderr)
         return 130
@@ -6323,8 +6440,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
 
     Extracted from `main()` so something other than a user
     typing `--help` can read it: `docs/user/cli-reference.md` is
-    GENERATED from this tree by `tools/gen_cli_reference.py`, and a test
-    regenerates it and fails on any difference. A hand-written reference
+    GENERATED from this tree by a script in the development repository,
+    whose suite regenerates it and fails on any difference. A hand-written reference
     drifts from `--help` -- the old hand-written one did, more than
     once -- and a generated one cannot.
     """
@@ -6340,6 +6457,9 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         add_help=False,  # -h is re-added below so it can print the full, spliced help
     )
     ap.add_argument("-h", "--help", action="store_true", help="Show this help (including every command's options) and exit")
+    ap.add_argument("--version", action="store_true",
+                    help="Print the version, where this copy of Atoo is running from, and, "
+                         "for a git checkout, its branch and commit, and exit")
     sub = ap.add_subparsers(dest="command")
 
     init_ap = sub.add_parser(
@@ -6537,6 +6657,10 @@ def main(argv: list[str] | None = None) -> int:
 def _main(argv: list[str] | None = None) -> int:
     ap, subparsers = build_parser()
     args = ap.parse_args(argv)
+
+    if args.version:
+        print(install_info.describe().version_text())
+        return 0
 
     # No command, or an explicit -h: the full help, not argparse's
     # "the following arguments are required: command" stub.

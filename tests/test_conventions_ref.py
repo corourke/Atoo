@@ -2,13 +2,13 @@
 relative to the show bundle, and the UI's Build step 01 loads that file
 when the bundle is opened.
 
-The maintainer, 2026-09-23: *"A generated plan file should include a relative
+*"A generated plan file should include a relative
 (to the show bundle directory) file name reference to the conventions
 file that was incorporated in the build such that it can be loaded by
 the UI when a show bundle is loaded."*
 
 Every bundle here is built in `tmp_path` -- nothing reads a bundle under
-`examples/` (CLAUDE.md, "a bundle under examples/ is a living example").
+`examples/`.
 """
 from __future__ import annotations
 
@@ -292,7 +292,7 @@ def test_a_bundle_moved_with_its_house_file_resolves_relatively(tmp_path):
 
 def test_a_plan_from_before_236_opens_exactly_as_it_did(tmp_path):
     """No migration: an old stack entry's bare `path` is not trusted, and
-    the tile shows the config default with no #236 finding at all."""
+    the tile shows the config default with no an earlier change finding at all."""
     show = _show(tmp_path)
     old_file, config_names = _house(tmp_path, "house-A.md"), _house(tmp_path, "house-B.md", OTHER_TEXT)
     _record(show, old_file, sha=None, relative=None, absolute=None)
@@ -328,7 +328,7 @@ def test_a_typed_path_still_wins_over_the_plan_and_says_so(tmp_path):
 
 def test_the_stack_carries_the_plans_keys(tmp_path):
     """`_build_payload` promises `meta.conventions_stack`'s shape key for
-    key -- so the three #236 keys ride on the page's stack too."""
+    key -- so the three an earlier change keys ride on the page's stack too."""
     show, house = _show(tmp_path), _house(tmp_path)
     data = _sources(show, house)
     for layer in data["stack"]:
@@ -350,7 +350,7 @@ def test_round_trip_build_then_open_under_a_different_config(stub_build, tmp_pat
 
 
 def test_the_served_page_draws_the_origin(tmp_path):
-    """CLAUDE.md's web/static rule: the Python suite cannot see the page,
+    """The Python suite cannot see the page,
     so assert the served assets read the new key."""
     app = create_app()
     with fastapi_testclient.TestClient(app) as c:
@@ -393,9 +393,9 @@ def _second_show(tmp_path: Path) -> Path:
 
 
 def test_opening_another_bundle_drops_a_typed_conventions_path(tmp_path):
-    """The maintainer, 2026-09-24: a conventions file typed into step 01 for one
+    """A conventions file typed into step 01 for one
     show does not carry over to the next. It used to (the house file is
-    outside the bundle), but since #236 a bundle's plan records the file it
+    outside the bundle), but since an earlier change a bundle's plan records the file it
     was built from, and a path typed for the LAST show would beat that
     record for this one. Opening a bundle now drops it, exactly as it
     already dropped typed input-list and instructions paths.

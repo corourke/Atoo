@@ -1,9 +1,8 @@
 """Keep a bundle's history folders to the newest few entries.
 
-The maintainer, 2026-10-02: *"In the bundle, I'd like to only see plan files at
-the top level so lets put .txt files in a directory called `logs`"*, and
-*"continually prune the builds, journals, and logs directories to a max of
-5 entries each."*
+A bundle shows only plan files at the top level (so text files go in a
+directory called `logs`), and the builds, journals, and logs directories
+are continually pruned to a max of 5 entries each.
 
 So a bundle has three folders that grow by one entry per run, and each is
 pruned to `KEEP` entries straight after every write into it:
@@ -30,7 +29,7 @@ them all. `journals/` decides what it can lose itself
 (`journal_stack._prune`), because which journal a stack still needs is a
 question about the stack, not about file names; it shares `KEEP`.
 
-The limit is a named constant, not a setting: the maintainer asked for five.
+The limit is a named constant, not a setting: five.
 """
 
 from __future__ import annotations
@@ -117,7 +116,7 @@ def prune_logs(directory: Path, keep: int | None = None) -> list[Path]:
 
 def main(argv: list[str] | None = None) -> int:
     """`python3 -m atoo.prune logs DIR` -- what
-    the maintainer's rebuild script calls after writing a run's transcripts
+    a rebuild script calls after writing a run's transcripts
     into `DIR` (a bundle's `logs/`). Prints one line per run removed."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if len(argv) != 2 or argv[0] != "logs":

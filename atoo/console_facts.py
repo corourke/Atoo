@@ -4,8 +4,8 @@ This is the whole point of the generator+verifier experiment:
 a conventions schema is unbounded because English is unbounded, but *this*
 table is bounded -- it is finished the day it matches the console. Nothing
 here is inferred from a conventions file or from what any model said; every
-number below was read out of the real hardware walk at
-`docs/reference/wing-compact-raw-walk-20260908.json`, with the originating
+number below was read out of the real hardware walk of 2026-09-08
+(the raw walk of a WING Compact), with the originating
 `.../data` string quoted beside it.
 
 Extracted 2026-09-11 by enumerating that walk. Re-derive, don't hand-edit:
@@ -32,7 +32,7 @@ CONSOLE_MODEL = "wing-compact"
 # same firmware on the same mainboard, so the tree is identical on all
 # three -- and it therefore says nothing about which sockets physically
 # exist. The proof is in our own walk: it reports a complete
-# `/io/in/AUX/1..8` and `/io/out/AUX/1..8` for the maintainer's Compact, a console
+# `/io/in/AUX/1..8` and `/io/out/AUX/1..8` for a Compact, a console
 # that has no local aux jacks at all.
 #
 # So `INPUT_SOCKETS`/`OUTPUT_SOCKETS` are an *address space*, and using them
@@ -43,9 +43,9 @@ CONSOLE_MODEL = "wing-compact"
 # preamp count ("8 (full size console) or 24 (Rack and Compact consoles)
 # original MIDAS PRO microphone preamps").
 #
-# The maintainer, 2026-09-21: **"an unknown console-model is a hard stop -- we have
+# **An unknown console-model is a hard stop**: we have
 # no way of knowing what its capabilities are and any plan would be
-# meaningless."** Hence `panel_for()` raises rather than falling back, and
+# meaningless. Hence `panel_for()` raises rather than falling back, and
 # every caller that needs a socket bound has to say which console it means.
 CONSOLE_MODELS = {
     "wing-full": {
@@ -78,7 +78,7 @@ CONSOLE_MODELS = {
 # mainboard, which pp. 11-12 describe as shared across all three models
 # ("Same Mainboard as on WING"), so none of those varies by model.
 #
-# The maintainer, 2026-09-21, confirming that for the bays specifically: all three
+# Confirming that for the bays specifically: all three
 # models -- full-size, Compact and Rack -- have the same two, and they work
 # **at the same time**, not one or the other. One rear-panel expansion slot
 # (`CRD`), shipping with the WING-LIVE 64-channel dual-SD recorder and
@@ -86,11 +86,11 @@ CONSOLE_MODELS = {
 # the motherboard, for an optional Dante or Waves SoundGrid module, another
 # 64x64. The PDF's p.256 "an extension card... **or** an internal module"
 # reads as exclusive and is not. "The expansion bay", unqualified, means
-# the rear slot. See `docs/reference/wing-console-model.md`.
+# the rear slot.
 #
 # That is **not** the same as saying the address-space count is the panel
 # count for all of them, and this comment said so until 2026-09-21. `CRD`
-# (the expansion card bay) and `MOD` (the AoIP module bay -- #99) are
+# (the expansion card bay) and `MOD` (the AoIP module bay) are
 # sockets that exist only when something is *in* the bay, which is a fact
 # about the rig rather than the model: `/cards.$type` and
 # `/$syscfg.opt_mod` both have a `NONE`, and the firmware answers
@@ -139,12 +139,12 @@ class UnknownConsoleModel(ValueError):
 # What the desk calls itself, where that is not what we call it
 #
 # Measured 2026-09-23 on a real full-size WING -- the first console other
-# than the maintainer's Compact this project has ever been connected to:
+# than the reference Compact this project has ever been connected to:
 #
 #     WING,192.0.2.148,WING-CCC,wing-fullsize,SERIAL00000002,
 #     3.1-0-g9f314617:release
 #
-# (`archive/examples/console-runs/2026-09-23-1921/A17-wing-full.json`, field
+# (the A17 capture of 2026-09-23, field
 # `identity`.) The desk's own token is `wing-fullsize`; our key -- and the
 # `--console-model` choice a user types, and the value written into a
 # plan's `meta.console_model` -- is `wing-full`. Both have to resolve to
@@ -156,7 +156,8 @@ class UnknownConsoleModel(ValueError):
 # because such a rule would silently invent an answer for a token nobody
 # has ever read off a desk -- and the answer it invents decides the socket
 # bound that stands between a plan and a patch to a jack that isn't there.
-# That is the same line `panel_for` and `model_from_identity` already draw, one field earlier.
+# That is the same line `panel_for` and `model_from_identity` already
+# draw, one field earlier.
 #
 # The cost of that choice is that it buys nothing for the Rack. **Nobody
 # has seen a WING Rack's identity string.** If a Rack answers `wing-rack`
@@ -172,14 +173,15 @@ class UnknownConsoleModel(ValueError):
 # at WARNING, before writing: the token the desk sent, that sockets were
 # checked against the plan's own model only, and that every write is
 # still read back and proved (`apply.check_desk_model`). Proceeding rather
-# than refusing is `CLAUDE.md`'s rule -- the WING family shares one
+# than refusing follows the principle that a judgement call is not an
+# impossible patch -- the WING family shares one
 # firmware and one mainboard, the plan's own model has already been
 # verified, and a wrong guess at the model shows up in the readback rather
 # than as a silent patch. The token goes into the apply journal's `desk`
 # block as `model_token` (`identity_model_token`), so the first real run
 # against an unmeasured desk hands us the exact string to add below.
 IDENTITY_MODEL_ALIASES = {
-    # measured: archive/examples/console-runs/2026-09-23-1921/A17-wing-full.json
+    # measured: the A17 capture of 2026-09-23
     "wing-fullsize": "wing-full",
 }
 
@@ -266,7 +268,7 @@ def output_socket_limit(group: str, console_model: str | None) -> int:
 # the desk came with -- per model, because the models do not ship alike.
 #
 # **Measured, on two models.** Every entry below was read out of a
-# factory-initialized capture the maintainer took from the desk itself
+# factory-initialized capture taken from the desk itself
 # (`ae_data.{ch,aux,bus}.{n}.in.conn`). Nothing here is inferred from the
 # protocol PDF and nothing is a guess at what a console "probably" does.
 #
@@ -297,8 +299,8 @@ def output_socket_limit(group: str, console_model: str | None) -> int:
 #
 # **`wing-rack` is NOT measured.** We have never had one in front of us.
 # Its panel has 24 local inputs like the Compact, which makes the Compact's
-# row a plausible guess -- and a plausible guess is the #13 mistake again,
-# writing down a number nobody read off hardware.
+# row a plausible guess -- and a plausible guess is the very mistake
+# this table exists to avoid, writing down a number nobody read off hardware.
 #
 # So an unmeasured model (and an unknown one, and a state with no model at
 # all) falls back to `FACTORY_CHANNEL_PATCH_IDENTITY`: channel n from
@@ -319,7 +321,7 @@ def output_socket_limit(group: str, console_model: str | None) -> int:
 # board (visible, at INFO) and hides nothing.
 #
 # **The fallback is for reading only. Never write it.** Returning a
-# dropped channel to free restores its factory patch (the maintainer,
+# dropped channel to free restores its factory patch (decided
 # 2026-09-24), and "channel 19 back to LCL 19" on a desk with 8 local
 # inputs is a patch to a socket that does not exist. A write asks
 # `measured_factory_input_patch()`, which answers only from this table and
@@ -354,7 +356,7 @@ MEASURED_FACTORY_PATCH_MODELS = tuple(sorted(FACTORY_INPUT_PATCHES))
 # --------------------------------------------------------------------------
 #
 # Measured, not assumed, off
-# `archive/examples/console-runs/2026-09-22-2139/A13-board-with-podium.snap`: a
+# the A13 snapshot of 2026-09-22 (board with Podium): a
 # Compact carrying the touring-band show, so every strip the show did not
 # build and every socket it did not name is a factory reading. Counted
 # across the whole board rather than read off one strip:
@@ -379,7 +381,7 @@ FACTORY_STRIP_ICON = 0
 # The fader of an untouched channel: -144 (-inf) on all 40 strips of both
 # `tests/fixtures/console-runs/Initialized-Compact.snap` and
 # `tests/fixtures/Initialized-Full.snap`. A released strip is pulled back to it
-# (the maintainer, 2026-09-24): once release restores the factory patch, a strip
+# : once release restores the factory patch, a strip
 # left unmuted at the plan's level would pass a stray source on its
 # factory jack straight to Main 1.
 FACTORY_STRIP_FADER_DB = -144.0
@@ -396,7 +398,7 @@ def factory_source_icon(group: str) -> int:
 
 
 # The factory reading of the strip PROCESSING block, measured off
-# `archive/examples/console-runs/session-2026-09-23-0928/A8-initialized.snap` --
+# the A8 initialized snapshot of 2026-09-23 --
 # a Compact captured straight after an Initialize, so every one of its 40
 # channel strips and 8 aux strips is an untouched reading. Counted across
 # all 48 rather than read off one: `flt`, `in.set`, `eq` and `peq` are
@@ -503,7 +505,7 @@ FACTORY_STRIP_PROCESSING: dict[str, object] = {
     "dyn/gain": 0.0,
     "dyn/thr": -10.0,
     # A list choice; the snapshot stores the COMP ratio as the number 3,
-    # and the desk lists it as "3.0" (docs/reference parameter map).
+    # and the desk lists it as "3.0" (the parameter map).
     "dyn/ratio": "3.0",
     "dyn/knee": 3,
     "dyn/det": "RMS",
@@ -635,7 +637,7 @@ def is_factory_input_patch(console_model: str | None, bank: str, index: int,
 
 
 # Strip/object counts. Confirmed against the walk's collection counts and
-# against docs/developer/requirements.md's Compact line.
+# against the requirements' Compact line.
 CAPACITY = {
     "ch": 40,
     "aux": 8,
@@ -651,7 +653,7 @@ CAPACITY = {
 # other Main OFF, with `lvl` 0 and `pre` off on all four. Counted across
 # all 40 channel strips and all 8 aux strips of
 # `tests/fixtures/console-runs/Initialized-Compact.snap`,
-# `archive/examples/console-runs/session-2026-09-23-0928/A8-initialized.snap` and
+# the A8 initialized snapshot of 2026-09-23 and
 # `tests/fixtures/Initialized-Full.snap` -- identical on every strip of all
 # three, so neither the bank nor the model changes it.
 #
@@ -697,7 +699,7 @@ def factory_bus_main_on(bus: int, index: int) -> int:
 # see `CONSOLE_MODELS` above and use `input_socket_limit()` for anything
 # that decides whether a socket physically exists.
 #
-# Note LCL: 24 in, but only 8 out. Until #13 this comment called that "a
+# Note LCL: 24 in, but only 8 out. This comment once called that "a
 # real asymmetry on the Compact", which had it backwards: local outputs are
 # 8 on all three models, and it is the *inputs* that vary (8 on a Full, 24
 # on a Rack and Compact). Still exactly the kind of thing a
@@ -717,23 +719,22 @@ GROUP_ALIASES = {
     "USR": "user signal",
 }
 
-# CRD/MOD, an earlier change. The maintainer, 2026-09-20: **"CRD is the expansion card,
-# not the SD card. The SD card is used by WING LIVE"** -- so this table and
-# `wing-console-model.md` were both wrong, and wrong in *different* ways
-# (that doc had CRD as the SD card and MOD as the expansion card; this file
+# CRD/MOD, an earlier change. **CRD is the expansion card,
+# not the SD card; the SD card is used by WING LIVE** -- so this table and
+# the console-model notes were both wrong, and wrong in *different* ways
+# (those notes had CRD as the SD card and MOD as the expansion card; this file
 # had MOD as an "expansion module"). CRD is now settled.
 #
-# What the *fitted* card is, the walk also answers (#109, 2026-09-20):
+# What the *fitted* card is, the walk also answers (2026-09-20):
 # `/cards.$type` is `list [NONE, WLIVE, WDANTE, WMADI, WDWSG]` -- one
 # expansion slot, four possible cards -- so `CRD n` is a WING LIVE
 # playback track only when a WING-LIVE card is the one in the slot, and a
 # Dante/MADI stream otherwise. That is why "SD card" is refused as an
 # input-list spelling rather than re-pointed here: the spelling
-# names a card this group may not be carrying. See
-# `docs/reference/wing-console-model.md`.
+# names a card this group may not be carrying.
 #
 # **MOD is the AoIP module slot, and it is a different slot from CRD**
-# (#99, settled 2026-09-21 from the protocol PDF and our own walk, after
+# (settled 2026-09-21 from the protocol PDF and our own walk, after
 # being carried as "unconfirmed" rather than guessed at twice).
 # `WING_Remote-Protocols-3.1-03.pdf` p.10: "64 channels of Audio over IP
 # (**AoIP module optional**)"; p.256: "an extension card (W-DANTE) that
@@ -750,7 +751,7 @@ GROUP_ALIASES = {
 #
 # These tables are rendered straight into the generate prompt and are what
 # `verify_plan` checks a patch against, so a confident wrong label here
-# produces a plausible patch nobody catches -- which is exactly what #99
+# produces a plausible patch nobody catches -- which is exactly what the issue
 # was filed about, and why this label waited for a source instead of a
 # second guess.
 #
@@ -759,7 +760,7 @@ GROUP_ALIASES = {
 # `/cards.$type` has a `NONE` too, yet the firmware answers
 # `/io/in/MOD/1..64` on every console -- so a plan patching `MOD 1` into an
 # empty bay verifies clean, applies clean, and the channel is silent. The
-# counts here are an address space, the same distinction #13 draws for the
+# counts here are an address space, the same distinction the model-variant table draws for the
 # panel counts; unlike those, the desk states this one itself, on
 # `/$syscfg/opt_mod` and `/cards/$type`, so a console we are connected to
 # can be asked -- and is. `atoo apply` reads both in pre-flight and
@@ -777,7 +778,7 @@ INPUT_SOCKETS = {
     "AUX": 8,                       # 1/4" jacks
     "SC": 32,                       # StageConnect
     "USB": 48,
-    "CRD": 64,                      # expansion card (the maintainer, 2026-09-20, #99)
+    "CRD": 64,                      # expansion card
     "MOD": 64,                      # AoIP module: Dante/WSG
     "AES": 2,                       # AES/EBU
     "PLAY": 4,                      # USB-stick player
@@ -816,10 +817,17 @@ OUTPUT_SOCKETS = {
 # -oo is -144.0 on the wire (wing-console-model.md).
 MINUS_INF_DB = -144.0
 FADER_DB_RANGE = (MINUS_INF_DB, 10.0)
+# What a strip the plan builds is left at when the plan states nothing for
+# it: unity, unmuted. `apply` writes exactly these for an unstated
+# `fader.fader_db` / `fader.muted`, and the critic is shown them in the
+# place of the null, so "unset" means the same thing to the desk, to the
+# audit and to the reviewer.
+FADER_DEFAULT_DB = 0.0
+MUTED_DEFAULT = False
 SEND_LEVEL_DB_RANGE = (MINUS_INF_DB, 10.0)
 HPF_HZ_RANGE = (20.0, 2000.0)
 # Hi-cut, tilt, trim, balance -- each confirmed against
-# docs/reference/wing-compact-parameter-map.json's own `ch.{n}.flt.hcf` /
+# the Compact parameter map's own `ch.{n}.flt.hcf` /
 # `.tilt` / `ch.{n}.in.set.trim` / `.bal` entries (quoted above), same
 # source and method as HPF_HZ_RANGE.
 HI_CUT_HZ_RANGE = (50.0, 20000.0)
@@ -832,7 +840,7 @@ HEAD_AMP_GAIN_DB_RANGE = (-3.0, 45.5)
 # The parametric EQ
 # --------------------------------------------------------------------------
 #
-# Quoted from `docs/reference/wing-compact-parameter-map.json`, the real
+# Quoted from the Compact parameter map, the real
 # console capture, same source and method as the filter ranges above:
 #
 #   {ch|aux|bus|main|mtx}.{n}.eq.{1..N}f   log [20.0 .. 20k00 Hz], 961 steps
@@ -852,14 +860,14 @@ EQ_Q_RANGE = (0.44, 10.0)
 # `{strip}.{n}.eq.mix` -- lin [0 .. 125 %], 126 steps, confirmed on all
 # five strip classes. The EQ's wet/dry blend: 100% is the EQ fully in
 # circuit, 0% is a bypass that keeps the curve, and above 100 pushes past
-# the stated curve. Included because the maintainer's own scope for this issue
+# the stated curve. Included because the scope for this issue
 # is that EQ be modelled in FULL for channels and busses (2026-09-21) -- it is the one leaf on the node, besides the transient solo
 # state, that an engineer can set and a show can depend on.
 EQ_MIX_PCT_RANGE = (0.0, 125.0)
 
 # ...but the TOPOLOGY is not uniform, and this is the part that bites.
 #
-# #13's lesson, one node over: the address tree is identical across console
+# The lesson, one node over: the address tree is identical across console
 # MODELS, so it cannot tell you what a Compact's front panel has. Here the
 # opposite asymmetry is real and the tree does state it -- a channel's EQ
 # node stops at band 4, a bus's runs to band 6. A schema that modelled "six
@@ -1053,8 +1061,8 @@ def stereo_pair_problem(sockets: list) -> str | None:
 #     card, internal module, USB PLAYER or AES/EBU IN.
 #
 # **The issue said these addresses had not been walked. They had.** They are
-# in `docs/reference/wing-compact-raw-walk-20260908.json` under
-# `/io/in/USR/{n}/user` -- not under `/$ctl/...`, which is where #121 looked.
+# in the 2026-09-08 raw walk of a Compact under
+# `/io/in/USR/{n}/user` -- not under `/$ctl/...`, which is where the issue looked.
 # The walk carries exactly 112 `USR` keys: 56 entries, each a
 # `/io/in/USR/{n}` node plus one `/io/in/USR/{n}/user` child, and the child's
 # descriptor differs by index in precisely the way the PDF's two variants
@@ -1096,12 +1104,12 @@ def stereo_pair_problem(sockets: list) -> str | None:
 # settles it: one `user` node per slot means 25L/26R, and 26L/26R is a typo.
 #
 # **Measured how far, and no further.** The address space, the two variants,
-# their value domains and the 24/32 split are from our own walk of the maintainer's
+# their value domains and the 24/32 split are from our own walk of a
 # Compact -- a real measurement of what the firmware addresses. That a pair
 # of ST-mode USR slots with disjoint sources then *sounds* like the intended
 # L/R at the strip is the PDF's claim, not ours: nobody has set one up at
-# the desk and listened. Per #13 (a walk of the address tree is not a
-# measurement of the hardware) that distinction is kept out loud -- it is
+# the desk and listened. Per the rule that a walk of the address tree is not a
+# measurement of the hardware, that distinction is kept out loud -- it is
 # why `verify_plan` checks these definitions but `apply` does not yet write
 # them.
 USER_SIGNAL_SLOTS = (1, 24)
@@ -1228,7 +1236,7 @@ USER_KIND_BOUNDARY_IS_PROTECTED_BY_PARITY = USER_PATCH_SLOTS[0] % 2 == 1
 # --------------------------------------------------------------------------
 #
 # WING's GET reply for a patch connector is **one less** than the value its
-# SET takes. Approved by the maintainer 2026-09-21 ("Yes, go ahead") after the
+# SET takes. Approved 2026-09-21 after the
 # mechanism was established three ways over:
 #
 #   * 25 readings across two real apply runs, `readback == intended - 1`,
@@ -1262,7 +1270,7 @@ _READBACK_INDEX_OFFSETS = (
     (re.compile(r"^/io/out/[A-Z]+/\d+/in$"), 1),
     # The identical leaf on the aux bank. It sat on the "not corrected,
     # no evidence" list below until 2026-09-23, when A11 measured it:
-    # `archive/examples/console-runs/2026-09-22-2008/A11-read-speed.txt` read the
+    # the A11 read-speed run of 2026-09-22 read the
     # whole desk twice, per-leaf and by node dump, and out of 5,712 values
     # exactly **eight** disagreed -- `/aux/1..8/in/conn/in`, per-leaf 0,
     # dump 1. A dump carries the TEXT form, which is the number the desk
@@ -1283,8 +1291,7 @@ _READBACK_INDEX_OFFSETS = (
     # exactly this shape and came off that list on evidence, not on the
     # resemblance that put it there.
     # The user-patch source leaf. Measured 2026-09-23 (A16),
-    # `archive/examples/console-runs/session-2026-09-23-1741/A16-2-after.txt`:
-    # The maintainer set USR 25 to LOCAL IN 5 by hand, and the desk screen read
+    # (the A16 after-capture): USR 25 was set to LOCAL IN 5 by hand, and the desk screen read
     # "USR 25, LCL 5". The `/io/in/USR/25` node dump -- the TEXT form, the
     # number the desk shows -- said 5; the per-leaf read said 4. Same
     # signature as the aux leaf above, same answer: the per-leaf read is
@@ -1304,7 +1311,7 @@ _READBACK_INDEX_OFFSETS = (
     # "patched to nothing", and the jack beside it was excused.
     (re.compile(r"^/io/in/USR/\d+/user/in$"), 1),
     # The alternate patch's socket. CONFIRMED on the
-    # Compact by A23 (2026-09-28 19:22, `console-runs/2026-09-28-1922/`):
+    # Compact by A23 (2026-09-28 19:22):
     # channel 1's alternate set to CRD 5 by hand answered `altin` text '5',
     # int 4 -- the same -1 as `in/conn/in`. The earlier, read-only evidence
     # it was first inferred from is A7 (2026-09-21):
@@ -1312,13 +1319,13 @@ _READBACK_INDEX_OFFSETS = (
     #     `sfi ['1', 0.0, 0]` -- text '1', int 0;
     #   * `A7-ch1-with-WLIVE-alt.snap`, the desk's own file of that
     #     session: `altin: 1`;
-    #   * `2026-09-21/A1-raw.log`: `/ch/1/in/conn/in`, whose SET value was
+    #   * the A1 raw log of 2026-09-21: `/ch/1/in/conn/in`, whose SET value was
     #     1, answered the identical `sfi ['1', 0.0, 0]`.
     # Same leaf shape, same reply, same snapshot value as the corrected
     # `in/conn/in` beside it. `apply` writes this leaf from slice 3 on, so
     # leaving it uncorrected would have turned every correct alternate
     # patch into a reported mismatch. The desk check is in
-    # docs/reference/console-session-checklist.md.
+    # the console session checklist.
     (re.compile(r"^/(ch|aux)/\d+/in/conn/altin$"), 1),
     (re.compile(r"^/(ch|aux|bus|main|mtx|dca)/\d+/col$"), 1),
     (re.compile(r"^/io/in/[A-Z]+/\d+/col$"), 1),
@@ -1327,8 +1334,7 @@ _READBACK_INDEX_OFFSETS = (
 # Deliberately NOT corrected, each for the same reason -- same shape, no
 # hardware evidence either way, and guessing is the mistake this fix is
 # repairing. Every one of these is a line item on the next console session.
-# The list is empty today: `in/conn/altin` left it on 2026-09-28 (issue
-# #109 slice 3), inferred from A7 and confirmed the same evening by A23.
+# The list is empty today: `in/conn/altin` left it on 2026-09-28, inferred from A7 and confirmed the same evening by A23.
 #
 # (`col` was on this list until 2026-09-22, `/aux/{n}/in/conn/in` until
 # 2026-09-23, and `/io/in/USR/{n}/user/in` until 2026-09-24 (A16); all are
@@ -1368,7 +1374,7 @@ def correct_readback_index(address: str, value: object) -> object:
 # Confirmed on hardware, 2026-09-21. WING Compact, firmware
 # 3.1-0-g9f314617, WLIVE card fitted, no AoIP module.
 #
-# Evidence is committed under archive/examples/console-runs/2026-09-21/ -- raw OSC
+# Evidence is kept from the 2026-09-21 console runs -- raw OSC
 # replies, not a recollection of what the desk looked like. Cited per fact
 # below, because the whole value of this file is that a future session can
 # tell what was measured from what was assumed.
@@ -1376,8 +1382,8 @@ def correct_readback_index(address: str, value: object) -> object:
 
 # -- Alternate input patch ------------------------------------
 #
-# A channel carries TWO patches and a switch between them. The maintainer had said
-# so; this is the encoding, from A7-{no-alts,with-AES-alt,with-WLIVE-alt}.txt.
+# A channel carries TWO patches and a switch between them;
+# this is the encoding, from A7-{no-alts,with-AES-alt,with-WLIVE-alt}.txt.
 #
 #   /ch/{n}/in/conn/altgrp   S   the alternate patch's GROUP, exactly the
 #                                vocabulary /in/conn/grp uses, plus 'OFF'
@@ -1427,8 +1433,8 @@ ALT_PATCH_MAIN = 0          # `in/set/altsrc`: on the main patch (see above)
 # The GLOBAL alternate switch (`/io.altsw` in the parameter map, `io.altsw`
 # in a .snap; `/io/altsw` over OSC). Found in the snapshots rather than by
 # the A7b sweep, which never looked under /io: every snapshot on disk reads
-# `false` except `2026-09-21-2100/A1-touringband.snap`, saved after the maintainer
-# flipped the desk's global switch in A7b, which reads `true`. A23
+# `false` except the A1 snapshot of 2026-09-21 (21:00), saved after
+# the desk's global switch was flipped in A7b, which reads `true`. A23
 # (2026-09-28) CONFIRMED it: with channel 1 on Input Select: Global, the
 # switch ON read `/io/altsw` 1 and the strip's own `altsrc` 1; OFF read 0
 # and 0. So 1 = global alternate engaged, and a strip following it
@@ -1450,11 +1456,11 @@ GLOBAL_ALT_SWITCH = "/io/altsw"
 #   /fx/{n}/mdl              S         the loaded effect, 'NONE' when empty
 #
 # Which banks carry which insert point is from
-# docs/reference/wing-compact-parameter-map.json: a channel, bus, Main and
+# the Compact parameter map: a channel, bus, Main and
 # Matrix have both; an aux has `preins` only. The same leaves appear in
 # the PDF's own `/ch/1` node dump (p25: `.preins.on=0,ins=NONE`,
 # `postins.on=0,mode=FX,ins=NONE`). Values, not just descriptors, are in
-# the A17 full-size capture (2026-09-23-1921/A17-wing-full.snap): sixteen
+# the A17 full-size capture (A17-wing-full.snap, 2026-09-23): sixteen
 # loaded slots, each named by exactly one strip insert, every one on.
 #
 # The slot's own `$a_chn`/`$a_pos` report the same attachment from the
@@ -1474,7 +1480,7 @@ INSERT_POINTS = {
 
 # -- Talkback (the comms half) ----------------------------------
 #
-# From the 2026-09-08 walk (`docs/reference/wing-compact-raw-walk-20260908.json`)
+# From the 2026-09-08 walk of a Compact
 # and the PDF's `/cfg/talk` table:
 #
 #   /cfg/talk/assign          list [OFF, CH40, AUX8]   the strip talkback uses
@@ -1499,7 +1505,7 @@ def talk_destination(button: str, dest: str) -> str:
 
 # The strips `assign` can name, as a plan channel's (bank, channel), and
 # the enum value each one is -- from the same `list [OFF, CH40, AUX8]`
-# (docs/reference/wing-compact-parameter-map.json, `/cfg/talk.assign`).
+# (the Compact parameter map, `/cfg/talk.assign`).
 # The desk's talkback can use no other strip: a talk mic on ch 12 is an
 # ordinary mic channel, and the TALK buttons cannot reach it.
 TALK_ASSIGN_STRIPS = {("ch", 40): "CH40", ("aux", 8): "AUX8"}
@@ -1523,7 +1529,7 @@ def is_talkback_name(*texts: object) -> bool:
 # -- AES50 ports and the monitor source ----------------
 #
 # From the 2026-09-08 walk of a WING Compact
-# (`docs/reference/wing-compact-raw-walk-20260908.json`):
+# (the raw walk of a Compact):
 #
 #   /$stat/{A,B,C}/stat   list [-, OK, ERR, UPD]   the AES50 port's link
 #   /$stat/{A,B,C}/dev    string                   the device on it
@@ -1533,12 +1539,12 @@ def is_talkback_name(*texts: object) -> bool:
 # a desk cannot be asked "where does bus 1 go"; only "what feeds AES50-A
 # 7". A read that never visits AES50-A therefore cannot see a monitor bus
 # patched to a stage box's output, and R002 called six correctly
-# patched wedges "no route" on the maintainer's Compact. So the read
+# patched wedges "no route" on a Compact. So the read
 # asks each port's link status first, and reads the outputs of every port
 # with a device on it (`OK`, `ERR` or `UPD`). The walk's desk had nothing on
 # AES50, so `-` is the only value seen on hardware; `OK`, `ERR` and `UPD`
 # are the list's own words. **Not yet confirmed on a desk with a stage
-# box** -- the maintainer's desk test list carries that test.
+# box** -- the desk test list carries that test.
 #
 # **Monitor source.** `/cfg/mon/1` and `/cfg/mon/2` are the desk's two
 # monitor outputs (the phones and the monitor speakers), and `src` names
@@ -1578,7 +1584,7 @@ NO_MODULE_FITTED = "NONE"
 # them up by hand and get one of them wrong.
 #
 # LCL/AUX are the other "the address space lies about the panel" case
-# (#13, `MODEL_VARIANT_GROUPS`) and are deliberately NOT here: the desk
+# (`MODEL_VARIANT_GROUPS`) and are deliberately NOT here: the desk
 # states no inventory for those, which is exactly why they needed a
 # `--console-model` flag and these do not.
 EXPANSION_BAY_ADDRESSES = {
@@ -1614,7 +1620,7 @@ def bay_is_empty(reported: object) -> bool:
 # console will show that patch and pass audio from nowhere. Nothing
 # downstream will report it -- the patch is, as far as the desk is
 # concerned, exactly what was asked for. **Refusing this is Atoo's
-# job or it does not happen at all**, which is what #115 is for.
+# job or it does not happen at all**, which is what the empty-bay audit rule is for.
 UNFITTED_BAY_PATCH_IS_ACCEPTED = True
 
 # -- Stereo pairs must start on an odd socket ------------------
@@ -1627,7 +1633,7 @@ UNFITTED_BAY_PATCH_IS_ACCEPTED = True
 # rather than merely with the documentation.
 STEREO_PAIR_RULE_CONFIRMED_ON_HARDWARE = "2026-09-21"
 
-# -- #75's index offset, confirmed a second way ----------------------------
+# -- the index offset, confirmed a second way ----------------------------
 #
 # The A1 snapshot (A1-touringband.snap) is a console-side export that does
 # not pass through this project's read path at all. It shows
@@ -1651,18 +1657,17 @@ STEREO_PAIR_RULE_CONFIRMED_ON_HARDWARE = "2026-09-21"
 # the proof and the desk disagree and the proof looks right.
 #
 # Measured 2026-09-22. The A1 journal called all 19 channel names a match;
-# the maintainer's note reads "Channel names are NOT present." He set one by hand
-# and found it "would only stick if the 'Link Customization to Source' box
-# is unchecked (seems to be the default)". Diffing his snapshots either
+# a note read "Channel names are NOT present." A name set by hand
+# "would only stick if the 'Link Customization to Source' box
+# is unchecked (seems to be the default)". Diffing the snapshots either
 # side of that changes exactly two leaves: `ch/40/clink` True -> False and
 # `ch/40/col` 1 -> 13.
 #
-# **The fix is to name the SOURCE, not to break the link.** The maintainer,
-# 2026-09-22: *"Maybe the approach to channel naming should be to set the
-# name, icon and color on the source, and let the 'Link Customization to
-# Source' flag flow the customization to the channel since that is the
-# default."* Right, and for a better reason than going with the desk's
-# grain: `input.csv` is one row per PHYSICAL INPUT, so the name originates
+# **The fix is to name the SOURCE, not to break the link** (2026-09-22):
+# set the name, icon and color on the source, and let the 'Link
+# Customization to Source' flag flow the customization to the channel,
+# since that is the default. That is right for a better reason than going
+# with the desk's grain: `input.csv` is one row per PHYSICAL INPUT, so the name originates
 # at the socket. Naming the strip and cutting the link is the distortion.
 #
 # So `apply` writes the name/col/icon to `/io/in/{grp}/{n}/...` and forces
@@ -1675,17 +1680,16 @@ CUSTOM_LINK_UNLINKED = 0
 
 # -- One measured point on the 1..18 colour palette -----------
 #
-# From that same snapshot pair: the maintainer set channel 40 to ORANGE by hand
+# From that same snapshot pair: channel 40 was set to ORANGE by hand
 # and the snapshot records `col: 13`. A snapshot is console-side, so this
 # is the true value rather than the offset readback.
 #
-# **Measured in full on 2026-09-22** (A2b, `archive/examples/console-runs/
-# 2026-09-21-2110/A2b-palette-names.txt`): col=1..18 written to AES50-A
+# **Measured in full on 2026-09-22** (A2b, the palette-names run): col=1..18 written to AES50-A
 # sockets 1..18 and read off the desk's I/O page in order.
 #
 # The 13 = Orange prediction held, which is the cross-check that makes the
-# rest trustworthy: it came from a completely different route -- the maintainer
-# set one channel orange by hand the night before and the snapshot
+# rest trustworthy: it came from a completely different route -- one channel
+# was set orange by hand the night before and the snapshot
 # recorded `col: 13`.
 #
 # **Four of the NAMES were then corrected by the desk itself, 2026-09-28**
@@ -1785,7 +1789,7 @@ NAMEABLE_INPUT_GROUPS = frozenset({
 # same fact, and two copies of a hardware fact is how they drift.
 #
 # `audit.console_read_plan` reads it too: the first live
-# audit of a full-size WING (A18, archive/examples/console-runs/2026-09-23-2107/)
+# audit of a full-size WING (A18)
 # asked for `/io/in/AUX/1..8/vph`, the full-size's line-level AUX inputs,
 # and none of the eight answered -- 24s of a 47s read.
 PHANTOM_CAPABLE_GROUPS = frozenset({"LCL", "A", "B", "C"})
@@ -1794,8 +1798,7 @@ PHANTOM_CAPABLE_GROUPS = frozenset({"LCL", "A", "B", "C"})
 # ==========================================================================
 # Confirmed on hardware, 2026-09-23. WING Compact, firmware
 # 3.1-0-g9f314617. Evidence:
-# archive/examples/console-runs/2026-09-22-2008/A11-read-speed.txt and
-# archive/examples/console-runs/2026-09-22-2119/A12-protocol-probes.txt.
+# the A11 read-speed run and the A12 protocol probes, 2026-09-22.
 # ==========================================================================
 
 # -- A send's leaves depend on WHAT IS SENDING ----------------
@@ -1828,7 +1831,7 @@ PHANTOM_CAPABLE_GROUPS = frozenset({"LCL", "A", "B", "C"})
 # 39 - 23 = 16 = 8 matrices x 2 leaves. And the dump of `/ch/1` carried
 # **all 106** addresses a read wants from a channel.
 #
-# `docs/reference/wing-compact-parameter-map.json` agrees a third time,
+# The Compact parameter map agrees a third time,
 # from the protocol PDF and independently of any hardware:
 # `/bus/{n}/send/*` and `/main/{n}/send/MX*` carry `{on, lvl, pre}`, while
 # `/ch/{n}/send/*` and `/aux/{n}/send/*` carry

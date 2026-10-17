@@ -1,7 +1,7 @@
 """The demo show: a packaged, read-only show bundle that
 matches the Demo console's rig.
 
-The maintainer, 2026-10-01: choosing **Demo** in the bundle bar's console dialog
+Choosing **Demo** in the bundle bar's console dialog
 opens the demo show and points the console at the Demo rig, as one
 action; choosing an address, or opening or creating another show, leaves
 it; and the demo show is immutable -- Save, Build, New file and Change
@@ -331,8 +331,8 @@ def test_the_demo_plan_verifies_against_its_own_input_list():
 
 def test_the_demo_plan_expands_its_presets_once_they_are_packaged():
     """The conventions name one preset per source,
-    and the maintainer's own set is packaged, so `tools/build_demo_show.py`
-    builds against it and every named preset carries its values."""
+    and the maintainer's own set is packaged, so the Demo is built against
+    it and every named preset carries its values."""
     assert any((PACKAGED_ROOT / "presets").glob("*.chn"))
     plan = json.loads((PACKAGED_SHOW / "plan.json").read_text())
     named = [c for c in plan["channels"] if (c.get("processing") or {}).get("preset")]
@@ -413,23 +413,6 @@ def _demo_rules():
 def _watch_ids(values: dict) -> set:
     return {f.rule_id for f in run_audit(ConsoleState(values), _demo_rules())
             if f.rule_id.startswith("WATCH:") and f.severity.value != "info"}
-
-
-def test_the_rig_is_the_plan_as_applied():
-    """`tools/build_demo_show.py` writes the rig from the plan; the packaged
-    rig is what it would write now, so the two cannot drift."""
-    import csv
-    import importlib.util
-    path = Path(__file__).resolve().parents[1] / "tools" / "build_demo_show.py"
-    spec = importlib.util.spec_from_file_location("build_demo_show", path)
-    tool = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(tool)
-    plan = json.loads((PACKAGED_SHOW / "plan.json").read_text())
-    rows = {r["name"]: r for r in csv.DictReader(
-        (PACKAGED_SHOW / "input.csv").read_text().splitlines())}
-    expected = {k: v for block in tool.rig_from_plan(plan, rows) for k, v in block.items()}
-    rig = {k: v for k, v in webui._load_demo_base().items() if not k.startswith("_")}
-    assert rig == expected
 
 
 def test_the_clean_rig_trips_no_watch_condition():
@@ -604,13 +587,33 @@ def test_the_demo_watch_opens_with_no_sp_l002_row(home):
 
 @pytest.mark.parametrize("issue, condition", [
     ("dca_closed", "WATCH:band-dca-open"),
-    ("fader_at_floor", "WATCH:drums-bus-fader-low"),
+    ("fader_at_floor", "WATCH:mix-bus-fader-low"),
     ("lead_vox_muted", "WATCH:lead-vox-unmuted"),
 ])
 def test_a_seeded_fault_trips_a_demo_watch_condition(issue, condition):
     values = dict(webui._load_demo_base())
     values.update(webui._DEMO_ISSUES[issue])
     assert condition in _watch_ids(values)
+
+
+def test_the_demos_range_conditions_name_each_strip_that_breaks_them():
+    """The Demo watches every DCA and every mix and FX bus with one
+    condition on a range apiece. Each strip that breaks one is its own
+    finding, citing the strip by number and by its name on the desk."""
+    values = dict(webui._load_demo_base())
+    values.update(webui._DEMO_ISSUES["dca_closed"])
+    values.update({"/bus/6/mute": 1, "/bus/7/mute": 1})
+    findings = {f.rule_id: [] for f in run_audit(ConsoleState(values), _demo_rules())}
+    for f in run_audit(ConsoleState(values), _demo_rules()):
+        findings[f.rule_id].append(f.message)
+    assert any('DCA 2 "Band"' in m for m in findings["WATCH:dca-fader-low"])
+    muted = findings["WATCH:mix-bus-muted"]
+    assert any('BUS 6 "Vocals"' in m for m in muted)
+    assert any('BUS 7 "Vox Verb"' in m for m in muted)
+    # One condition, so one rule id: not a condition per bus.
+    text = (PACKAGED_SHOW / "watch.json").read_text()
+    channels = [c["channel"] for c in json.loads(text)["watch_conditions"]]
+    assert {"DCA 1-5", "BUS 5-7"} <= set(channels)
 
 
 def test_watch_on_the_demo_show_fires_its_conditions(client, monkeypatch):
@@ -682,7 +685,7 @@ def test_watch_on_the_demo_show_warns_when_its_fx_bus_is_bypassed(client, monkey
         client.post("/api/watch/stop")
 
 
-# ---- The page, as served assets (CLAUDE.md: the suite cannot see the JS) ----
+# ---- The page, as served assets (the suite cannot see the JS) ----
 
 def test_the_page_draws_the_demo_show_read_only(client):
     html = client.get("/").text
@@ -699,7 +702,11 @@ def test_the_page_draws_the_demo_show_read_only(client):
     # Nothing on the demo show is editable.
     assert "!stale && !isDemoShow()" in shell
     css = client.get("/static/styles.css").text
-    assert "body.is-demo-show" in css and ".demo-chip" in css and ".demo-notice" not in css
+    assert "body.is-demo-show" in css and ".demo-notice" not in css
+    # "Demo · what's this?" is a quiet button beside a neutral
+    # Read-only state, not a yellow chip.
+    assert 'class="btn btn-quiet" id="demo-chip"' in html
+    assert '<span class="state" id="bundle-readonly" hidden>Read-only</span>' in html
     # The DEMO_LOCKED list and the stylesheet name the same write controls.
     for control in ("#run-build-btn", "#wc-save-btn",
                     "#apply-arm-checkbox", "#input-save-btn", "#change-input-list"):
@@ -709,23 +716,6 @@ def test_the_page_draws_the_demo_show_read_only(client):
     assert "that is off here" not in shell and "sayDemoReadOnly" not in shell
     watch = client.get("/static/watch.js").text
     assert 'source: "console"' in watch and 'desk.demo ? "demo"' not in watch
-
-
-def test_the_demo_reply_is_the_one_its_plan_gives_back():
-    """`tools/demo_reply_from_plan.py` recovers a model-built Demo plan's
-    reply (2026-10-13: the maintainer's model rebuild). Run on the packaged
-    plan, it gives back exactly `tools/demo_show.reply.json` -- so the
-    reply and the plan line up, and the recipe in `build_demo_show.py`'s
-    docstring still round-trips."""
-    import importlib.util
-    tools = Path(__file__).resolve().parents[1] / "tools"
-    spec = importlib.util.spec_from_file_location(
-        "demo_reply_from_plan", tools / "demo_reply_from_plan.py")
-    tool = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(tool)
-    plan = json.loads((PACKAGED_SHOW / "plan.json").read_text())
-    reply = json.loads((tools / "demo_show.reply.json").read_text())
-    assert tool.reply_from_plan(plan) == reply
 
 
 def test_the_demo_plan_records_no_absolute_path():

@@ -2,7 +2,7 @@
   "watch_conditions": [
     {
       "id": "lead-vox-unmuted",
-      "description": "Lead Vox muted is the one mistake the whole room hears. A mute left on after a speech or a guest's song is the usual way it happens.",
+      "description": "Lead Vox stays unmuted.",
       "channel": "Lead Vox",
       "field": "muted",
       "operator": "==",
@@ -11,7 +11,7 @@
     },
     {
       "id": "band-dca-open",
-      "description": "The Band DCA rides bass, guitars and keys. Pulled to the floor, the band drops out of the PA while the stage still sounds fine.",
+      "description": "The Band DCA fader stays at or above -20 dB.",
       "channel": "DCA Band",
       "field": "fader_db",
       "operator": ">=",
@@ -20,26 +20,16 @@
     },
     {
       "id": "pa-unmuted",
-      "description": "The PA must never be muted mid-show.",
-      "channel": "MAIN PA",
+      "description": "Main 1 (the PA) stays unmuted.",
+      "channel": "MAIN 1",
       "field": "muted",
       "operator": "==",
       "value": false,
       "severity": "error"
     },
     {
-      "id": "pa-main-muted",
-      "description": "PA Main 1 must stay unmuted. If it is muted, the whole house goes silent.",
-      "channel": "MAIN 1",
-      "field": "muted",
-      "operator": "==",
-      "value": false,
-      "severity": "error",
-      "source": "drafted"
-    },
-    {
-      "id": "pa-main-fader-low",
-      "description": "PA Main 1 fader has dropped below -40 dB, so the house is effectively off.",
+      "id": "pa-fader-low",
+      "description": "Main 1 fader stays at or above -40 dB.",
       "channel": "MAIN 1",
       "field": "fader_db",
       "operator": ">=",
@@ -48,9 +38,9 @@
       "source": "drafted"
     },
     {
-      "id": "drum-iem-muted",
-      "description": "Drum IEM bus must stay unmuted. The drummer loses their in-ears and has no click or monitor.",
-      "channel": "BUS Drum IEM",
+      "id": "monitor-muted",
+      "description": "No monitor bus is muted.",
+      "channel": "BUS 1-4",
       "field": "muted",
       "operator": "==",
       "value": false,
@@ -58,19 +48,9 @@
       "source": "drafted"
     },
     {
-      "id": "vox-wedge-muted",
-      "description": "Vox Wedge bus must stay unmuted. The lead singer loses their monitor.",
-      "channel": "BUS Vox Wedge",
-      "field": "muted",
-      "operator": "==",
-      "value": false,
-      "severity": "warning",
-      "source": "drafted"
-    },
-    {
-      "id": "vocals-dca-muted",
-      "description": "Vocals DCA must stay unmuted. It carries every vocal channel.",
-      "channel": "DCA Vocals",
+      "id": "mix-bus-muted",
+      "description": "No mix or FX bus is muted.",
+      "channel": "BUS 5-7",
       "field": "muted",
       "operator": "==",
       "value": false,
@@ -78,85 +58,42 @@
       "source": "drafted"
     },
     {
-      "id": "drums-bus-muted",
-      "description": "Drums bus must stay unmuted. It is the only path the whole kit takes to Main.",
-      "channel": "BUS Drums",
-      "field": "muted",
-      "operator": "==",
-      "value": false,
+      "id": "mix-bus-fader-low",
+      "description": "No mix or FX bus fader is below -40 dB.",
+      "channel": "BUS 5-7",
+      "field": "fader_db",
+      "operator": ">=",
+      "value": -40,
       "severity": "error",
       "source": "drafted"
-    },
-    {
-      "id": "drums-bus-fader-low",
-      "description": "Drums bus fader has dropped below -40 dB. The whole kit reaches Main only through it, so the drums are gone from the PA.",
-      "channel": "BUS Drums",
-      "field": "fader_db",
-      "operator": ">=",
-      "value": -40,
-      "severity": "error"
-    },
-    {
-      "id": "vocals-bus-muted",
-      "description": "Vocals bus must stay unmuted. Every vocal reaches Main only through it.",
-      "channel": "BUS Vocals",
-      "field": "muted",
-      "operator": "==",
-      "value": false,
-      "severity": "error"
-    },
-    {
-      "id": "vocals-bus-fader-low",
-      "description": "Vocals bus fader has dropped below -40 dB, so every vocal is effectively out of the PA.",
-      "channel": "BUS Vocals",
-      "field": "fader_db",
-      "operator": ">=",
-      "value": -40,
-      "severity": "error"
-    },
-    {
-      "id": "vox-verb-muted",
-      "description": "Vox Verb bus must stay unmuted. Muted, the vocals go dry.",
-      "channel": "BUS Vox Verb",
-      "field": "muted",
-      "operator": "==",
-      "value": false,
-      "severity": "warning"
-    },
-    {
-      "id": "vox-verb-fader-low",
-      "description": "Vox Verb bus fader has dropped below -40 dB, so the vocals are effectively dry.",
-      "channel": "BUS Vox Verb",
-      "field": "fader_db",
-      "operator": ">=",
-      "value": -40,
-      "severity": "warning"
     },
     {
       "id": "dca-muted",
-      "description": "No DCA may be muted. A muted DCA silences every strip it rides.",
+      "description": "No DCA is muted.",
       "channel": "DCA 1-5",
       "field": "muted",
       "operator": "==",
       "value": false,
-      "severity": "error"
+      "severity": "error",
+      "source": "drafted"
     },
     {
       "id": "dca-fader-low",
-      "description": "A DCA fader has dropped below -30 dB, so the strips it rides are effectively out of the mix.",
+      "description": "No DCA fader is below -30 dB.",
       "channel": "DCA 1-5",
       "field": "fader_db",
       "operator": ">=",
       "value": -30,
-      "severity": "warning"
+      "severity": "warning",
+      "source": "drafted"
     }
   ],
   "drafted": [
-    "drum-iem-muted",
-    "drums-bus-muted",
-    "pa-main-fader-low",
-    "pa-main-muted",
-    "vocals-dca-muted",
-    "vox-wedge-muted"
+    "dca-fader-low",
+    "dca-muted",
+    "mix-bus-fader-low",
+    "mix-bus-muted",
+    "monitor-muted",
+    "pa-fader-low"
   ]
 }

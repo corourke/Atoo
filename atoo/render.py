@@ -170,8 +170,8 @@ def _fed_by_desc(fed_by: dict | None) -> str:
 
 
 def render_plan(plan: dict, warnings: list) -> str:
-    # Where the texts came from is in `meta` (#90: the conventions are a
-    # stack, not one file; #293: the input list's own record). A plan
+    # Where the texts came from is in `meta` (the conventions are a
+    # stack, not one file; the input list has its own record). A plan
     # once carried top-level `conventions_file` / `input_list` strings and
     # `--pretty` still read them -- a KeyError on every plan built since.
     meta = plan.get("meta") or {}

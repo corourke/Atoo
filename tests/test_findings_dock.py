@@ -1,6 +1,6 @@
 """
 
-The maintainer, 2026-10-02: *"have all the findings go to the sidebar like they're
+*"have all the findings go to the sidebar like they're
 supposed to with no duplication, the other thing is we are going to need to
 reduce or hide a lot of those info messages. They're simply too many of
 them."*
@@ -12,7 +12,7 @@ critic findings. Nothing here reads `examples/`.
 
 What the browser does with these -- the INFO toggle, the per-code rows, the
 one row for a finding two producers published -- is pinned on the served
-assets (CLAUDE.md: the Python suite cannot see `web/static/`), and was
+assets (the Python suite cannot see `web/static/`), and was
 checked in Chromium.
 """
 
@@ -109,7 +109,7 @@ def test_the_dock_collapses_info_under_one_remembered_fold(client):
     for element_id in ("dock-info", "dock-info-count", "dock-info-list",
                        "dock-details", "dock-details-count", "dock-details-list"):
         assert f'id="{element_id}"' in html
-    assert '<details class="dock-fold dock-info" id="dock-info" hidden>' in html
+    assert '<details class="dock-fold fold dock-info" id="dock-info" hidden>' in html
     assert 'const INFO_OPEN_KEY = "atoo.dock.infoOpen";' in js
     assert ('try { details.open = localStorage.getItem(key) === "1"; } '
             "catch (e) { details.open = false; }") in js

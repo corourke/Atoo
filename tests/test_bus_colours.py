@@ -1,4 +1,4 @@
-"""Bus colours stated in the conventions (the maintainer, 2026-09-28).
+"""Bus colours stated in the conventions.
 
 A bus carries a colour NAME, `color`, the same field a channel has: the
 model writes it when the conventions state one ("FX busses are purple"),
@@ -7,8 +7,7 @@ index -- apply writes `/bus/{n}/col`, step 04's chip is painted with it,
 and a name the desk lacks is verify's `bus.colour-not-writable`.
 
 Built on the frozen `tests/fixtures/touringband.plan.json`, never on a
-bundle under `examples/` (CLAUDE.md, "A bundle under examples/ is a
-living example").
+bundle under `examples/`.
 """
 from __future__ import annotations
 

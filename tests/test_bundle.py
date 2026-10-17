@@ -125,7 +125,7 @@ def test_an_unknown_slot_is_a_programming_error_not_a_user_error(tmp_path):
 
 
 def test_expectations_toml_is_no_longer_a_slot(tmp_path):
-    """#153 retired it. A bundle directory that still holds one is not an
+    """An earlier change retired it. A bundle directory that still holds one is not an
     error and not a slot: `present()` never names it, so the web UI's
     bundle bar stops drawing a row for a file the project no longer has."""
     d = _make(tmp_path, "input.csv", "expectations.toml")
@@ -160,7 +160,7 @@ def test_the_retired_journal_files_are_not_slots(tmp_path):
 
 
 def test_the_house_conventions_file_is_not_a_bundle_slot():
-    """#81 point 5: the house conventions file stays OUTSIDE the bundle --
+    """An earlier change point 5: the house conventions file stays OUTSIDE the bundle --
     it is the reusable piece, and putting it in would defeat the point."""
     assert not any("convention" in s for s in bundle.SLOTS)
 

@@ -92,7 +92,7 @@ def test_auto_detect_no_csv_is_a_clear_error(tmp_path, monkeypatch, capsys):
 # when (and only when) the current directory has exactly one .csv and
 # ZERO conventions sources, an explicit flag or a locally auto-detected
 # pair always wins over it, and its own failures fall through to the
-# pre-#11 "no conventions source found" error rather than crashing.
+# older "no conventions source found" error rather than crashing.
 
 def _home_config(tmp_path, monkeypatch, default_conventions):
     """A fake $HOME, separate from the cwd this test also sets up, with
@@ -191,7 +191,7 @@ def test_malformed_config_falls_through_to_existing_error_not_a_crash(tmp_path, 
     assert exit_code == 1
     err = capsys.readouterr().err
     assert "not valid TOML" in err  # config.py's own note
-    # ...and it still falls all the way through to the pre-#11 message,
+    # ...and it still falls all the way through to the older message,
     # not a traceback.
     assert "no --conventions given" in err
 
@@ -441,7 +441,7 @@ def test_audit_without_a_plan_withholds_nothing(tmp_path, capsys):
 # bad path is a clean exit(1) before any console connection is attempted.
 
 # The audit/watch demo state, as a TEST fixture rather than the copy in
-# `examples/`. The maintainer, 2026-09-21: "examples is really for
+# `examples/`. "examples is really for
 # experimentation and user testing" -- so a user editing
 # `examples/audit_demo_state.json` to try something must not turn the
 # suite red. The two files are byte-identical today and serve different
@@ -618,7 +618,7 @@ def test_watch_with_no_flag_and_no_config_default_behaves_as_before(tmp_path, mo
 # The stub is `stub_ui_server` in conftest.py, shared with
 # test_console_address.py, which had its own copy until an earlier change broke
 # one of them. It stubs `uvicorn.Server.run` rather than `uvicorn.run`,
-# because #169 moved `ui_cmd` off the latter: the listening socket is now
+# because an earlier change moved `ui_cmd` off the latter: the listening socket is now
 # bound by `ui_cmd` itself, BEFORE the URL banner, and handed to the
 # server. So the bind here is real, which is why every one of these passes
 # `--port 0` and lets the kernel pick -- a test that hard-coded the
@@ -757,7 +757,7 @@ def test_ui_announces_the_port_it_got_not_the_one_it_asked_for(stub_ui_server, c
 # Precedence everywhere: explicit flag > --show > auto-detect > config.
 # --------------------------------------------------------------------------
 
-# The house conventions file, which lives OUTSIDE any bundle (#81 point 5,
+# The house conventions file, which lives OUTSIDE any bundle (an earlier change point 5,
 # reaffirmed by the maintainer 2026-09-20: "conventions.md is not a part of the
 # show... It should be referenced by a config file or a command line
 # option"). Every bundle build below passes it explicitly.
@@ -771,7 +771,7 @@ def _bundle(tmp_path, *, conventions=True, stale_expectations=False, watch=False
     that *layers over* the house file, never replaces it.
 
     `stale_expectations=True` drops an `expectations.toml` in it. That was
-    a bundle slot until #153 retired the feature; a real bundle on a real
+    a bundle slot until an earlier change retired the feature; a real bundle on a real
     laptop still has one sitting in it, and nothing may notice.
     """
     d = tmp_path / "my-show"
@@ -798,14 +798,14 @@ def test_build_show_resolves_the_bundle_and_writes_the_plan_into_it(stub_build, 
     stub_build("smallband")
     d = _bundle(tmp_path)
     assert main(["build", "--console-model", "wing-compact", "--skip-verify", "--show", str(d), "--conventions", str(HOUSE)]) == 0
-    # #81 point 4: generated artifacts land in the bundle, not wherever
+    # An earlier change point 4: generated artifacts land in the bundle, not wherever
     # --out happened to point.
     plan = json.loads((d / "plan.json").read_text())
     assert plan["channels"], "the plan should have been written into the bundle"
 
 
 def test_build_show_ignores_a_leftover_expectations_file(stub_build, tmp_path, capsys):
-    """#153 retired expectations. A bundle directory someone laid out last
+    """An earlier change retired expectations. A bundle directory someone laid out last
     month still holds an `expectations.toml`, and that must be neither read
     nor complained about -- an old bundle keeps building."""
     stub_build("smallband")
@@ -922,7 +922,7 @@ def test_apply_without_plan_or_show_explains_both_ways_to_supply_one(capsys):
 
 
 def test_flat_invocations_are_completely_unchanged_by_the_bundle_work(stub_build, tmp_path, capsys):
-    """#89 is explicit: a bundle is an additional way to invoke, never a
+    """An earlier change is explicit: a bundle is an additional way to invoke, never a
     replacement. The existing flat-file form must behave identically."""
     stub_build("smallband")
     out = tmp_path / "flat.plan.json"
@@ -936,13 +936,13 @@ def test_flat_invocations_are_completely_unchanged_by_the_bundle_work(stub_build
 
 
 # --------------------------------------------------------------------------
-# the acceptance criterion, restated for the post-#29 world.
+# the acceptance criterion, restated for the newer world.
 #
 # The original pair of tests here drove the *conventions parser's* own
 # diagnostics (a '## Watch' heading the templated grammar couldn't read, a
 # rule detail the compiler couldn't carry) through `build`. Both of those
-# producers were deleted with the compile path in #29, so the tests could
-# not survive their subject. What #18 actually asked for -- that what
+# producers were deleted with the compile path, so the tests could
+# not survive their subject. What an earlier change actually asked for -- that what
 # reaches a human is severity-labelled and blocked, not one
 # undifferentiated bullet list -- is still true of every stream that
 # remains, and that is what these assert.
@@ -978,7 +978,7 @@ def test_a_generated_plans_notes_render_through_the_one_renderer(tmp_path, monke
 
 
 def test_the_critic_keeps_its_own_heading_so_it_never_reads_as_a_finding(tmp_path, monkeypatch, capsys):
-    """#26's whole point: a model's opinion must never render as though it
+    """The whole point: a model's opinion must never render as though it
     were a deterministic finding, even though both go through one
     renderer."""
     plan = copy.deepcopy(REAL_PLANS["smallband"])
@@ -1006,9 +1006,9 @@ def test_the_critic_keeps_its_own_heading_so_it_never_reads_as_a_finding(tmp_pat
 
 
 # --------------------------------------------------------------------------
-# #90: the house conventions file and a show's instructions are LAYERS.
+# the house conventions file and a show's instructions are LAYERS.
 #
-# The maintainer, 2026-09-20: "the show independent conventions file should always
+# "the show independent conventions file should always
 # be brought in, as well as a show's instructions if it is present. Content
 # in the instructions file overrides the conventions file."
 #
@@ -1047,7 +1047,7 @@ def test_both_layers_reach_the_model_with_the_house_file_first(tmp_path, monkeyp
 
 
 def test_the_prompt_states_which_layer_wins(tmp_path, monkeypatch, capsys):
-    """#81 point 2: precedence is resolved by the model, told in the prompt,
+    """An earlier change point 2: precedence is resolved by the model, told in the prompt,
     never by merging the two texts in `compiler.py`-style code."""
     from atoo.generate import generator_user
     rendered = generator_user(
@@ -1070,7 +1070,7 @@ def test_a_bundle_without_instructions_sends_only_the_house_layer(tmp_path, monk
 
 
 def test_the_layering_announces_itself(tmp_path, monkeypatch, capsys):
-    """The maintainer, 2026-09-19: "yes, make it announce itself." A build that
+    """"yes, make it announce itself." A build that
     quietly composed a file the command line never named is a build whose
     output cannot be explained afterwards."""
     d = _bundle(tmp_path)
@@ -1110,7 +1110,7 @@ def test_instructions_are_never_a_substitute_for_the_house_file(tmp_path, capsys
 
 def test_the_house_default_applies_to_an_explicit_input_too(tmp_path, monkeypatch, capsys):
     """"The show independent conventions file should always be brought in."
-    Until #90 the config default was consulted only by the auto-detect
+    Until an earlier change the config default was consulted only by the auto-detect
     branch, so this route failed with a settled house file in the config."""
     home = tmp_path / "home"
     home.mkdir()
@@ -1127,7 +1127,7 @@ def test_the_house_default_applies_to_an_explicit_input_too(tmp_path, monkeypatc
 
 
 # --------------------------------------------------------------------------
-# `--show` on verify and compare -- the gap #89 left (found while renaming
+# `--show` on verify and compare -- the gap an earlier change left (found while renaming
 # examples/touringband: the testing guide claimed every file flag collapsed
 # into --show, and for these two it did not).
 #
@@ -1140,7 +1140,7 @@ def test_the_house_default_applies_to_an_explicit_input_too(tmp_path, monkeypatc
 
 def test_verify_show_ignores_a_leftover_expectations_file(stub_build, tmp_path, capsys):
     """Both of verify's file arguments are bundle slots, so a bundle verify
-    needs no other flag at all -- and the `expectations.toml` #153 retired
+    needs no other flag at all -- and the `expectations.toml` an earlier change retired
     is no longer one of them, so a leftover copy changes nothing."""
     stub_build("smallband")
     plain = _bundle(tmp_path / "plain")
@@ -1292,7 +1292,7 @@ def test_presets_lists_the_bus_presets_after_the_channel_presets(capsys):
 
 
 def test_a_preset_with_a_problem_surfaces_without_any_plan_naming_it(tmp_path, capsys):
-    """The part of #166 that is more than a convenience. A preset carrying
+    """The part of an earlier change that is more than a convenience. A preset carrying
     an unrecognised field already reports itself -- but only when some
     plan happens to name it, which is to say never, until a show does."""
     source = json.loads((PRESET_FIXTURES / "Kick.chn").read_text())
@@ -1362,7 +1362,7 @@ def test_presets_falls_back_to_the_config_default_like_every_other_command(
 
 
 def test_a_partial_reply_is_saved_as_stem_partial_suffix():
-    """The maintainer, 2026-09-28: `plan.partial.json`, not `plan.json.partial` --
+    """`plan.partial.json`, not `plan.json.partial` --
     it sorts beside the file it was meant to become. (It is usually not
     valid JSON: a reply cut off partway.)"""
     from pathlib import Path
@@ -1375,7 +1375,7 @@ def test_a_partial_reply_is_saved_as_stem_partial_suffix():
 
 
 def test_a_rebuild_moves_the_old_plan_aside_before_it_starts(tmp_path, monkeypatch, capsys):
-    """The maintainer, 2026-10-02: "If we rebuild, we need to clear the current
+    """"If we rebuild, we need to clear the current
     plan ... because none of that is still current." A build that then
     fails leaves no out-of-date plan.json for Apply to offer."""
     from atoo.ai_provider import AIProviderError
@@ -1403,7 +1403,7 @@ def test_a_build_refused_before_it_starts_leaves_the_plan_alone(tmp_path, capsys
 
 
 def test_a_successful_build_removes_an_old_partial_reply(stub_build, tmp_path, capsys):
-    """The maintainer, 2026-10-02: "clear any plan.partial.json after a successful
+    """"clear any plan.partial.json after a successful
     build"."""
     stub_build("smallband")
     out = tmp_path / "plan.json"

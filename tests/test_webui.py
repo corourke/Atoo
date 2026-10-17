@@ -47,16 +47,15 @@ def test_index_served(client):
 def test_the_served_page_says_atoo_and_never_the_old_name(client):
     """The product is Atoo. The page title and the header say
     so, and no served asset still carries the old name -- the Python
-    suite cannot see a browser string any other way (CLAUDE.md, "a
-    rename that crosses into web/static/")."""
+    suite cannot see a browser string any other way."""
     page = client.get("/").text
     assert "<title>Atoo</title>" in page
     assert "<h1>Atoo</h1>" in page
     # The brass chip holds A2 (docs/marketing/naming-and-brand.md, "Colour
     # and mark"); it held SP.
     assert '<span class="brand-mark">A2</span>' in page
-    # Spelled in two halves, so a release's old-name gate (tools/publish.py,
-    # gate 5) does not find it in this test.
+    # Spelled in two halves, so a release's old-name gate does not find it
+    # in this test.
     old_name = "show" + "proof"
     assert old_name not in page.lower()
     static = Path(__file__).parents[1] / "atoo" / "web" / "static"
@@ -226,7 +225,7 @@ def test_unknown_source_is_a_client_error(client):
 
 
 # ---- The plan (FR-6.3) -- `/api/plan*`, read-only. What was
-# the viewer at `/setup` is Build step 04 now, drawn by the
+# The viewer at `/setup` is Build step 04 now, drawn by the
 # same `setup.js`; these tests pin the API and the renderer it kept.
 
 
@@ -285,6 +284,28 @@ def test_plan_load_with_invalid_json_is_a_clean_error(client, tmp_path):
     assert "error" in r.json()
 
 
+def test_the_served_pages_read_as_explanations_and_not_as_a_project_diary(client):
+    """View-source is the first thing a curious engineer opens,
+    so no served page (script, style or markup) attributes a decision to a
+    person on a date, cites the project's rulebook or plan, or points at a
+    document, mockup or run the public tree does not have. Asserted over
+    the served assets because the Python suite cannot see the browser code."""
+    diary = re.compile(
+        r"maintainer\W+\d{4}-\d{2}-\d{2}"
+        r"|CLAUDE\.md|WORK_PLAN|OPTIONS-H"
+        r"|docs/(?!user/)[a-z]+/|\bmockups/|\barchive/|\bexperiments/|ui-style\.md"
+    )
+    static = Path(__file__).resolve().parent.parent / "atoo" / "web" / "static"
+    names = sorted(p.name for p in static.iterdir() if p.is_file())
+    assert {"setup.js", "shell.js", "watch.js", "styles.css", "shell.html"} <= set(names)
+    for name in names:
+        served = client.get(f"/static/{name}")
+        assert served.status_code == 200, name
+        found = diary.search(served.text)
+        assert not found, f"/static/{name} still carries {found.group(0)!r}"
+    assert not diary.search(client.get("/").text)
+
+
 def test_setup_is_retired_and_its_renderer_is_not(client):
     """Step 04 covers everything `/setup` did, so the route
     and its page are gone. `setup.js` is not -- it is still the one thing
@@ -314,7 +335,7 @@ def test_api_plan_carries_the_plans_own_findings():
 
 
 def test_a_plan_built_before_18_still_opens_with_its_critic_findings_named():
-    """**A plan whose critic findings carry the pre-#18 `kind`** -- no
+    """**A plan whose critic findings carry the older `kind`** -- no
     `category` and no `code`, which is what every plan.json written before
     that issue has on disk. They must still reach the dock as critic
     findings with a code, not as blanks.
@@ -322,7 +343,7 @@ def test_a_plan_built_before_18_still_opens_with_its_critic_findings_named():
     Stated as a two-line plan rather than read out of
     `examples/touringband/plan.json`, which is where this test used to get
     its legacy findings. That bundle is rebuilt between shows, and the
-    rebuild of 2026-09-23 wrote post-#18 findings into it -- so the test
+    rebuild of 2026-09-23 wrote newer findings into it -- so the test
     went green-then-red on a property of the maintainer's working file, while the
     old shape it exists to defend went untested either way. A legacy plan
     cannot stop being legacy, so this one is written out here."""
@@ -341,7 +362,7 @@ def test_a_plan_built_before_18_still_opens_with_its_critic_findings_named():
 
 
 def test_step_04_lists_no_findings_of_its_own(client):
-    """An earlier change (the maintainer, 2026-10-02: "after a plan is rebuilt there's
+    """An earlier change ("after a plan is rebuilt there's
     typically a very long list of warnings and info findings down the page
     under the build status. That is what the sidebar is for"). Step 04's
     "Critic pass", "Verify" and "The conventions themselves" lists are
@@ -349,7 +370,7 @@ def test_step_04_lists_no_findings_of_its_own(client):
     step 04 draws one line counting them. The Python suite cannot see the
     page, so this pins the served asset.
 
-    The critic's pre-#18 `kind` is still read -- in Python now
+    The critic's older `kind` is still read -- in Python now
     (`_plan_finding`, tested above), which is what feeds the dock."""
     js = client.get("/static/setup.js").text
     for gone in ("renderCriticFindings", "renderVerifyFindings", "renderBuildFindings",
@@ -440,8 +461,7 @@ def test_setup_page_renders_meta_build_log(client):
     """docs/developer/build-lessons-2026-09-27.md, part C: a plan's
     `meta.build_log` (each role's kept thinking-summary notes and usage)
     gets its own disclosure on step 04. The Python suite cannot see the
-    browser render it (CLAUDE.md, "A rename ... invisible to the test
-    suite"), so this pins that the served JS still reads the field."""
+    browser render it, so this pins that the served JS still reads the field."""
     js = client.get("/static/setup.js").text
     assert "meta.build_log" in js, "setup.js must read plan.meta.build_log"
     assert "Build log" in js
@@ -450,8 +470,8 @@ def test_setup_page_renders_meta_build_log(client):
 
 
 def test_setup_page_no_longer_renders_expectations_findings(client):
-    """#153 retired expectations. The Python suite cannot see the browser
-    (`CLAUDE.md`), so the only thing standing between "the key is gone from
+    """An earlier change retired expectations. The Python suite cannot see the browser,
+    so the only thing standing between "the key is gone from
     `build`" and "the page still draws a section for it" is an assertion
     over the served asset.
 
@@ -491,7 +511,7 @@ def test_the_bundle_payload_has_no_expectations_slot(client):
 
 def test_setup_page_reads_verify_findings_by_their_stable_code(client):
     """The other half of the same wire shape. `code`/`where`/`message`
-    survived #18 unchanged -- this pins that, since a rename there would
+    survived an earlier change unchanged -- this pins that, since a rename there would
     break the page just as quietly."""
     # The dock is the only thing that renders a finding.
     js = client.get("/static/shell.js").text
@@ -706,13 +726,14 @@ def test_served_watch_js_offers_every_watch_condition_field(client):
     # An earlier change added `dca`/`mute_group`/`patch` to the Python vocabulary.
     # `watch.js` keeps its OWN copy of that list (WC_FIELDS) to build the
     # editor's <select>, and the Python suite cannot see this file --
-    # per CLAUDE.md, a rename or extension that crosses into
+    # a rename or extension that crosses into
     # atoo/web/static/ is invisible to pytest and fails SILENTLY in
     # the browser. Crude, but it is the only thing standing between a
     # Python-side vocabulary change and an editor that cannot author the
     # new conditions.
     body = client.get("/static/watch.js").text
-    for field in ("muted", "fader_db", "dca", "mute_group", "patch"):
+    for field in ("muted", "fader_db", "dca", "mute_group", "patch",
+                  "send_on", "send_db", "send_mode", "phantom"):
         assert f'"{field}"' in body, f"watch.js does not offer the {field!r} watch-condition field"
     # The relational fields take a string value, so the editor needs a
     # text input for them -- not the checkbox/number the scalar fields use.
@@ -720,16 +741,15 @@ def test_served_watch_js_offers_every_watch_condition_field(client):
     assert "wc-value-text" in body
 
 
-@pytest.mark.example_guard
 def test_step_04_opens_a_plan_from_its_tile_not_a_path_box(client):
-    """The maintainer, 2026-09-25: the "open a plan.json that is somewhere else"
+    """The "open a plan.json that is somewhere else"
     row belongs on the Plan tile like every other file. Its path box is a
     hidden input the tile's Change file fills (filebrowser.js `browseInto`),
     so no example path is shown to go stale."""
     import re
     html = client.get("/").text
     assert "Or open a plan.json that is somewhere else" not in html
-    tile = html[html.index('id="tab-plan"'):html.index('id="tab-plan"') + 1500]
+    tile = html[html.index('id="tab-plan"'):html.index('class="help-pop pipeline-help"')]
     assert 'id="plan-browse-btn"' in tile and "Change file" in tile
     assert re.search(r'<input type="hidden" id="plan-path">', html)
 
@@ -742,7 +762,7 @@ def test_setup_page_shows_which_console_the_plan_was_built_for(client):
     operator never sees.
 
     Asserted over the served asset because the Python suite has no way to
-    see the browser code (CLAUDE.md): a frontend that simply never read
+    see the browser code: a frontend that simply never read
     this key would show nothing and break no test.
     """
     js = client.get("/static/setup.js").text
@@ -750,8 +770,8 @@ def test_setup_page_shows_which_console_the_plan_was_built_for(client):
         "setup.js must render meta.console_model -- without it the page "
         "silently omits which console the plan is for"
     )
-    # A plan built before #13 has no such key, and `esc(undefined)` renders
-    # as an empty string -- the exact silently-blank failure #18 hit.
+    # A plan built before an earlier change has no such key, and `esc(undefined)` renders
+    # as an empty string -- the exact silently-blank failure an earlier change hit.
     assert "built before #13" in js, (
         "setup.js must say the field is absent rather than rendering blank "
         "for a plan built before #13"
@@ -759,7 +779,7 @@ def test_setup_page_shows_which_console_the_plan_was_built_for(client):
 
 
 def test_setup_page_renders_every_processing_field_the_plan_can_carry(client):
-    """CLAUDE.md's standing rule, applied forward rather than after the
+    """The rule that a renamed field breaks the page silently, applied forward rather than after the
     fact: the Python suite cannot see the browser code, so a field Python
     can write and render is a field the page can silently omit.
 
@@ -790,8 +810,8 @@ def test_setup_page_distinguishes_the_two_eqs(client):
 # ---------------------------------------------------------------- 
 # the Watch page's console IP field seeds from ATOO_CONSOLE / [console]
 #
-# Two halves, tested two different ways, because CLAUDE.md's standing
-# warning applies squarely here: the Python suite cannot see
+# Two halves, tested two different ways, because the standing
+# warning about the browser applies squarely here: the Python suite cannot see
 # `atoo/web/static/`, and `esc()`-style rendering turns an
 # `undefined` payload key into an empty string rather than an error. So
 # the server half is tested over the response, and the browser half is
@@ -827,7 +847,7 @@ def test_watch_mode_embeds_the_resolved_console_defaults():
 
 def test_watch_mode_with_no_console_defaults_is_todays_page():
     """No environment variable, no config file: an empty IP box and no
-    provenance line, exactly as before #137. `create_app()` resolves
+    provenance line, exactly as. `create_app()` resolves
     nothing itself -- `ui_cmd` does -- so the default really is 'nothing
     seeded'."""
     app = create_app()
@@ -856,7 +876,7 @@ def test_the_page_escapes_a_closing_tag_in_a_console_origin():
 
 
 def test_watch_js_follows_the_bundle_bars_console(client):
-    """The maintainer, 2026-09-24: the console address is *"Editable in the bundle
+    """The console address is *"Editable in the bundle
     bar only"*. Watch used to carry its own IP and port boxes, seeded from
     the same resolved console -- two places to type an address on
     one page, so Watch could be reading one desk while Apply wrote another.
@@ -892,9 +912,7 @@ def test_the_browser_severity_ladder_matches_pythons(client):
     `critical` there is not a crash: a pill nothing ever increments, and a
     `<select>` offering a value the loader now refuses to read back.
 
-    Asserted over the served assets for exactly that reason (`CLAUDE.md`,
-    "a rename that crosses into atoo/web/static/ is invisible to the
-    test suite")."""
+    Asserted over the served assets for exactly that reason."""
     from atoo.diagnostics import Severity
 
     js = client.get("/static/watch.js").text
@@ -964,7 +982,7 @@ def test_styles_css_marks_an_address_set_here_and_draws_the_watch_readout(client
     assert ".console-source.is-set-here" in css
     assert ".watch-console" not in css and ".console-fields" not in css.replace(
         "old `.console-fields[hidden]`", ""), "styles.css still styles Watch's retired readout"
-    assert ".console-kind-opt" in css and ".wc-file" in css
+    assert ".seg-opt" in css and ".wc-file" in css
     assert ".console-origin" in css
     assert ".journal-stack-table tr.is-other-desk" in css
     assert "input.is-seeded" not in css and ".seed-tag" not in css, (
@@ -979,7 +997,7 @@ def test_styles_css_marks_an_address_set_here_and_draws_the_watch_readout(client
 # only one of them is Python:
 #
 #   * the endpoints the page calls, below;
-#   * the SERVED ASSETS, further down. `CLAUDE.md`'s static-asset rule is
+#   * the SERVED ASSETS, further down. the rule about the static assets is
 #     the reason those exist at all -- a key renamed on the Python side
 #     and not in shell.js renders a silently blank element and breaks no
 #     other test in this file.
@@ -1156,7 +1174,7 @@ def test_ping_reports_what_the_desk_said(recording_console):
     assert body["identity"] == [IDENTITY]
     assert body["elapsed_ms"] is not None
     assert body["error"] is None
-    # #137: a value nobody typed has to say where it came from.
+    # A value nobody typed has to say where it came from.
     assert body["address_source"] == "ATOO_CONSOLE"
 
 
@@ -1178,7 +1196,7 @@ def test_ping_lets_a_typed_console_win_and_claims_no_provenance_for_it(recording
     """Typing over the seeded address wins for this one round trip. It
     also stops reporting the seed's origin: an address the operator typed
     did not come from ATOO_CONSOLE, and saying it did is the
-    stale-export mistake #137 exists to prevent, inverted."""
+    stale-export mistake an earlier change exists to prevent, inverted."""
     app = create_app(initial_console={"address": "192.0.2.16",
                                       "address_source": "ATOO_CONSOLE",
                                       "port": 2223, "timeout": 1.0})
@@ -1215,8 +1233,8 @@ def test_an_unreachable_desk_is_a_200_with_ok_false(client):
 # ---- The page and its assets ------------------------------------------
 #
 # From here down, every assertion is over what is actually SERVED.
-# `CLAUDE.md`: "a rename that crosses into atoo/web/static/ is
-# invisible to the test suite" -- `esc()`-style rendering turns a missing
+# A rename that crosses into atoo/web/static/ is
+# invisible to the test suite -- `esc()`-style rendering turns a missing
 # field into an empty string, so the failure mode is a blank element that
 # passes every Python test.
 
@@ -1239,7 +1257,7 @@ def test_shell_page_embeds_startup_state_before_its_own_script_tag(tmp_path):
     """Document order, not `</body>` proximity: a plain `<script src>`
     runs the moment the parser reaches it, so a blob spliced in after it
     is a blob `shell.js` never finds. That failure is silent and total --
-    it cost #45's plan viewer every plan, 100% of the time, when
+    it cost the plan viewer every plan, 100% of the time, when
     `_embed_startup_json` was first written."""
     directory = _bundle_dir(tmp_path, "input.csv")
     app = create_app(initial_bundle=str(directory),
@@ -1311,7 +1329,7 @@ def test_shell_html_carries_every_element_shell_js_fills(client):
 
 
 def test_bundle_bar_words(client):
-    """The maintainer, 2026-10-11: the bundle's button reads Open..., an
+    """The bundle's button reads Open..., an
     empty bundle reads "none", the bar shows no "set here" beside a
     console typed into it, and separators divide bundle, console and Ping."""
     html = client.get("/static/shell.html").text
@@ -1323,6 +1341,129 @@ def test_bundle_bar_words(client):
     assert "address_source === CONSOLE_SET_HERE) {" in js
     assert html.count('class="bundle-bar-sep"') == 2
 
+
+
+# ---- The shared pieces of docs/developer/ui-style.md ----------
+# The Python suite cannot see the page, so these read the served assets.
+
+
+def _css_rules(css):
+    """(selector, body) for every plain rule in a stylesheet."""
+    import re
+
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    return re.findall(r"([^{}]+)\{([^{}]*)\}", css)
+
+
+def test_no_disabled_rule_dims_with_opacity(client):
+    """ui-style.md §4: opacity is never the signal. A red button at 40%
+    still reads as red, and in a dim room it reads as armed."""
+    css = client.get("/static/styles.css").text
+    dimming = [sel.strip() for sel, body in _css_rules(css)
+               if ":disabled" in sel and "opacity" in body
+               and "opacity: 1;" not in body]
+    assert not dimming, dimming
+
+
+def test_one_locked_look_for_every_button(client):
+    import re
+
+    css = client.get("/static/styles.css").text
+    rule = re.search(r"\.btn:disabled, \.btn\.is-locked \{([^}]*)\}", css)
+    assert rule, "no shared locked look"
+    body = rule.group(1)
+    for decl in ("background: transparent", "color: var(--text-off)",
+                 "border: 1px dashed var(--border-strong)", "cursor: not-allowed"):
+        assert decl in body, decl
+    # Last in the file, so no screen's own button colour wins over it.
+    assert css.rindex(".btn:disabled, .btn.is-locked") > css.rindex(".tile-stale .btn-secondary")
+    # A locked segmented control wears the same look: dashed, no fill, no hue.
+    seg = re.search(r"\.seg\.is-locked \{([^}]*)\}", css)
+    assert seg and "border-style: dashed" in seg.group(1) and "background: transparent" in seg.group(1)
+    assert "var(--text-off)" in re.search(r"\.seg\.is-locked \.seg-opt \{([^}]*)\}", css).group(1)
+
+
+def test_the_shared_buttons_tags_and_focus_ring(client):
+    import re
+
+    css = client.get("/static/styles.css").text
+    for selector in (".btn-quiet", ".btn-sm", ".btn[hidden]", ".state", ".state.is-ok",
+                     ".state.is-err", ".prop", ".sev", ".sev.solid.sev-error", ".sev.big",
+                     ".lock-reason"):
+        assert re.search(re.escape(selector) + r"(?![\w-])", css), selector
+    # Danger is the solid red with white ink, not the pink tint.
+    assert re.search(r"\.btn-danger \{[^}]*background: var\(--alarm-solid\); color: var\(--alarm-ink\)", css)
+    # Quiet: brass words, no box, 13/600 sentence case.
+    quiet = re.search(r"\.btn-quiet \{([^}]*)\}", css).group(1)
+    for decl in ("color: var(--accent)", "background: transparent", "font-size: 13px",
+                 "font-weight: 600", "text-transform: none"):
+        assert decl in quiet, decl
+    # Every button has the brass focus ring.
+    assert re.search(r"\.btn:focus-visible[^{]*\{\s*outline: 2px solid var\(--accent\); outline-offset: 2px;\s*\}", css)
+
+
+def test_the_guide_tokens_and_no_orange(client):
+    css = client.get("/static/styles.css").text
+    for token in ("--accent-tint", "--ok-solid", "--ok-ink", "--border-strong", "--text-off"):
+        assert css.count(token + ":") == 3, token  # dark, light by preference, light by choice
+    for token in ("--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--radius", "--mono"):
+        assert css.count(token + ":") == 1, token  # theme-free
+    # Error has one red (§1): the orange --error-* is gone.
+    assert "--error-fg" not in css.replace("`--error-*`", "")
+    assert "var(--error" not in css
+
+
+def test_the_bundle_bar_and_header_follow_the_guide(client):
+    html = client.get("/static/shell.html").text
+    bar = html[html.index('<div class="bundle-bar" id="bundle-bar">'):html.index('id="console-bar-edit"')]
+    for element_id in ("bundle-change-btn", "bundle-new-btn", "console-change-btn", "demo-chip"):
+        assert f'class="btn btn-quiet" id="{element_id}"' in bar, element_id
+    assert 'id="theme-seg" role="radiogroup" aria-label="Theme"' in html
+    assert "pipe-change-btn" not in bar and "state-readonly" not in bar
+    # Label type, no colon.
+    assert '<span class="bundle-bar-label">Show bundle</span>' in bar
+    assert '<span class="bundle-bar-label">Console</span>' in bar
+    # The Ping answer is a state tag, and a locked Ping says why.
+    assert '<span class="state" id="ping-pill">Not pinged</span>' in bar
+    assert 'class="lock-reason" id="ping-lock"' in bar and 'id="ping-detail"' in bar
+    # The empty state: one sentence and one way out.
+    notice = html[html.index('id="no-show-notice"'):html.index("</p>", html.index('id="no-show-notice"'))]
+    assert "No show open." in notice and 'class="btn btn-secondary btn-sm" id="try-demo-btn"' in notice
+    # Danger is never paired with primary.
+    assert "btn-primary btn-danger" not in html and "btn-danger btn-primary" not in html
+
+
+def test_the_ping_answer_is_a_state_and_ping_locks_with_a_reason(client):
+    js = client.get("/static/shell.js").text
+    assert 'pingPill.className = "state" + (state ? " " + state : "");' in js
+    assert 'setPingPill("Answered", "is-ok", parts.join(" · "));' in js
+    assert 'setPingPill("No reply", "is-err", data.error || "no reply");' in js
+    assert 'className = "ping-pill' not in js and '"is-bad"' not in js
+    assert "pingBtn.disabled = !!pingReason;" in js and "pingLock.hidden = !pingReason;" in js
+    assert 'return "the Demo has no desk to ping";' in js
+    assert 'setPingPill("nothing to ping"' not in js
+
+
+def test_the_demo_lock_does_not_dim_a_locked_button(client):
+    """Nora's review: the Demo rule's id selectors beat
+    `.btn:disabled`, so a locked Write showed at 0.45 on top of the dashed
+    look. Every listed control is inert; only the non-buttons are dimmed."""
+    import re
+
+    css = client.get("/static/styles.css").text
+    dims = [sel for sel, body in _css_rules(css)
+            if "body.is-demo-show" in sel and "opacity" in body and "opacity: 1;" not in body]
+    assert dims and all(sel.strip().endswith(":not(.btn)") for sel in dims), dims
+    assert re.search(r"#apply-run-btn[^{]*\) \{\s*pointer-events: none;\s*\}", css)
+
+
+def test_a_long_ping_answer_wraps_inside_the_console_group(client):
+    import re
+
+    css = client.get("/static/styles.css").text
+    wide = re.search(r"@media \(min-width: 720px\) \{(.*?)\n\}", css, re.S)
+    assert wide and ".console-readout { flex: 100 1 0; min-width: 0; flex-wrap: nowrap; }" in wide.group(1)
+    assert ".ping-detail { flex: 1 1 0; min-width: 12em;" in wide.group(1)
 
 def test_shell_js_reads_every_key_webui_sends(client):
     """One assertion per key that crosses the wire. Python renaming a key
@@ -1411,11 +1552,11 @@ def test_styles_css_carries_the_shell_chrome(client):
 
     css = client.get("/static/styles.css").text
     for selector in (".bundle-bar", ".bundle-bar-name",
-                     ".console-readout", ".ping-pill", ".ping-pill.is-ok",
+                     ".console-readout", ".ping-detail",
                      ".mode-panel",
                      ".state-badge", ".state-loaded", ".state-missing",
                      ".dock-col", ".findings-dock", ".dock-item", ".dock-jump",
-                     ".pipe-file-hint", ".pipe-change-btn", ".house-tag"):
+                     ".pipe-file-hint", ".prop"):
         # The class has to END there. A plain substring check would be
         # satisfied by `.findings-dockk`, which is a typo that serves no
         # rule at all -- and that is precisely the mistake worth catching.
@@ -1526,7 +1667,7 @@ def test_every_tile_path_is_derived_from_the_one_bundle_folder(build_client):
     data = build_client.get("/api/build/sources").json()
     assert data["input_list"]["display_path"] == "touringband/input.csv"
     assert data["instructions"]["display_path"] == "touringband/instructions.md"
-    # The house file is NOT in the bundle (#81 point 5), so it is not
+    # The house file is NOT in the bundle (an earlier change point 5), so it is not
     # shown as though it were.
     assert not data["conventions"]["display_path"].startswith("touringband/")
 
@@ -1550,7 +1691,7 @@ def _codes(data):
 
 
 def test_an_unparseable_input_list_is_a_finding_not_an_exception(tmp_path):
-    """CLAUDE.md's split, and the reason this screen exists: the file is
+    """The split, and the reason this screen exists: the file is
     there, its content is wrong, and the operator has to be able to look
     at it. A 500 -- or a refusal -- would leave them with neither."""
     directory = _build_bundle(tmp_path, input_csv="name,category,type,phantom\nKick,drums,Mic,maybe\n")
@@ -1584,8 +1725,7 @@ def test_the_input_list_is_read_by_the_engines_own_loader(build_client, tmp_path
 
 def test_a_missing_instructions_file_is_a_quiet_line_on_its_tile_not_a_finding(tmp_path):
     """A bundle with no per-show text is normal. Until 2026-10-02 it was
-    an INFO, `build.no-instructions`, in the dock of every new show; Issue
-    #434 made it a line on tile 03 ("the house conventions apply in full")
+    an INFO, `build.no-instructions`, in the dock of every new show; an earlier change made it a line on tile 03 ("the house conventions apply in full")
     and nothing in the dock."""
     directory = _build_bundle(tmp_path, instructions=None)
     app = create_app(initial_bundle=str(directory), initial_conventions=str(_house(tmp_path)))
@@ -1671,7 +1811,7 @@ def test_a_file_that_is_there_but_wrong_is_still_a_finding(tmp_path):
 
 
 def test_a_new_show_has_nothing_in_the_dock(tmp_path):
-    """The maintainer, 2026-10-02: "when I created a new show that I got error
+    """"when I created a new show that I got error
     and warning findings immediately in the sidebar ... It seems a little
     premature." A brand-new, empty bundle with a house file: no ERROR, no
     WARNING, and no missing-file finding of any severity."""
@@ -1696,7 +1836,7 @@ def test_a_new_show_has_nothing_in_the_dock(tmp_path):
     "## Sources\nPatch as listed.\n\n## Channels\nDrums first.\n",
 ])
 def test_headings_are_never_required_or_remarked_on(tmp_path, house):
-    """The maintainer, 2026-09-28: the section headers "aren't really used". A
+    """The section headers "aren't really used". A
     conventions file is prose the model reads whole, so a file with no
     headings, or headings that are not the canonical eight, is shown and
     edited as written, with no finding about its headings -- the INFOs
@@ -1723,7 +1863,7 @@ def test_the_canonical_eight_are_the_eight_artifact_formats_documents():
 
     doc = Path(__file__).parent.parent / "docs" / "developer" / "artifact-formats.md"
     if not doc.exists():
-        pytest.skip("docs/developer/ is not in the public repository (not approved)")
+        pytest.skip("needs docs/developer/artifact-formats.md, which this tree does not have")
     text = doc.read_text()
     section = text.split("## 2. Conventions file (Markdown)")[1].split("\n## 3.")[0]
     example = section.split("```markdown")[1].split("```")[0]
@@ -1747,7 +1887,7 @@ def test_the_stack_is_the_shape_the_plan_records(build_client, tmp_path):
 
 
 def test_the_whole_file_reaches_the_editor_as_written(build_client, tmp_path):
-    """Steps 01 and 03 edit the file whole (the maintainer, 2026-09-28): the
+    """Steps 01 and 03 edit the file whole: the
     title line, the prose before the first heading, comments -- nothing is
     split off or left out of what the editor is given."""
     data = build_client.get("/api/build/sources").json()
@@ -1819,7 +1959,7 @@ def test_opening_another_show_drops_every_typed_override_the_house_one_included(
 ):
     """A tile still pointing at the previous show's input.csv while the
     bundle bar names a new folder is the worst of both. The house file used
-    to be kept -- it lives outside the bundle -- but since #236 a bundle's
+    to be kept -- it lives outside the bundle -- but since an earlier change a bundle's
     plan records the house file it was built from, and the maintainer chose
     (2026-09-24) that a typed one is dropped too: the new show opens on its
     recorded file, else the config's (here, the fixture's house-rules.md)."""
@@ -1847,7 +1987,7 @@ def test_opening_another_show_drops_every_typed_override_the_house_one_included(
 # file outside the UI and manually adding it to either the user preferences
 # or an environment variable or the show bundle." These endpoints create
 # an EMPTY file -- files only, never a console -- and never overwrite. The
-# template is a suggestion only (the maintainer, 2026-09-28): the example text
+# template is a suggestion only: the example text
 # beside each editor, which nothing writes.
 
 
@@ -1924,7 +2064,7 @@ def home(tmp_path, monkeypatch):
 
 
 def test_new_conventions_writes_an_empty_file_and_points_step_01_at_it(tmp_path, home):
-    """The maintainer, 2026-09-28: the template is a suggestion only. New file
+    """The template is a suggestion only. New file
     writes nothing into the file; the example arrives beside the editor."""
     from atoo.webui import conventions_example
 
@@ -2101,7 +2241,7 @@ def test_new_instructions_writes_an_empty_file_into_the_bundle(tmp_path):
     data = r.json()
     target = directory / "instructions.md"
     # Empty: the template is a suggestion beside the editor, never
-    # written by New file (the maintainer, 2026-09-28).
+    # written by New file.
     assert target.read_bytes() == b""
     assert data["instructions"]["path"] == str(target)
     assert data["instructions"]["state"] == "loaded"
@@ -2235,7 +2375,7 @@ def test_the_setup_page_says_comments_are_not_read_by_the_build(client):
 
 def test_step_03_no_longer_tags_sections(client):
     """No sections view, so no overrides/adds-to-house tag per section
-    (the maintainer, 2026-09-28). The precedence is still said, in words, under
+. The precedence is still said, in words, under
     the editor and in the stack above it."""
     js = client.get("/static/shell.js").text
     html = client.get("/").text
@@ -2263,7 +2403,7 @@ def test_shell_js_only_replaces_its_own_findings_in_the_shared_dock(client):
 
 
 def test_the_bundle_bar_lists_no_files(client):
-    """The "Also in this bundle" strip is gone (the maintainer, 2026-09-25: "We
+    """The "Also in this bundle" strip is gone ("We
     don't need this in the UI"). Each file is shown by the step that reads
     it; the bar names only the folder."""
     html = client.get("/").text
@@ -2274,12 +2414,12 @@ def test_the_bundle_bar_lists_no_files(client):
 
 
 def test_the_theme_toggle_is_served_and_the_light_tokens_answer_it(client):
-    """The maintainer, 2026-09-25: a toggle to see both the light and dark variants."""
+    """A toggle to see both the light and dark variants."""
     html = client.get("/").text
     js = client.get("/static/shell.js").text
     css = client.get("/static/styles.css").text
-    assert 'id="theme-toggle"' in html and 'localStorage.getItem("atoo.theme")' in html
-    assert "THEME_NEXT" in js
+    assert 'id="theme-seg"' in html and 'localStorage.getItem("atoo.theme")' in html
+    assert "THEME_NEXT" not in js and "wireSeg(el(\"theme-seg\")" in js
     assert ':root[data-theme="light"]' in css and ':root:not([data-theme="dark"])' in css
 
 
@@ -2312,7 +2452,7 @@ def _tile(html: str, tab_id: str) -> str:
 
 
 def test_build_tiles_put_the_path_above_the_buttons_and_carry_their_status(client):
-    """An earlier change (the maintainer, 2026-10-01): the buttons moved below the path
+    """An earlier change: the buttons moved below the path
     so they no longer shorten it, and each of the status line's readouts
     moved onto the tile it describes. The status line itself is gone."""
     html = client.get("/static/shell.html").text
@@ -2719,7 +2859,7 @@ def test_a_routed_stream_resolves_to_the_owners_log_from_any_thread():
     assert seen == [elsewhere], "another thread resolves to its own stream, not the build's"
 
 
-# ---- step 04's live progress (the maintainer, 2026-09-25) ------------------------
+# ---- step 04's live progress ------------------------
 
 
 def _streaming_plan_provider(refused=False, **kw):
@@ -2983,7 +3123,7 @@ def test_shell_js_selects_the_quoted_line_when_a_finding_jumps_to_an_editor(clie
 
 
 def test_shell_js_edits_steps_01_and_03_as_one_text_and_saves_it_whole(client):
-    """The maintainer, 2026-09-28: no sections view. Each step's one textarea is
+    """No sections view. Each step's one textarea is
     the file; its Save sends it whole as `text` -- the key the server
     reads -- and Save/Discard appear only once it differs from the file."""
     js = client.get("/static/shell.js").text
@@ -2998,7 +3138,7 @@ def test_shell_js_edits_steps_01_and_03_as_one_text_and_saves_it_whole(client):
 
 
 def test_the_example_is_a_suggestion_the_page_inserts_only_when_asked(client):
-    """The maintainer, 2026-09-28: "provide the templated new conventions and
+    """"provide the templated new conventions and
     instructions files as suggestions only". The example is shown beside
     the editor, read-only; Insert puts it (or the part selected) at the
     cursor as an unsaved change, and only Save writes it."""
@@ -3048,7 +3188,7 @@ def test_the_watch_event_payload_carries_the_coverage_caveat():
 
 def test_the_watch_page_renders_the_coverage_caveat(client):
     """A rename or a reshape on the Python side is invisible to this
-    suite (CLAUDE.md, the `web/static/` rule): `esc()`-style rendering
+    suite: `esc()`-style rendering
     turns a missing field into a silently blank element rather than an
     error. So the served asset is asserted on directly -- crude, and the
     only thing standing between a payload change and a Watch page that
@@ -3064,7 +3204,7 @@ def test_the_watch_page_renders_the_coverage_caveat(client):
     assert 'id="coverage-note"' in html
 
 
-# ---- The stale-page guard (the maintainer's desk session, 2026-09-24) -----------
+# ---- The stale-page guard -----------
 # A tab A19 opened kept showing A19's state against the server A20 started
 # on the same port over a different bundle copy. The server refuses a stale
 # write (tests/test_webui_stale_page.py); these assert the page's half,
@@ -3201,7 +3341,7 @@ def test_the_apply_view_groups_its_warnings_and_the_journal_keeps_each():
 
 
 def test_setup_js_jumps_a_grouped_finding_to_each_members_row(client):
-    """CLAUDE.md's web/static rule: the Python suite cannot see the page,
+    """The Python suite cannot see the page,
     so the served asset is asserted on. A grouped dock item (`members`)
     takes a jump link per member, which is also what counts it on each
     row's Findings badge. The Plan panel draws no list of its own."""
@@ -3215,7 +3355,7 @@ def test_setup_js_jumps_a_grouped_finding_to_each_members_row(client):
 
 
 def test_starting_a_build_blanks_the_plan_it_replaces():
-    """The build moves plan.json aside as it starts (the maintainer, 2026-10-02);
+    """The build moves plan.json aside as it starts;
     step 04 stops showing it at the same moment."""
     from fastapi.testclient import TestClient
     from atoo.webui import create_app
@@ -3243,7 +3383,7 @@ def test_atoo_demo_seed_makes_the_demo_repeatable(monkeypatch):
 def test_step_04_reads_the_bus_preset_fields_the_plan_carries(client):
     """The bus row's detail draws `preset` and
     `preset_values.inserts` (model, engine, point, saved_on). A rename on
-    the Python side would leave it silently blank (CLAUDE.md), so the
+    the Python side would leave it silently blank, so the
     served asset is checked for the field names it reads."""
     js = client.get("/static/setup.js").text
     for field in ("b.preset_values", "b.preset", "ins.engine", "ins.model",

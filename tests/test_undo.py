@@ -618,6 +618,53 @@ def test_cli_previews_offline_and_exits_clean(tmp_path, capsys):
     assert "no console was contacted" in out
 
 
+def test_cli_writes_the_run_as_json_for_a_preview_and_for_a_confirmed_run(
+        tmp_path, capsys, monkeypatch):
+    """`--result-json FILE`: what a page draws. A preview's rows say what
+    would go back and what would not; a confirmed run's say what did."""
+    from atoo import cli
+
+    journal_file = tmp_path / "apply-journal.json"
+    journal_file.write_text(json.dumps(journal(
+        row("/ch/1/name", "", "Kick"), row("/ch/2/name", "", "Snare"))))
+    state = tmp_path / "state.json"
+    state.write_text(json.dumps({"/ch/1/name": "Kick", "/ch/2/name": "Somebody Else"}))
+    preview = tmp_path / "preview.json"
+    assert cli.main(["undo", str(journal_file), "--state", str(state),
+                     "--result-json", str(preview)]) == 0
+    data = json.loads(preview.read_text())
+    assert data["dry_run"] is True and data["outcome"] == "differs"
+    assert {r["address"]: r["verdict"] for r in data["rows"]} == {
+        "/ch/1/name": "goes-back", "/ch/2/name": "changed-since"}
+
+    console = console_holding(__ch__1__name=("Kick", "s"), __ch__2__name=("Theirs", "s"))
+    console.close = lambda: None
+    monkeypatch.setattr(cli, "_open_console", lambda args: console)
+    done = tmp_path / "done.json"
+    assert cli.main(["undo", str(journal_file), "--console", "198.51.100.1", "--confirm",
+                     "--result-json", str(done)]) == 2
+    data = json.loads(done.read_text())
+    assert data["dry_run"] is False and data["outcome"] == "partly-undone"
+    assert {r["address"]: r["verdict"] for r in data["rows"]} == {
+        "/ch/2/name": "changed-since", "/ch/1/name": "went-back"}
+
+
+def test_cli_still_records_a_confirmed_undo_when_the_result_file_cannot_be_written(
+        tmp_path, capsys, monkeypatch):
+    from atoo import cli
+
+    journal_file = tmp_path / "apply-journal.json"
+    journal_file.write_text(json.dumps(journal(row("/ch/1/name", "", "Kick"))))
+    console = console_holding(__ch__1__name=("Kick", "s"))
+    console.close = lambda: None
+    monkeypatch.setattr(cli, "_open_console", lambda args: console)
+    missing = tmp_path / "no-such-folder" / "result.json"
+    assert cli.main(["undo", str(journal_file), "--console", "198.51.100.1", "--confirm",
+                     "--result-json", str(missing)]) == 0
+    assert "--result-json" in capsys.readouterr().err
+    assert (tmp_path / "apply-journal.undo.json").exists(), "the reversal is still journalled"
+
+
 def test_cli_refuses_state_plus_confirm(tmp_path, capsys):
     """There is no second arming control, and --state cannot be the
     first: a capture says nothing about what the desk holds now."""
@@ -696,3 +743,84 @@ def test_a_connection_that_dies_mid_undo_journals_what_it_got_through(tmp_path):
     assert console.state["/ch/1/name"] == ("Kick", "s")  # never reached
     assert [w["address"] for w in json.loads(path.read_text())["writes"]] == ["/ch/3/name"]
     assert "ABORTED" in result.summary()
+
+
+# ---------------------------------------------------------------------------
+# The run as data: `UndoResult.to_dict()`, which a page draws
+# ---------------------------------------------------------------------------
+
+def test_the_run_as_data_has_one_row_per_address_and_one_word_for_the_whole():
+    """A preview over four addresses -- one that goes back, one that is
+    already back, one somebody has moved and one the apply never read a
+    prior value for -- comes out as four rows with their own verdicts, the
+    counts, and `differs` for the run: not `safe`."""
+    console = console_holding(
+        __ch__1__name=("Kick", "s"),
+        __ch__2__name=("Somebody Else's Vocal", "s"),
+        __ch__3__name=("", "s"),
+        __ch__4__name=("Bass", "s"),
+    )
+    result = undo_from_journal(
+        journal(row("/ch/1/name", "", "Kick", description="ch 1 (Kick): name"),
+                row("/ch/2/name", "", "Snare", description="ch 2 (Snare): name"),
+                row("/ch/3/name", "", "", description="ch 3: name"),
+                row("/ch/4/name", None, "Bass", status="unreadable",
+                    description="ch 4 (Bass): name")),
+        console, dry_run=True)
+    data = result.to_dict()
+    assert data["dry_run"] is True and data["outcome"] == "differs"
+    by_address = {r["address"]: r for r in data["rows"]}
+    assert {a: r["verdict"] for a, r in by_address.items()} == {
+        "/ch/1/name": "goes-back", "/ch/2/name": "changed-since",
+        "/ch/3/name": "already-back", "/ch/4/name": "no-earlier-value"}
+    moved = by_address["/ch/2/name"]
+    assert moved["strip"] == "ch:2" and moved["strip_name"] == "Snare"
+    assert moved["control"] == "name"
+    # What the run wrote, what is on the desk now, what an undo would put back.
+    assert (moved["written"], moved["now"], moved["goes_back_to"]) == (
+        "Snare", "Somebody Else's Vocal", "")
+    assert data["counts"]["goes-back"] == 1 and data["counts"]["changed-since"] == 1
+    assert data["counts"]["total"] == 4
+    assert json.loads(json.dumps(data)) == data, "it has to be plain JSON"
+    assert "DRY RUN" in data["summary"]
+
+
+def test_a_preview_that_puts_everything_back_is_safe_and_an_empty_one_has_nothing_to_undo():
+    console = console_holding(__ch__1__name=("Kick", "s"))
+    safe = undo_from_journal(journal(row("/ch/1/name", "", "Kick")), console, dry_run=True)
+    assert safe.to_dict()["outcome"] == "safe"
+    nothing = undo_from_journal(journal(), console, dry_run=True)
+    assert nothing.to_dict()["outcome"] == "nothing-to-undo"
+    assert nothing.to_dict()["rows"] == []
+
+
+def test_a_confirmed_run_that_left_something_is_partly_undone_not_undone():
+    console = console_holding(
+        __ch__1__name=("Kick", "s"), __ch__2__name=("Somebody Else's Vocal", "s"))
+    result = undo_from_journal(
+        journal(row("/ch/1/name", "", "Kick"), row("/ch/2/name", "", "Snare")),
+        console, dry_run=False)
+    data = result.to_dict()
+    assert data["outcome"] == "partly-undone"
+    assert {r["verdict"] for r in data["rows"]} == {"went-back", "changed-since"}
+    clean = undo_from_journal(journal(row("/ch/1/name", "", "Kick")),
+                              console_holding(__ch__1__name=("Kick", "s")), dry_run=False)
+    assert clean.to_dict()["outcome"] == "undone"
+
+
+@pytest.mark.parametrize("address, strip", [
+    ("/ch/21/eq/1/g", "ch:21"), ("/aux/3/name", "aux:3"), ("/bus/4/fdr", "bus:4"),
+    ("/main/1/name", "main:1"), ("/mtx/2/name", "mtx:2"), ("/dca/6/name", "dca:6"),
+    ("/mgrp/2/name", "mgrp:2"), ("/io/in/A/21/col", "A 21"),
+    ("/io/out/A/3/name", "out A 3"), ("/cfg/talk/A/on", "/cfg/talk"),
+])
+def test_an_address_is_labelled_by_the_object_it_belongs_to(address, strip):
+    assert undo_engine.strip_of(address) == strip
+
+
+def test_a_description_gives_up_the_strips_name_and_the_control():
+    assert undo_engine.split_description("ch 21 (Trumpet): patch socket") == (
+        "Trumpet", "patch socket")
+    assert undo_engine.split_description("bus 'Horns': send level") == ("Horns", "send level")
+    assert undo_engine.split_description("ch 3: HPF") == ("", "HPF")
+    assert undo_engine.split_description("a write") == ("", "a write")

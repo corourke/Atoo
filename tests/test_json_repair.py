@@ -80,7 +80,7 @@ def test_a_repair_that_would_re_nest_expected_keys_is_refused():
 def test_the_real_14b_reply_is_refused_rather_than_mangled():
     raw = EVIDENCE / "qwen2.5-14b.touringband.raw.txt"
     if not raw.exists():
-        pytest.skip("evidence not present")
+        pytest.skip("needs a captured model reply, which this tree does not have")
     text = raw.read_text()
     body = text[text.index("{"):text.rindex("}") + 1]
     with pytest.raises(json.JSONDecodeError, match="no longer be top-level"):

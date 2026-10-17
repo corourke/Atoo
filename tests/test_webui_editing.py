@@ -5,7 +5,7 @@ things are tested hardest:
 
 * **Round-trip fidelity.** Saving a file nobody changed leaves it
   byte-identical (nothing is written); steps 01 and 03 save the whole
-  file as their one editor holds it (the maintainer, 2026-09-28: no sections
+  file as their one editor holds it (no sections
   view), keeping CRLF line endings, comments and whatever headings --
   or none -- the file has. input.csv is spliced by row.
 * **An outside edit is never overwritten.** A save whose file changed on
@@ -150,8 +150,7 @@ def test_a_file_with_no_final_newline_keeps_none():
 
 @pytest.mark.parametrize("sent", ["patch", "socket"])
 def test_a_value_for_a_column_the_file_lacks_adds_the_column(sent):
-    """A new column is written under the current name, `patch` (issue
-    #342), whichever name the page sent the value under."""
+    """A new column is written under the current name, `patch`, whichever name the page sent the value under."""
     text = "name,category,type,phantom\nKick,drums,Mic,FALSE\n"
     out, summary = source_edit.splice_input_list(text, [{"line": 0, "values": {sent: "LCL 1"}}])
     assert summary["columns_added"] == ["patch"]
@@ -232,7 +231,7 @@ def test_the_sources_carry_what_an_editor_needs(show):
     assert data["input_list"]["header"][:2] == ["socket", "name"]
     assert data["input_list"]["records"][0]["line"] == 0
     assert data["plan_freshness"]["state"] == "none"
-    # No sections view any more (the maintainer, 2026-09-28): nothing keyed on
+    # No sections view any more: nothing keyed on
     # headings reaches the page.
     assert "sections" not in data["conventions"] and "sections" not in data["instructions"]
     assert "canonical_sections" not in data
@@ -673,11 +672,11 @@ def test_the_editing_controls_are_in_the_served_page(show):
         "status-plan-badge", "status-plan-sep", "status-rebuild-btn",
     ):
         assert f'id="{element_id}"' in html, f"the page has no #{element_id}"
-    # Step 01 is edited like step 03 (the maintainer, 2026-09-25); the mockup's
+    # Step 01 is edited like step 03; the mockup's
     # blast-radius warning is up while it has changes.
     assert "Edit house style&hellip;" not in html
     assert "<strong>Editing your house style.</strong>" in html
-    # One editor per step, no sections view (the maintainer, 2026-09-28): the
+    # One editor per step, no sections view: the
     # cards, View source and Add section are gone from steps 01 and 03.
     for gone in ("conv-editor", "instr-editor", "conv-source", "instr-source",
                  "conv-add-section", "instr-add-section", "conv-edit-btn", "instr-edit-btn"):
@@ -708,7 +707,7 @@ def test_shell_js_sends_what_the_server_checks_and_reads_what_it_sends(show):
     assert "if (!editingStep[slot]) {" in js
     assert "if (editingStep.input_list) return;" in js
     # Nothing of the sections view is left to read a field the server no
-    # longer sends (CLAUDE.md: a stale read renders silently blank).
+    # longer sends (a stale read renders silently blank).
     for gone in ("source.sections", "section.index", "canonical_sections", "layer_tag",
                  "sectionCard", "addSectionCard", "editingMode"):
         assert gone not in js, f"shell.js still has {gone}"
@@ -719,7 +718,7 @@ def test_setup_js_draws_staleness_and_sends_the_bundle_with_a_build(show):
     for text in ("SP.planFreshness()", "f.plan_path", "f.reasons", "f.unknown", "f.state",
                  "reason.message", '"plan-rebuild-btn"', '"status-rebuild-btn"',
                  "expected_bundle: SP.bundle() ? SP.bundle().directory : null",
-                 '["Stale", "state-stale"]', "SP.onBuildChange", "SP.refreshBuild()"):
+                 '["Stale", "is-warn"]', "SP.onBuildChange", "SP.refreshBuild()"):
         assert text in js, f"setup.js never has {text}"
 
 

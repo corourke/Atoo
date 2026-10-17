@@ -1,7 +1,7 @@
 """Eight unanswered addresses cost 24s of a 47s read on a
 full-size WING -- the shape on a model we had only just met.
 
-Two halves, as #195 taught:
+Two halves, as an earlier change taught:
 
 - **The read plan is corrected.** The eight were `/io/in/AUX/1..8/vph`:
   a full-size's AUX inputs are line-level jacks with no head amp, so

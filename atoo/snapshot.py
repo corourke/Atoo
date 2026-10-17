@@ -8,7 +8,7 @@ to it -- a recall, a hand edit at soundcheck, a page the operator nudged.
 A `.snap` is JSON whose `ae_data` mirrors the OSC tree
 (`ae_data.{ch,aux,bus,main,mtx,dca,mgrp,io,...}`), so `/ch/1/flt/lcf` is
 `ae_data["ch"]["1"]["flt"]["lcf"]`. Confirmed against three real show
-files (`docs/reference/wing-console-model.md`).
+files (the console model notes).
 
 UNVERIFIED IN ONE RESPECT, deliberately flagged: WING firmware has moved
 some per-strip scalars (`name`, `icon`, `col`) under a `config` node in

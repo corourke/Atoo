@@ -4,7 +4,7 @@ On the maintainer's Mac `atoo init` copied nothing into
 ``~/Documents/Atoo``, and the Demo show opened
 ``.../dev/<checkout>/atoo/starter/demo-show`` -- inside his checkout,
 at a path that has not existed. The cause was an
-editable install from a checkout that still had the pre-#493
+editable install from a checkout that still had the older
 ``atoo/starter/`` folder (a ``.DS_Store`` or an untracked preset
 keeps it alive after ``git pull``), which ``firstrun.starter_dir()`` took
 for the starter set because it was a folder.

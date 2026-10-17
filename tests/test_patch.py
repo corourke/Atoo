@@ -254,7 +254,7 @@ def test_a_malformed_reply_is_a_change_error_with_the_text_kept():
         patch.parse_change_set("I think you want three horns.")
     assert exc.value.partial_text == "I think you want three horns."
     with pytest.raises(patch.ChangeError, match="change-set format"):
-        patch.parse_change_set(json.dumps({"name": "x", "add": {}, "drop": {}}))
+        patch.parse_change_set(json.dumps({"name": "x", "add": [], "drop": {}}))
 
 
 # ======================================================================
@@ -629,7 +629,7 @@ def test_an_amend_counts_as_a_change_the_apply_would_replace(tmp_path, desk, cap
 
 
 def test_a_legacy_amend_whose_plan_is_plan_json_is_not_warned_about(tmp_path, desk, capsys):
-    """An amend recorded between #259 and #279 replaced plan.json. While
+    """An amend recorded between two earlier changes replaced plan.json. While
     plan.json is still what it wrote, its content IS in plan.json."""
     from test_amend_plan_json import _bundle as amend_bundle, _legacy_amend
 
@@ -657,11 +657,3 @@ def test_a_socket_the_desk_lacks_is_refused_in_a_changes_words(tmp_path, desk, m
     assert _writes(desk) == []
 
 
-@pytest.mark.example_guard
-def test_the_shipped_example_change_set_is_a_valid_change_set():
-    """`examples/amend-demo/horns.change-set.json` is the worked example in
-    docs/user/applying.md and examples/README.md stage 6b. Asserted valid,
-    never on what is in it."""
-    path = Path(__file__).parent.parent / "examples" / "amend-demo" / "horns.change-set.json"
-    change_set, text = patch.load_change_set(path)
-    assert text and change_set["name"]

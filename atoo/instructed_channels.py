@@ -1,14 +1,14 @@
 """Channels the conventions or instructions ask for that are not rows of
-the input list (the maintainer, 2026-09-29).
+the input list.
 
 The case: the sixpiece show's `instructions.md` (frozen in
 `tests/fixtures/sixpiece_instructions_2026-09-29.md`) says *"Setup Talkback on
 Channel 40, source A 40"*. Talkback is not on the input list -- nobody
 writes the engineer's own talk mic on a band's list -- and until this
-module the build refused the channel as an invention (rule 2). The maintainer's
-decision: **allow it when its source socket is stated.** The engineer
+module the build refused the channel as an invention (rule 2). The decision:
+**allow it when its source socket is stated.** The engineer
 asked for it in words, and said where the cable is; building it is doing
-what he asked, not inventing.
+what they asked, not inventing.
 
 So a channel with no input-list row is built only when all three hold:
 
@@ -36,14 +36,14 @@ The plan records it on the channel's `source`:
 
 and its `patch` is the stated socket, `stated: true`. What the text does
 not say -- the source type, phantom, the colour category -- is decided
-here and announced at INFO (CLAUDE.md, "an error of judgement is not an
-error of patching"): a talk mic is a mic, phantom is off unless the text
+here and announced at INFO (an error of judgement is not an
+error of patching): a talk mic is a mic, phantom is off unless the text
 asks for it, and the colour is the category the text or the name points
 at, if the conventions colour one.
 
 ## Strips code builds (the resolved conventions, 2026-10-01)
 
-The maintainer's sixpiece build of 2026-10-01 (commit c04dd25) showed rule 2's
+A sixpiece build of 2026-10-01 (commit c04dd25) showed rule 2's
 exception is not reliable as prompt wording: the conventions ask for Aux 1
 MUSIC (LCL 23-24), Aux 2 HOST (preset "Host CO2", LCL 20) and Aux 8
 TALKBACK (LCL 22 if available), the resolved file stated all three, and

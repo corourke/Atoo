@@ -1,12 +1,12 @@
 """A Main or Matrix with no physical socket is a WARNING, not a refusal.
 
-The maintainer, 2026-10-09: *"I'm getting output.nopatch on a Matrix that I will
+*"I'm getting output.nopatch on a Matrix that I will
 use as the headphone monitoring source"* -- and it was an ERROR, so apply
 refused the whole plan. An unpatched Matrix is a working desk state:
 apply still writes its fader, mute, processing and what feeds it, and
 skips only the `/io/out/...` routing to a socket. So `output.no-patch` is
-a WARNING (CLAUDE.md, "An error of judgement is not an error of
-patching"), and the socket is still never guessed.
+a WARNING (an error of judgement is not an error of
+patching), and the socket is still never guessed.
 
 Every plan here is built in the test; nothing is read from `examples/`.
 """

@@ -9,8 +9,8 @@
   // watch.json when Watch is entered -- a build on this same page may have
   // just drafted into it.
   //
-  // The console is the bundle bar's (the maintainer, 2026-09-24: "Editable in the
-  // bundle bar only"). This form used to carry its own IP and port boxes,
+  // The console is the bundle bar's (editable in the
+  // bundle bar only). This form used to carry its own IP and port boxes,
   // seeded from the same resolved console; with the address now
   // editable in the bar, two boxes on one page would let Watch read one
   // desk while Apply wrote another -- and watching the desk you have just
@@ -40,14 +40,16 @@
 
   // ---- Watch-conditions panel (FR-6.5) -- a small
   // add/remove/edit table over atoo.watch_conditions's fixed
-  // {id, description, channel, field, operator, value, severity} schema,
+  // {id, description, channel, field, operator, value, severity} schema
+  // (plus `bus` on the send fields),
   // wired to the /api/watch-conditions* endpoints the same "path input +
   // Load button" and fetch/JSON-error conventions Build step 04's plan
   // loader uses (atoo/web/static/setup.js). Placed directly
   // below the connect panel and above the summary/table (shell.html's
-  // Watch panel), per docs/developer/setup-ui-design.md §6.5.
+  // Watch panel), per the Setup UI design.
 
-  const WC_FIELDS = ["muted", "fader_db", "dca", "mute_group", "patch"];
+  const WC_FIELDS = ["muted", "fader_db", "dca", "mute_group", "patch",
+                     "send_on", "send_db", "send_mode", "phantom"];
   const WC_OPERATORS = ["==", "!=", ">", "<", ">=", "<="];
   // `muted` is a bool, and the three relational fields ask a
   // yes/no question ("is it in DCA Drums", "is it patched to AES50-A 12") --
@@ -63,7 +65,16 @@
   // tests/test_webui.py asserts the served asset offers all five fields,
   // because the Python suite cannot otherwise see this file at all.
   const WC_TEXT_FIELDS = ["dca", "mute_group", "patch"];
-  const WC_EQUALITY_ONLY_FIELDS = ["muted"].concat(WC_TEXT_FIELDS);
+  // Boolean fields take a checkbox. The three send fields are about a
+  // strip's send to a bus, which the row's Bus box names (the `bus` key,
+  // shown under the Field select for those fields only), and send_mode
+  // takes one of three words. These lists must stay in step with
+  // watch_conditions (_BOOLEAN_FIELDS, _SEND_FIELDS, _SEND_MODES).
+  const WC_BOOL_FIELDS = ["muted", "send_on", "phantom"];
+  const WC_SEND_FIELDS = ["send_on", "send_db", "send_mode"];
+  const WC_SEND_MODES = ["pre", "post", "group"];
+  const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(WC_TEXT_FIELDS, ["send_mode"]);
+  const WC_BUS_PLACEHOLDER = "to bus: BUS 5-8, or a name";
   // What a valid value looks like, shown as placeholder text. A patch is
   // written the way an input list's patch column writes it and the way
   // CV005's own finding prints it -- one vocabulary, so an operator
@@ -76,8 +87,8 @@
   };
   const WC_SEVERITIES = ["error", "warning", "info"];
   // The Channel cell takes a strip name, or a position, a
-  // range, a whole kind, or a kind and a name (`BUS Drums`, the maintainer
-  // 2026-10-01). Which spellings are accepted, and which are
+  // range, a whole kind, or a kind and a name (`BUS Drums`, 2026-10-01). Which
+  // spellings are accepted, and which are
   // refused, is decided by the SERVER (`POST /api/watch-conditions/check`,
   // `watch_conditions.row_problems`) -- the loader's own rules -- rather
   // than by a second copy of them here that could drift.
@@ -100,8 +111,10 @@
   const wcEmptyState = el("wc-empty-state");
   const wcTableWrap = el("wc-table-wrap");
   const wcBody = el("wc-body");
-  const wcDraftedNote = el("wc-drafted-note");
   const wcDraftedBadge = el("wc-drafted-badge");
+  const wcSaveLock = el("wc-save-lock");
+  const wcFoldHint = el("wc-fold-hint");
+  const wcTable = el("wc-table");
 
   // The editor's working copy -- plain objects matching the file's own
   // {id, description, channel, field, operator, value, severity} shape.
@@ -169,14 +182,58 @@
     return cond.source === WC_SOURCE_DRAFTED;
   }
 
+  // How many drafted conditions nobody has reviewed is a
+  // state in the block's header (`.state.is-warn`), and
+  // what that means is its title.
   function wcRenderDraftedNote() {
     const drafted = wcConditions.filter(wcIsDrafted).length;
-    wcDraftedNote.hidden = drafted === 0;
+    wcDraftedBadge.hidden = drafted === 0;
     wcDraftedBadge.textContent = drafted + " drafted, unreviewed";
+  }
+
+  // A cell is an input only when it can
+  // be edited and saved. On a read-only show (the Demo) the table is
+  // text, the controls that would change the file are hidden
+  // (styles.css, `body.is-demo-show`), and Save stays up, locked, with
+  // the reason -- as Build step 02 does.
+  function wcReadOnly() {
+    const show = wcBundle();
+    return !!(show && show.demo);
+  }
+
+  // Save, by the UI style rules: hidden with nothing to save; locked, with
+  // the reason in words, when it could not work; a live primary only
+  // when pressing it writes a file. It was a live
+  // brass button on an empty page with no file and no show.
+  let wcSaving = false;
+  function wcSaveLockReason() {
+    if (wcReadOnly()) return "the Demo show is read-only";
+    if (!wcLoadedPath && !wcBundle()) return "no watch-conditions file. Change file to choose one";
+    return "";
+  }
+
+  function wcRenderSave() {
+    const reason = wcSaveLockReason();
+    const shown = wcDirty || wcReadOnly();
+    wcSaveBtn.hidden = !shown;
+    wcSaveBtn.disabled = !!reason || !wcDirty || wcSaving;
+    wcSaveLock.textContent = reason;
+    wcSaveLock.hidden = !(shown && reason);
+    if (wcFoldHint) wcFoldHint.textContent = wcReadOnly() ? "Show" : "Edit";
+  }
+
+  // A cell of text, for a read-only show (§7).
+  function wcTextCell(tr, text, cls) {
+    const td = document.createElement("td");
+    if (cls) td.className = cls;
+    td.textContent = text == null ? "" : String(text);
+    tr.appendChild(td);
+    return td;
   }
 
   function wcBuildRow(cond, index) {
     const tr = document.createElement("tr");
+    const readOnly = wcReadOnly();
 
     // The Source cell, drawn by a function because an edit anywhere in
     // this row changes it in place -- rebuilding the row on every
@@ -188,17 +245,21 @@
       if (wcIsDrafted(cond)) {
         // A button, not a label: pressing it is how an engineer keeps a
         // drafted condition exactly as proposed and still says "reviewed".
-        const tag = document.createElement("button");
-        tag.type = "button";
-        tag.className = "state-badge state-drafted wc-source-drafted";
+        // Drafted is a state (unreviewed, §6), so it is yellow; on a
+        // read-only show there is nothing to press, so it is only the tag.
+        const tag = document.createElement(readOnly ? "span" : "button");
+        if (!readOnly) tag.type = "button";
+        tag.className = "state is-warn wc-source-drafted";
         tag.textContent = "Drafted";
-        tag.title = "Proposed by a bundle build. Edit it, or press this, "
-          + "and it is yours; delete it and the next build does not re-add it.";
-        tag.addEventListener("click", edited);
+        tag.title = readOnly ? "Proposed by a bundle build, and not yet reviewed."
+          : "Proposed by a bundle build. Edit it, or press this, "
+            + "and it is yours; delete it and the next build does not re-add it.";
+        if (!readOnly) tag.addEventListener("click", edited);
         sourceCell.appendChild(tag);
       } else {
+        // Who wrote it is a fact about the row, not a state (§6).
         const tag = document.createElement("span");
-        tag.className = "state-badge state-notset wc-source-yours";
+        tag.className = "prop wc-source-yours";
         tag.textContent = "Yours";
         sourceCell.appendChild(tag);
       }
@@ -219,6 +280,27 @@
       }
     }
     renderSource();
+
+    // A read-only show: the same columns, as text (no remove column).
+    if (readOnly) {
+      wcRowRefs[index] = {};
+      wcTextCell(tr, cond.id, "wc-text wc-text-id");
+      wcTextCell(tr, cond.description, "wc-text wc-text-desc");
+      wcTextCell(tr, cond.channel, "wc-text");
+      wcTextCell(tr, cond.bus ? cond.field + " \u2192 " + cond.bus : cond.field,
+        "wc-text wc-text-mono");
+      wcTextCell(tr, cond.operator, "wc-text wc-text-mono");
+      wcTextCell(tr, cond.value, "wc-text wc-text-mono");
+      const sevCell = document.createElement("td");
+      const sev = WC_SEVERITIES.includes(cond.severity) ? cond.severity : "info";
+      const tag = document.createElement("span");
+      tag.className = "sev sev-" + sev;
+      tag.textContent = SEVERITY_LABEL[sev];
+      sevCell.appendChild(tag);
+      tr.appendChild(sevCell);
+      tr.appendChild(sourceCell);
+      return tr;
+    }
 
     const idCell = document.createElement("td");
     const idInput = wcMakeInput("text", cond.id, "wc-id");
@@ -276,12 +358,21 @@
       // The value's TYPE is a function of the field, so switching field
       // has to carry the value across or reset it -- a number left in a
       // `dca` row would be rejected at load time by the Python side.
-      if (cond.field === "muted") {
+      if (WC_BOOL_FIELDS.includes(cond.field)) {
         cond.value = typeof cond.value === "boolean" ? cond.value : false;
+      } else if (cond.field === "send_mode") {
+        cond.value = WC_SEND_MODES.includes(cond.value) ? cond.value : "pre";
       } else if (WC_TEXT_FIELDS.includes(cond.field)) {
         cond.value = typeof cond.value === "string" ? cond.value : "";
       } else {
         cond.value = typeof cond.value === "number" ? cond.value : 0;
+      }
+      // Only a send field has a bus, and the loader refuses the key on any
+      // other.
+      if (WC_SEND_FIELDS.includes(cond.field)) {
+        if (typeof cond.bus !== "string") cond.bus = "";
+      } else {
+        delete cond.bus;
       }
       // `field` changing narrows the operator <select> AND switches the
       // value input's type (checkbox <-> number) -- both live only in a
@@ -290,6 +381,24 @@
     });
     fieldCell.appendChild(fieldSelect);
     refs.field = [fieldSelect, wcMakeCellError(fieldCell)];
+    if (WC_SEND_FIELDS.includes(cond.field)) {
+      const busInput = wcMakeInput("text", cond.bus, "wc-bus");
+      busInput.placeholder = WC_BUS_PLACEHOLDER;
+      busInput.setAttribute("aria-label", "Send to bus");
+      busInput.addEventListener("input", () => { cond.bus = busInput.value; edited(); });
+      // A bus is written in its one display spelling (`bus5-8` -> `BUS
+      // 5-8`) once the cell is left, as the Channel cell is.
+      busInput.addEventListener("blur", async () => {
+        await wcRunCheck();
+        const check = wcRowChecks[index];
+        if (check && !check.bus && check.bus_canonical && check.bus_canonical !== cond.bus) {
+          cond.bus = check.bus_canonical;
+          busInput.value = check.bus_canonical;
+        }
+      });
+      fieldCell.appendChild(busInput);
+      refs.bus = [busInput, wcMakeCellError(fieldCell)];
+    }
     tr.appendChild(fieldCell);
 
     const opCell = document.createElement("td");
@@ -301,10 +410,14 @@
     tr.appendChild(opCell);
 
     const valueCell = document.createElement("td");
-    if (cond.field === "muted") {
+    if (WC_BOOL_FIELDS.includes(cond.field)) {
       const checkbox = wcMakeInput("checkbox", cond.value, "wc-value-checkbox");
       checkbox.addEventListener("change", () => { cond.value = checkbox.checked; edited(); });
       valueCell.appendChild(checkbox);
+    } else if (cond.field === "send_mode") {
+      const mode = wcMakeSelect(WC_SEND_MODES, cond.value, "wc-value-select");
+      mode.addEventListener("change", () => { cond.value = mode.value; edited(); });
+      valueCell.appendChild(mode);
     } else if (WC_TEXT_FIELDS.includes(cond.field)) {
       const text = wcMakeInput("text", cond.value, "wc-value-text");
       text.placeholder = WC_VALUE_PLACEHOLDER[cond.field] || "";
@@ -347,6 +460,7 @@
       wcRowChecks.splice(index, 1);
       wcRenderTable();
     });
+    removeCell.className = "wc-col-remove";
     removeCell.appendChild(removeBtn);
     tr.appendChild(removeCell);
 
@@ -359,16 +473,18 @@
     wcConditions.forEach((cond, index) => wcBody.appendChild(wcBuildRow(cond, index)));
     wcEmptyState.hidden = wcConditions.length > 0;
     wcTableWrap.hidden = wcConditions.length === 0;
+    wcTable.classList.toggle("is-readonly", wcReadOnly());
     wcRenderFoldMeta();
     wcRenderDraftedNote();
+    wcRenderSave();
     wcPaintChecks();
-    wcScheduleCheck();
+    if (!wcReadOnly()) wcScheduleCheck();
   }
 
   // ---- Inline checks -----------------------------------
   //
-  // The maintainer: "Have the UI reject channel names or values that are not
-  // well formed." Each row is asked of the server, which answers with
+  // The UI rejects channel names or values that are not
+  // well formed. Each row is asked of the server, which answers with
   // the loader's own reasons per cell; a refused cell is outlined and its
   // reason shown under it, and Save refuses while any remain.
 
@@ -383,7 +499,7 @@
   function wcPaintChecks() {
     wcRowRefs.forEach((refs, index) => {
       const check = wcRowChecks[index] || {};
-      for (const cell of ["channel", "field", "value"]) {
+      for (const cell of ["channel", "field", "bus", "value"]) {
         if (!refs || !refs[cell]) continue;
         const [control, err] = refs[cell];
         const reason = check[cell] || "";
@@ -431,17 +547,17 @@
   function wcCountProblems(rows) {
     let n = 0;
     for (const row of rows) {
-      for (const cell of ["channel", "field", "value", "row"]) if (row && row[cell]) n += 1;
+      for (const cell of ["channel", "field", "bus", "value", "row"]) if (row && row[cell]) n += 1;
     }
     return n;
   }
 
   // ---- The file: a bundle file, like Build's -------------
   //
-  // The maintainer, 2026-10-01: "The `watch.json` file always needs to go with
-  // the current bundle. Make its file handling consistent with the way we
-  // handle other files: file change / new / save and if we change to a new
-  // file or create a new one, it goes into the bundle." So the row reads
+  // The `watch.json` file always goes with the current bundle, and its
+  // file handling is consistent with the way the other files are handled:
+  // file change / new / save, and if we change to a new
+  // file or create a new one, it goes into the bundle. So the row reads
   // like a Build tile's: the file as a readout, then
   //
   //   Change file  the file browser. With a bundle open, a file from
@@ -468,6 +584,7 @@
     wcDirty = !!dirty;
     wcDirtyBadge.hidden = !wcDirty;
     wcRenderFoldMeta();
+    wcRenderSave();
   }
 
   // The editor's folded line says what is in it.
@@ -475,9 +592,14 @@
     const meta = el("wc-fold-meta");
     if (!meta) return;
     const n = wcConditions.length;
-    meta.textContent = n + (n === 1 ? " condition" : " conditions") +
-      (wcLoadedPath ? " \u00b7 " + wcFile.textContent : "") +
-      (wcDirty ? " \u00b7 unsaved changes" : "");
+    // The block's notation (§3): the count, then the file, as data type.
+    meta.textContent = n + (n === 1 ? " condition" : " conditions");
+    if (wcLoadedPath) {
+      const own = wcBundleFile && wcBundleFile.path === wcLoadedPath;
+      meta.appendChild(document.createTextNode(" \u00b7 "));
+      meta.appendChild(makeCode(own ? wcBundleFile.display_path : wcLoadedPath));
+    }
+    // The Unsaved tag in the box says so; saying it here too is a second voice.
   }
 
   // The readout: the bundle's file by its short name (`touringband/
@@ -498,6 +620,7 @@
     wcFile.classList.toggle("is-empty", !wcLoadedPath);
     wcNewBtn.hidden = !(show && wcBundleFile && !wcBundleFile.present);
     wcRenderFoldMeta();
+    wcRenderSave();
   }
 
   function wcApplyResponse(data) {
@@ -667,7 +790,8 @@
       return;
     }
     wcSetMessage(null);
-    wcSaveBtn.disabled = true;
+    wcSaving = true;
+    wcRenderSave();
     try {
       // No path is the open bundle's watch.json (the server's default).
       const res = await fetch("/api/watch-conditions/save", {
@@ -681,13 +805,14 @@
         return;
       }
       wcApplyResponse(data);
-      // The maintainer, 2026-10-01: a save while watching is picked up at once.
+      // A save while watching is picked up at once.
       wcSetMessage("Saved " + wcFile.textContent + "." +
         (data.watch_reloaded ? " Watch is using it from the next reading." : ""), true);
     } catch (e) {
       wcSetMessage("Could not reach the Atoo server.");
     } finally {
-      wcSaveBtn.disabled = false;
+      wcSaving = false;
+      wcRenderSave();
     }
   });
 
@@ -704,7 +829,27 @@
   // so the next build would not put them back either). So a table with
   // no unsaved edits is refreshed; one WITH unsaved edits is left alone
   // and told, because overwriting someone's typing is worse.
+  // The watch-conditions file the server held when this page was drawn
+  // (`--watch-conditions`), from the embedded start-up data.
+  function wcStartupPath() {
+    const tag = el("initial-shell");
+    if (!tag) return null;
+    try {
+      return (JSON.parse(tag.textContent) || {}).watch_conditions_path || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  const wcStartedWith = wcStartupPath();
+
   async function wcRefresh() {
+    // With no show open the server holds a file only if one was given at
+    // start-up or this page has loaded one: otherwise there is nothing to
+    // ask for, and asking would put a 404 in the browser's console.
+    if (!wcBundle() && !wcLoadedPath && !wcStartedWith) {
+      wcRenderFile();
+      return;
+    }
     let res;
     try {
       res = await fetch("/api/watch-conditions");
@@ -760,7 +905,16 @@
       SP.onModeChange((mode) => { if (mode === "watch") wcRefresh(); });
     }
     if (SP && typeof SP.onBundleChange === "function") {
-      SP.onBundleChange(() => wcRefresh());
+      // A read-only show draws the table as text, so a change between a
+      // writable show and the Demo redraws it as well as re-reading it.
+      let wasReadOnly = wcReadOnly();
+      SP.onBundleChange(() => {
+        if (wcReadOnly() !== wasReadOnly) {
+          wasReadOnly = wcReadOnly();
+          wcRenderTable();
+        }
+        wcRefresh();
+      });
     }
   }
 
@@ -773,22 +927,33 @@
   const coverageNote = el("coverage-note");
   const alertBody = el("alert-body");
   const emptyState = el("empty-state");
+  // Whether the alert table has no rows; set by renderTable, and read by
+  // renderEmptyState, which is also redrawn when Start's lock changes.
+  let tableEmpty = true;
   const lastUpdated = el("last-updated");
+  // The block header's notation (which console) and Start's
+  // lock reason; the verdict bar that heads the alert table (§10).
+  const consoleNote = el("watch-notation");
+  const startLock = el("start-lock");
+  const verdictBar = el("watch-verdict");
+  const verdictWord = el("watch-verdict-word");
+  const verdictLine = el("watch-verdict-line");
+  const alertHead = document.querySelector("#alert-table thead");
   const consoleOrigin = el("console-origin");
   const watchNotes = el("watch-notes");
   // The flash, and the two folds below the table.
   const watchFlash = el("watch-flash");
   const flashToggle = el("watch-flash-on");
   // "Flash on new" is the engineer's choice: off until turned on, and
-  // remembered on this device. A toggle button (aria-pressed), not a
+  // remembered on this device. A switch (role="switch"), not a
   // checkbox -- the only checkbox that reaches a console is Apply's
-  // arming control. (The rows' Suppress boxes, only hide a
+  // arming control. (The rows' Hide buttons only hide a
   // row here.)
   let flashOn = false;
   try { flashOn = localStorage.getItem("atoo.watchFlash") === "1"; } catch (e) { /* off */ }
   function renderFlashToggle() {
-    flashToggle.setAttribute("aria-pressed", flashOn ? "true" : "false");
-    flashToggle.innerHTML = "Flash on new: <b>" + (flashOn ? "On" : "Off") + "</b>";
+    flashToggle.setAttribute("aria-checked", flashOn ? "true" : "false");
+    flashToggle.querySelector(".word").textContent = flashOn ? "On" : "Off";
   }
   renderFlashToggle();
   flashToggle.addEventListener("click", () => {
@@ -796,6 +961,20 @@
     renderFlashToggle();
     try { localStorage.setItem("atoo.watchFlash", flashOn ? "1" : "0"); } catch (e) { /* this page only */ }
   });
+  // Virtual soundcheck: the engineer's word that the alternate inputs are on
+  // purpose. A switch (role="switch") with a state tag beside the
+  // connection while it is on. Off until pressed, sent with Start, told to the
+  // server while a watch runs; the server forgets it at Stop, so every Start
+  // begins Off and nothing is stored on this device.
+  const vsToggle = el("watch-virtual");
+  const vsPill = el("vs-pill");
+  let virtualSoundcheck = false;
+  function renderVirtualSoundcheck() {
+    vsToggle.setAttribute("aria-checked", virtualSoundcheck ? "true" : "false");
+    vsToggle.querySelector(".word").textContent = virtualSoundcheck ? "On" : "Off";
+    vsPill.hidden = !virtualSoundcheck;
+  }
+  renderVirtualSoundcheck();
   const wcPanel = el("wc-panel");
   const suppressedFold = el("watch-suppressed");
   const suppressedList = el("watch-suppressed-list");
@@ -807,7 +986,7 @@
   //
   // One address on the page, and it is the bar's -- resolved at startup
   // from ATOO_CONSOLE / ~/.atoo.config [console] or set
-  // in the bar since. the rule still binds: a value nobody typed on
+  // in the bar since. The rule still binds: a value nobody typed on
   // this form must say where it came from, so #console-origin names the
   // provenance exactly as the bar does ("from ...", or "set here").
   //
@@ -822,7 +1001,7 @@
     // `window.Atoo.console()` hands out a copy of the shell's ONE
     // console. No shell, or a shell that sent nothing: nothing to watch
     // but the demo. Every key read below is tested for presence first --
-    // CLAUDE.md's silently-blank trap.
+    // the silently-blank trap (`esc()` renders undefined as an empty string).
     if (!SP || typeof SP.console !== "function") return {};
     return SP.console() || {};
   }
@@ -842,8 +1021,8 @@
   }
 
   // Which console Start will watch, in words -- and NOT its address, which
-  // the bar already shows (the maintainer 2026-10-01: "no need to
-  // repeat the IP address"). Demo is the bar's choice too: Watch follows
+  // the bar already shows (no need to
+  // repeat the IP address). Demo is the bar's choice too: Watch follows
   // the bar, so there is no Source picker here.
   function renderWatchConsole() {
     const desk = barConsole();
@@ -879,7 +1058,7 @@
   }
 
   if (SP && typeof SP.onConsoleChange === "function") {
-    SP.onConsoleChange(() => { renderWatchConsole(); renderAboutLine(); });
+    SP.onConsoleChange(() => { renderWatchConsole(); renderAboutLine(); renderStartLock(); });
   }
 
   // Findings currently shown, keyed the same way atoo.watch does
@@ -903,16 +1082,18 @@
   let serverRunning = null;
   let wsRetryMs = 1000;
 
+  // The severity is part of the key: the same rule at another grade (C004
+  // at INFO under Virtual soundcheck, a warning once it is off) is the old
+  // row cleared and a new one, as the server counts it (`watch.finding_key`).
   function findingKey(f) {
-    return f.rule_id + "|" + f.addresses.join(",");
+    return f.rule_id + "|" + f.addresses.join(",") + "|" + f.severity;
   }
 
   // ---- Suppression ----------------------------------------
   //
-  // The maintainer, 2026-10-12: "I want to supress either all Warnings or all
-  // Infos by clicking on their findings, and I want to be able to supress
-  // individual findings on the Watch page by checking a box similar to
-  // how I can supress findings on the build page findings panel."
+  // An engineer can suppress either all Warnings or all
+  // Infos by clicking on their findings, and individual findings on the
+  // Watch page by checking a box, as on the build page's findings panel.
   //
   // Two ways to hide a row, both held by this page only (nothing reaches
   // the server or the desk), and both for the watch session -- Start
@@ -948,13 +1129,14 @@
     updateCounts();
   }
 
-  // The fold below the table: each finding suppressed by its box, with
-  // the same box ticked -- untick it to bring the row back.
+  // The fold below the table: each finding hidden by its row's Hide
+  // button, with a Show button in its place to bring the row back.
   function renderSuppressed() {
     if (!suppressedFold) return;
     const items = Array.from(shown.values()).filter((f) => suppressed.has(findingKey(f)));
     items.sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
-    suppressedCount.textContent = "(" + items.length + ")";
+    // The count is the block's notation (§3), not in brackets.
+    suppressedCount.textContent = String(items.length);
     suppressedFold.hidden = items.length === 0;
     suppressedList.textContent = "";
     for (const f of items) {
@@ -962,41 +1144,43 @@
       const li = document.createElement("li");
       li.className = "watch-suppressed-item";
       li.dataset.sev = SEVERITY_ORDER[f.severity] !== undefined ? f.severity : "info";
-      const box = makeSuppressBox(f, true);
-      li.appendChild(box);
       const badge = document.createElement("span");
-      badge.className = "sev-badge sev-" + f.severity;
+      badge.className = "sev sev-" + f.severity;
       badge.textContent = SEVERITY_LABEL[f.severity] || f.severity;
       li.appendChild(badge);
       const where = document.createElement("b");
-      where.textContent = parts.where || "\u2014";
+      where.textContent = parts.where ? parts.where + ":" : "\u2014";
       li.appendChild(where);
       li.appendChild(document.createTextNode(" " + (parts.claim || "")));
+      li.appendChild(makeHideButton(f, true));
       li.appendChild(makeCode(f.rule_id));
       suppressedList.appendChild(li);
     }
   }
 
-  // The row's box, and the fold's: the Build dock's checkbox, ticked
-  // meaning "suppressed".
-  function makeSuppressBox(f, checked) {
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.className = "watch-row-check";
-    box.checked = checked;
-    box.title = checked ? "Suppressed -- untick to show this finding again"
-                        : "Suppress: hide this finding while it stands";
-    box.setAttribute("aria-label", checked ? "Show this finding again" : "Suppress this finding");
-    box.addEventListener("change", () => {
-      // Ticking moves the row out of the table, so this box goes with it:
-      // keep keyboard focus on the next row's box rather than <body>.
-      const row = box.closest("tr, li");
+  // The row's Hide button, and the fold's Show: a quiet button (the guide's
+  // §4), labelled in words, with the finding named in its accessible label
+  // so a list of them is not twelve buttons called "Hide".
+  function makeHideButton(f, hidden) {
+    const parts = splitFinding(f);
+    const what = joinWhere(parts.where, parts.claim) || f.rule_id;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-quiet watch-row-hide";
+    btn.textContent = hidden ? "Show" : "Hide";
+    btn.title = hidden ? "Show this finding again"
+                       : "Hide this finding on this page while it stands; the desk is not touched";
+    btn.setAttribute("aria-label", (hidden ? "Show again: " : "Hide: ") + what);
+    btn.addEventListener("click", () => {
+      // Hiding moves the row out of the table, so this button goes with it:
+      // keep keyboard focus on the next row's button rather than <body>.
+      const row = btn.closest("tr, li");
       const next = row && (row.nextElementSibling || row.previousElementSibling);
-      setSuppressed(f, box.checked);
-      const target = next && next.isConnected ? next.querySelector(".watch-row-check") : null;
+      setSuppressed(f, !hidden);
+      const target = next && next.isConnected ? next.querySelector(".watch-row-hide") : null;
       if (target) target.focus();
     });
-    return box;
+    return btn;
   }
 
   for (const sev of SUPPRESSIBLE_SEVS) {
@@ -1023,20 +1207,77 @@
   // What the running watch reads ("Demo", or "address:port"), kept so a
   // live event -- which carries no label -- does not wipe it off the pill.
   let watchingLabel = "";
+  // The pill's state, so it can be redrawn when only the bar's console
+  // changes: idle reads "Demo ready" beside a chosen Demo, and "Not
+  // connected" otherwise.
+  let connState = "idle";
 
+  // The connection is a state tag. Watching
+  // is good and live -- green, its dot pulsing; not connected is neutral;
+  // an error is red, and what the server said goes under the verdict in
+  // words, since a tag holds a state word, not a sentence.
   function setConnPill(state, label) {
-    connPill.className = "pill";
+    connState = state;
+    connPill.className = "state";
+    connPill.title = "";
     if (state === "watching") {
       if (label) watchingLabel = label;
-      connPill.classList.add("pill-watching");
+      connPill.classList.add("is-ok", "is-live");
       connPill.textContent = ("Watching " + (label || watchingLabel)).trim();
     } else if (state === "error") {
-      connPill.classList.add("pill-error");
-      connPill.textContent = "Error: " + label;
+      connPill.classList.add("is-err");
+      connPill.textContent = "Error";
+      connPill.title = label || "";
+      if (label) setMessage(label);
     } else {
-      connPill.classList.add("pill-idle");
-      connPill.textContent = "Not connected";
+      connPill.textContent = idlePillText();
     }
+    renderConsoleNote();
+  }
+
+  // The header's notation: which console this watch reads -- the running
+  // watch's own while it runs (it does not follow the bar), the bar's
+  // otherwise.
+  function idlePillText() {
+    return barConsole().demo ? "Demo ready" : "Not connected";
+  }
+
+  function renderConsoleNote() {
+    if (!consoleNote) return;
+    if (connState === "idle") connPill.textContent = idlePillText();
+    const desk = barConsole();
+    let text;
+    if (serverRunning && watchingLabel) text = watchingLabel === DEMO_LABEL ? "Demo rig" : watchingLabel;
+    else if (desk.demo) text = "Demo rig";
+    else text = barLabel(desk) || "No console";
+    consoleNote.textContent = text;
+  }
+
+  // Start, by the UI style rules: a button that would do nothing is locked,
+  // with the reason beside it. With no console in the bar (and no Demo)
+  // there is nothing to watch -- before an earlier change it was a live brass
+  // button on the empty page. While a watch runs Stop is the action, and
+  // the Watching state says why Start is not.
+  let startPending = false;
+  function startLockReason() {
+    const desk = barConsole();
+    if (!desk.demo && !barLabel(desk)) return "no console. Choose one in the bar";
+    return "";
+  }
+
+  function renderStartLock() {
+    const running = serverRunning === true || lastRunning === true;
+    const reason = running ? "" : startLockReason();
+    startBtn.disabled = running || startPending || !!reason;
+    startLock.textContent = reason;
+    startLock.hidden = !reason;
+    // No visible text for the running case (the Watching state says it);
+    // the title is for hover and assistive technology.
+    if (running) startBtn.title = "Locked: already watching";
+    else if (reason) startBtn.title = "Locked: " + reason;
+    else startBtn.removeAttribute("title");
+    renderConsoleNote();
+    renderEmptyState();
   }
 
   // While a watch runs, the editor and the session details fold to one
@@ -1044,14 +1285,16 @@
   // change, so a fold opened by hand mid-show stays open.
   let lastRunning = null;
   function setRunningUI(running) {
-    startBtn.disabled = running;
     stopBtn.disabled = !running;
+    if (running) stopBtn.removeAttribute("title");
+    else stopBtn.title = "Locked: not watching";
     intervalInput.disabled = running;
     if (running !== lastRunning) {
       lastRunning = running;
       wcPanel.open = !running;
       watchAbout.open = !running;
     }
+    renderStartLock();
     renderStatus();
   }
 
@@ -1113,6 +1356,26 @@
   // claim is what the reading says -- the detail, which reads
   // `<strip> <what it reads> -- <description>`, with the strip and the
   // description taken off. Both are known values, not guessed at.
+  //
+  // The claim of a built-in finding is its catalogue title, which is Title
+  // Case ("Main Not Patched"); the engineer's conditions say "has its fader
+  // at -144 dB". Watch reads both as one sentence after the strip, so the
+  // title is sentence-cased here -- in Watch only; the catalogue is
+  // unchanged everywhere else.
+  function sentenceCase(title) {
+    return String(title == null ? "" : title).replace(/[A-Za-z0-9'\u2019]+/g, (word, at) => {
+      // The first word keeps its capital; an acronym or a word with a digit
+      // (DCA, FX, AES50, OK) is a name and stays as it is.
+      if (at === 0 || word === word.toUpperCase()) return word;
+      return word.charAt(0).toLowerCase() + word.slice(1);
+    });
+  }
+
+  // "<where>: <claim>", or the claim alone when the finding has no strip.
+  function joinWhere(where, claim) {
+    return where && claim ? where + ": " + claim : (where || claim || "");
+  }
+
   function splitFinding(f) {
     const where = f.strip || "";
     const detail = f.detail || "";
@@ -1123,7 +1386,7 @@
       if (f.title && claim.endsWith(tail)) claim = claim.slice(0, -tail.length);
       return { where, claim, why: f.title };
     }
-    return { where, claim: f.title, why: detail };
+    return { where, claim: sentenceCase(f.title), why: detail };
   }
 
   function findingHtml(f) {
@@ -1132,19 +1395,24 @@
       '<span class="row-why">' + escapeHtml(parts.why) + "</span>";
     for (const g of f.also || []) {
       html += '<span class="finding-also">Also <code>' + escapeHtml(g.rule_id) + "</code> " +
-        escapeHtml(g.title) + ": " + escapeHtml(g.detail) + "</span>";
+        escapeHtml(sentenceCase(g.title)) + ": " + escapeHtml(g.detail) + "</span>";
     }
     return html;
   }
 
+  // In this table, and only here, the
+  // severity tag is the large solid, to be read across the room. An info
+  // has no solid: it keeps its tint, so a row of notes stays calm. The
+  // rule id is a readout.
   function rowHtml(f) {
     const sevLabel = SEVERITY_LABEL[f.severity] || f.severity;
     const parts = splitFinding(f);
+    const solid = f.severity === "error" || f.severity === "warning" ? " solid" : "";
     return (
-      '<td class="col-sev"><span class="sev-badge sev-' + f.severity + '">' + sevLabel + "</span></td>" +
+      '<td class="col-sev"><span class="sev big' + solid + " sev-" + f.severity + '">' + sevLabel + "</span></td>" +
       '<td class="col-where"><span class="row-where">' + escapeHtml(parts.where || "\u2014") + "</span></td>" +
       '<td class="col-title">' + findingHtml(f) + "</td>" +
-      '<td class="col-rule"><code>' + escapeHtml(f.rule_id) + '</code><span class="row-cat">' +
+      '<td class="col-rule"><span class="readout">' + escapeHtml(f.rule_id) + '</span><span class="row-cat">' +
         escapeHtml(f.category) + "</span></td>" +
       '<td class="col-since">' + relativeTime(f._since) + "</td>"
     );
@@ -1185,7 +1453,7 @@
     if (!baselineNote.hidden && baselineNote.textContent) parts.push(baselineNote.textContent);
     if (warned.length) {
       const badge = document.createElement("span");
-      badge.className = "sev-badge sev-warning";
+      badge.className = "sev sev-warning";
       badge.textContent = warned.length + " not watched";
       watchAboutLine.appendChild(badge);
     }
@@ -1218,7 +1486,7 @@
       part.className = "watch-note watch-note-" + g.severity;
       if (g.severity !== "info") {
         const badge = document.createElement("span");
-        badge.className = "sev-badge sev-" + g.severity;
+        badge.className = "sev sev-" + g.severity;
         badge.textContent = SEVERITY_LABEL[g.severity];
         part.appendChild(badge);
         part.appendChild(document.createTextNode(" "));
@@ -1261,8 +1529,25 @@
     return div.innerHTML;
   }
 
+  // The sentence under an empty table. It depends on whether Start is live,
+  // which follows the bundle bar's console, so it is drawn again when that
+  // changes and not only with the table.
+  function renderEmptyState() {
+    if (tableEmpty) {
+      const hiddenNow = Array.from(shown.values()).filter(isHidden).length;
+      emptyState.textContent = !shown.__watchedOnce
+        ? (startLockReason() ? "Not watching yet. Choose a console in the bar, then Start watching."
+          : "Not watching yet. Press Start watching.")
+        : hiddenNow
+          ? "Nothing shown: " + hiddenNow + " finding(s) hidden. Click a struck-through " +
+            "count above, or choose Show on one under Suppressed, to show them."
+          : "";
+    }
+    emptyState.hidden = !tableEmpty || !emptyState.textContent;
+  }
+
   function renderTable() {
-    // The maintainer, 2026-10-01: errors first, then warnings, then info, and
+    // Errors first, then warnings, then info, and
     // within a severity the newest finding at the top. Every render puts
     // every row back in this order (below), so a finding that arrives
     // later never lands at the bottom of the table.
@@ -1286,16 +1571,13 @@
       return a.rule_id.localeCompare(b.rule_id);
     });
 
-    emptyState.hidden = rows.length > 0 || alertBody.children.length > 0;
-    if (rows.length === 0 && alertBody.children.length === 0) {
-      const hiddenNow = Array.from(shown.values()).filter(isHidden).length;
-      emptyState.textContent = !shown.__watchedOnce
-        ? "Not watching yet. Press Start watching."
-        : hiddenNow
-          ? "Nothing shown -- " + hiddenNow + " finding(s) hidden. Click a struck-through " +
-            "count above, or untick one under Suppressed, to show them."
-          : "No findings — nothing on this desk is out of place.";
-    }
+    // The one centred empty state. With
+    // nothing in the table its head goes too; a watch with nothing wrong
+    // says so in the verdict bar (ALL OK), so the sentence is only for
+    // before Start, and for rows that are all hidden.
+    tableEmpty = rows.length === 0 && alertBody.children.length === 0;
+    if (alertHead) alertHead.hidden = tableEmpty;
+    renderEmptyState();
 
     for (const f of rows) {
       const key = findingKey(f);
@@ -1305,7 +1587,7 @@
         tr.dataset.key = key;
         tr.className = "sev-row-" + f.severity;
         tr.innerHTML = rowHtml(f);
-        tr.querySelector(".col-sev").prepend(makeSuppressBox(f, false));
+        tr.querySelector(".col-sev").appendChild(makeHideButton(f, false));
         if (f._isNew) {
           f._isNew = false;
           tr.classList.add("row-new");
@@ -1433,6 +1715,9 @@
     const silent = since === null ? 0 : Date.now() - since;
     const stale = serverRunning === true && since !== null && silent >= staleAfterMs();
     const wasStale = lastUpdated.classList.contains("is-stale");
+    // Meta type while readings arrive; a warning state (§6)
+    // once they stop.
+    lastUpdated.className = stale ? "state is-warn" : "meta";
     lastUpdated.classList.toggle("is-stale", stale);
     if (stale) {
       lastUpdated.textContent = "No reading for " + durationText(silent);
@@ -1455,9 +1740,25 @@
   }
   setInterval(renderLastUpdated, 1000);
 
+  // A stopped watch's "Updated 1m ago" is about the show and console it
+  // read. Opening another show, or changing the console, makes it a claim
+  // about something no longer on the screen, so it goes. A running watch
+  // keeps its label: it is still reading what it was started on.
+  function forgetStoppedReading() {
+    if (serverRunning === true) return;
+    lastReadingAt = null;
+    waitingSince = null;
+    lastUpdated.className = "meta";
+    lastUpdated.textContent = "";
+    lastUpdated.title = "";
+    renderStatus();
+  }
+  if (SP && typeof SP.onBundleChange === "function") SP.onBundleChange(forgetStoppedReading);
+  if (SP && typeof SP.onConsoleChange === "function") SP.onConsoleChange(forgetStoppedReading);
+
   // ---- The screen's state --------------------------------
   //
-  // The maintainer, 2026-10-11: a glance at the screen tells "everything is OK
+  // A glance at the screen tells "everything is OK
   // on the desk" from "something needs attention" -- by how it looks, not
   // by a label. The rows carry it (tinted and barred in their severity's
   // colour); the page carries one state, `body[data-watch-worst]`: none or
@@ -1476,6 +1777,63 @@
     else if (counts.warning) worst = "warning";
     else worst = counts.info ? "info" : "none";
     document.body.dataset.watchWorst = worst;
+    renderVerdict(worst);
+  }
+
+  // ---- The verdict bar ------------------
+  //
+  // Communicate 'All OK' or 'Trouble' at a
+  // glance. One word at the head of the table, in the severity's colour:
+  // TROUBLE with any error, WARNING with warnings only, ALL OK with
+  // neither (an info is a note, not trouble); NOT WATCHING, grey, before
+  // Start. Then the first open finding, in words. Two states the drawing
+  // has no word for are said in grey rather than guessed at: STARTING
+  // before the first reading, and NO READING when readings have stopped
+  // -- the table then shows how the desk WAS, so it must not read as ALL
+  // OK.
+  const VERDICT = {
+    error: ["is-trouble", "Trouble"],
+    warning: ["is-warn", "Warning"],
+    info: ["is-ok", "All OK"],
+    none: ["is-ok", "All OK"],
+    idle: ["", "Not watching"],
+    starting: ["", "Starting"],
+    stale: ["", "No reading"],
+  };
+
+  function firstOpenFinding() {
+    let best = null;
+    for (const f of shown.values()) {
+      if (isHidden(f) || SEVERITY_ORDER[f.severity] === undefined) continue;
+      if (!best) { best = f; continue; }
+      const a = SEVERITY_ORDER[f.severity], b = SEVERITY_ORDER[best.severity];
+      if (a < b || (a === b && (Date.parse(f._since) || 0) > (Date.parse(best._since) || 0))) best = f;
+    }
+    return best;
+  }
+
+  function renderVerdict(worst) {
+    if (!verdictBar) return;
+    const [cls, word] = VERDICT[worst] || VERDICT.idle;
+    verdictBar.className = "verdict-bar" + (cls ? " " + cls : "");
+    verdictBar.dataset.verdict = worst;
+    verdictWord.textContent = word;
+    let line = "";
+    if (worst === "error" || worst === "warning") {
+      const f = firstOpenFinding();
+      if (f) {
+        const parts = splitFinding(f);
+        line = joinWhere(parts.where, parts.claim);
+      }
+    } else if (worst === "none" || worst === "info") {
+      line = "Nothing on this desk is out of place.";
+    } else if (worst === "starting") {
+      line = "Waiting for the first reading.";
+    } else if (worst === "stale") {
+      line = "The table shows the desk as it was at the last reading.";
+    }
+    verdictLine.textContent = line;
+    verdictLine.hidden = !line;
   }
 
   // "Flash on new": a new warning or error flashes the whole screen once
@@ -1564,6 +1922,41 @@
     }
   }
 
+  // The server's word on the switch, for a running watch; and Off again once
+  // a watch that was running has stopped. A choice made before Start is kept
+  // until then.
+  function adoptVirtualSoundcheck(status, wasRunning) {
+    if (status.running) virtualSoundcheck = !!status.virtual_soundcheck;
+    else if (wasRunning) virtualSoundcheck = false;
+    renderVirtualSoundcheck();
+  }
+
+  vsToggle.addEventListener("click", async () => {
+    const wanted = !virtualSoundcheck;
+    virtualSoundcheck = wanted;
+    renderVirtualSoundcheck();
+    if (!serverRunning) return;  // chosen now, sent with Start
+    vsToggle.disabled = true;
+    try {
+      const res = await fetch("/api/watch/virtual-soundcheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: wanted }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        virtualSoundcheck = !wanted;
+        setMessage(data.error || "Could not change Virtual soundcheck.");
+      }
+    } catch (e) {
+      virtualSoundcheck = !wanted;
+      setMessage("Could not reach the Atoo server.");
+    } finally {
+      vsToggle.disabled = false;
+      renderVirtualSoundcheck();
+    }
+  });
+
   function connectWs() {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
     ws = new WebSocket(proto + "//" + location.host + "/ws/watch");
@@ -1577,6 +1970,7 @@
     ws.onmessage = (evt) => {
       const payload = JSON.parse(evt.data);
       if (payload.type === "status") {
+        adoptVirtualSoundcheck(payload, serverRunning);
         serverRunning = !!payload.running;
         setRunningUI(payload.running);
         if (payload.running) setConnPill("watching", payload.label);
@@ -1593,6 +1987,8 @@
         setConnPill("watching", watchingLabel);
         handleEvent(payload);
       } else if (payload.type === "error") {
+        virtualSoundcheck = false;
+        renderVirtualSoundcheck();
         serverRunning = false;
         setRunningUI(false);
         setConnPill("error", payload.error);
@@ -1609,6 +2005,7 @@
     try {
       const res = await fetch("/api/status");
       const status = await res.json();
+      adoptVirtualSoundcheck(status, serverRunning);
       serverRunning = !!status.running;
       setRunningUI(status.running);
       // A live-console watch is labelled `address:port` by the server
@@ -1638,6 +2035,7 @@
     const body = {
       source: "console",
       interval: parseFloat(intervalInput.value) || 2.0,
+      virtual_soundcheck: virtualSoundcheck,
     };
     // No console, port or timeout in the body: the server watches the
     // bundle bar's console, with its port and timeout -- the same one
@@ -1654,7 +2052,8 @@
     // session, the same way `atoo watch --watch-conditions` already
     // does on the CLI side.
     if (wcLoadedPath) body.watch_conditions_path = wcLoadedPath;
-    startBtn.disabled = true;
+    startPending = true;
+    renderStartLock();
     // The session's first event can beat both the server's status frame
     // and this fetch's answer to the socket.
     serverRunning = true;
@@ -1663,8 +2062,8 @@
     // resolves, and clearing afterwards wiped it -- the table then showed
     // only what changed later, never what was already wrong at Start
     // (found checking an earlier change in Chromium).
-    // The maintainer, 2026-10-01: "When you start watching, existing findings
-    // need to be deleted" -- every trace of the last session goes: rows,
+    // When you start watching, existing findings
+    // need to be deleted -- every trace of the last session goes: rows,
     // counts and the last-updated time.
     shown = new Map();
     alertBody.innerHTML = "";
@@ -1692,9 +2091,12 @@
         setMessage(data.error || "Could not start watching.");
         serverRunning = false;
         waitingSince = null;
-        startBtn.disabled = false;
+        startPending = false;
+        renderStartLock();
+        renderStatus();
         return;
       }
+      startPending = false;
       setRunningUI(true);
       setConnPill("watching", data.label || "");
       watchingConsole = startingOn;
@@ -1703,7 +2105,9 @@
       setMessage("Could not reach the Atoo server.");
       serverRunning = false;
       waitingSince = null;
-      startBtn.disabled = false;
+      startPending = false;
+      renderStartLock();
+      renderStatus();
     }
   });
 
@@ -1715,6 +2119,9 @@
     waitingSince = null;
     renderLastUpdated();
     await fetch("/api/watch/stop", { method: "POST" });
+    // The server forgets the switch at Stop; so does the page.
+    virtualSoundcheck = false;
+    renderVirtualSoundcheck();
     setRunningUI(false);
     setConnPill("idle");
     watchingConsole = null;
@@ -1722,6 +2129,7 @@
   });
 
   renderWatchConsole();
+  renderStartLock();
   refreshStatus();
   connectWs();
   renderTable();

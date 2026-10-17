@@ -1,252 +1,164 @@
 # `tests/fixtures/`
 
-Everything the test suite reads lives here. Nothing under `examples/` is a
-fixture: the show bundles there are rebuilt between shows, and the desk
-captures, presets and demo files are the maintainer's working material.
-`tests/conftest.py` refuses any read of `examples/` from a test that is not
-marked `example_guard` (CLAUDE.md, "A bundle under `examples/` is a living
-example, not a test fixture").
+Everything the test suite reads from disk lives here: input lists and
+conventions, plans, model replies, build logs, console captures and
+journals, and channel presets. Tests build small cases in the test itself
+where they can; these are the ones that are too large or too real to build.
 
-A test that needs a file which also lives in `examples/` reads a **frozen
-copy** here. A copy is not kept in step with its original. If the original
-changes, the copy stays as it is, and the tests go on asserting against the
-bytes they were written for. To refresh a copy on purpose, copy the new
-bytes, fix whichever assertions change, and update the entry below.
+A fixture is **frozen**. If the file it was taken from changes, the fixture
+stays as it is, and the tests go on asserting against the bytes they were
+written for. To refresh one on purpose, copy the new bytes, fix whichever
+assertions change, and update its entry below.
 
-## Scrubbed for the public repository (2026-10-11)
+## Scrubbed
 
-Every fixture here was put through the manifest's scrub check
-(`docs/product/public-repo-manifest.md`), and `python3 tools/scrub_check.py
-tests/fixtures` is clean (the `.chn` files here are the maintainer's own
-set, which the check allows). A copy refreshed from `examples/` is scrubbed the same way before
-it is committed. What changed, so a test still means what it meant:
+The plans, captures and journals come from real shows and real desks, and
+every one was put through a scrub before it was committed:
 
-- **Names.** The band, its members and the one named person in the
-  church capture have neutral names. The band is `sixpiece` (files and
-  text alike, so `examples/sixpiece/...` below names that band's bundle by
-  its neutral name), and `touringband.md`'s source show file is
+- **Names.** The band, its members and the one named person in the church
+  capture have neutral names. The band is `sixpiece`, in file names and
+  text alike. The source show file of the touring-band lists is
   `TOURING_260821_MIX.snap`. Channel names (Kick, Vocal 1, Bass DI) are
   unchanged: they are what the tests are about.
 - **Home paths** are `/home/user/show/...`.
-- **Desk addresses** are documentation addresses (RFC 5737): the Compact
-  is `192.0.2.16`, the full-size `192.0.2.148`.
+- **Desk addresses** are documentation addresses (RFC 5737): the Compact is
+  `192.0.2.16`, the full-size `192.0.2.148`.
 - **Serials.** The Compact states `SERIAL00000001` and is named
   `WING-PP-SERIAL01`; the full-size states `SERIAL00000002`. Each is the
-  same in every file of a capture -- the identity string, the journals'
-  `desk` blocks and journal ids, and the hex of the raw log's `/?` reply,
-  where every replacement is the same length so the OSC padding is
-  unchanged. `atoo/initialized/wing-compact.snap` took the same
-  `creator_name`, so it is still byte for byte `Initialized-Compact.snap`.
-- **Presets.** The commercial `.chn` presets that were here are gone
-  (see "The maintainer's own presets" below). His own carry
-  `creator_name` `WING-PP-SERIAL01` too.
+  same in every file of a capture (the identity string, the journals' `desk`
+  blocks and journal ids, and the hex of the raw log's `/?` reply, where
+  every replacement is the same length so the OSC padding is unchanged).
+  `atoo/initialized/wing-compact.snap` carries the same `creator_name`, so it
+  is byte for byte `console-runs/Initialized-Compact.snap`.
 
-## The maintainer's own presets (2026-10-12)
+A fixture added or refreshed is scrubbed the same way.
 
-Frozen copies of `starter/presets/` at the commit that adopted
-it (517ff1e, with `creator_name` scrubbed to `WING-PP-SERIAL01`), so a
-later re-export of the starter set does not move the tests. All are
-`chpreset.11` exports from WING-EDIT 3.3.1.
+## Sample shows: input lists and conventions
 
-| Copy | What | Read by |
+The hand-written sample shows the suite builds from, each an input list
+(`.csv`) with the conventions that go with it (`.md`).
+
+| Files | What | Read by |
 |---|---|---|
-| `channel_presets/` | all 19 `.chn`, the two FX bus presets (`FX Vox Verb.bus`, `FX Snare Verb.bus`) and the mix bus preset (`Mix Bus.bus`, copied from `starter/presets/` 2026-10-13) | `test_cli.py` (`atoo presets`, the bus-preset note), `test_presets.py` (a `.bus` is not read as a channel preset), `test_preset_expand.py` (Speech on an aux; every fixture preset's leaves have a type), `test_mix_bus_presets.py` (a bus preset with no effect, on a mix bus) |
-| `presets/` | five of them: `Kick.chn` (saved as **Kick In**), `Snare.chn`, `H Tom.chn`, `Fl Tom.chn`, `Piano.chn` | `test_presets.py`, `test_preset_expand.py`, `test_preset_resolution.py`, `test_input_list_preset.py`, `test_cli.py` |
+| `smallband.csv`, `smallband.md`, `smallband.plan.json` | a small band; the plan is a build of it | `test_cli.py`, `test_conventions_ref.py`, `test_amend.py`, `test_channel_misses_main.py`, `test_channel_reaches_nothing.py`, `test_render.py` |
+| `smallband_natlang.md` | the same band's conventions written as plain prose | a sample for trying a build |
+| `fullband.csv`, `fullband.md` | a larger band with monitor sends that do not route to Main, a bus routed to an outboard effect, and a per-channel override beside a category default | `test_cli.py` |
+| `touringband.csv`, `touringband.md` | a touring band converted by hand from a real show file | `test_cli.py`, `test_bundle.py`, `test_webui.py`, `test_preset_library.py` and more |
+| `touringband.plan.json`, `touringband.generated.plan.json` | plans for it: one from the compiler that preceded model builds, one a real model reply from before the `socket` rename | `test_verify_plan.py`, `test_bus_colours.py`, `test_plan_schema.py`, `test_generate_and_verify_cli.py` |
+| `touringband.watch.json` | its watch conditions, with a channel written as bare `Main` | `test_watch_scoped_names.py` |
+| `festival.csv`, `festival.md` | a festival template, deliberately partly filled (14 of 38 channels unpatched) | `test_webui_filebrowser.py` |
+| `real_plans.json`, `compiled_plans.json` | plans for four real shows of 9 to 38 channels, written by the compiler that preceded model builds | `test_plan_schema.py`, `test_preset_expand.py`, `test_apply.py`, `test_render.py`, and `conftest.py`'s `stub_build` |
+| `setup_viewer.plan.json` | a plan for the Setup page's plan viewer | `test_webui.py`, `test_conventions_ref.py` |
+| `applied-show.plan.json` | the touring-band plan as it stood when it was applied: the "applied show" of the amend tests | `test_amend.py`, `test_patch.py`, `test_webui_amend.py` |
+| `sample.snap`, `sample.watch.json` | a console snapshot and a watch list | `test_snapshot.py`, `test_cli.py`, `test_webui.py` |
+| `bus_width.csv`, `bus_width.md` | a deliberately small show whose conventions state a bus width in the middle of a bullet that says three other things | `test_prompt_fidelity.py` |
+| `engineer-conventions.md` | an engineer's own conventions, kept only to check that the prompt does not quote them | `test_prompts.py` |
 
-They replace the commercial exports that were here (`presets/` five
-`chpreset.8` files, `presets_v11/kick_wing_edit_v11.chn`, and twelve in
-`channel_presets/`). Tests that named those presets now name these;
-the `chpreset.8` shape is built in `test_presets.py` from the Kick.
-`preset-test.plan.json` names presets from this set too (`kick-in`,
-`KEYS`, `vocal`, `Perc`, and two that are deliberately not in it,
-`Snare Top` and `Kick (In)`).
+## Build replies, plans and logs from real models
 
-## Frozen copies of `examples/` (2026-09-29)
+One regression each: what a model wrote, kept so the code that repairs,
+checks or expands it is tested on the real thing.
 
-These are byte-for-byte copies (until the scrub above) of `examples/` at `origin/main` 1ff4317,
-taken when the guard was extended from `examples/touringband/` to all of
-`examples/` (`examples/smallband/` is a living example too, and
-the tests still assert on its contents). Each keeps its path relative to
-`examples/`, except where noted.
-
-| Copy | Original | Read by |
+| Files | What | Read by |
 |---|---|---|
-| `smallband.plan.json` | `examples/smallband/plan.json` | `test_amend.py` (the offline `amend` CLI walkthrough, stage 4) |
-| `amend-demo/rebuilt.plan.json`, `rebuilt-minus-bgvox.plan.json`, `occupancy.json`, `occupancy-bgvox-taken-over.json` | `examples/amend-demo/` | `test_amend.py` |
-| `examples-conventions.md` | `examples/conventions.md` | `test_prompts.py` (the prompt must not quote it) |
-| `touringband.generated.plan.json` | `experiments/generator/touringband.generated.plan.json`, copied 2026-10-13 (the public tree carries no `experiments/`) | `test_plan_schema.py`, `test_generate_and_verify_cli.py`, `test_role_effort.py`, `test_patch_rename.py` (a real model reply, from before the `socket` rename) |
-| `Initialized-Full.snap` | `examples/Initialized-Full.snap` | `test_audit_in_use.py` |
-| `console-runs/Initialized-Compact.snap` | `examples/console-runs/` | `test_alternate_input_plan.py`, `test_apply.py`, `test_audit_alternate_input.py`, `test_audit_effects.py`, `test_audit_in_use.py`, `test_audit_talkback.py` |
-| `console-runs/Church-Full.snap` | `examples/console-runs/` | `test_alternate_input_plan.py` |
-| `console-runs/2026-09-21/A1-raw.log`, `A7-with-AES-alt.txt` | `archive/examples/console-runs/2026-09-21/` | `test_readback_index_base.py` |
-| `console-runs/2026-09-21/A7-ch1-with-WLIVE-alt.snap` | `archive/examples/console-runs/2026-09-21/` | `test_alternate_input_plan.py`, `test_audit_alternate_input.py`, `test_readback_index_base.py` |
-| `console-runs/2026-09-21/A7-no-alts.txt`, `A7-with-WLIVE-alt.txt` | `archive/examples/console-runs/2026-09-21/` | `test_audit_alternate_input.py` |
-| `console-runs/2026-09-21-2100/A1-apply-journal.json` | `archive/examples/console-runs/2026-09-21-2100/` | `test_undo.py` |
-| `console-runs/2026-09-22-2008/A11-read-speed.json` | `archive/examples/console-runs/2026-09-22-2008/` | `test_watch_scope.py` |
-| `console-runs/2026-09-22-2136/A1-apply-journal.json` | `archive/examples/console-runs/2026-09-22-2136/` | `test_undo.py` |
-| `console-runs/2026-09-22-2139/A13-board-with-podium.snap` | `archive/examples/console-runs/2026-09-22-2139/` | `test_amend.py`, `test_audit_in_use.py` |
-| `console-runs/2026-09-22-2139/A13-occupancy.json` | `archive/examples/console-runs/2026-09-22-2139/` | `test_amend.py` |
-| `console-runs/2026-09-23-1921/A17-wing-full.json` | `archive/examples/console-runs/2026-09-23-1921/` | `test_console_model.py` |
-| `console-runs/2026-09-23-1921/A17-wing-full.snap` | `archive/examples/console-runs/2026-09-23-1921/` | `test_alternate_input_plan.py`, `test_audit_effects.py`, `test_audit_stale_strip_name.py`, `test_audit_talkback.py` |
-| `console-runs/2026-10-02-sixpiece-apply-excerpt.json` | an EXCERPT of `examples/sixpiece/journals/20261002T234240.710613Z-apply-SERIAL00000001.json` (the maintainer's first full apply on the Compact, 4,583 writes), copied 2026-10-05 at `origin/main` bef79bd: every mismatch row, every `/bus/{n}/busmono` and `/bus/{n}/wid` row, and aux 2's `dyn/mdl` and `dynsc` rows, unchanged, each with its `index` in the journal | `test_initialize.py` and `test_preset_expand.py` (a mono bus's width reads back 0; an aux's tap written `IN` reads back `BUS`) |
-| `console-runs/session-2026-09-23-0928/A15-rebuilt-minus-ch18.plan.json` | `archive/examples/console-runs/session-2026-09-23-0928/` | `test_amend.py` |
-| `touringband.watch.json` | `examples/touringband/watch.json`, copied 2026-10-01 at `origin/main` c984173 | `test_watch_scoped_names.py` (its `"channel": "Main"`, refused from an earlier change until bare `Main` was read as `MAIN 1`) |
-| `sixpiece_2026-10-11.plan.json` | `examples/sixpiece/plan.json` (the 2026-10-02 build), copied 2026-10-12, home paths replaced (the plan the maintainer watched his Compact with on 2026-10-12) | `test_watch_desk_drift.py` (monitor busses on AES50, a phones Matrix, a Kick out of its busses, a muted Vocals bus) |
-| `sixpiece_2026-10-02.plan.json` | `examples/sixpiece/plan.json`, copied 2026-10-02 at `origin/main` 89f2baa (the maintainer's sixpiece build whose ch 24 read MUSIC) | `test_full_apply.py` (a full apply unpatches ch 24-40 and the unused auxes, and sets talkback's assign to AUX8 for aux 8 TALKBACK) |
-| `sixpiece_2026-10-01.plan.json` | `examples/sixpiece/plan.json`, copied 2026-10-02 at `origin/main` 028ae10 (the maintainer's rebuild of 2026-10-01) | `test_findings_dock.py` (a real findings load -- 36 build INFOs, 10 verify findings, 10 critic findings -- for the dock's one-place, no-duplicates and INFO-grouping checks) |
-| `console-runs/2026-09-28-1904/A22-apply-journal.json` | `examples/console-runs/2026-09-28-1904/`, copied 2026-09-29 at `origin/main` 59d0a66 | `test_selector_dependent.py` (a journal from before the fix, whose `in/set/dly` was skipped under a changed `dlymode`) |
-| `preset-test.plan.json` | `examples/preset-test.plan.json`, copied 2026-10-11 at `origin/main` c82d729, when the original was archived at `archive/examples/preset-test.plan.json` | no test: the worked examples in `docs/user/presets.md` and `docs/reference/console-session-checklist.md` section B run on it (touringband with a preset named on six channels, each a matching case) |
+| `haiku45_smallband.csv`, `haiku45_smallband.reply.json`, `haiku45_smallband_2026-09-29.reply.json` | a smaller hosted model's failed builds of the small band | `test_haiku_plan_fixes.py`, `test_send_levels_and_reply_repair.py` |
+| `haiku45_smallband_nulls.reply.json` | a reply that writes `null` for what it has nothing to say about | `test_reply_expand.py` |
+| `haiku45_sixpiece_2026-09-29.reply.json`, `haiku45_sixpiece_2026-09-29_fixup.reply.json` | a build of the six-piece band that gave a category no colour and put a marker where a Matrix cannot carry one, and the reply to the fix-up round | `test_instructed_channels.py`, `test_sixpiece_round2.py`, `test_stereo_pair_reconcile.py` |
+| `haiku45_festival_2026-09-29.csv` | the input list a festival build read, with 14 "not patched for this event" rows its reply left out | `test_every_row_built.py` |
+| `haiku45_festival_dangling_dca.csv`, `haiku45_festival_dangling_dca.reply.json` | three channels of that build, rewritten as a compact reply: one joins a DCA the plan never declares | `test_fixup_round.py`, `test_conventions_resolve.py` |
+| `festival_2026-09-29.plan.json` | a festival plan from a larger model, every unity send to a mix or FX bus written `level_db: null` | `test_send_levels_and_reply_repair.py`, `test_channel_misses_main.py` |
+| `sixpiece_2026-09-29.csv`, `sixpiece_conventions_2026-09-29.md`, `sixpiece_instructions_2026-09-29.md` | the texts those six-piece builds read: the input list, the conventions and the show's instructions | `test_instructed_channels.py`, `test_category_table.py` |
+| `sixpiece_2026-10-01.csv`, `sixpiece_instructions_2026-10-01.md`, `conventions_2026-10-01.md`, `conventions_2026-10-01.resolved.md` | the inputs of a six-piece rebuild whose generator dropped the conventions' Aux 1, Aux 2 and Aux 8 | `test_instructed_strips.py` |
+| `conventions_2026-10-01_strips.resolved.md` | that resolved file with an `## Instructed strips` block added, restating its three aux strips | `test_instructed_strips.py` |
+| `sixpiece_2026-10-01.reply.json` | that build's reply, reconstructed from its plan (the raw reply was not kept) | `test_instructed_strips.py` |
+| `conventions_2026-09-30.resolved-body.md` | a resolved conventions body with a `## Category table` written after it | `test_category_table.py` |
+| `sixpiece_2026-10-01.plan.json` | a real findings load: 36 build notes, 10 verify findings, 10 critic findings | `test_findings_dock.py`, `test_findings_dock_layout.py`, `test_build_details.py` |
+| `sixpiece_2026-10-02.plan.json` | a six-piece build whose channel 24 reads MUSIC | `test_full_apply.py`, `test_apply_progress.py`, `test_initialize.py` |
+| `sixpiece_2026-10-11.plan.json` | the plan a Compact was watched with: monitor busses on AES50, a phones Matrix, a Kick out of its busses, a muted Vocals bus | `test_watch_desk_drift.py` |
+| `lessons_thinking.build-log.json` | a build log with the model's kept thinking-summary notes | `test_lessons.py` |
+| `preset-test.plan.json` | the touring-band plan with a preset named on six channels, each a matching case, and two names that are deliberately not in the library (`Snare Top`, `Kick (In)`) | `test_bus_presets.py`, `test_mix_bus_presets.py` |
+| `watchlist_draft_extra_key.json` | a watch-list draft whose first condition carries an `index` key no condition has, and whose third names a field outside the vocabulary | `test_watchlist_draft.py` |
 
-The originals stay in `examples/`, because the docs' worked examples, the
-desk scripts under `examples/console-runs/` or the code's own comments use
-them. No file in `examples/` was used by the tests alone, so none was moved.
-The exception is the early desk runs, `console-runs/2026-09-21*` to
-`2026-09-23*` and the two `session-2026-09-23-*` sessions, whose
-originals were archived on 2026-10-11 under
-`archive/examples/console-runs/`; the copies here are
-unchanged.
+## Console captures and journals
 
-The `example_guard` tests (`python3 -m pytest -m example_guard`) are the only
-ones that still read `examples/`. They check that the shipped examples are
-valid, for example that the bundles verify and the amend walkthrough runs.
-They never check what the examples contain.
+From real desks. `console-runs/` keeps its original sub-folder names.
 
-## Fixtures that were always here
+| Files | What | Read by |
+|---|---|---|
+| `console-runs/Initialized-Compact.snap`, `Initialized-Full.snap` | the factory state of a Compact and of a full-size WING | `test_audit_in_use.py`, `test_initialize.py`, `test_apply.py`, `test_alternate_input_plan.py` |
+| `console-runs/Church-Full.snap` | a full-size WING with a house mix on it | `test_alternate_input_plan.py` |
+| `console-runs/2026-09-21/` | raw log and OSC captures of channel 1 with and without alternate inputs | `test_readback_index_base.py`, `test_alternate_input_plan.py`, `test_audit_alternate_input.py` |
+| `console-runs/2026-09-21-2100/`, `2026-09-22-2136/` | apply journals of two real runs | `test_undo.py` |
+| `console-runs/2026-09-22-2008/` | a read-speed measurement | `test_watch_scope.py` |
+| `console-runs/2026-09-22-2139/` | a board with a podium channel on it, and its occupancy | `test_amend.py`, `test_audit_in_use.py` |
+| `console-runs/2026-09-23-1921/` | a full-size WING: its model description and its capture | `test_console_model.py`, `test_audit_stale_strip_name.py`, `test_audit_effects.py`, `test_audit_talkback.py` |
+| `console-runs/2026-09-28-1904/` | a journal from before a fix: its `in/set/dly` was skipped under a changed `dlymode` | `test_selector_dependent.py` |
+| `console-runs/2026-10-02-sixpiece-apply-excerpt.json` | an excerpt of the first full apply on a Compact (4,583 writes): every mismatch row, every `/bus/{n}/busmono` and `/bus/{n}/wid` row, and aux 2's `dyn/mdl` and `dynsc` rows, unchanged, each with its `index` in the journal | `test_initialize.py`, `test_preset_expand.py` |
+| `console-runs/session-2026-09-23-0928/` | a rebuilt plan with channel 18 removed | `test_amend.py` |
+| `touringband-2026-09-18.apply-journal.json` | the journal of a touring-band apply on a real desk | `test_apply.py`, `test_readback_index_base.py`, `test_webui_apply.py` |
+| `a18-full-size-unanswered.json` | what a full-size WING left unanswered in a read | `test_read_unanswered_family.py` |
+| `amend-demo/` | the amend walkthrough's files: a rebuilt plan, the same without one channel, and the desk's occupancy before and after a strip is taken over | `test_amend.py`, `test_amend_plan_json.py`, `test_webui_amend.py` |
+| `audit_demo_plan.json`, `audit_demo_state.json`, `audit_demo_state_before.json` | a hand-built console state and plan for trying `audit` with no console attached; the packaged copies are `starter/audit-demo/` | `test_audit_dump_state.py`, `test_help_examples.py`, `test_packaging.py` |
 
-These fixtures were never copies of a living file. Each test that reads one
-says in its own docstring what the fixture is for.
+## Presets
 
-- `smallband.*`, `fullband.*`, `festival.*`, `touringband.csv`,
-  `touringband.md`: input lists and conventions for four real shows (see
-  `docs/developer/modules.md`, "Test fixtures").
-- `real_plans.json`, `compiled_plans.json`, `touringband.plan.json`: plans
-  from the deterministic compiler, generated just before an earlier change deleted
-  it.
-- `applied-show.plan.json`: the touring-band plan as
-  `examples/touringband/plan.json` held it on 2026-09-23, just before that
-  bundle was rebuilt. It is the applied show in `test_amend.py`.
-- `touringband-2026-09-18.apply-journal.json`: the journal from the
-  2026-09-18 touringband apply on a real desk.
-- `audit_demo_*.json`, `sample.snap`, `sample.watch.json`: console states,
-  a snapshot and a watchlist used by the audit, watch and snapshot tests.
-- `presets/`, `channel_presets/`: the maintainer's own presets (next
-  section).
-- `festival_2026-09-29.plan.json`: `examples/festival/plan.json` as
-  the maintainer's Sonnet 5 build of 2026-09-29 wrote it, every unity send to a
-  mix or FX bus `level_db: null` (`test_send_levels_and_reply_repair.py`).
-- `haiku45_smallband_2026-09-29.reply.json`: that day's failed Haiku 4.5
-  smallband reply, from `examples/smallband/plan.partial.json`; its input
-  list is `haiku45_smallband.csv`.
-- `haiku45_sixpiece_2026-09-29.reply.json`: that day's failed Haiku 4.5
-  sixpiece reply, from `examples/sixpiece/plan.partial.json`: a category
-  given no colour, and a marker for a field a Matrix cannot carry.
-- `haiku45_sixpiece_2026-09-29_fixup.reply.json`: the fix-up reply of
-  Haiku 4.5's second sixpiece build that day (commit 4492816), from
-  `examples/sixpiece/plan.partial.json` -- which was written part-expanded,
-  so its name-keyed `busses`/`outputs`/`dcas`/`mute_groups` maps are turned
-  back into the arrays the model wrote. Its Talkback quote carries an
-  "Instructions:" label and drops "Setup"; the first reply is rebuilt from
-  it in the test with its two format slips put back
-  (`test_sixpiece_round2.py`).
-- `haiku45_festival_dangling_dca.reply.json` and `.csv`: three channels
-  (Kick, BassDI, VOX 1) of Haiku 4.5's festival build of 2026-09-29
-  (`git show 2897232:examples/festival/plan.json`), rewritten as a
-  compact reply with sends left out. BassDI joins DCA 'Band', which the
-  plan never declares -- verify's `reference.dangling`, as in the real
-  build (`test_fixup_round.py`).
-- `sixpiece_2026-09-29.csv`, `sixpiece_instructions_2026-09-29.md`,
-  `sixpiece_conventions_2026-09-29.md`: `examples/sixpiece/input.csv`,
-  its `instructions.md` and `examples/conventions.md` as that day's
-  Haiku sixpiece build read them (the conventions' sha256 matches the
-  build log) -- the texts the Talkback quote is checked against
-  (`test_instructed_channels.py`).
-- `haiku45_festival_2026-09-29.csv`: `examples/festival/input.csv` as
-  Haiku's festival build of 2026-09-29 read it (commit 2897232), whose 14
-  "not patched for this event" rows the reply left out
-  (`test_every_row_built.py`).
-- `conventions_2026-09-30.resolved-body.md`: the body of
-  `examples/conventions.resolved.md` as the maintainer's Sonnet-high resolve
-  wrote it on 2026-09-30 (header and title line removed), with a
-  `## Category table` written by hand after it, restating its
-  Categories section (Keys, Strings, Horns and Tracks leave
-  `main_direct` out, as the prose makes it depend on the show)
-  (`test_category_table.py`).
-- `conventions_2026-10-01.md`, `conventions_2026-10-01.resolved.md`,
-  `sixpiece_2026-10-01.csv`, `sixpiece_instructions_2026-10-01.md`:
-  byte-for-byte copies (until the scrub above) of `examples/conventions.md`,
-  `examples/conventions.resolved.md`, `examples/sixpiece/input.csv` and
-  its `instructions.md` at commit c04dd25 -- the maintainer's sixpiece build of
-  2026-10-01, whose generator dropped the conventions' Aux 1 MUSIC, Aux 2
-  HOST and Aux 8 TALKBACK (`test_instructed_strips.py`).
-- `conventions_2026-10-01_strips.resolved.md`: that resolved file with a
-  `## Instructed strips` block written by hand after it -- the block the
-  resolve prompt asks for since 2026-10-01, restating its Misc section's
-  three aux strips (MUSIC's `stereo` left null, so code decides it from
-  "23-24") (`test_instructed_strips.py`).
-- `sixpiece_2026-10-01.reply.json`: sixpiece's reply at c04dd25,
-  RECONSTRUCTED from `examples/sixpiece/plan.json` (the raw reply was
-  not kept): each channel as its input-list row with the socket group,
-  processing (no preset values), fader, DCA, mute group and Main routes
-  the plan has; busses with their senders grouped by mode and level; the
-  model's own notes. It expands back to that plan's 23 channels, with no
-  aux strip (`test_instructed_strips.py`).
-- `haiku45_*`, `lessons_thinking.build-log.json`, `setup_viewer.plan.json`,
-  `bus_width.*`, `a18-full-size-unanswered.json`, and the rest: model
-  replies, build logs and plans captured for a single regression each.
+Frozen copies of the starter preset library (`starter/presets/`), with
+`creator_name` scrubbed to `WING-PP-SERIAL01`. All are `chpreset.11`
+exports from WING-EDIT 3.3.1.
+
+| Folder | What | Read by |
+|---|---|---|
+| `channel_presets/` | all 19 channel presets (`.chn`), the two FX bus presets (`FX Vox Verb.bus`, `FX Snare Verb.bus`) and the mix bus preset (`Mix Bus.bus`) | `test_cli.py`, `test_presets.py`, `test_preset_expand.py`, `test_mix_bus_presets.py`, `test_preset_map_coverage.py` |
+| `presets/` | five of them: `Kick.chn` (saved as **Kick In**), `Snare.chn`, `H Tom.chn`, `Fl Tom.chn`, `Piano.chn` | `test_presets.py`, `test_preset_resolution.py`, `test_input_list_preset.py` |
+
+The older `chpreset.8` shape is built in `test_presets.py` from the Kick.
 
 ## The Demo show
 
-`starter/demo-show/` is shipped, not a fixture (an earlier change replaced the
-7-channel show with the sample show), so a test that needs the OLD
-Demo's contents reads a frozen copy, and a test whose subject is the
-shipped Demo (`test_demo_show.py`) asserts only what it promises.
+`starter/demo-show/` is shipped, not a fixture, so a test that needs an
+older Demo reads a frozen copy, and a test whose subject is the shipped Demo
+(`test_demo_show.py`) asserts only what it promises.
 
-- `old-demo-rig/before.json`: the 7-channel Demo rig
-  (`atoo/web/demo_states/before.json` at `origin/main`), for `test_webui_watch.py`'s scoped-name resolution, which
-  needs a bus named Drums at BUS 1.
-- `demo-horns.change-set.json`: the change set for the Demo's 6pm
-  change, *"trumpet, sax and trombone on LCL 21-23, Band DCA"*, written
-  by hand in the shape `patch --save-change-set` writes, so
-  `test_demo_show.py` can review it against the Demo rig with no model.
-  Since 2026-10-13 the horns take their starter presets and land on a
-  new Horns mix bus with the "Mix Bus" bus preset (the maintainer's desk test 13).
-  `docs/user/demo/demo-show/horns.change-set.json` is the same file, for
-  `patch.md`'s transcript; a test keeps the two equal.
-- `demo_2026-10-13/`: the maintainer's real-model rebuild of the Demo
-  (commit d89acf7), frozen for `test_quiet_build.py`: the
-  `conventions.md`, `demo-show/input.csv` and `demo-show/instructions.md`
-  he built from, the `conventions.resolved.md` his resolve call wrote
-  (169 citations), and `generator.reply.json`, the generator's reply
-  recovered from his plan by `tools/demo_reply_from_plan.py`. The test
-  replays that build with no model and asserts the Findings dock reads 0
-  to check and 4 choices.
-- `preset_map_2026-10-13/`: the maintainer's real-model build of a copy
-  of `starter/` on 2026-10-13 (Resolve: preset-map lines in
-  the conventions come back as resolve.line-not-covered notes): the
-  `conventions.md` he built from (before the starter's Keyboards, T Sax
-  and Generic sax edits and the rename) and the `conventions.resolved.md`
-  his resolve call wrote, which cites ten of the preset map's lines by
-  no rule. Unchanged but for the product's old name, which became Atoo
-  in the resolved file's header and one conventions comment (so a release carries no old name). Read by
-  `test_preset_map_coverage.py`, with `channel_presets/` as the library
-  (byte for byte the `presets/` of his bundle).
-- `watchlist_draft_extra_key.json`: a watchlist draft whose first
-  condition carries an `index` key no condition has, as the Demo's real
-  draft did, and whose third names a field outside the vocabulary, for
-  `test_watchlist_draft.py`.
-- `rebuild_diff/previous.plan.json` and `rebuild_diff/current.plan.json`:
-  the packaged Demo show built from `tools/demo_show.reply.json` with no
-  model, then rebuilt after one edit -- the `Guest Vox` row un-skipped in
-  `input.csv` and named in instructions.md's Vox Wedge line -- with that
-  reply edited to add Guest Vox and, unasked, to raise the Bass DI's gain
-  from 20 to 26 dB. Both carry `meta.change_basis`; the
-  second carries `meta.changes_since_previous`. Scratch paths are spelled
-  `starter/...`, and `meta.build_log_file` is dropped. For
-  `test_plan_diff.py`: an asked-for change, one nobody asked for, and a
-  renumbered strip (Playback, CH 13 -> CH 14).
-- `rebuild_diff/demo/`: the Demo inputs that run was built from, frozen
-  from `starter/` and `tools/demo_show.reply.json` on 2026-10-13
-  (`conventions.md`, `input.csv`, `instructions.md`, `reply.json`), and
-  the edit as files (`input.after.csv`, `instructions.after.md`,
-  `reply.after.json`), so `test_plan_diff.py`'s end-to-end build does not
-  depend on the shipped Demo's text.
+- `old-demo-rig/before.json`: the earlier 7-channel Demo rig, for
+  `test_webui_watch.py`'s scoped-name resolution, which needs a bus named
+  Drums at BUS 1.
+- `demo-horns.change-set.json`: the change set for the Demo's 6pm change,
+  *"trumpet, sax and trombone on LCL 21-23, Band DCA"*, written by hand in
+  the shape `patch --save-change-set` writes, so `test_demo_show.py` can
+  review it against the Demo rig with no model. The horns take their starter
+  presets and land on a new Horns mix bus with the "Mix Bus" preset.
+  `docs/user/demo/demo-show/horns.change-set.json` is the same file; a test
+  keeps the two equal.
+- `watch-build-duplicates.watch.json` and `watch-build.plan.json`: the
+  `watch.json` a full-size WING run of the Demo ended with (a `MAIN PA` and a
+  `MAIN 1` mute condition side by side, one `BUS` condition per bus, a `DCA`
+  range beside a `DCA Vocals`), and the plan it was drafted for, cut down to
+  two channels. Read by `test_watch_build_duplicates.py`.
+- `patch-aux8.change-reply.json` and `patch-aux8.plan.json`: a real-model
+  reply to the change *"Add another vocal channel, move Playback to Aux 8."*
+  (the 3,544 characters `atoo patch` kept when it refused the reply for
+  leaving out `add.busses`, `add.dcas`, `add.mute_groups` and `add.outputs`),
+  and the plan it was compiled onto, cut down to the four strips (Kick, Lead
+  Vox, Playback, Music) and the busses, DCAs, mute groups and output the
+  reply names. Read by `test_patch_omitted_sections.py`.
+- `demo_2026-10-13/`: a real-model rebuild of the Demo: its `conventions.md`,
+  `demo-show/input.csv` and `instructions.md`, the `conventions.resolved.md`
+  its resolve call wrote (169 citations), and `generator.reply.json`, the
+  generator's reply. `test_quiet_build.py` replays that build with no model
+  and asserts the Findings dock reads 0 to check and 4 choices.
+- `preset_map_2026-10-13/`: a real-model build of a copy of `starter/`: its
+  `conventions.md` and the `conventions.resolved.md` its resolve call wrote,
+  which cites ten of the preset map's lines by no rule. Read by
+  `test_preset_map_coverage.py`, with `channel_presets/` as the library.
+- `rebuild_diff/previous.plan.json` and `current.plan.json`: the packaged Demo
+  built from its hand-written reply with no model, then rebuilt after one
+  edit (the `Guest Vox` row un-skipped and named in the instructions), with
+  that reply edited to add Guest Vox and, unasked, to raise the Bass DI's gain
+  from 20 to 26 dB. Both carry `meta.change_basis`; the second carries
+  `meta.changes_since_previous`. For `test_plan_diff.py`: an asked-for
+  change, one nobody asked for, and a renumbered strip.
+- `rebuild_diff/demo/`: the inputs of that run (`conventions.md`,
+  `input.csv`, `instructions.md`, `reply.json`) and the edit as files
+  (`input.after.csv`, `instructions.after.md`, `reply.after.json`), so
+  `test_plan_diff.py`'s end-to-end build does not depend on the shipped
+  Demo's text.

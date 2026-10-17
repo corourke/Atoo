@@ -20,7 +20,7 @@ from atoo.cli import build_parser
 # word on its own: `A 12` and `AES50-A` are sockets, not desk runs.
 PROVENANCE = re.compile(
     r"\bissues? #?\d+"          # An earlier change, an earlier change
-    r"|#\d{2,}"                 # #128
+    r"|#\d{2,}"                 # An earlier change
     r"|\bN?FR-[\dX]"            # FR-2.2, FR-X.3
     r"|\([OD]\d(?:/O\d)?\b"     # (O2), (O2/O3), (D6
     r"|\bA\d{1,2}\b(?!\s*\d)"   # A11, A22 -- not "A 12"

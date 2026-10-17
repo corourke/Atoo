@@ -80,19 +80,6 @@ def test_bus_presets_are_a_name_space_of_their_own(library):
 
 # -- the engines ---------------------------------------------------------------
 
-def test_the_frozen_engine_table_is_the_walk():
-    """`initialized/fx_models.json` is generated, never hand-typed: it must
-    equal what the freeze tool derives from the walk and the map now."""
-    sys.path.insert(0, str(REPO / "tools"))
-    import freeze_initialized_capture as tool
-
-    if not (tool.RAW_WALK.exists() and tool.PARAMETER_MAP.exists()):
-        pytest.skip("docs/reference/ is not in the public repository (not approved)")
-
-    frozen = json.loads((REPO / "atoo" / "initialized" / fx_engines.FX_MODELS_FILE).read_text())
-    assert frozen == json.loads(json.dumps(tool.build_fx_models()))
-
-
 def test_reverbs_and_delays_are_offered_by_engines_1_to_8_only():
     for model in ("V-REV", "HALL", "PLATE", "GATED", "ST-DL", "TAPE-DL"):
         assert fx_engines.engines_for(model) == list(range(1, 9)), model

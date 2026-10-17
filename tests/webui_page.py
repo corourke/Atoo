@@ -1,7 +1,7 @@
 """What the shell page sends with a confirmed write, for tests that drive
 the write endpoints the way the page does.
 
-A confirmed `POST /api/apply/run`, `/api/amend/run`, `/api/patch/run` or
+A confirmed `POST /api/apply/run`, `/api/patch/run` or
 `/api/undo/run`
 must say what the page it came from was showing -- the bundle, and the
 plan / review / journal-stack entry it reviewed -- or it is refused as a
@@ -29,7 +29,7 @@ def page_fields(client, url: str) -> dict:
         preflight = client.get("/api/apply/preflight")
         if preflight.status_code == 200 and preflight.json().get("plan_sha256"):
             fields["expected_plan_sha256"] = preflight.json()["plan_sha256"]
-    elif url in ("/api/amend/run", "/api/patch/run"):
+    elif url == "/api/patch/run":
         review = client.get("/api/apply/status").json().get("review") or {}
         if review.get("review_id"):
             fields["expected_review_id"] = review["review_id"]

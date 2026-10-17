@@ -8,7 +8,7 @@ on the maintainer's Compact on 2026-09-24
 4.8s against 118.8s. So every live read now goes by node dump unless the
 user asks otherwise.
 
-The lesson this file is built around is WORK_PLAN's *a default that no
+The lesson this file is built around is *a default that no
 test omits is a default that no test covers*: the first test of each
 command passes NO read-path flag at all, because that absent case is the
 one every user gets.

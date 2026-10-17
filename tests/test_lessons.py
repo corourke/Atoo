@@ -3,8 +3,8 @@ a read-only report over one bundle's build log and findings, optionally
 alongside its git history of `plan.json`.
 
 Every fixture plan here is built IN the test or frozen into
-`tests/fixtures/` -- CLAUDE.md, "A bundle under examples/ is a living
-example, not a test fixture": nothing here reads `examples/`'s contents.
+`tests/fixtures/`: nothing here reads the contents of a bundle under
+`examples/`, which is a living example, not a test fixture.
 """
 
 from __future__ import annotations

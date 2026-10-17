@@ -1,5 +1,7 @@
 # Atoo
 
+[![tests](https://github.com/corourke/Atoo/actions/workflows/tests.yml/badge.svg)](https://github.com/corourke/Atoo/actions/workflows/tests.yml)
+
 Set up a Behringer WING for tonight's show from your own house rules, write
 it to the desk, and prove every value landed.
 
@@ -48,25 +50,32 @@ every write logged and undoable.
 | the desk's channel presets and libraries | set up the show around the strips: patch, busses, sends, DCAs |
 | typing a spreadsheet input list into the desk | confirm that the desk now matches the spreadsheet |
 
-[Why Atoo](docs/user/why.md) makes the comparison in full, including
+[Why Atoo?](docs/user/why.md) makes the comparison in full, including
 where the existing ways are better.
 
 ## Try it in two minutes, with no desk
 
 You need Python 3.11 or newer ([installing](docs/user/install.md) covers
-older ones).
+older ones), `git`, and a web browser. Nothing else: no desk and no API
+key to look around.
 
 ```bash
 git clone https://github.com/corourke/Atoo.git
 cd Atoo
 python3 -m venv .venv && source .venv/bin/activate
-python3 -m pip install -e '.[ui]'
+python3 -m pip install '.[ui]'
 atoo ui
 ```
 
+To keep Atoo installed on a laptop instead of running it from a clone,
+[install it with pipx](docs/user/install.md). A real build also needs
+your own AI API key ([Setting up an AI provider](docs/user/ai-provider.md)).
+
 `a2` is the same command as `atoo`, shorter to type (`a2 ui`).
 
-Your browser opens on an empty show. Press **Try the Demo show**. A
+Your browser opens on an empty show at `http://127.0.0.1:8420`; on a
+machine with no display, `atoo ui` prints that address and you open it
+yourself. Press **Try the Demo show**. A
 five-piece band with backing tracks opens on a simulated WING Compact: look through
 **Build**, **Apply** and **Watch**. On **Apply**, press **Preview** to see
 the simulated desk drawn as the plan would leave it; on **Watch**, press
@@ -81,7 +90,11 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.
 
 Three horns land on free strips with their presets, on a new Horns bus
 with a compressor, and nothing else on the desk is touched
-([The 6pm change](docs/user/demo.md#the-6pm-change)).
+([The 6pm change](docs/user/demo.md#the-6pm-change)). The review counts
+`4 added`: the three channels and the bus. Its notes that bus 8 was judged
+free from the plan alone, and its `reconcile.not-checked` warning, say what
+this offline run could not check, because no desk and no input list were
+read. Neither blocks the change.
 
 ## Consoles
 

@@ -13,7 +13,7 @@ Tested here:
 * **The Demo's Patch preview** -- refused, saying why, when no model is
   set up; with one (here a stand-in that answers the frozen horns change
   set), it runs on the simulated WING and draws the four new strips.
-* **The page, as served** (CLAUDE.md: the suite cannot see the browser
+* **The page, as served** (the suite cannot see the browser
   code): the four headings, the button labels, the popups, and no
   "that is off here".
 
@@ -209,9 +209,6 @@ def test_with_no_model_the_demo_says_so_and_previews_a_full_build_only(demo):
     assert "compiled by a model, and none is set up here" in r.json()["error"]
     assert "The Demo can still preview a Full build." in r.json()["error"]
     assert demo.get("/api/apply/status").json()["state"] == "idle"
-    # A rebuilt plan: the Demo show has none, and cannot be given one.
-    r = demo.post("/api/amend/run", json={})
-    assert r.status_code == 400 and "no rebuilt plan" in r.json()["error"]
 
 
 def test_with_a_model_the_demo_previews_a_typed_change_on_the_simulated_wing(demo, monkeypatch):
@@ -243,7 +240,7 @@ def test_with_a_model_the_demo_previews_a_typed_change_on_the_simulated_wing(dem
     assert status["review"]["timing"]["desk_addresses"] >= 144
     # A Demo preview arms nothing -- no review is recorded
     # against the packaged show, and the page is given no review id.
-    assert demo.app.state.amend_reviewed is None
+    assert demo.app.state.patch_reviewed is None
     assert demo.app.state.patch_change_set is None
     assert "review_id" not in status["review"]
     # And still nothing can be written from it.
@@ -267,7 +264,7 @@ def test_the_page_draws_four_steps_with_one_heading_style(assets):
     titles = [part.split(">", 1)[1].split("<", 1)[0]
               for part in apply_panel.split('class="apply-step-title"')[1:]]
     assert titles == ["What will be written", "Preview", "Arm and write", "History"]
-    assert apply_panel.count('class="apply-step-num"') == 4
+    assert apply_panel.count('class="step-no"') == 4
     # One Options fold in each mode; no flag names on the screen.
     assert 'id="apply-advanced"' in apply_panel and 'id="amend-advanced"' in apply_panel
     visible = _strip_comments(apply_panel)
@@ -293,8 +290,14 @@ def test_the_buttons_say_what_they_do(assets):
     js = assets.get("/static/apply.js").text
     assert '>Preview</button>' in html and "Preview (dry run)" not in html + js
     assert '"Write changes to console" : "Write to console"' in js
-    assert 'id="undo-preview-btn">Preview undo<' in html
-    assert 'id="undo-run-btn" disabled>Undo newest write<' in html
+    # Preview undo is drawn with History's rows (amend.js), in the last cell of
+    # the newest standing one; Undo is step 3's, directly under its header.
+    amend = assets.get("/static/amend.js").text
+    assert 'btn.id = "undo-preview-btn";' in amend and '"Preview undo"' in amend
+    assert 'id="undo-preview-btn"' not in html
+    step3 = html[html.index('id="apply-step-3-box"'):html.index('id="journal-stack-panel"')]
+    assert step3.index('<h3>Undo</h3>') < step3.index('id="undo-run-btn"')
+    assert 'id="undo-run-btn" disabled aria-describedby="undo-locked">Undo newest write<' in html
     # The write's result shows in step 3, in the mockup's words.
     for words in (' written · ', ' read back and confirmed', "Nothing failed to land.",
                   "The desk now matches the plan.", "didn't land: "):
@@ -311,8 +314,9 @@ def test_the_demo_banner_is_a_popup_and_locked_controls_explain_themselves(asset
     assert 'id="popup-preflight"' in html and 'id="popup-clean-sockets"' in html
     assert "that is off here" not in shell + js
     assert 'const DEMO_POPUP_KEY = "atoo.demoPopupSeen";' in shell
-    assert '"Writing is switched off in the Demo show."' in js
-    assert '"Undo is switched off in the Demo show."' in js
+    # After the shared "Locked:", so lower-case.
+    assert '"writing is switched off in the Demo show. "' in js
+    assert '"undo is switched off in the Demo show. "' in js
     assert '"Choose a console address in the bar to write to a real desk."' in js
     # Preview is not among the controls the Demo locks.
     locked = shell[shell.index("const DEMO_LOCKED = ["):]
@@ -339,7 +343,7 @@ def test_a_preview_is_stale_once_step_one_changes(assets):
     js = assets.get("/static/apply.js").text
     html = assets.get("/static/shell.html").text
     assert "Step 1 changed since this preview. Preview again before writing." in html
-    assert "staleNote.hidden = !(reviewedFor && reviewedFor !== stepOneKey()" in js
+    assert "!(reviewedFor && reviewedFor !== stepOneKey() && previewIsWritable(run))" in js
     assert "return previewIsWritable(run) && reviewedFor === stepOneKey();" in js
     run_btn = js[js.index("runBtn.disabled = "):]
     assert "!previewed" in run_btn[:run_btn.index(";")]
@@ -393,7 +397,6 @@ def test_a_demo_preview_that_cannot_open_its_copy_leaves_nothing_behind(demo, mo
 @pytest.mark.parametrize("url, body", [
     ("/api/apply/run", {}),
     ("/api/patch/run", {"change": "trumpet on LCL 21"}),
-    ("/api/amend/run", {}),
 ])
 def test_a_demo_write_is_refused_before_it_is_told_to_tick_arm(demo, url, body):
     """A `confirm` without `arm` in the Demo is the Demo's 403, not "tick
@@ -411,8 +414,7 @@ def test_off_the_demo_confirm_without_arm_is_still_told_to_tick_arm(tmp_path):
     """The order changed only for the Demo: anywhere else, FR-X.2's 400."""
     app = create_app(initial_console={"address": "192.0.2.9", "port": 2223})
     with fastapi_testclient.TestClient(app, **LOCAL) as c:
-        for url, body in (("/api/apply/run", {}), ("/api/patch/run", {"change": "x"}),
-                          ("/api/amend/run", {})):
+        for url, body in (("/api/apply/run", {}), ("/api/patch/run", {"change": "x"})):
             r = c.post(url, json={**body, "confirm": True})
             assert r.status_code == 400 and "not armed" in r.json()["error"], (url, r.text)
 
@@ -425,7 +427,7 @@ def test_off_the_demo_confirm_without_arm_is_still_told_to_tick_arm(tmp_path):
     ("lots", "ATOO_CONSOLE_WINDOW='lots' is not a whole number of at least 1"),
 ])
 def test_a_ui_run_logs_the_console_window_as_the_cli_does(demo, monkeypatch, value, line):
-    """Apply, Patch, Amend and Undo from the page are the command, so the
+    """Apply, Patch and Undo from the page are the command, so the
     run's log -- `/api/apply/status` `log`, which the Apply screen shows --
     carries the line `atoo apply` prints on a terminal."""
     monkeypatch.setenv("ATOO_CONSOLE_WINDOW", value)
@@ -440,3 +442,108 @@ def test_a_ui_run_says_nothing_of_the_default_window(demo, monkeypatch):
     assert demo.post("/api/apply/run", json={}).status_code == 200
     status = _wait(demo)
     assert not [e for e in status["log"] if "console window" in e or "CONSOLE_WINDOW" in e]
+
+
+# ---- Apply to the UI style guide (docs/developer/ui-style.md) ------
+
+
+def _apply_panel(assets):
+    html = assets.get("/static/shell.html").text
+    return html[html.index('id="mode-apply"'):html.index('id="mode-watch"')]
+
+
+def test_each_step_header_sits_outside_and_above_its_box(assets):
+    """§3: the number, the white title, the grey notation and the state
+    tag are a `.block-head` before the step's `.panel.box`, not inside it."""
+    panel = _apply_panel(assets)
+    for n, sid in ((1, "apply-step-1"), (2, "apply-step-2"), (3, "apply-step-3"),
+                   (4, "journal-stack-panel")):
+        start = panel.index(f'<section class="apply-step" id="{sid}"')
+        section = panel[start:panel.index("</section>", start)]
+        head = section.index('<div class="block-head apply-step-head">')
+        no = section.index(f'<span class="step-no" id="apply-step-{n}-no">{n}</span>')
+        title = section.index('class="apply-step-title"')
+        notation = section.index('<span class="notation"')
+        box = section.index(f'<div class="panel box apply-step-box" id="apply-step-{n}-box">')
+        assert head < no < title < notation < box, sid
+        if n < 4:
+            assert section.index(f'<span class="state" id="apply-step-{n}-state" hidden>') < box
+    assert 'class="apply-step-state"' not in panel
+    assert 'class="panel apply-step"' not in panel
+
+
+def test_every_locked_control_on_apply_says_why_beside_it(assets):
+    """§4: Write, Undo and Preview each have a `.lock-reason` in their own
+    row (after the button and its "?"); no `.apply-locked` line under it."""
+    panel = _apply_panel(assets)
+    js = assets.get("/static/apply.js").text
+    css = assets.get("/static/styles.css").text
+    for button, reason in (("apply-run-btn", "apply-disabled-reason"),
+                           ("undo-run-btn", "undo-locked"),
+                           ("apply-preview-btn", "apply-preview-reason")):
+        at = panel.index(f'id="{button}"')
+        after = panel[at:]
+        assert after.index(f'<span class="lock-reason" id="{reason}" hidden></span>') < \
+            after.index("</div>"), button
+    assert "apply-locked" not in panel + js + css
+    assert "is-bypass" not in js + css
+    for words in ('"tick Arm first"', '"preview first. Write unlocks',
+                  '"nothing to undo on this desk"', '"no console address',
+                  '"wait for the current run to finish"',
+                  '"preview the undo first"', '"preview the undo again"',
+                  '"already written; preview again before another write"'):
+        assert words in js, words
+    # The Demo dims the Arm checkbox no more: it takes the locked look.
+    dim = css[css.index("dimming it again would leave it barely legible"):]
+    dim = dim[:dim.index("opacity: 0.45;")]
+    assert "#apply-arm-checkbox" not in dim
+    assert ".apply-arm-checkbox:has(input:disabled) { color: var(--text-off);" in css
+
+
+def test_apply_tags_are_the_three_families(assets):
+    """§6: the pre-flight is a severity tag, the steps' states and the run's
+    Done are state tags, the counts are readouts; no old badge on Apply."""
+    panel = _apply_panel(assets)
+    js = assets.get("/static/apply.js").text
+    amend = assets.get("/static/amend.js").text
+    assert '<span class="state" id="apply-preflight-badge">Not run</span>' in panel
+    assert '"sev " +\n      (errors ? "sev-error" : (warnings ? "sev-warning" : "sev-ok"))' in js
+    assert 'done: ["Done", "is-ok"]' in js
+    assert '<span class="state" id="apply-run-state">Idle</span>' in panel
+    assert "state-badge" not in panel and "state-badge" not in js
+    assert "apply-chip\"" not in js + amend and "apply-chip-key" not in js + amend
+    # A tag holds a word; what it means sits beside it in meta type.
+    assert 'text("span", "prop", "Other desk")' in amend and 'text("span", "prop", "Undone")' in amend
+    assert "Undo reverses this" not in amend and "Next undo" not in amend
+    assert "left alone" not in amend.replace("Removed, left alone", "")
+    assert 'src.className = "prop";' in js and "source-tag" not in js + amend
+    assert 'class="apply-sub-title"' not in panel
+    # Quiet buttons, not underlined links.
+    assert 'class="btn btn-quiet apply-recheck" id="apply-preflight-btn">Re-check<' in panel
+    assert '<summary class="btn btn-quiet" id="apply-result-summary">' in panel
+    assert 'link.className = "btn btn-quiet findings-summary-link";' in js
+    assert "link-btn" not in panel
+    # Empty states (§8) and the Options fold (§3).
+    assert '<div class="empty" id="journal-stack-empty" hidden></div>' in panel
+    assert 'class="step-empty"' not in panel
+    assert panel.count('<details class="section fold apply-options"') == 2
+
+
+def test_preview_drops_to_secondary_once_it_is_done(assets):
+    """§4: Primary marks the next action now. A current preview makes
+    Write the next action, so Preview reads "Preview again", secondary."""
+    js = assets.get("/static/apply.js").text
+    assert ('previewBtn.className = "btn " + (previewedNow || undoOnShow ? "btn-secondary"'
+            ' : "btn-primary");') in js
+    assert ('previewBtn.textContent = undoOnShow ? "Preview write" : previewedNow'
+            ' ? "Preview again" : "Preview";') in js
+    # One brass circle at a time.
+    assert '(ready1 ? "is-current" : "")' in js
+    assert "ready1 = ready1 && !patchBlocker();" in js
+
+
+def test_apply_focus_rings_are_brass(assets):
+    css = assets.get("/static/styles.css").text
+    assert ".apply-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }" in css
+    assert ".apply-log > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }" in css
+    assert "outline: none" not in css[css.index(".apply-help {"):css.index(".apply-info {")]

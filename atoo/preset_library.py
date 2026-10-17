@@ -20,9 +20,9 @@ The order, first usable one wins:
    not a directory, or holds no `.chn`/`.bus` file, is passed over with
    a note saying so, and the next candidate is tried.
 
-Whichever is used is announced at INFO with the reason (CLAUDE.md's INFO
-principle): the engineer can see which library his new strips' values
-came from, and correct his config if it was the wrong one.
+Whichever is used is announced at INFO with the reason (the INFO
+principle): the engineer can see which library their new strips' values
+came from, and correct their config if it was the wrong one.
 
 No library at all is not refused. A strip without its preset's values
 still passes audio; it is a WARNING (`preset.no-library`), and `patch`

@@ -20,7 +20,7 @@ from atoo.console import OscReply
 # -- the plan is counted, not remembered -----------------------------------
 
 
-def test_a_compact_reading_its_own_panel_asks_for_6143_addresses():
+def test_a_compact_reading_its_own_panel_asks_for_6195_addresses():
     # Counted, not pinned to a constant: this is the number
     # `cli.read_addresses` prints and `progress` divides by, and the
     # hand-maintained constant it replaced (5,928) had been stale for
@@ -48,10 +48,17 @@ def test_a_compact_reading_its_own_panel_asks_for_6143_addresses():
     # sources); 6,138: each phantom-capable socket's width
     # (`/io/in/{grp}/{n}/mode`, 8 LCL + 16 A), so C001 can tell the even
     # socket of a stereo pair is taken. Same `/io/in` node as `vph`.
+    #
+    # 6,167 since the input socket's own mute (`/io/in/{grp}/{n}/mute`,
+    # the 24 LCL sockets, C007): the same node again, so the 323 requests
+    # below do not move.
+    #
+    # 6,195 since the width of each bus, Main and Matrix (`busmono`: 16 + 4
+    # + 8, R011 and CV020), inside the object nodes already dumped.
     inputs, outputs = socket_groups_to_read("wing-compact")
     plan = console_read_plan(input_sockets=inputs, output_sockets=outputs)
-    assert len(plan) == 6143
-    assert len(set(a for a, _ in plan)) == 6143, "no address is read twice"
+    assert len(plan) == 6195
+    assert len(set(a for a, _ in plan)) == 6195, "no address is read twice"
 
 
 def test_the_320_addresses_the_desk_never_answers_are_no_longer_asked_for():
@@ -104,7 +111,7 @@ def test_the_plan_contacts_nothing():
                              dcas=0, mute_groups=0)[0] == ("/ch/1/name", "s")
 
 
-def test_node_dumps_take_6143_addresses_down_to_323_requests():
+def test_node_dumps_take_6195_addresses_down_to_323_requests():
     inputs, outputs = socket_groups_to_read("wing-compact")
     plan = console_read_plan(input_sockets=inputs, output_sockets=outputs)
     by_node, alone = group_plan_by_node(plan)

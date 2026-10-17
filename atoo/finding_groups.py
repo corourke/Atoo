@@ -1,7 +1,7 @@
 """Group repeated findings in what a person READS (FR-X.15c).
 
-The maintainer, 2026-09-30, after a real build of a 24-channel show printed
-about sixty notes and warnings: *"The notes noise is way too much."*
+A real build of a 24-channel show printed
+about sixty notes and warnings -- far too much noise.
 Most of them said one thing once per channel -- the plan's high-pass
 beat the preset's, twenty-two times; "patch socket was not stated",
 twenty-three times; one "declared but unused" note per empty DCA.
@@ -481,8 +481,8 @@ def group_lines(lines) -> list[str]:
 
 # ---- the dock's INFO rows, by code ------------------------
 #
-# The maintainer, 2026-10-02, of the notes under a rebuilt plan: *"They're simply
-# too many of them."* The Setup UI's findings dock therefore collapses
+# The notes under a rebuilt plan were simply
+# too many of them. The Setup UI's findings dock therefore collapses
 # every INFO under one "N info" toggle and, opened, shows ONE ROW PER CODE:
 # a count and a plain-English summary, each opening onto its items (which
 # are this module's `group_dicts` entries, unchanged). Errors and warnings

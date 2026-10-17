@@ -48,7 +48,7 @@ class TestPanelCounts:
 
 
 class TestTheAddressTreeIsNotAPanelInventory:
-    """The finding that reopened #13."""
+    """The finding that reopened an earlier change."""
 
     def test_the_walk_reports_aux_sockets_the_compact_does_not_have(self):
         """`/io/in/AUX/1..8` is in the 2026-09-08 walk of the maintainer's Compact.
@@ -179,7 +179,7 @@ class TestExpansionBays:
 
     def test_the_model_variant_groups_are_a_different_problem(self):
         """LCL/AUX vary by panel and the desk states no inventory for
-        them -- that is #13's flag. Mixing the two sets up would either
+        them -- that is the flag. Mixing the two sets up would either
         refuse a Compact's local inputs or read a bay off a model name."""
         assert not (facts.EXPANSION_BAY_ADDRESSES.keys() & facts.MODEL_VARIANT_GROUPS)
 
@@ -205,7 +205,7 @@ class TestExpansionBays:
         assert not facts.bay_is_empty(reported)
 
     def test_the_desk_does_not_refuse_the_patch_itself(self):
-        """The measurement the whole of #115 rests on
+        """The measurement the whole of an earlier change rests on
         (`archive/examples/console-runs/2026-09-21/A8_patch_test.txt`). If this
         ever becomes False the check in `apply` is redundant, not wrong --
         but nothing should quietly assume the desk started refusing."""

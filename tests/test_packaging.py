@@ -81,8 +81,8 @@ def test_no_starter_data_glob_is_dead_and_every_starter_file_is_shipped():
 
 
 def test_no_package_data_glob_is_dead():
-    """A glob matching nothing is the shape of the #101 bug: `domain/*.json`
-    stayed in the list after #98 deleted the last .json in that directory,
+    """A glob matching nothing is the shape of the bug: `domain/*.json`
+    stayed in the list after an earlier change deleted the last .json in that directory,
     and read as "domain files are handled" while handling none."""
     for glob in package_data_globs():
         assert list(PACKAGE.glob(glob)), (
@@ -196,6 +196,10 @@ def test_the_starter_set_is_package_data_and_not_read_from_examples():
     matched = {path for glob in starter_data_globs() for path in STARTER.glob(glob)}
     files = firstrun.starter_files()
     assert {"README.md", "conventions.md", "presets/README.md"} <= set(files)
+    # The audit demo states `audit --help` and `watch --help`
+    # name are in the starter set, so `init` hands them to a pipx install.
+    assert {"audit-demo/audit_demo_plan.json", "audit-demo/audit_demo_state.json",
+            "audit-demo/audit_demo_state_before.json"} <= set(files)
     assert not any(f.startswith(firstrun.DEMO_SHOW_NAME + "/") for f in files)
     for rel in files:
         assert STARTER / rel in matched, rel

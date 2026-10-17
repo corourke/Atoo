@@ -1,7 +1,7 @@
 """`atoo init` -- a working folder of your own.
 
 Before this, a new user's only starting material was a clone of the
-maintainer's working show folder, which is the project's working area (tens of
+project's working show folder, which is the project's working area (tens of
 megabytes of desk captures, runs and test plans) rather than something to
 hand a person. `init` makes ``~/Documents/Atoo`` (or ``--dir``),
 copies a small **starter set** into it, and names three of those things
@@ -13,30 +13,37 @@ in ``~/.atoo.config`` so the rest of Atoo finds them:
 
 **The starter set is the repository's top-level ``starter/``**, the one
 copy of the starter conventions, the starter preset library and the Demo
-show (the maintainer, 2026-10-11: *"one top level starter or
-examples directory at the top of the project -- let's get rid of
-duplicates"*). A wheel carries it as the package ``atoo.starter``
+show (one top-level starter directory at the top of the project,
+with no duplicates). A wheel carries it as the package ``atoo.starter``
 (``pyproject.toml`` maps that package to ``starter/``; checked by
 ``tests/test_packaging.py``), so a pipx install has it with no checkout.
 `starter_dir()` finds it in either place: inside the installed package,
 or beside the ``atoo/`` package in a checkout or an editable
-install -- whichever actually holds the set, so a pre-#493 checkout's
-leftover ``atoo/starter/`` is passed over. It is never read from the maintainer's own show folders -- a wheel
-install has none. What
+install -- whichever actually holds the set, so an older checkout's
+leftover ``atoo/starter/`` is passed over. It is never read
+from the project's own working show folders -- a wheel install has none. What
 ``init`` copies from it:
 
 * ``README.md`` -- what each file is, and ``atoo ui`` next;
 * ``conventions.md`` -- the starter house conventions: a
   band/club house style that states the usual choices, so a first build
   infers little. The packaged Demo show is built from the same file;
-* ``presets/`` -- the starter preset library: the maintainer's own
+* ``presets/`` -- the starter preset library: the project's own
   channel presets, one per source, that those conventions name, and three
   bus presets: "Mix Bus" for the mix busses and two for FX busses;
+* ``audit-demo/`` -- three small hand-built console captures
+  (``audit_demo_state.json``, ``audit_demo_state_before.json`` and a plan,
+  ``audit_demo_plan.json``) for trying ``atoo audit`` and ``atoo watch``
+  with no console attached. ``audit --help`` and ``watch --help`` name
+  ``~/Documents/Atoo/audit-demo/...`` (a pipx install has no
+  ``docs/user/``, and the help examples have to run on one), so ``init``
+  copies them like any other starter file rather than the CLI resolving a
+  short name to the package's own copy;
 * no show bundle, unless asked. ``demo-show/`` (the Demo) is opened
   read-only from the package by the UI's **Try the demo show**. Which
-  show a user starts with is not something ``init`` can know (the
-  maintainer, 2026-10-01: *"Do not automatically choose a starter show
-  -- we have no way of knowing what it should be"*), so the first show
+  show a user starts with is not something ``init`` can know (a starter
+  show is not chosen automatically: there is no way of knowing what it
+  should be), so the first show
   is made with the UI's **New show...**. Nor are there plans, build
   logs, journals, captures or resolved conventions: those are what
   Atoo makes.
@@ -134,6 +141,9 @@ STARTER_DIR = starter_dir()
 DEMO_SHOW_NAME = "demo-show"
 #: The starter preset library, as `init` copies it into the folder.
 PRESETS_NAME = "presets"
+#: The audit demo's captures, as `init` copies them: the
+#: files `audit --help` and `watch --help` name.
+AUDIT_DEMO_NAME = "audit-demo"
 MANIFEST_NAME = ".atoo-starter.json"
 DEFAULT_DIR_PARTS = ("Documents", "Atoo")
 
@@ -391,23 +401,26 @@ def format_report(result: InitResult) -> list[str]:
                  + (" (created)" if result.directory_created else " (already there)"))
 
     # Loose files one per line; the preset library's presets (channel
-    # `.chn` and bus `.bus`) as one line of counts, plus a line for each
-    # preset not merely created/same.
-    prefix = f"{PRESETS_NAME}/"
-    presets = [r for r in result.files
-               if r.startswith(prefix) and r.endswith((".chn", ".bus"))]
-    loose = [r for r in result.files if r not in presets]
-    for rel in loose:
+    # `.chn` and bus `.bus`) and the audit demo's captures as one line of
+    # counts each, plus a line for each one not merely created/same.
+    groups = [(f"{PRESETS_NAME}/", "presets", (".chn", ".bus")),
+              (f"{AUDIT_DEMO_NAME}/", "files", (".json",))]
+    grouped = {rel for prefix, _, suffixes in groups for rel in result.files
+               if rel.startswith(prefix) and rel.endswith(suffixes)}
+    for rel in [r for r in result.files if r not in grouped]:
         lines.append(f"  {rel:<28} {_FILE_WORDS[result.files[rel]]}")
-    if presets:
+    for prefix, noun, suffixes in groups:
+        members = [r for r in result.files if r in grouped and r.startswith(prefix)]
+        if not members:
+            continue
         counts: dict[str, int] = {}
-        for rel in presets:
+        for rel in members:
             counts[result.files[rel]] = counts.get(result.files[rel], 0) + 1
         summary = ", ".join(f"{n} {_FILE_WORDS[s].split(':')[0]}"
                             for s, n in sorted(counts.items(),
                                                key=lambda kv: list(_FILE_WORDS).index(kv[0])))
-        lines.append(f"  {prefix:<28} {len(presets)} presets: {summary}")
-        for rel in presets:
+        lines.append(f"  {prefix:<28} {len(members)} {noun}: {summary}")
+        for rel in members:
             if result.files[rel] in ("older", "yours", "updated"):
                 lines.append(f"    {rel[len(prefix):]}: {_FILE_WORDS[result.files[rel]]}")
     if result.demo == "created":

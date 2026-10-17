@@ -1,7 +1,7 @@
 """Resolving a plan's named presets against Atoo's
 own preset library.
 
-**These are not the console's presets.** The maintainer, 2026-09-20: *"I want to
+**These are not the console's presets.** *"I want to
 be sure that we understand that these presets are managed in Atoo,
 they are not the presets that live on the console."* WING has no remote
 preset-recall command at all (D7), so a "preset" here is a `.chn` export
@@ -174,7 +174,7 @@ def plan_file(tmp_path):
 def test_every_command_that_verifies_accepts_presets(command, capsys):
     """--presets is on build, verify and apply -- the three that run
     verification. A flag that exists on only some of them is the kind of
-    gap #89 left for --show."""
+    gap an earlier change left for --show."""
     with pytest.raises(SystemExit):
         main([command, "--help"])
     out = capsys.readouterr().out

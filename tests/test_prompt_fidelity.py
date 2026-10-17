@@ -62,7 +62,7 @@ case would have passed.
 question is whether the prompt is unambiguous, and a strong model papers
 over ambiguity by inferring what was meant: `claude-haiku-4-5` and
 `claude-sonnet-4-5` both got every width right against the *unfixed*
-wording, so neither would have caught #130 on its own. A prompt the weakest
+wording, so neither would have caught an earlier change on its own. A prompt the weakest
 model reads correctly is a prompt that says what it means; a prompt only the
 strongest model reads correctly is a prompt that got lucky. A local
 Ollama model (`ATOO_AI_PROVIDER=ollama`) is the weak end in practice,
@@ -210,7 +210,7 @@ def test_no_stated_width_is_announced_as_a_decision(stated_width_plan):
 @pytest.mark.live_model
 def test_an_unstated_bus_width_is_decided_and_marked_by_the_model():
     """The other direction. `tests/fixtures/smallband.md` states no width
-    anywhere. Before 2026-09-25 the right answer was null; under CLAUDE.md's
+    anywhere. Before 2026-09-25 the right answer was null; under the
     judgement-vs-patching rule ("it is not OK to leave the mono/stereo
     decision undecided because it affects how we patch ... This is why we
     have INFO messages") it is a decided width, with an `inferred` entry

@@ -18,7 +18,7 @@
    refused.
 
 Every plan and reply here is frozen under `tests/fixtures/` or built in
-the test; nothing reads `examples/` (CLAUDE.md).
+the test; nothing reads `examples/`.
 """
 
 from __future__ import annotations

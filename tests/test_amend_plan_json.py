@@ -1,24 +1,23 @@
 """plan.json is written only by a build, reversing the
-plan.json half of #259.
+plan.json half.
 
-**The history.** #259 found that a confirmed `amend --show DIR` left
+**The history.** an earlier change found that a confirmed `amend --show DIR` left
 `plan.json` describing the show from before it, so the next amend read the
 strips it had just filled as somebody else's and placed the same horns a
 second time. The maintainer's answer then (2026-09-24) was to REPLACE plan.json with
 the amended show and keep the replaced plan in the amend's journal entry, so
 undo could put it back.
 
-**The decision now (the maintainer, 2026-09-25):** *"I don't think we should modify
+**The decision now:** *"I don't think we should modify
 plan.json unless we've modified the input list or the conventions file or
 the instructions file, the inputs to plan.json."* So a confirmed amend (and a
-confirmed patch) never touches plan.json. The hazard #259 closed stays closed
+confirmed patch) never touches plan.json. The hazard an earlier change closed stays closed
 another way: every amend entry embeds the plan it left on its desk
 (`journal_stack.DESK_PLAN_BLOCK`, per-desk journals), and the next amend of
 that desk compares against THAT -- so amending again from the same rebuild
 still finds nothing to add.
 
-**Old entries still undo correctly.** An amend recorded between #259 and
-#279 did replace plan.json and carries the replaced text (`bundle_plan`).
+**Old entries still undo correctly.** An amend recorded between two earlier changes did replace plan.json and carries the replaced text (`bundle_plan`).
 `_legacy_amend` below makes one, and the second half of this file checks
 undo still restores it under the rules -- byte-identical, only while
 plan.json is still what that amend wrote, and the redo re-installs it.
@@ -109,7 +108,7 @@ def _channels(plan: dict) -> dict[int, str]:
 
 
 # ======================================================================
-# #259's hazard stays closed -- through the desk's journal, not plan.json
+# The hazard stays closed -- through the desk's journal, not plan.json
 # ======================================================================
 
 
@@ -340,13 +339,13 @@ def test_undo_of_a_new_amend_leaves_plan_json_alone_and_says_why(tmp_path, desk,
 
 
 # ======================================================================
-# An amend recorded between #259 and #279 still undoes correctly
+# An amend recorded between two earlier changes still undoes correctly
 # ======================================================================
 
 
 def _legacy_amend(show: Path) -> tuple[bytes, bytes]:
     """Run an amend, then put the bundle in the state an amend recorded
-    between #259 and #279 left it in: plan.json replaced by the effective
+    between two earlier changes left it in: plan.json replaced by the effective
     plan, and the replaced bytes kept in the entry's `bundle_plan` (and in
     its mirror, which is the same bytes). Returns `(before, written)`."""
     before = (show / "plan.json").read_bytes()

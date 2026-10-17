@@ -42,7 +42,6 @@ points: replace them with your own.
 3. Run `atoo presets` and check it lists the name you meant.
 
 In an Atoo checkout, the exported file carries the desk's own name in
-`creator_name`: change it to `WING-PP-SERIAL01`, and run
-`python3 tools/scrub_check.py starter` before you commit. Then rebuild
-the Demo with `python3 tools/build_demo_show.py`
-(`docs/developer/demo-presets.md`).
+`creator_name`: change it to `WING-PP-SERIAL01` before you share it.
+(Rebuilding the Demo show from a changed set is done in the development
+repository.)

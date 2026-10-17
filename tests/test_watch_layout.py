@@ -1,6 +1,6 @@
 """The Watch page's layout, look B of `mockups/watch-layout/`.
 
-The maintainer, 2026-10-11, choosing it: *"B, with no thin colored border (keep
+Choosing it: *"B, with no thin colored border (keep
 the thicker colored bars), and the flash option off by default."*
 
 * **The table first.** A one-row header (interval, Start/Stop, the flash
@@ -18,7 +18,7 @@ the thicker colored bars), and the flash option off by default."*
   edge glow under reduced motion.
 
 The browser half is asserted on the served assets, which is all the
-Python suite can see (CLAUDE.md); every state here is built in the test.
+Python suite can see; every state here is built in the test.
 """
 
 from __future__ import annotations
@@ -104,10 +104,11 @@ def _watch_panel(html):
 def test_the_table_comes_right_after_a_one_row_header_and_the_folds_follow(assets):
     panel = _watch_panel(assets["html"])
     order = [panel.index(marker) for marker in (
-        'id="panel"', 'id="start-btn"', 'id="watch-flash-on"', 'class="summary"',
-        'id="conn-pill"', 'id="alert-table"', 'id="watch-about"', 'id="wc-panel"')]
+        'id="panel"', 'id="conn-pill"', 'id="start-btn"', 'id="watch-flash-on"',
+        'id="watch-verdict"', 'class="summary verdict-counts"', 'id="alert-table"',
+        'id="watch-about"', 'id="wc-panel"')]
     assert order == sorted(order)
-    # Nothing between the header and the table but the header's own lines.
+    # Nothing between the header and the table but the verdict and its lines.
     between = panel[panel.index('id="panel"'):panel.index('id="alert-table"')]
     assert 'id="wc-table"' not in between and 'id="console-origin"' not in between
     assert '<details id="watch-about"' in panel and '<details id="wc-panel"' in panel
@@ -147,7 +148,7 @@ def test_the_rows_carry_the_state_and_nothing_else_takes_its_colour(assets):
 
 
 def test_a_stale_watch_greys_the_table(assets):
-    assert 'body[data-watch-worst="stale"] .watch-table-wrap' in assets["css"]
+    assert 'body[data-watch-worst="stale"] .watch-table-scroll' in assets["css"]
     assert 'worst = "stale"' in assets["js"]
 
 
@@ -162,7 +163,8 @@ def test_flash_on_new_is_off_by_default_remembered_and_never_for_info(assets):
     panel = _watch_panel(html)
     toggle = panel[panel.index('id="watch-flash-on"') - 40:]
     toggle = toggle[:toggle.index("</button>")]
-    assert "<button" in toggle and 'aria-pressed="false"' in toggle and "Off" in toggle
+    assert "<button" in toggle and 'role="switch"' in toggle and 'aria-checked="false"' in toggle
+    assert 'aria-pressed' not in toggle and "Off" in toggle
     assert "let flashOn = false;" in js
     assert 'localStorage.getItem("atoo.watchFlash") === "1"' in js
     assert 'localStorage.setItem("atoo.watchFlash"' in js
@@ -194,27 +196,26 @@ def _media_block(css, query, after):
 
 
 def test_the_alert_table_fits_its_frame_at_phone_width(assets):
-    """At 390px the five columns measured ~474px in a 364px frame, and
-    .table-wrap's overflow: hidden clipped Rule out of reach. Narrow
-    screens let the fixed widths go and scroll rather than clip; phone
-    width drops Rule (Since already goes in the generic table rule)."""
+    """At 390px the five columns measured ~474px in a 364px frame. The
+    table scrolls sideways inside its box (ui-style.md §7), narrow
+    screens let the fixed widths go, and phone width drops Rule (Since
+    already goes in the generic table rule)."""
     css = assets["css"]
-    assert re.search(r"\.table-wrap \{[^}]*overflow: hidden", css)
-    narrow = _media_block(css, "max-width: 760px", "/* The folds: one line each until opened. */")
-    assert ".watch-table-wrap { overflow-x: auto; }" in narrow
+    assert ".watch-table-scroll { overflow-x: auto; }" in css
+    assert "padding: 0; overflow: hidden;" in _rule(css, ".watch-table-wrap.panel.box")
+    narrow = _media_block(css, "max-width: 760px", "/* The folds: each summary IS the block header")
     assert "#alert-table :is(.col-sev, .col-rule, .col-since) { width: auto; }" in narrow
-    phone = _media_block(css, "max-width: 640px", "/* The folds: one line each until opened. */")
+    phone = _media_block(css, "max-width: 640px", "/* The folds: each summary IS the block header")
     assert "#alert-table .col-rule { display: none; }" in phone
     assert re.search(r"@media \(max-width: 640px\) \{[^}]*\.col-since \{ display: none; \}", css)
 
 
 # ---- suppression ----------------------------------------------
 #
-# The maintainer, 2026-10-12: suppress all Warnings or all Infos by clicking their
+# Suppress all Warnings or all Infos by clicking their
 # counts, and one finding by a checkbox, as in the Build findings dock. The
 # rules live in watch.js; the Python suite cannot run it, so these hold the
-# served text to them (CLAUDE.md, "a rename that crosses into
-# atoo/web/static/ is invisible to the test suite").
+# served text to them.
 
 
 def _fn(js, signature):
@@ -305,42 +306,47 @@ def test_the_info_count_is_blue_when_its_infos_are_hidden_by_their_boxes(assets)
 
 def test_the_updated_label_keeps_one_width_while_it_counts(assets):
     rule = _rule(assets["css"], ".watch-head #last-updated")
-    assert "font-variant-numeric: tabular-nums" in rule
-    assert "white-space: nowrap" in rule and "box-sizing: border-box" in rule
-    # Wide enough for "Updated just now" and "No reading for 45s" at 12px
-    # (measured 112px and 117px in Chromium, padding included).
-    width = re.search(r"min-width: ([\d.]+)em", rule)
+    assert "font-variant-numeric: tabular-nums" in rule and "white-space: nowrap" in rule
+    # Wide enough for "Updated just now" at 12px while readings arrive.
+    width = re.search(r"min-width: ([\d.]+)em", _rule(assets["css"], ".watch-head #last-updated.meta"))
     assert width and float(width.group(1)) >= 10
-    # The stale state's padding is the base rule's, so going stale adds a
-    # colour and not width; and its colour is not lost to the base rule.
-    assert "padding: 3px 6px" in rule
-    assert "padding" not in _rule(assets["css"], ".watch-head #last-updated.is-stale")
-    assert "var(--warning-fg)" in _rule(assets["css"], ".watch-head #last-updated.is-stale")
+    # Stale, it is a warning state (ui-style.md §6).
+    render = _fn(assets["js"], "function renderLastUpdated()")
+    assert 'lastUpdated.className = stale ? "state is-warn" : "meta";' in render
 
 
-def test_the_header_is_compact_enough_for_one_line_at_laptop_width(assets):
-    css = assets["css"]
-    row = _rule(css, ".watch-head .watch-head-row")
-    assert "gap: 8px" in row
-    assert "padding: 7px 12px" in _rule(css, ".watch-head .btn")
-    assert "padding: 6px 8px" in _rule(css, ".watch-head .count-pill")
-    assert "padding: 6px 8px" in _rule(css, ".watch-head #conn-pill")
-    assert "width: 52px" in _rule(css, ".watch-interval input")
-    flash = _rule(css, ".watch-flash-toggle")
-    assert "padding: 6px 8px" in flash and "margin-left" not in flash
+def test_the_header_is_a_block_header_outside_its_box(assets):
+    """An earlier change (ui-style.md §3): the title, a notation, then on the
+    right the connection state and the controls -- outside the box, which
+    is the alert table. Start is the primary, Stop and Flash secondary
+    small buttons; Flash says its state in words."""
+    panel = _watch_panel(assets["html"])
+    head = panel[panel.index('id="panel"'):panel.index('class="panel box table-box watch-table-wrap"')]
+    assert 'class="block-head watch-head"' in head and "<h2>Watch</h2>" in head
+    assert 'class="notation" id="watch-notation"' in head
+    assert 'id="start-btn" class="btn btn-primary btn-sm"' in head
+    assert 'id="stop-btn" class="btn btn-secondary btn-sm"' in head
+    assert 'class="switch watch-flash-toggle" role="switch"' in head
+    assert "<span>Flash on new</span>" in head and '<span class="word" aria-hidden="true">Off</span>' in head
+    assert "width: 52px" in _rule(assets["css"], ".watch-interval input")
+    assert 'flashToggle.setAttribute("aria-checked", flashOn ? "true" : "false");' in assets["js"]
 
 
 def test_an_info_rows_tag_in_the_table_is_the_same_blue_as_in_suppressed(assets):
-    """The maintainer, 2026-10-13: "Info badge in regular section is grey
+    """"Info badge in regular section is grey
     but is the correct blue color in the suppressed section." Both draw
-    `sev-badge sev-<severity>`; the table's info rows may quieten their
-    text, never recolour the tag."""
+    `sev sev-<severity>`; the table's info rows may quieten their text,
+    never recolour the tag. Since the Watch restyle the table's error and warning
+    tags are the large solids (ui-style.md §6, §10)."""
     css, js = assets["css"], assets["js"]
     assert "background: var(--info-bg); color: var(--info-fg)" in _rule(css, ".sev-info")
-    assert '<span class="sev-badge sev-\' + f.severity + \'">' in js
-    assert re.search(r"tr\.sev-row-info[^{]*\.sev-(badge|info)\b[^{]*\{", css) is None
+    row = _fn(js, "function rowHtml(f)")
+    assert '<span class="sev big\' + solid + " sev-" + f.severity' in row
+    assert 'f.severity === "error" || f.severity === "warning" ? " solid" : ""' in row
+    assert 'badge.className = "sev sev-" + f.severity;' in js
+    assert re.search(r"tr\.sev-row-info[^{]*\.sev(-badge|-info)?\b[^{]*\{", css) is None
     assert re.search(r"#alert-table \.sev-info\b[^{]*\{", css) is None
-    # The row itself stays calm, and error/warning tags keep their solids.
+    # The row itself stays calm, and error/warning tags take the solids.
     assert "color: var(--text-dim)" in _rule(css, "#alert-table tr.sev-row-info :is(.row-where, .row-claim)")
-    assert "var(--alarm-solid)" in _rule(css, "#alert-table .sev-error")
-    assert "var(--caution-solid)" in _rule(css, "#alert-table .sev-warning")
+    assert "var(--alarm-solid)" in _rule(css, ".sev.solid.sev-error")
+    assert "var(--caution-solid)" in _rule(css, ".sev.solid.sev-warning")

@@ -1,6 +1,6 @@
 """Bus presets, resolved into the plan -- an earlier change.
 
-The maintainer's decision, 2026-10-12: effects on FX busses come from **bus
+The decision, 2026-10-12: effects on FX busses come from **bus
 presets saved on the desk**. A plan's bus names one (`busses[X].preset`),
 chosen by the conventions the same way a channel's preset is ("FX busses
 get the bus preset of the same name"), and `build` expands it here, the
@@ -32,7 +32,7 @@ are carried as saved; `fx_engines.coerce_param` types each one when it is
 checked (verify) and written (apply).
 
 **The insert is always switched ON.** A preset saved with its insert
-bypassed (the maintainer's Vox Verb is) is switched on, with an INFO, because an
+bypassed (the Vox Verb is) is switched on, with an INFO, because an
 FX bus with its effect bypassed is a silent FX bus.
 """
 

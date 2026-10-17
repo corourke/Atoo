@@ -1,6 +1,6 @@
 """A smaller hosted model's plan, and what it takes to accept one.
 
-The maintainer, 2026-09-28: *"I'm looking to see if we can get acceptable plans
+*"I'm looking to see if we can get acceptable plans
 on smaller hosted models."* His smallband build on claude-haiku-4-5 failed
 outright on `plan.outputs.Main.inferred: not a field this format has`.
 The plan is not constrained-decoded (its name-keyed maps are outside the
@@ -9,7 +9,7 @@ guard, and a smaller model drifts further from the format than Sonnet.
 
 The reply itself is frozen in `tests/fixtures/haiku45_smallband.reply.json`
 (a copy, never read from `examples/smallband/`, which is the maintainer's living
-bundle -- CLAUDE.md). What it needed:
+bundle). What it needed:
 
   * `inferred` on an output (fix 1) -- the marker a bus and a channel
     already carry, for the one field an output can have decided: its

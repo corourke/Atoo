@@ -1,13 +1,11 @@
-"""Each build's own log file, in `<bundle>/builds/` (this
-project's own an earlier change as revised; the folder was renamed to `builds/`
+"""Each build's own log file, in `<bundle>/builds/` (the folder was renamed to
+`builds/`
 on 2026-10-02).
 
-An earlier change kept a build's per-role thinking-summary notes and usage
-(`ModelCallProgress.build_log_entry()`, `docs/developer/build-lessons-
-2026-09-27.md` part C) as `plan["meta"]["build_log"]`, folded in by
-`cli.py`. The maintainer, 2026-09-28: *"Build log looks good and is very
-interesting... I'm not sure the plan.json is the best place to keep
-it."* The plan is the console spec; the log is a build's own diary, and
+The build log first kept a build's per-role thinking-summary notes and usage
+(`ModelCallProgress.build_log_entry()`) as `plan["meta"]["build_log"]`,
+folded in by `cli.py`, but plan.json is not the best place to keep
+it. The plan is the console spec; the log is a build's own diary, and
 it should not grow plan.json by megabytes over a show's life, or vanish
 if `plan.json` is later swapped out from under it (an amend, an undo).
 
@@ -22,9 +20,9 @@ plan is exactly the build worth keeping a record of, and it has no
     <bundle>/builds/2026-09-28T18-05-41Z.json
     ...
 
-**The newest five are kept** (`prune.KEEP`; the maintainer, 2026-10-02:
-*"continually prune the builds, journals, and logs directories to a max
-of 5 entries each"*). `write` prunes straight after writing, so the
+**The newest five are kept** (`prune.KEEP`: the builds, journals, and logs
+directories are continually pruned to a max of 5 entries each). `write` prunes straight
+after writing, so the
 folder never holds more. The log `plan.json` (or `plan.previous.json`)
 points to is protected -- a run of failed builds cannot prune away the
 log of the plan the bundle still holds -- and takes one of the five
@@ -36,10 +34,9 @@ to the directory this log file lives beside (the bundle, or wherever
 `--out` pointed with no bundle -- see `directory_for`). A plan built
 before this shipped may still carry the old, inline `meta.build_log`;
 nothing here requires it to be migrated, and `resolve` reads either
-shape (`docs/developer/build-lessons-2026-09-27.md`'s design, kept
-working rather than broken by this).
+shape.
 
-**Never fed back into a prompt.** That was the own rule
+**Never fed back into a prompt.** That was always the rule
 (`generate._plan_for_prompt`, `patch._base_for_prompt`) and it still
 holds: a build log, wherever it lives, is for a human (`atoo
 lessons`, the Setup UI's "Build log" fold), never for a model.
@@ -76,8 +73,8 @@ def timestamp_name(now: datetime | None = None) -> str:
 
 def directory_for(*, bundle_dir: Path | None, out_path: Path | None) -> "Path | None":
     """Where this build's log goes. A bundle (`--show`) wins over
-    `--out` even when `--out` points somewhere else -- the maintainer's "into
-    the bundle when there is one" -- since the bundle is the one thing a
+    `--out` even when `--out` points somewhere else -- into
+    the bundle when there is one -- since the bundle is the one thing a
     show's builds are collected under. With no bundle, the log sits next
     to whatever `plan.json` was (or would have been) written to.
 

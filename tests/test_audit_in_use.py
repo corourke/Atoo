@@ -280,7 +280,7 @@ def test_the_name_a_finding_quotes_is_the_one_on_the_desk():
 
 
 def test_two_strips_named_on_their_sockets_still_collide():
-    """N001 compared `{base}/name` alone until #206, so two strips a
+    """N001 compared `{base}/name` alone, so two strips a
     person named identically on the desk -- blank strip names, the names
     on their sockets -- did not collide at all."""
     state = _compact({
@@ -373,7 +373,7 @@ def test_one_socket_feeding_two_strips_is_asked_about_once():
 # Which patches are the factory's own is a fact about the model
 # --------------------------------------------------------------------------
 #
-# The maintainer, 2026-09-23, choosing between naming the Compact's two media
+# Choosing between naming the Compact's two media
 # auxes in the vocabulary rule and broadening it once: *"Go with your
 # recommended B"* -- any factory-default patch, whatever the source. The
 # table that answers "which" is `console_facts.FACTORY_INPUT_PATCHES`,
@@ -655,8 +655,7 @@ def _initialized_console_state() -> ConsoleState:
 
 def _podium_console_state() -> ConsoleState:
     """The board the maintainer set up by hand, with channel 20 named "Podium"
-    **on its socket** -- `A13-board-with-podium.snap`, the capture issue
-    #204 was written off."""
+    **on its socket** -- `A13-board-with-podium.snap`, the capture an earlier change was written off."""
     return _console_state_from_snap(BOARD_WITH_PODIUM)
 
 
@@ -797,7 +796,7 @@ def test_an_initialized_console_produces_exactly_0_findings():
     was implemented, 49 of them warnings; **4** after it, all
     INFO, all about `/aux/1` and `/aux/2` -- the two auxes a Compact ships
     patched from the USB player and the media player, which the rule named
-    no exclusion for. The maintainer, 2026-09-23, on whether to name a third one
+    no exclusion for. On whether to name a third one
     or broaden the rule once: *"Go with your recommended B"*. So: **0**.
 
     Nothing about this number is allowed to be arranged. If it moves, read
@@ -898,12 +897,12 @@ def test_the_podium_capture_really_does_carry_the_name_only_on_the_socket():
 
 def test_the_channel_a_human_named_by_hand_is_in_use():
     """The headline, scored off the capture. `False` here
-    until #206, on a strip with somebody's live feed on it."""
+, on a strip with somebody's live feed on it."""
     assert is_in_use(_podium_console_state(), "/ch/20")
 
 
 def test_the_audit_now_has_something_to_say_about_that_channel():
-    """30 findings on this board before #206 and 32 after, and the two new
+    """30 findings on this board before an earlier change and 32 after, and the two new
     ones are both about `/ch/20`: it is in use and in no DCA (CH001),
     and it is unmuted and in use with its fader at the floor (L002).
     Neither is a regression to paper over -- they are the rules finally
@@ -1048,11 +1047,11 @@ def test_the_live_read_puts_the_media_aux_patches_back_where_the_desk_shows_them
 
 def test_the_live_read_and_the_snapshot_agree_on_every_address_both_hold():
     """The general form of the bug: the two paths are meant to describe
-    the same desk, and until #195 they differed on eight addresses.
+    the same desk, and until an earlier change they differed on eight addresses.
 
     Compared over the addresses the live read asks for, so the snapshot's
     extra leaves (a bus send `mode`, which the console has no such thing
-    as -- #195 again) are not counted against it."""
+    as -- an earlier change again) are not counted against it."""
     snapshot = _initialized_desk().values          # what the desk holds
     live = _initialized_console_read().values      # what the read made of it
     disagree = {a: (snapshot[a], live[a])
@@ -1116,6 +1115,8 @@ def test_the_live_path_never_asks_for_a_bus_send_mode():
     **6,143 + 26 + 26**: the three AES50 ports'
     link status and the two monitor sources. A factory desk has nothing
     on AES50, so no AES50 output is asked.
+    **6,167 + 26 + 26** since each local socket's own mute (C007).
+    **6,195 + 26 + 26** since the width of each bus, Main and Matrix.
 
     **Counted as asked-or-deliberately-not.** The capture
     this desk is built from predates the insert points and FX slots, so
@@ -1126,7 +1127,7 @@ def test_the_live_path_never_asks_for_a_bus_send_mode():
     desk = _initialized_desk()
     state = read_console_state(desk, **_COMPACT_READ)
     not_asked = sum(len(v) for v in state.unasked_families.values())
-    assert len(set(desk.asked)) + not_asked == 6143 + 26 + 26
+    assert len(set(desk.asked)) + not_asked == 6195 + 26 + 26
     assert "/bus/1/send/MX1/mode" not in desk.asked
     assert "/main/4/send/MX8/pon" not in desk.asked
     assert "/bus/1/send/MX1/on" in desk.asked
@@ -1134,7 +1135,7 @@ def test_the_live_path_never_asks_for_a_bus_send_mode():
 
 
 def test_the_second_pass_is_one_address_per_patched_socket_on_a_real_board():
-    """The cost of #206, counted on hardware values rather than argued.
+    """The cost, counted on hardware values rather than argued.
     26 of 5,738: the 24 channels a Compact ships patched from its own LCL
     sockets, plus USB 1 and PLAY 1. The 16 unpatched channels and 6
     unpatched auxes cost nothing, which is the shape the budget has to

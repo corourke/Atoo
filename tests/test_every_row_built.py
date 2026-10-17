@@ -1,5 +1,5 @@
 """Every input-list row is built as a channel, unless the engineer's own
-words say to leave it out (the maintainer, 2026-09-29).
+words say to leave it out.
 
 The evidence: Haiku's festival reply of 2026-09-29 declared 14 rows
 "deliberately unassigned", and its smallband reply dropped Playback

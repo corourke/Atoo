@@ -1,14 +1,14 @@
 """One plan, more than one WING model (the check, regraded 2026-09-24).
 
-The maintainer, 2026-09-24: *"you might generate a plan, and want to apply it to
+*"you might generate a plan, and want to apply it to
 more than one console, ex: primary console wing compact, backup console
 wing rack (both have similar I/O.)"* Until then `apply` refused ANY
 difference between the plan's model and the desk's, although every socket
 a Compact plan can name exists on a Rack -- and the Apply screen had no
 way past it at all.
 
-`CLAUDE.md`'s rule decides the new behaviour ("an error of judgement is
-not an error of patching"), and each branch is a test here:
+The rule "an error of judgement is not an error of patching" decides the
+new behaviour, and each branch is a test here:
 
 * different model, every socket the plan patches exists on the desk --
   proceed, INFO naming both models, pre-flight verify re-run against the

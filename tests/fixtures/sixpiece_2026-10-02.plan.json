@@ -31,7 +31,7 @@
         "preset_values": {
           "preset": "Kick B91A",
           "file": "Drums - Kick In Shure Beta91A.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "d62fbe91fe1aad4ff2bebd714a0f2bfbacecb053bef3637fa7e1d1857ab5d97b",
           "leaves": {
             "in/set/dlymode": "FT",
@@ -204,7 +204,7 @@
         "preset_values": {
           "preset": "Snare i5",
           "file": "Drums - Snare Top Audix i5.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "8c58d3a5c60618450e75f89c7aff17c57e4c6b2b7497b5cb0edf40dedf3b4c3c",
           "leaves": {
             "in/set/dlymode": "M",
@@ -382,7 +382,7 @@
         "preset_values": {
           "preset": "Hi Hat",
           "file": "Drums - Hi Hat General.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "6a20fd494c79c1cd526c248694e1ff484574836b6d48d833defad5fc4b990150",
           "leaves": {
             "in/set/dlymode": "M",
@@ -555,7 +555,7 @@
         "preset_values": {
           "preset": "H.Tom e604",
           "file": "Drums - H.Tom Sennheiser e604.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "c8ebf33fd8a4c2408fad9084ae09a88a2702308d07ee7db73418ff188e86faf8",
           "leaves": {
             "in/set/dlymode": "M",
@@ -728,7 +728,7 @@
         "preset_values": {
           "preset": "M.Tom e604",
           "file": "Drums - M.Tom Sennheiser e604.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "88b3099ebb1a27d514315ec237fae3916a38a0efafac7232dfcd6cd4daf542dd",
           "leaves": {
             "in/set/dlymode": "M",
@@ -901,7 +901,7 @@
         "preset_values": {
           "preset": "Fl.Tom e604",
           "file": "Drums - Floor Tom Sennheiser e604.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "29810efe27a19b4d5d5f89b33d2312a3fcc4585387aa0f76afe24a0b52846bbd",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1074,7 +1074,7 @@
         "preset_values": {
           "preset": "Fl.Tom e604",
           "file": "Drums - Floor Tom Sennheiser e604.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "29810efe27a19b4d5d5f89b33d2312a3fcc4585387aa0f76afe24a0b52846bbd",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1247,7 +1247,7 @@
         "preset_values": {
           "preset": "O.Head SM81",
           "file": "Drums - Overhead Shure SM81.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "14b65676487f0fe5f4d761a672a8a06d0adda1955ab32fb41c8067c72821dd66",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1421,7 +1421,7 @@
         "preset_values": {
           "preset": "O.Head SM81",
           "file": "Drums - Overhead Shure SM81.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "14b65676487f0fe5f4d761a672a8a06d0adda1955ab32fb41c8067c72821dd66",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1594,7 +1594,7 @@
         "preset_values": {
           "preset": "Synth",
           "file": "Synth.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "50971367dbd2e59934b61dc120f4e48c7df145938dfc793e62704127e96ac050",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1768,7 +1768,7 @@
         "preset_values": {
           "preset": "Bass GTR",
           "file": "Bass GTR.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "dd59f25ca559fc103decb6af4104fefb944e089a3babcc959ee503239cce3635",
           "leaves": {
             "in/set/dlymode": "M",
@@ -1940,7 +1940,7 @@
         "preset_values": {
           "preset": "E.GTR Gen",
           "file": "E.GTR General.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "fc9e0e4a55ba3db436688be053e62d1bb2f0cf628c0f40661a1bef1cfcb1edda",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2112,7 +2112,7 @@
         "preset_values": {
           "preset": "E.GTR Gen",
           "file": "E.GTR General.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "fc9e0e4a55ba3db436688be053e62d1bb2f0cf628c0f40661a1bef1cfcb1edda",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2284,7 +2284,7 @@
         "preset_values": {
           "preset": "A.GTR DI",
           "file": "A.GTR DI.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "22be961a86a894c5f1758894cb12c87274e96aa849564830bef968851568eeaf",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2458,7 +2458,7 @@
         "preset_values": {
           "preset": "Keys",
           "file": "Keys.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "e2799a9ff9c5e1149f06239558b40211ac9315072d5cb4e4e4547382ebea9f16",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2638,7 +2638,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2813,7 +2813,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -2988,7 +2988,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -3163,7 +3163,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -3338,7 +3338,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -3513,7 +3513,7 @@
         "preset_values": {
           "preset": "Vocal Beta58",
           "file": "Vocal Shure Beta58.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "90e35ce174200ddc7e3aa379ac4659a262896af8a7c0157e888f9573e950219b",
           "leaves": {
             "in/set/dlymode": "M",
@@ -3688,7 +3688,7 @@
         "preset_values": {
           "preset": "Vocal Gen",
           "file": "Vocal General.chn",
-          "library": "/home/user/show/examples/channel_presets",
+          "library": "/home/user/show/channel_presets",
           "sha256": "9c81602c837042638d82b76be96475168e4e519aa2eb4d6bcaf2105ce6c76cec",
           "leaves": {
             "in/set/dlymode": "M",
@@ -4398,25 +4398,25 @@
     "console_model": "wing-compact",
     "conventions_stack": [
       {
-        "path": "/home/user/show/examples/conventions.md",
+        "path": "/home/user/show/conventions.md",
         "role": "conventions",
         "source": "--conventions",
-        "absolute_path": "/home/user/show/examples/conventions.md",
+        "absolute_path": "/home/user/show/conventions.md",
         "bundle_relative_path": "../conventions.md",
         "sha256": "539327422513b3a1e133f2f2b6315775e3fede0ae12f3efd422f2475e2726e62"
       },
       {
-        "path": "/home/user/show/examples/sixpiece/instructions.md",
+        "path": "/home/user/show/sixpiece/instructions.md",
         "role": "instructions",
-        "source": "show bundle /home/user/show/examples/sixpiece",
-        "absolute_path": "/home/user/show/examples/sixpiece/instructions.md",
+        "source": "show bundle /home/user/show/sixpiece",
+        "absolute_path": "/home/user/show/sixpiece/instructions.md",
         "bundle_relative_path": "instructions.md",
         "sha256": "6fa580e7c280fd471271c9a9a48ee786b53b10c7e5fa8203fbfef16df99e03b2"
       }
     ],
     "input_list": {
-      "path": "/home/user/show/examples/sixpiece/input.csv",
-      "absolute_path": "/home/user/show/examples/sixpiece/input.csv",
+      "path": "/home/user/show/sixpiece/input.csv",
+      "absolute_path": "/home/user/show/sixpiece/input.csv",
       "bundle_relative_path": "input.csv",
       "sha256": "862d3bf5221220ba0693a37a751fa780df28f1a14e7708b5d8d787c994d7d262"
     },
@@ -4485,7 +4485,7 @@
         {
           "severity": "warning",
           "code": "preset.unknown",
-          "message": "names the preset 'Host CO2', which is not in the library at /home/user/show/examples/channel_presets (98 presets) -- that strip will be built without it. Nothing in the library is close",
+          "message": "names the preset 'Host CO2', which is not in the library at /home/user/show/channel_presets (98 presets) -- that strip will be built without it. Nothing in the library is close",
           "where": "channels[HOST]",
           "source": "verify",
           "fix": "check the spelling, or add the preset to the library"
@@ -4658,7 +4658,7 @@
       {
         "severity": "info",
         "code": "preset.expanded",
-        "message": "22 channel(s) carry a preset's values, resolved from /home/user/show/examples/channel_presets and written at the processing stage: ch 1 Kick B91A (76), ch 2 Snare i5 (76), ch 3 Hi Hat (76), ch 4 H.Tom e604 (76), ch 5 M.Tom e604 (76), ch 6 Fl.Tom e604 (76), ch 7 Fl.Tom e604 (76), ch 8 O.Head SM81 (76), ch 9 O.Head SM81 (76), ch 10 Synth (76), ch 11 Bass GTR (76), ch 12 E.GTR Gen (76), ch 13 E.GTR Gen (76), ch 14 A.GTR DI (76), ch 15 Keys (76), ch 16 Vocal Beta58 (73), ch 17 Vocal Beta58 (73), ch 18 Vocal Beta58 (73), ch 19 Vocal Beta58 (73), ch 20 Vocal Beta58 (73), ch 21 Vocal Beta58 (73), ch 22 Vocal Gen (73)",
+        "message": "22 channel(s) carry a preset's values, resolved from /home/user/show/channel_presets and written at the processing stage: ch 1 Kick B91A (76), ch 2 Snare i5 (76), ch 3 Hi Hat (76), ch 4 H.Tom e604 (76), ch 5 M.Tom e604 (76), ch 6 Fl.Tom e604 (76), ch 7 Fl.Tom e604 (76), ch 8 O.Head SM81 (76), ch 9 O.Head SM81 (76), ch 10 Synth (76), ch 11 Bass GTR (76), ch 12 E.GTR Gen (76), ch 13 E.GTR Gen (76), ch 14 A.GTR DI (76), ch 15 Keys (76), ch 16 Vocal Beta58 (73), ch 17 Vocal Beta58 (73), ch 18 Vocal Beta58 (73), ch 19 Vocal Beta58 (73), ch 20 Vocal Beta58 (73), ch 21 Vocal Beta58 (73), ch 22 Vocal Gen (73)",
         "where": "plan",
         "source": "build"
       },
@@ -4819,8 +4819,8 @@
     ],
     "resolved_conventions": {
       "used": true,
-      "path": "/home/user/show/examples/conventions.resolved.md",
-      "absolute_path": "/home/user/show/examples/conventions.resolved.md",
+      "path": "/home/user/show/conventions.resolved.md",
+      "absolute_path": "/home/user/show/conventions.resolved.md",
       "bundle_relative_path": "../conventions.resolved.md",
       "sha256": "fc3699870b6b2a41760b14eb1f1d27144a1a8f72aaed2a9cefb3906c48b78677",
       "fingerprint": {

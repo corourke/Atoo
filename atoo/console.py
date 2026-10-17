@@ -1,11 +1,11 @@
 """O2/O3 network client: a minimal WING OSC client, promoted from
-experiments/wing/wing_osc.py into product code (stdlib only, no dependencies).
+an early experiment into product code (stdlib only, no dependencies).
 
 Grounded in Behringer's WING_Remote-Protocols-3.1-03.pdf ("OSC Remote
 Protocol" chapter, pages 18-26) -- every encode/decode rule here is taken
 directly from that document's own worked examples, not guessed -- and
-confirmed against a real WING Compact by experiments/wing/spike_write_verify.py
-and experiments/wing/spike_dca_mgrp.py (2026-09-09). The wire-level behavior
+confirmed against a real WING Compact by early write-and-verify and
+DCA/mute-group spikes (2026-09-09). The wire-level behavior
 this module
 relies on:
 
@@ -51,7 +51,7 @@ the protocol allows it, and never trusts either path without a readback:
   path, malformed value, unknown parameter name), each returning a real
   error token rather than silence.
 
-FR-X.1 (docs/developer/requirements.md) requires a readback path for every
+FR-X.1 requires a readback path for every
 write regardless of which of these two a given write used -- an ack is
 useful defense-in-depth for `set_node`, but it is not a substitute for
 reading the parameter back, since an ack only proves the command parsed,
@@ -219,7 +219,7 @@ class OscReply:
         `/ch/{n}/fdr` (a "fader"-type param): its `,sff` reply is
         [raw-text, 0..1 raw fraction, real dB value] -- for a float, take
         the LAST float argument, not the first. The schema
-        (docs/reference/wing-compact-parameter-map.json) documents this
+        (the Compact parameter map) documents this
         same "fader" type for every `.lvl`/`.fdr` leaf this project reads,
         including its own literal "-oo" notation for -infinity dB as the
         raw-text argument -- exactly the string that broke a naive
@@ -329,7 +329,7 @@ NODE_DUMP_MODE = "*"
 # What WING writes for a fader or send level at -infinity dB, in the text
 # form a dump carries. The per-leaf `,sff` reply for the same parameter
 # carries '-oo' as its text argument and -144.0 as its float (protocol
-# PDF p21, and hardware: archive/examples/console-runs/2026-09-21/A1-raw.log), so
+# PDF p21, and hardware: the A1 raw log of 2026-09-21), so
 # this is the number a dump has to produce for the two paths to agree.
 MINUS_INFINITY_DB = -144.0
 
@@ -427,7 +427,7 @@ def parse_node_dump(node: str, dump: str) -> dict[str, str]:
             # A dump of an INTERMEDIATE node ends by climbing back out of
             # the last child it descended into, and that climb is an item
             # of its own with nothing after it. Measured 2026-09-23,
-            # `archive/examples/console-runs/2026-09-22-2119/A12-protocol-probes.txt`:
+            # the A12 protocol probes:
             #
             #   /bus/1/send -> 1.on=0,lvl=-oo,pre=0,. ... .MX8.on=0,lvl=-oo,pre=0,.
             #
@@ -478,7 +478,7 @@ def value_from_dump_text(text: str, value_type: str) -> tuple[object, str | None
       desk shows and the SET takes -- hence `console_facts.
       correct_readback_index` at every per-leaf call site. A
       dump carries the TEXT form instead, which is the un-offset number:
-      hardware, `2026-09-21/A1-raw.log`, `/ch/7/in/conn/in` ->
+      hardware, the A1 raw log of 2026-09-21, `/ch/7/in/conn/in` ->
       `['6', 0.0794, 5]`, where 0.0794 = 5/63 and the corrected value is
       6 -- the text. So a dump value must NOT be run through
       `correct_readback_index`, and `audit.read_console_state` does not.
@@ -508,7 +508,7 @@ def value_from_dump_text(text: str, value_type: str) -> tuple[object, str | None
 # reply, send the next. That makes a read's time the number of requests
 # times the round trip, and the round trip is the network's, not the
 # desk's. On 2026-10-02 the Demo show's reset read ran at about 0.26ms a
-# request; on 2026-10-13, over the maintainer's other network, the same
+# request; on 2026-10-13, over another network, the same
 # 2,448 requests took about 38s, ~16ms each, and an `apply` preview of
 # the Demo almost two minutes. Nothing in the code had changed.
 #
@@ -732,8 +732,7 @@ class WingConsole:
         self.sock.settimeout(timeout)
         self.timeout = timeout
         self.raw_log = raw_log
-        # How many reads `get_many`/`node_dump_many` keep in flight (Issue
-        # #643): the argument, else `ATOO_CONSOLE_WINDOW`, else
+        # How many reads `get_many`/`node_dump_many` keep in flight: the argument, else `ATOO_CONSOLE_WINDOW`, else
         # `DEFAULT_WINDOW`. 1 is the serial client. See "Several requests
         # in flight" above.
         self.window = (min(MAX_WINDOW, max(1, int(window))) if window is not None
@@ -788,7 +787,7 @@ class WingConsole:
         every read for the rest of the session, silently**, because each
         request then collects the previous request's reply.
 
-        The maintainer's 2026-09-21 apply is what this is written from. The desk
+        A 2026-09-21 apply is what this is written from. The desk
         sent `/dca/8/name` twice; the copy was taken as the reply to
         `/mgrp/1/name`, and from there **880 of 1142 reads were answered by
         the wrong leaf**. The journal recorded 188 mismatches -- every one
@@ -908,8 +907,8 @@ class WingConsole:
 
         - **Only for the address it names.** There is no nearest-match,
           no prefix rule and no "the console was probably talking about
-          this". An unaddressed value is not evidence (WORK_PLAN lesson
-          17); the whole reason a drained datagram is usable at all is
+          this". An unaddressed value is not evidence; the whole reason a drained datagram
+          is usable at all is
           that it carries its own identity.
         - **Only if it arrived after `after`.** Pass
           `datagrams_received` from before a write and a duplicate of

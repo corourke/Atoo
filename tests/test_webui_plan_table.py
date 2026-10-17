@@ -1,4 +1,4 @@
-"""Build step 04 as mockup version H's table (the maintainer, 2026-09-26: *"Per
+"""Build step 04 as mockup version H's table (*"Per
 mockup version H, the step for Plan output is tabular, with a disclosure
 for more detail instead of cards"*).
 
@@ -11,8 +11,7 @@ Two halves:
   by. Derived, never written into the plan.
 * **The served assets.** The Python suite cannot see the browser, so
   every id, class and contract name the table's JS relies on is pinned
-  here (CLAUDE.md, "A rename that crosses into atoo/web/static/ is
-  invisible to the test suite"). The table itself was checked in
+  here. The table itself was checked in
   Chromium; this is what stands between a rename and a quietly broken
   page.
 
@@ -470,14 +469,14 @@ def test_a_stereo_channel_carries_st_and_its_partner_row_says_so(client):
     js = client.get("/static/setup.js").text
     # Stereo is what apply writes (`source.stereo`), or a two-socket patch.
     assert "(ch.source && ch.source.stereo) || (ch.patch && (ch.patch.sockets || []).length > 1)" in js
-    assert '`<span class="st-badge${partner ? " st-badge-partner" : ""}"' in js
+    assert '`<span class="prop ct-st" title="${esc(title)}">`' in js
     assert '`${stereo ? stBadge(ch) : ""}${changeChip(cardId("channel", ch.name))}</td>`' in js
     assert "stBadge(item.ch, true)" in js
     # The pair keeps its first row's shading, and names it.
     assert 'if (item.type !== "pair") alt = !alt;' in js
     assert 'data-pair-of="${esc(cardId("channel", item.ch.name))}"' in js
     css = client.get("/static/styles.css").text
-    for rule in (".st-badge {", ".st-badge-partner {", ".ct tbody tr.row-pair td.col-num"):
+    for rule in (".ct-st {", ".ct tbody tr.row-pair td.col-num"):
         assert rule in css, f"styles.css has no {rule}"
 
 
@@ -504,10 +503,10 @@ def test_step_04_notes_are_step_02s_icon_and_popup_with_no_second_save_path(clie
 def test_step_04_has_a_phantom_column_as_the_plan_sets_it(client):
     js = client.get("/static/setup.js").text
     assert "const on = !!(ch && ch.source && ch.source.phantom);" in js
-    assert '<span class="phantom-badge"' in js
+    assert '<span class="prop" title="Phantom power (48V) on' in js
     assert '<th class="subhead-plan col-plan-phantom"' in js
     assert "if (th) th.colSpan = open ? PLAN_COLS : 1;" in js
-    assert ".phantom-badge {" in client.get("/static/styles.css").text
+    assert ".phantom-badge" not in client.get("/static/styles.css").text
 
 
 def test_findings_badges_count_the_docks_findings_by_its_own_jump_targets(client):
@@ -584,9 +583,9 @@ def test_step_02_patch_is_a_badge_edited_in_place_and_validated(client):
 
 
 def test_step_02_has_order_skip_insert_and_row_moves(client):
-    """FR-1.1 (the maintainer, 2026-10-09). The Python suite cannot run the page,
+    """FR-1.1. The Python suite cannot run the page,
     so this pins the served assets: a rename here is a blank or dead
-    control there (CLAUDE.md, `atoo/web/static/`). Driven for real in
+    control there. Driven for real in
     Chromium when it was built (PR body)."""
     shell = client.get("/static/shell.js").text
     # The Order cell, first after the move handle, with its Skip box.

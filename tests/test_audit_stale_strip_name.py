@@ -14,7 +14,7 @@ off that same desk, in the same session -- proves both halves:
 
 Both strip leaves hold a stale 'Acoustic'; the sockets hold the truth, and
 with `clink` ON the surface displays the socket's name. `effective_name`
-already had the right rule for this (#206: unread -> prefer the strip,
+already had the right rule for this (an earlier change: unread -> prefer the strip,
 read-and-ON -> prefer the socket, read-and-OFF -> prefer the strip). What
 it never had was a reading: `clink` was in no read plan, so the audit was
 permanently in the first branch. An earlier change puts it in the second pass,
@@ -58,7 +58,7 @@ def _two_strips_from_the_capture(*, read_clink: bool) -> ConsoleState:
     walks: name, patch, the patched socket's name, and -- when
     `read_clink` -- the link flag.
 
-    `read_clink=False` is what an audit produced before #246, and it is
+    `read_clink=False` is what an audit produced, and it is
     how the mutation check below gets the false finding back.
 
     A `.snap` stores the patch connector as the number the desk shows
@@ -225,7 +225,7 @@ def test_two_strips_that_really_do_share_a_name_still_collide():
 
 
 def test_a_shared_socket_deliberately_unlinked_still_cannot_collide():
-    """The case #206's tie-break was written for, which must survive.
+    """The case the tie-break was written for, which must survive.
     `apply.py` switches `clink` OFF for a socket shared between two strips
     and names each strip separately; with the flag now actually read, the
     strip's own name wins outright rather than by the unread-flag
@@ -244,7 +244,7 @@ def test_a_shared_socket_deliberately_unlinked_still_cannot_collide():
 
 def test_an_unread_clink_still_prefers_the_strip():
     """The third branch is unchanged, and it has to be: an assumption must
-    not overrule a real reading. A capture taken before #246, or a state
+    not overrule a real reading. A capture taken, or a state
     assembled by hand, still reaches here."""
     state = ConsoleState({
         "/ch/1/name": "Kick",
@@ -257,7 +257,7 @@ def test_an_unread_clink_still_prefers_the_strip():
 
 @pytest.mark.parametrize("clink", [None, 1])
 def test_the_podium_shape_reads_as_named_either_way(clink):
-    """An earlier change inverted is what #246 fixes, so #204 itself must not
+    """An earlier change inverted is what an earlier change fixes, so an earlier change itself must not
     move: a blank strip whose socket carries the name shows the socket's
     name, whether the flag was read or assumed."""
     values = {

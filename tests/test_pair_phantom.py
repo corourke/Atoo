@@ -8,7 +8,7 @@ pair, it is read as both sockets' and announced at INFO
 (`inferred.pair-phantom`). Build, apply, verify and amend/patch all read
 it through `inferred.socket_phantom`, so they cannot disagree.
 
-Every plan and input list here is built in the test (CLAUDE.md: nothing
+Every plan and input list here is built in the test (nothing
 reads `examples/`).
 """
 

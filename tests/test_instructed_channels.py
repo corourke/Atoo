@@ -1,5 +1,5 @@
 """Channels the conventions or instructions ask for that are not on the
-input list (the maintainer, 2026-09-29; `atoo/instructed_channels.py`).
+input list (`atoo/instructed_channels.py`).
 
 The case is sixpiece: its instructions say *"Setup Talkback on Channel
 40, source A 40"*, Haiku's reply built a Talkback channel on 40, and the
@@ -8,7 +8,7 @@ when its source socket is stated and its quote is really in the texts;
 verify reports it as a WARNING. One with no stated socket, or a quote the
 engineer never wrote, is still refused.
 
-Every file read here is frozen under `tests/fixtures/` (CLAUDE.md): the
+Every file read here is frozen under `tests/fixtures/`: the
 reply, the sixpiece input list, its instructions and the conventions it
 was built with, as they were on 2026-09-29.
 """
@@ -478,7 +478,7 @@ def test_the_unassigned_quote_check_strips_a_label_too():
 
 # ---- Asked for in so many words is an INFO --------------------
 #
-# The maintainer, 2026-10-11: "Downgrade reconcile.from-instructions to INFO when
+# "Downgrade reconcile.from-instructions to INFO when
 # the instructions quote the strip verbatim and state its socket. Keep it a
 # WARNING when the strip was inferred, paraphrased or has no stated socket."
 

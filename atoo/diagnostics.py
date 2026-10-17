@@ -12,18 +12,19 @@ like an error the engineer could fix in their own prose.
 Everything now produces `Diagnostic` and is rendered by `render()`.
 
 Severity is flat -- ``error`` / ``warning`` / ``info``, and that is
-the whole list. The maintainer's call, on the issue (2026-09-19): a
-"limitation" is not a fifth severity, it is a warning. A fourth,
-``critical``, existed from #18 until 2026-09-23 and was dropped for the
+the whole list. A
+"limitation" is not a fifth severity, it is a warning (decided
+2026-09-19). A fourth,
+``critical``, existed from an earlier change until 2026-09-23 and was dropped for the
 same kind of reason -- **nothing in this codebase ever emitted one**, so
 it was a rung of the ladder with no members, and `error` already blocked
-everything a `critical` would have. The maintainer: *"Since we never emit
-CRITICAL, let's drop it everywhere. ERROR suffices."*
+everything a `critical` would have: since nothing emitted CRITICAL, it
+was dropped everywhere, and ERROR suffices.
 What makes a limitation legible is not its severity but the two fields
 below it -- `fix` (what the engineer should change, when they can) and
 `issue` (the tracking issue, when they can't). A diagnostic carrying
 `issue` renders "Not something you can fix in your conventions file",
-which is the distinction #18 was filed to get.
+which is the distinction an earlier change was filed to get.
 
 `to_dict()` is the wire shape the Setup UI consumes, so the
 UI is a client against the same engine (D9) rather than a second
@@ -40,9 +41,9 @@ class Severity(str, Enum):
     """Flat severity, ordered worst-first by `SEVERITY_ORDER`.
 
     A `str` mixin, deliberately: `Severity.ERROR == "error"` is True, so
-    the string comparisons that the pre-#18 layers were written against
+    the string comparisons that the older layers were written against
     keep working, and `json.dumps` needs no encoder. (`enum.StrEnum`
-    would be the modern spelling, but this package supports 3.9.)
+    would be the modern spelling; the explicit `str` mixin is kept.)
     """
 
     ERROR = "error"
@@ -71,11 +72,10 @@ _INDENT = " " * _LABEL_WIDTH
 
 
 # The default tracker for "Atoo can't represent this yet" on the
-# deterministic compile path. #29 ("retire the deterministic compile
-# path") is the right one rather than #6: #6 asked for the compiler to
+# deterministic compile path. An earlier change is the right one rather than an older issue that asked for the compiler to
 # consume the IR's richer membership and was closed not-planned in favour
 # of `--strategy generate`, so every drop below is a symptom of the path
-# #29 tracks retiring, not of a gap anyone intends to fill.
+# an earlier change tracks retiring, not of a gap anyone intends to fill.
 COMPILE_PATH_ISSUE = 29
 
 
@@ -158,7 +158,7 @@ class Diagnostic:
         """`conventions.py`'s (severity, section, line, message) shape.
 
         `section`/`line` provenance is load-bearing -- it is what
-        surfaced #27's two hidden plan-changing drops -- so it is kept
+        surfaced the two hidden plan-changing drops -- so it is kept
         rather than flattened into the message. `where` defaults to the
         section and is overridden only where the section name isn't what
         a reader should be shown (preamble prose).
@@ -189,7 +189,7 @@ class Diagnostic:
         This is the category an earlier change was actually filed about: it is
         *not* the engineer's mistake, and no amount of editing their
         conventions file will fix it. It is a warning like any other now
-        (the maintainer's call -- a limitation is not its own severity), but it
+        (a limitation is not its own severity), but it
         carries `issue`, which is what makes the renderer say so out
         loud instead of letting it sit in a bullet list next to genuine
         user error.
@@ -203,7 +203,7 @@ class Diagnostic:
             source="conventions-adapter",
         )
 
-    # ---- accessors the pre-#18 names still reach for ----
+    # ---- accessors the older names still reach for ----
 
     @property
     def rule_id(self) -> str:
@@ -411,7 +411,7 @@ def summary_line(diagnostics) -> str:
     """"2 error(s), 1 warning(s), 3 note(s)" -- or "" when there's nothing.
 
     Counted by severity rather than a single total, because the total was
-    exactly what hid #27's two plan-changing drops inside a count of 25.
+    exactly what hid the two plan-changing drops inside a count of 25.
     """
     items = list(diagnostics)
     if not items:

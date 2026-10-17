@@ -9,7 +9,7 @@ that rejected any other literal. That was itself a mistake, overruled by
 the project owner (a working live-sound engineer, 2026-09-10): a starting
 level is a stated convention like any other -- "busses at -6dB to give
 some headroom during the show," a compressed drums bus with its fader
-"pulled down 6dB" (the maintainer's natural-language smallband conventions, previously
+"pulled down 6dB" (natural-language conventions that were previously
 unimplementable under the unity-only rule), "start everything muted" --
 and refusing to write anything but unity made those conventions
 impossible to apply, not safer.
@@ -38,7 +38,7 @@ touched (a full apply unpatches it, and writes nothing else to it).
 **One documented exception, an earlier change: `mute` for a strip this run is
 RETURNING TO FREE.** A channel the rebuild dropped has its strip muted,
 put back on its factory input patch (or OFF where that is unmeasured,
-absent or claimed -- the maintainer, 2026-09-24), blanked and its processing put
+absent or claimed), blanked and its processing put
 back (`release_write_targets`). The mute is **a bracket around the clear,
 not the end state** (corrected off the first hardware run):
 it goes ON as the strip's first address so nothing pops while the strip
@@ -54,7 +54,7 @@ value: -144 (-inf), the reading every untouched strip gives**
 full-size). That is not a level chosen for a show, which is what this
 rule forbids; it is the same "return to the factory reading" as the
 name, colour and processing. It became necessary when release started
-restoring the factory patch (the maintainer, 2026-09-24): an unmuted strip left
+restoring the factory patch: an unmuted strip left
 at the plan's level, routed to Main 1 and patched to its factory socket,
 would carry a stray source on that jack to the PA. Pulled to -inf before
 the closing unmute, it passes nothing until somebody raises it -- exactly
@@ -76,8 +76,7 @@ real show file, Festival_STANDALONE.snap: a parked channel's `fdr` is
 exactly `-144`, unity is `0`) -- JSON has no `-Infinity`, so `-144.0` IS
 how a stated "all the way down"/"-inf"/"off"/"minus infinity"/"fully
 down" starting level is represented all the way from the conventions
-grammar through the plan to this module's own write; see
-docs/developer/artifact-formats.md.
+grammar through the plan to this module's own write.
 
 `set_fader_levels` (default True, see `apply_plan`) decides WHETHER a
 strip's fader/mute is written at all, as distinct from which value goes
@@ -117,7 +116,7 @@ itself -- see `_output_slot`'s docstring: every bus/Main/
 Matrix reserves a fixed 2-slot pair (`2*index - 1` for its first/"L"
 physical socket, `2*index` for a second/"R" one), confirmed against a
 real console after the first live apply run wrote the bare index and
-scrambled the maintainer's monitor-bus routing. `_output_slot(index, position)`
+scrambled a monitor-bus routing. `_output_slot(index, position)`
 is the one place that math happens; every write site below calls it
 rather than using `index`/`idx` directly.
 
@@ -177,8 +176,8 @@ is in.
 ## Address grounding
 
 Every address this module writes is confirmed present in
-docs/reference/wing-compact-parameter-map.json's schema (the 2026-09-08
-live walk) and cross-checked against docs/reference/wing-console-model.md.
+the Compact parameter map's schema (the 2026-09-08
+live walk) and cross-checked against the console model notes.
 One thing is NOT hardware-confirmed and is called out at the point it
 matters, below: whether `/ch/{n}/flt/lcf` (a "log" type param) replies
 with the same raw-fraction-plus-real-value double-float shape that
@@ -223,10 +222,8 @@ nothing to wait on, so the readback goes out immediately -- and the desk
 answers it from the value the address held BEFORE the write, then sends
 the new value as its own datagram one or two later, by which time this
 module is reading the next address and the client discards it as stale
-(`/bus/10/name`, archive/examples/console-runs/2026-09-21/A1-raw.log lines
-189-202; `/ch/7/tags`, archive/examples/console-runs/2026-09-21-2100/A1-raw.log
-lines 1469-1485 -- the maintainer confirmed at the desk, both nights, that the
-writes had landed).
+(`/bus/10/name` and `/ch/7/tags` in the A1 runs of 2026-09-21, where the
+writes were confirmed at the desk, both nights, to have landed).
 
 The fix is not to read again harder. It is that **a discarded datagram
 carries the address it is about**, so the answer is already in hand:
@@ -314,23 +311,20 @@ _SEND_MODE_TO_WING = {"pre": "PRE", "post": "POST", "group": "GRP"}
 # instead (see module docstring's "Write path choice" section).
 _UNSAFE_NODE_COMMAND_CHARS = (",", "=", " ")
 
-# This module's own documented default when the conventions state
-# nothing for a strip's starting level -- see the module docstring's
-# fader/mute section. Unity/unmuted is still the sound-check starting
-# point the owner asked for; the difference from the old rule is that
-# this is now a FALLBACK for an unstated value, not the only value this
-# module is willing to write.
-FADER_DEFAULT_DB = 0.0
-MUTED_DEFAULT = False
+# The documented default when the conventions state nothing for a strip's
+# starting level (`facts.FADER_DEFAULT_DB`, `facts.MUTED_DEFAULT`; see the
+# module docstring's fader/mute section). Unity/unmuted is the sound-check
+# starting point the owner asked for; it is a FALLBACK for an unstated
+# value, not the only value this module is willing to write.
 
 # A channel's direct-to-main route (no bus, no DCA -- the festival
 # conventions' HOST) writes `ch.{n}/main/{m}.on`/.lvl/.pre (FR-1.5,
-# confirmed present -- docs/reference/wing-compact-raw-walk-20260908.json:
+# confirmed present -- the 2026-09-08 raw walk of a Compact:
 # every /ch/{n}/main/{m} node is exactly `on int[0..1]`, `lvl fader`,
 # `pre int[0..1]`). The conventions grammar has no phrasing yet for this
 # route's OWN level or pre/post-fader tap (only THAT it routes, and
 # optionally which Main) -- same "documented fallback, not guessed"
-# policy as FADER_DEFAULT_DB/MUTED_DEFAULT above: unity (0dB, this
+# policy as the starting-level defaults above: unity (0dB, this
 # project's one standard "no level stated" default) and post-fader
 # (0 -- a channel's main feed reflecting its own fader is the ordinary,
 # expected wiring; pre-fader would silently bypass the channel's own
@@ -406,7 +400,7 @@ class WriteRecord:
     # it: `_values_equal` is type-aware, and for "f" it carries the
     # stepped-parameter tolerance. A record that knows only its two values
     # has to fall back on exact equality -- which is exactly the
-    # preview-vs-apply disagreement #142 is about. Journalled, so a
+    # preview-vs-apply disagreement that this exists to close. Journalled, so a
     # journal can be re-scored later with the comparison its run used.
     value_type: str
     method: str | None  # "node" | "param" | None (dry_run, or skipped)
@@ -443,7 +437,7 @@ class WriteRecord:
         The dry-run summary used to answer this with a plain
         `prior_value != intended_value`, which is stricter than the write
         path for floats (`_values_equal` carries the stepped-parameter
-        tolerance). On the maintainer's 631-address A1 run that was 340 "would
+        tolerance). On the 631-address A1 run that was 340 "would
         change" against 337 actually written -- three `flt/lcf` addresses
         sitting at 100.237Hz where the plan says 100Hz, a difference the
         desk cannot even represent. A preview that overstates what will
@@ -612,23 +606,23 @@ def _output_slot(internal_index: int, position: int) -> int:
     (0-based) physical socket fed by internal object `internal_index` (a
     bus, Main, or Matrix's own declared number).
 
-    Docs/reference/wing-console-model.md's original example
+    The console model notes' original example
     ("grp=BUS, in=3 patches Bus 3 to this output socket") was never
     hardware-confirmed -- it was written straight from the parameter map's
     schema, before any real console existed to check it against, and reads
     as "in == the object's own declared index" (an implicit `position=0`
     assumption that happens to be right for object 1 and silently wrong
     for every object after it, so it went uncaught until a plan actually
-    used a bus other than the first). Reconstructed from the maintainer's real
-    console (2026-09-18/19 apply run cross-checked line-for-line against
-    his WING-Edit screenshots and the post-apply `.snap`): each internal
+    used a bus other than the first). Reconstructed from a real
+    console (the 2026-09-18/19 apply run cross-checked line-for-line against
+    WING-Edit screenshots and the post-apply `.snap`): each internal
     object of a given type reserves a FIXED pair of slots -- object N's
     position 0 (its "L"/mono feed) is slot `2N - 1`, position 1 ("R") is
     `2N` -- independent of the object's own busmono/stereo setting, which
     changes what plays on those slots, not their addresses. A single
-    physical jack wanting an object's primary/mono feed (the maintainer's
-    "monitor busses should link to the Left channel, I never asked for
-    stereo") always wants position 0.
+    physical jack wanting an object's primary/mono feed (a monitor bus
+    links to the Left channel; stereo was never asked for) always wants
+    position 0.
     """
     return internal_index * 2 - 1 + position
 
@@ -667,7 +661,7 @@ def _fader_starting_target(base: str, label: str, fader_db: float) -> WriteTarge
     exception in the module docstring.)
     `fader_db` is sourced ONLY from a plan entry's own stated
     `fader["fader_db"]` (a convention the engineer wrote down) or
-    FADER_DEFAULT_DB (this module's own documented default, unity)
+    `facts.FADER_DEFAULT_DB` (the documented default, unity)
     -- see the module docstring's fader/mute section for the full "stated
     vs invented" reasoning, and why -144.0 there means -inf, not some
     other float this module decided on its own."""
@@ -683,6 +677,17 @@ def _mute_starting_target(base: str, label: str, muted: bool) -> WriteTarget:
 
 
 _EQ_SHELF_LEAVES = {"low": ("lf", "lg", "lq", "leq"), "high": ("hf", "hg", "hq", "heq")}
+
+
+def eq_band_leaves(band: str) -> tuple[str, str, str, str | None]:
+    """`(frequency, gain, Q, shape)` leaf names under `{base}/eq/` for one
+    plan band id (`low`, `1`..`4`, `high`). Only the two shelf bands have a
+    shape leaf; the numbered ones return None for it. The one place the band
+    naming is written down, for the write path and for the audit that reads
+    the same leaves back."""
+    if band in _EQ_SHELF_LEAVES:
+        return _EQ_SHELF_LEAVES[band]
+    return f"{band}f", f"{band}g", f"{band}q", None
 
 
 def _eq_write_targets(base: str, strip: str, label: str, eq: dict | None) -> tuple[list[WriteTarget], list[str]]:
@@ -721,10 +726,7 @@ def _eq_write_targets(base: str, strip: str, label: str, eq: dict | None) -> tup
                 f"{', '.join(valid_bands)} (confirmed: wing-compact-parameter-map.json) -- not written"
             )
             continue
-        if band in _EQ_SHELF_LEAVES:
-            freq_leaf, gain_leaf, q_leaf, shape_leaf = _EQ_SHELF_LEAVES[band]
-        else:
-            freq_leaf, gain_leaf, q_leaf, shape_leaf = f"{band}f", f"{band}g", f"{band}q", None
+        freq_leaf, gain_leaf, q_leaf, shape_leaf = eq_band_leaves(band)
 
         for leaf, key, unit in ((freq_leaf, "freq_hz", "frequency"),
                                 (gain_leaf, "gain_db", "gain"),
@@ -909,10 +911,10 @@ def _fader_targets(base: str, label: str, fader: dict | None) -> list[WriteTarge
     fader = fader or {}
     fader_db = fader.get("fader_db")
     if fader_db is None:
-        fader_db = FADER_DEFAULT_DB
+        fader_db = facts.FADER_DEFAULT_DB
     muted = fader.get("muted")
     if muted is None:
-        muted = MUTED_DEFAULT
+        muted = facts.MUTED_DEFAULT
     return [_fader_starting_target(base, label, fader_db), _mute_starting_target(base, label, muted)]
 
 
@@ -1239,16 +1241,16 @@ def _channel_write_targets(
     # correctly, and never shown.
     #
     # That cost a whole apply on 2026-09-22: the journal reported all 19
-    # channel names as `match` and the maintainer's note reads "Channel names are
+    # channel names as `match` while the desk showed "Channel names are
     # NOT present." A write that verifies and changes nothing an engineer
     # can see is the worst failure shape this project has.
     #
     # The first fix was to unlink -- write clink=0 and name the strip.
-    # The maintainer, 2026-09-22: *"Maybe the approach to channel naming should
-    # be to set the name, icon and color on the source, and let the 'Link
-    # Customization to Source' flag flow the customization to the channel
-    # since that is the default."* He is right, and for a better reason
-    # than going with the desk's grain: **`input.csv` is one row per
+    # The better approach is to set the name, icon and color on the
+    # source, and let the 'Link Customization to Source' flag flow the
+    # customization to the channel, since that is the default. That is
+    # right, and for a better reason than going with the desk's grain:
+    # **`input.csv` is one row per
     # PHYSICAL INPUT.** The name originates at the socket. Naming the
     # strip and cutting the link is the distortion; naming the socket is
     # what the input list already says.
@@ -1259,10 +1261,10 @@ def _channel_write_targets(
     # A socket feeding more than one strip is the exception, and it is a
     # deliberate one: a separate strip for monitors, or one jack reused
     # between acts at a festival (`atoo/domain/knowledge.md`). One
-    # socket cannot carry two names, so those strips keep their own --
-    # the maintainer, 2026-09-22: *"we need to unlink the channel and source
-    # customization, and customize the channels separately. The source can
-    # be given some kind of composite name."* The socket's label is
+    # socket cannot carry two names, so those strips keep their own: the
+    # channel and source customization are unlinked and the channels
+    # customized separately, while the source is given a composite name.
+    # The socket's label is
     # written once by `_shared_source_name_targets`, not fought over here.
     linked, why = source_name_link(group, sockets, shared_sockets)
 
@@ -1346,20 +1348,32 @@ def _channel_write_targets(
     # for the same reason (STAGE_PHANTOM), so it's built right alongside
     # phantom rather than down with the rest of `processing` below. Reuses
     # _VPH_CAPABLE_GROUPS rather than a separate constant: confirmed
-    # against docs/reference/wing-compact-parameter-map.json that `.g`
+    # against the Compact parameter map that `.g`
     # exists for exactly the same groups as `.vph` (A/B/C/LCL) and no
     # others -- the same physical mic/line inputs that carry phantom power
     # also carry a head amp, which lines up with wing-console-model.md's
     # own "gain/phantom/mute/polarity/..." grouping for a physical source.
+    #
+    # On EVERY socket of the patch, like phantom and width: a stereo pair
+    # is two sources and the desk holds a gain on each. Once the pair is in
+    # stereo mode the desk carries the first socket's gain onto the second
+    # (every pair in the captures on file reads the same on both), so a
+    # plan that wrote only the first left the second reading that value
+    # without the plan having named it. The reset to initialized then
+    # counted the second socket as its own to put back to 0, and a preview
+    # taken straight after an apply proposed it, again and again. The plan
+    # now states both, so both are the plan's, whether or not the desk
+    # links them.
     gain_db = processing.get("gain_db")
     if gain_db is not None:
         if group in _VPH_CAPABLE_GROUPS:
-            socket = sockets[0]
-            targets.append(WriteTarget(
-                f"/io/in/{group}/{socket}/g", "f",
-                f"{strip_label} {n} ({name}): head-amp gain on {group} {socket}",
-                _const(float(gain_db)), STAGE_PHANTOM,
-            ))
+            for i, socket in enumerate(sockets):
+                why = " (the pair's second socket carries the same gain)" if i else ""
+                targets.append(WriteTarget(
+                    f"/io/in/{group}/{socket}/g", "f",
+                    f"{strip_label} {n} ({name}): head-amp gain on {group} {socket}{why}",
+                    _const(float(gain_db)), STAGE_PHANTOM,
+                ))
         else:
             warnings.append(
                 f"{strip_label} {n} ({name!r}): head-amp gain requested but patched to group {group!r}, "
@@ -1488,8 +1502,8 @@ def _group_name_targets(plan: dict, warnings: list[str],
             warnings.append(f"DCA {name!r} (index {idx}) exceeds this console's capacity ({facts.CAPACITY['dca']}) -- not applying")
             continue
         targets.append(WriteTarget(f"/dca/{idx}/name", "s", f"DCA {idx}: name", _const(name), STAGE_NAMES))
-        # The maintainer, 2026-10-01: "All created DCAs should start with fader at
-        # unity" reached the plan (`fader: {fader_db: 0}`) and never the
+        # A created DCA starts with its fader at unity. That reached the plan
+        # (`fader: {fader_db: 0}`) and never the
         # desk -- apply wrote a DCA's name and nothing else. A DCA is a
         # strip with a fader and a mute like a bus, and takes the same
         # starting level: the plan's, else unity, unmuted.
@@ -1543,8 +1557,8 @@ def _bus_write_targets(
         # A bus's own mono/stereo width -- confirmed OSC
         # address /bus/{n}/busmono (int [0..1]) in the parameter map.
         # Never None by the time it reaches here: `_build_write_targets`
-        # decides an unstated width first (`inferred.with_decisions`,
-        # CLAUDE.md -- the mono/stereo decision may not be left to
+        # decides an unstated width first (`inferred.with_decisions`:
+        # the mono/stereo decision may not be left to
         # whatever the desk had). The guard stays for a caller that
         # builds bus targets without going through it.
         if entry.get("mono") is not None:
@@ -1592,7 +1606,7 @@ def _bus_write_targets(
                 # Schema allows other destination types (currently "matrix")
                 # that this module has no confirmed write path for -- there is
                 # no documented `bus.{n}` -> matrix routing node anywhere in
-                # docs/reference/wing-console-model.md, and inventing one would
+                # the console model notes, and inventing one would
                 # be exactly the guess this project refuses to make elsewhere.
                 # A bus feeding a Matrix is expressed elsewhere now (the matrix's own outputs[name].fed_by), so this branch is
                 # legacy-schema defense, not a live path -- say so rather
@@ -1825,7 +1839,7 @@ def _declared_output_patches(plan: dict) -> dict[tuple[str, int], tuple[str, int
 
     for name, bus in (plan.get("busses") or {}).items():
         # `isinstance`, not `bus or {}`: a truthy non-dict (a bare LIST,
-        # which `archive/examples/archive/smallband.gemma3:4b.plan.json` really
+        # which an archived smallband plan from a small local model really
         # has for a *dca* entry, so the shape is not hypothetical) sails
         # through `or` and then raises AttributeError on `.get` -- which
         # this function's own docstring promises it does not do. An earlier change
@@ -1871,7 +1885,7 @@ def _declared_output_patches(plan: dict) -> dict[tuple[str, int], tuple[str, int
 # `/io/in/MOD/1..64` on a console with an empty module bay, which is how
 # every WING leaves the factory (`/$syscfg/opt_mod` defaults to `NONE`).
 # So `MOD 1` verifies clean, applies clean, reads back `MOD` -- and the
-# channel is silent. Measured on the maintainer's Compact, 2026-09-21, and
+# channel is silent. Measured on a Compact, 2026-09-21, and
 # recorded as `console_facts.UNFITTED_BAY_PATCH_IS_ACCEPTED`: the desk
 # accepts the patch with no error, no refusal and no clamp.
 #
@@ -1881,8 +1895,9 @@ def _declared_output_patches(plan: dict) -> dict[tuple[str, int], tuple[str, int
 # console_facts.py ... or from the input list itself"). Nothing in a plan
 # or an input list states what is in a bay, and inventing a plan field
 # for it would mean trusting a human-entered claim about hardware over
-# the hardware -- which is precisely the mistake #13 was filed about, one
-# layer up. The desk answers this itself, for free, on two read-only
+# the hardware -- which is precisely the mistake the patch-model
+# cross-check exists to prevent, one layer up. The desk answers this
+# itself, for free, on two read-only
 # leaves, at the one moment Atoo is holding a connection to the desk
 # the plan is about. So `verify_plan` says out loud that it did not check
 # this (`patch.expansion-bay-not-checked`) and these two functions do the
@@ -2104,14 +2119,14 @@ class DeskModelCheck:
 def check_desk_model(plan: dict, plan_model: str | None, identity_args,
                      address: str, *, skip_verify: bool = False,
                      output_sockets=None) -> DeskModelCheck:
-    """The cross-check, graded by `CLAUDE.md`'s rule that a
+    """The cross-check, graded by the rule that a
     judgement call is not an impossible patch.
 
     Until 2026-09-24 any difference between the plan's model and the
-    desk's was a refusal, which made the maintainer's own workflow impossible --
-    *"generate a plan, and want to apply it to more than one console, ex:
-    primary console wing compact, backup console wing rack (both have
-    similar I/O)"* -- although every socket a Compact plan can name exists
+    desk's was a refusal, which made a common workflow impossible --
+    generating a plan and applying it to more than one console, say a
+    primary Compact and a backup Rack (both have similar I/O) --
+    although every socket a Compact plan can name exists
     on a Rack. So, in order:
 
     * **Same model** -- nothing to say.
@@ -2126,8 +2141,8 @@ def check_desk_model(plan: dict, plan_model: str | None, identity_args,
       measured (`IDENTITY_MODEL_ALIASES`), or none at all. WARNING, and
       proceed: sockets were checked against the plan's own model only,
       and a confirmed run still reads every write back and proves it. It
-      used to go unannounced, which `CLAUDE.md` names as the defect: an
-      inferred value that does not announce itself. The token is kept on
+      used to go unannounced, which is the defect: an inferred value that
+      does not announce itself. The token is kept on
       the result for the journal.
     * **The plan states no model** -- `verify_plan` has already refused
       that unless `--skip-verify` was passed, and with it there is no
@@ -2199,9 +2214,8 @@ def check_desk_model(plan: dict, plan_model: str | None, identity_args,
 
 
 def _clean_write_targets(plan: dict, clean_output_sockets: dict[str, int]) -> list[WriteTarget]:
-    """An earlier change (opt-in, the maintainer's own call -- "B must be an
-    option that is turned on, not the default"): for every physical
-    output socket in `clean_output_sockets` (`{group: count}`, the same
+    """An earlier change (opt-in, deliberately not the default): for every
+    physical output socket in `clean_output_sockets` (`{group: count}`, the same
     "no confirmed default" shape `audit.py`'s `read_console_state` takes
     -- there is no safe guess at how many sockets a given rig actually
     has) that this plan does NOT declare via `_declared_output_patches`,
@@ -2239,9 +2253,10 @@ def _clean_write_targets(plan: dict, clean_output_sockets: dict[str, int]) -> li
 # A full apply: the strips the plan does not build, and talkback's assign
 # --------------------------------------------------------------------------
 #
-# The maintainer, 2026-10-02, after sixpiece's build showed a channel 24 named
-# MUSIC duplicating aux 1: *"We should unpatch any channels that are not in
-# the plan. Simply unpatch from the source."* The plan built ch 1-23, so
+# Sixpiece's build showed a channel 24 named
+# MUSIC duplicating aux 1, and the answer is to unpatch any channels that
+# are not in the plan, simply by unpatching from the source. The plan
+# built ch 1-23, so
 # ch 24 kept the factory patch (ch N <- LCL N), LCL 24 -- and apply had
 # just named LCL 23/24 "MUSIC" for aux 1's stereo pair. An unnamed strip
 # shows its source's name, so ch 24 read MUSIC, and it really was
@@ -2266,8 +2281,8 @@ def _clean_write_targets(plan: dict, clean_output_sockets: dict[str, int]) -> li
 # The same full apply sets Setup -> Audio's talkback assign
 # (`/cfg/talk/assign`, `list [OFF, CH40, AUX8]`) to the strip the plan
 # builds as the talk mic, when that strip is ch 40 or aux 8 -- the only two
-# the desk's talkback can use. A plan with no talkback strip sets it OFF
-# (the maintainer, 2026-10-02): a full apply makes the desk the plan, and the
+# the desk's talkback can use. A plan with no talkback strip sets it OFF:
+# a full apply makes the desk the plan, and the
 # plan has no talkback -- the same full apply unpatches ch 40 and aux 8
 # when it does not build them, so a hand-set assign would point at a strip
 # with no input anyway. Undo puts it back. A talkback strip anywhere else is
@@ -2411,14 +2426,15 @@ def _full_apply_run_notes(records: list[WriteRecord]) -> list[str]:
 # Returning a dropped channel's strip to free
 # --------------------------------------------------------------------------
 #
-# The maintainer, 2026-09-23, given "report it", "mute it" and "return it to
-# free": *"Whether this is for a rebuild of the plan, or an amend, the
-# answer is C. Channels are not an unlimited resource and we want to do
-# what the engineer is asking for."*
+# Given the choice of "report it", "mute it" and "return it to
+# free", whether this is for a rebuild of the plan or an amend, the
+# answer is to return it to free: channels are not an unlimited resource
+# and the tool should do what the engineer is asking for.
 #
 # So a channel the rebuild dropped has its strip muted, put back on its
-# factory input patch (the maintainer, 2026-09-24 -- or OFF, see
-# `release_patch_decision`), and its name, colour and icon blanked -- on
+# factory input patch (or OFF, see
+# `release_patch_decision`; decided 2026-09-24), and its name, colour and
+# icon blanked -- on
 # the SOURCE as well as the strip,
 # because with `clink` on that is where the name the desk displays lives.
 # The end state is the reading an untouched strip gives
@@ -2489,18 +2505,17 @@ def release_patch_decision(
 
     `why` is a sentence for a person, and it always comes back, because
     either answer is a choice the engineer should be able to see
-    (CLAUDE.md: an inferred value that does not announce itself is the
+    (an inferred value that does not announce itself is the
     defect). `amend.plan_amendment` puts it in the review at INFO;
     `release_write_targets` makes the same call for the wire. One
     function, so the review and the write cannot disagree.
 
-    The maintainer, 2026-09-24, choosing between three options off the Compact
-    session where a freed channel 19 did not look like an initialized one:
-    *"The factory patch, unless the plan uses that socket, otherwise OFF.
-    Ch 19 goes back to LCL 19 and looks exactly like an initialized
-    channel, glyph included. If the rebuilt plan now uses LCL 19 for
-    something else, it stays OFF rather than double-patching the socket,
-    and an INFO says so."*
+    Of three options, off a Compact session where a freed channel 19 did
+    not look like an initialized one, the choice is the factory patch,
+    unless the plan uses that socket, otherwise OFF. Ch 19 goes back to
+    LCL 19 and looks exactly like an initialized channel, glyph included.
+    If the rebuilt plan now uses LCL 19 for something else, it stays OFF
+    rather than double-patching the socket, and an INFO says so.
 
     The factory socket comes from
     `console_facts.measured_factory_input_patch` -- **measured data only**.
@@ -2555,7 +2570,7 @@ def release_write_targets(channels: list[dict], *,
     on, the source label cleared next, and only then the patch goes back
     to what the factory left there.
 
-    **The patch goes back to the factory's, not to OFF** (the maintainer,
+    **The patch goes back to the factory's, not to OFF** (decided
     2026-09-24; `release_patch_decision`). A Compact's channel 19 returns
     to LCL 19 -- and with `clink` back on it shows that socket's glyph,
     which is the whole of what made a freed strip look different from an
@@ -2579,7 +2594,7 @@ def release_write_targets(channels: list[dict], *,
     afresh at each step.
 
     **`fdr` goes to -inf, the factory reading, just before the closing
-    unmute** (the maintainer, 2026-09-24). Never to any other value: picking a
+    unmute**. Never to any other value: picking a
     level for a strip no plan is building is still the one thing this
     module must never do. See the module docstring for why restoring the
     factory patch made the factory fader necessary.
@@ -2680,8 +2695,8 @@ def release_write_targets(channels: list[dict], *,
                             f"/io/in/{group}/{socket}/icon", "i",
                             f"returned to free: icon cleared on source {group} {socket} ({was})",
                             _const(facts.factory_source_icon(group)), STAGE_SOURCE_LABEL))
-            # 4. The patch, back to what the factory left there
-            # (the maintainer, 2026-09-24): the measured factory socket when
+            # 4. The patch, back to what the factory left there:
+            # the measured factory socket when
             # nothing else claims it, OFF otherwise. Where OFF sat, and for
             # the same reason: last of the socket-side writes, so phantom
             # and the label above were cleared while the patch still said
@@ -2786,7 +2801,7 @@ def release_write_targets(channels: list[dict], *,
 
         # 8. The fader to the factory reading, -inf -- BEFORE the unmute,
         # so the strip is silent by level before it stops being silent by
-        # mute. The maintainer, 2026-09-24: with the factory patch restored, a
+        # mute. With the factory patch restored, a
         # strip left unmuted at the plan's level would carry a stray source
         # on its factory jack to Main 1. This is not a level chosen for a
         # show; it is the reading an untouched strip gives, like every
@@ -2820,7 +2835,7 @@ def _release_processing_targets(channel: dict, was: str, *,
     keeps the targets at `STAGE_PROCESSING` -- the `flt`, `in/set`, `eq`
     and `peq` leaves. Every one of them gets the reading an untouched
     strip gives, measured across all 48 strips of
-    `archive/examples/console-runs/session-2026-09-23-0928/A8-initialized.snap`
+    the A8 initialized snapshot of 2026-09-23
     (`console_facts.FACTORY_STRIP_PROCESSING`).
 
     Three consequences of deriving it this way, all of them the point:
@@ -2930,9 +2945,9 @@ def _shared_source_sockets(plan: dict) -> dict[tuple[str, int], list[str]]:
 
     So a shared socket is the one case where the strips have to carry
     their own names, and this is what tells `_channel_write_targets` which
-    those are. The maintainer, 2026-09-22: *"we need to unlink the channel and
-    source customization, and customize the channels separately. The
-    source can be given some kind of composite name."*
+    those are: the channel and source customization are unlinked and
+    the channels customized separately, while the source is given some
+    kind of composite name.
     """
     occupants: dict[tuple[str, int], list[str]] = {}
     for channel in plan.get("channels", []):
@@ -3008,7 +3023,7 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
         # at once (TOURING_260821_MIX.snap's Main feeds USB 47/48, CRD
         # 31/32 AND REC 1/2 simultaneously) -- `patches` (plural) is
         # authoritative when non-empty; `patch` (singular) covers a plan
-        # that only ever set the one, and plan_compat reads the pre-#342
+        # that only ever set the one, and plan_compat reads the older
         # `sockets`/`socket` spelling of both.
         sockets = plan_compat.output_patches(output_entry)
         # The plan now states which internal source feeds this Output
@@ -3036,10 +3051,9 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
                 "socket and free text -- not guessed from the name"
             )
 
-        # Its name, on the internal object. The maintainer, 2026-10-09: "Its not
-        # setting my main or matrix bus names even though they are in the
-        # plan" -- a bus's name was written (`_bus_write_targets`), an
-        # output's never was. The plan's key IS the name ("Phones",
+        # Its name, on the internal object. Main and matrix bus names in the
+        # plan were not being set -- a bus's name was written
+        # (`_bus_write_targets`), an output's never was. The plan's key IS the name ("Phones",
         # "Matrix 1"), written whether or not a socket is patched: a
         # Matrix used as the phones source is found on the desk by it.
         if wing_grp is not None and index is not None:
@@ -3140,7 +3154,8 @@ def _extract_reply_value(reply, value_type: str, address: str = "") -> tuple[obj
     matter, and the second one is the one that hurt: `apply` reads an
     address before deciding whether to write it at all, and on the
     2026-09-18 run that uncorrected baseline read hid **five genuinely
-    wrong physical patches** behind a false "already correct, skip". The 20 false MISMATCH lines were noise; this was the failure
+    wrong physical patches** behind a false "already correct, skip". The 20
+    false MISMATCH lines were noise; this was the failure
     direction that actually costs a show.
     """
     if reply is None:
@@ -3166,7 +3181,7 @@ _REL_TOLERANCE = {"gate/rel": 0.03, "dyn/rel": 0.03}
 _DESK_FLOOR = {"in/set/dly": 0.1}
 
 
-# A stage box's own preamp gain, read back after a write. The maintainer's
+# A stage box's own preamp gain, read back after a write. An
 # apply of 2026-10-09 through a Behringer stage box on AES50 A: all 16
 # gains read back half a dB high -- 20.0 asked, 20.5 held; 0.0 asked,
 # 0.5 held. The box sets its own preamps and answers on its own steps,
@@ -3211,7 +3226,7 @@ def _values_equal(value_type: str, a: object, b: object, address: str | None = N
             # where a relative tolerance degenerates. It used to be 0.5,
             # and that was wrong in a way that cost a silent failure.
             #
-            # 2026-09-22, the maintainer's A3 run: `/ch/1/eq/1q` asked for Q=1.4
+            # 2026-09-22, the A3 run: `/ch/1/eq/1q` asked for Q=1.4
             # against a prior of 0.998. |1.4 - 0.998| = 0.402 < 0.5, so
             # this function said "already correct", `apply` SKIPPED THE
             # WRITE, and the journal reported `skipped_no_change`. Same
@@ -3322,7 +3337,7 @@ def _late_confirmation(console, target: WriteTarget, intended_value, after: int)
     of inventing a match:
 
     1. The datagram names THIS address. `console.late_reply` will not
-       offer one filed under any other (WORK_PLAN lesson 17).
+       offer one filed under any other (a lesson from the first live runs).
     2. It arrived after `after`, the datagram count from before the
        write. The console duplicates pre-write replies too.
     3. Its value equals the intended value under the same comparison
@@ -3484,7 +3499,10 @@ def _recheck_disagreements(console, pending: list[_PendingCheck], *,
 #: phases name both.
 PREVIEW_PHASE = "reading the desk for the preview"
 RESET_WRITE_PHASE = "resetting to initialized, reading each back"
-WRITE_PHASE = "writing, reading each back"
+#: The plan's own stretch looks at every setting it states and sends only
+#: those the desk does not already hold, so its count is of settings looked
+#: at, and its summary line says how many of them were written.
+WRITE_PHASE = "checking each setting, writing what differs"
 RECHECK_PHASE = "reading back again what disagreed"
 
 
@@ -3593,8 +3611,8 @@ def apply_plan(
     connection died, never a placeholder for the ones that weren't.
 
     `clean_output_sockets` (default None): opt-in
-    ONLY -- the maintainer's own call, 2026-09-19, "B must be an option that is
-    turned on, not the default". None (the default) behaves exactly as
+    ONLY -- a decision of 2026-09-19: option B must be turned on, not the
+    default. None (the default) behaves exactly as
     before this existed: this function only ever writes an address the
     plan itself names. Given `{group: count}` (the same shape `audit.py`'s
     `read_console_state(output_sockets=...)` already takes, since there is
@@ -3757,6 +3775,19 @@ def apply_plan(
         phase = phases.start(PREVIEW_PHASE, len(targets))
         prefetched = _prefetch_baselines(console, targets, known, phase)
 
+    # Where the records of the phase in progress begin, so that when it ends
+    # its summary can say how many of its settings were actually written.
+    phase_first = 0
+    phase_checks_more = False
+
+    def finish_phase() -> None:
+        if phase is None:
+            return
+        if phase_checks_more:
+            phase.written = sum(1 for r in records[phase_first:]
+                                if r.status in ("match", "mismatch", "unreadable"))
+        phase.finish()
+
     def step_done() -> None:
         nonlocal in_flight
         if in_flight:
@@ -3769,14 +3800,16 @@ def apply_plan(
         step_done()
         if (index == 0 and prefetched is None) or (
                 not dry_run and reset is not None and index == reset_phase):
-            if phase is not None:
-                phase.finish()
+            finish_phase()
+            phase_first = len(records)
+            phase_checks_more = False
             if dry_run:
                 phase = phases.start(PREVIEW_PHASE, len(targets))
             elif reset is not None and index < reset_phase:
                 phase = phases.start(RESET_WRITE_PHASE, reset_phase, writes=True)
             else:
                 phase = phases.start(WRITE_PHASE, len(targets) - index, writes=True)
+                phase_checks_more = True
         if prefetched is not None and target.address in prefetched:
             # Counted by the phase as its reply came in.
             in_flight = False
@@ -3912,11 +3945,11 @@ def apply_plan(
         #   GET /bus/11/name -> '' for /bus/10/name    (stale, discarded)
         #   GET /bus/11/name -> 'VOX Delay' for /bus/10/name  (stale, discarded)
         #
-        # (archive/examples/console-runs/2026-09-21/A1-raw.log, lines 189-202.
+        # (from the A1 raw log of 2026-09-21.
         # `/ch/7/tags` on the 21:00 run of the same night does it one
         # worse: the readback AND an immediate re-read both answered '',
         # and the value arrives in two datagrams drained during
-        # `/ch/8/tags` -- 2026-09-21-2100/A1-raw.log, lines 1469-1485.)
+        # `/ch/8/tags`.)
         #
         # The write had landed both times; the journal called both a
         # MISMATCH. Those are the only writes in the run that took the
@@ -3928,8 +3961,7 @@ def apply_plan(
         # wolf about its own central claim, and the exit code is non-zero,
         # so a script cannot tell one from the real thing.
         #
-        # So: consult the datagrams the client drained (free -- issue
-        # #144), and if they do not settle it, hold the address back for
+        # So: consult the datagrams the client drained (free), and if they do not settle it, hold the address back for
         # `_recheck_disagreements` after the loop rather than spending a
         # round trip and a sleep here, in the middle of the race.
         readback_reply = console.get(target.address)
@@ -3972,8 +4004,7 @@ def apply_plan(
                 record=record, target=target, intended_value=intended_value, mark=mark))
 
     step_done()
-    if phase is not None:
-        phase.finish()
+    finish_phase()
 
     if pending and abort_reason is None:
         recheck_warning = _recheck_disagreements(console, pending, phases=phases)
@@ -4094,7 +4125,7 @@ def _fixed_default_notes(records: list[WriteRecord]) -> list[str]:
     once each rather than once per strip (review 2026-09-28).
 
     * C2 (R8): every strip the plan builds is put back on its MAIN input
-      (`altsrc = 0`). Coordinator decision: keep it -- a show apply means
+      (`altsrc = 0`). Decision: keep it -- a show apply means
       stage inputs live -- and say how many, and how many were on their
       alternate when read, so a desk parked on its alternates for a
       virtual soundcheck is not flipped back without a line saying so.

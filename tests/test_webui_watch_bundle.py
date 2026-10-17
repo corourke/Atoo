@@ -1,6 +1,6 @@
 """
 
-The maintainer, 2026-10-01:
+
 
     The `watch.json` file always needs to go with the current bundle. Make
     its file handling consistent with the way we handle other files: file
@@ -259,8 +259,6 @@ def test_apply_writes_and_undo_refuse_demo(client, show):
              "Writing is switched off in the Demo show"),
             ("/api/patch/run", {"change": "horns", "confirm": True, "arm": True}, 403,
              "Writing is switched off in the Demo show"),
-            ("/api/amend/run", {"confirm": True, "arm": True}, 403,
-             "Writing is switched off in the Demo show"),
             ("/api/undo/run", {}, 400, "writing and Undo are switched off"),
             ("/api/undo/run", {"confirm": True, "arm": True}, 400,
              "writing and Undo are switched off")):
@@ -297,7 +295,7 @@ def test_the_bars_editor_offers_demo_beside_the_address(client):
     page = client.get("/").text
     edit = page[page.index('id="console-bar-edit"'):page.index('id="bundle-message"')]
     assert 'id="console-kind-desk"' in edit and 'id="console-kind-demo"' in edit
-    assert "> Demo</label>" in edit
+    assert ">Demo</button>" in edit and 'role="radiogroup" aria-label="Which console"' in edit
     shell = client.get("/static/shell.js").text
     for marker in ('el("console-kind-demo")', "body = { demo: true };",
                    'const DEMO_LABEL = "Demo";', "consoleDefaults.demo"):
@@ -313,8 +311,10 @@ def test_the_bars_editor_offers_demo_beside_the_address(client):
 def test_the_watch_conditions_box_has_a_section_title_like_the_others(client):
     page = client.get("/").text
     panel = page[page.index('id="wc-panel"'):page.index('id="wc-table-wrap"')]
-    assert '<h2 class="stage-title">Watch conditions</h2>' in panel
-    assert 'class="stage-head' in panel
+    # An earlier change (ui-style.md §3): the fold's summary is the block header,
+    # outside the box.
+    assert '<summary class="block-head">' in panel
+    assert "<h2>Watch conditions</h2>" in panel
     for element_id in ("wc-file", "wc-change-btn", "wc-new-btn", "wc-save-btn",
                        "wc-dirty-badge"):
         assert f'id="{element_id}"' in panel, element_id
@@ -332,7 +332,7 @@ def test_watch_js_uses_the_shells_copy_in_flow_and_reads_what_the_server_sends(c
         assert f'el("{element_id}")' in js, element_id
     assert '"/api/watch-conditions/new"' in js
     # Every key watch.js reads off the answer is one the server sends --
-    # the silently-blank trap (CLAUDE.md).
+    # the silently-blank trap.
     data = client.post("/api/watch-conditions/new", json={"expected_bundle": str(show)}).json()
     for key in ("path", "watch_conditions", "bundle_file", "message"):
         assert key in data and f"data.{key}" in js, key

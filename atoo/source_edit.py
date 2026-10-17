@@ -1,8 +1,9 @@
 """Editing the three files a build reads, from the Setup page, without
 rewriting them.
 
-The maintainer edits these files in Obsidian as well as on the page, so the
-page is a second editor of a file that is his, and it behaves like one:
+These files are also edited in other editors (Obsidian, say) as well as on
+the page, so the page is a second editor of a file that is the user's, and
+it behaves like one:
 
 * **Saving a file nobody changed leaves it byte-identical** -- nothing
   is written at all.
@@ -55,7 +56,7 @@ def _terminator(line: str) -> str:
 
 def replace_text(text: str, new_text: str) -> tuple[str, bool]:
     """The whole file replaced by ``new_text`` -- a Save on step 01 or 03,
-    whose one editor is the file (the maintainer, 2026-09-28: no sections view).
+    whose one editor is the file (no sections view).
 
     The editor is the file, so there is nothing to splice: what it says is
     what is written. Two things are still kept from the file on disk:

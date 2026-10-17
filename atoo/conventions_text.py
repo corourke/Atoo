@@ -1,7 +1,7 @@
 """Comments in a conventions file or instructions.md: notes the build ignores.
 
-The maintainer, 2026-09-25: the conventions file needs a place for notes to
-himself that the build must not act on -- *"(We will EQ this so it sounds
+The conventions file needs a place for notes to
+its author that the build must not act on -- *"(We will EQ this so it sounds
 good for a recording.)"* is a reminder, not a rule. Parentheses were
 rejected for that job because the same file uses them for real rules
 ("(L/R, Left/Right)", a compressor's settings, "(but not drums)"). The
@@ -267,8 +267,8 @@ def lines_inside_comments(text: str) -> set[int]:
 
 # A Markdown ATX heading of ANY level: up to three spaces, one to six `#`,
 # whitespace, then the name (an optional closing run of `#` is dropped).
-# The maintainer, 2026-09-25: "it should not matter how many hash marks there
-# are" -- `# Busses`, `## Busses` and `### Busses` all start the section
+# It should not matter how many hash marks there
+# are -- `# Busses`, `## Busses` and `### Busses` all start the section
 # named "Busses".
 _HEADING_RE = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$")
 

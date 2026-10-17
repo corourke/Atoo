@@ -14,7 +14,7 @@ substituted for `atoo.console.WingConsole` -- the same fake the apply
 engine's own tests use. Nothing opens a socket.
 
 The second half asserts over the **served assets**, because the Python
-suite cannot see the browser (`CLAUDE.md`): a field `webui.py` renames is
+suite cannot see the browser: a field `webui.py` renames is
 a silently blank element on the page, not an exception.
 """
 
@@ -44,8 +44,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 # A plan frozen in `tests/fixtures/`, never one out of `examples/`: a
 # bundle under `examples/` is a show file the maintainer edits, and a test that
-# asserted on its contents would break the next time he touched it
-# (`CLAUDE.md`). This one verifies with **no errors** on its own, and with
+# asserted on its contents would break the next time he touched it.
+# This one verifies with **no errors** on its own, and with
 # **one error** against `touringband.csv` -- which is exactly the pair the
 # pre-flight gate tests need.
 CLEAN_PLAN = json.loads((FIXTURES / "applied-show.plan.json").read_text())
@@ -128,7 +128,7 @@ class _Desk(FakeConsole):
         puts that back with `console_facts.correct_readback_index`. A fake
         that echoed what it was written would read one high on exactly
         those addresses, and every one of them would come back a false
-        mismatch -- which is the bug #75 is about, inverted.
+        mismatch -- which is the bug an earlier change is about, inverted.
 
         So `state` stays in the values a plan states, and this is the
         wire."""
@@ -254,7 +254,7 @@ def test_preflight_is_fresh_and_not_the_plans_own_record(tmp_path, desk):
 
 
 def test_preflight_does_not_block_on_an_unpatched_matrix(tmp_path, desk):
-    """The maintainer, 2026-10-09: a Matrix used as the phones source has no
+    """A Matrix used as the phones source has no
     physical socket, and `output.no-patch` was an ERROR that blocked
     Apply. It is a WARNING: apply sets the Matrix up and routes it to no
     socket, so the pre-flight reads applicable."""
@@ -428,6 +428,32 @@ def test_armed_and_confirmed_writes_journals_and_says_how_to_reverse_it(
     assert f"atoo undo {journal}" in reversible[0]["message"]
 
 
+def test_an_undo_preview_sends_every_address_and_not_the_last_200_lines_of_a_log(
+        apply_client, desk):
+    """A full apply writes hundreds of addresses; the run's log keeps its last
+    200 lines. The undo preview's rows come from the command's own result
+    file, whole -- one per address the apply wrote -- so the page lists them
+    all."""
+    from atoo import journal_stack
+
+    assert apply_client.post("/api/apply/run",
+                             json=armed(apply_client, "/api/apply/run")).status_code == 200
+    assert _wait(apply_client)["exit_code"] == 0
+    [entry] = journal_stack.entries(apply_client.bundle_directory)
+    sent = [w for w in json.loads(entry.path.read_text())["writes"] if w["status"] == "match"]
+    assert len(sent) > 200, "the scenario has to be bigger than the log"
+    before = _writes(desk)
+
+    assert apply_client.post("/api/undo/run", json={}).status_code == 200
+    status = _wait(apply_client)
+    assert status["kind"] == "undo" and status["preview"] is True
+    undo = status["result"]["undo"]
+    assert len(undo["rows"]) == len(sent) and len(status["log"]) <= 200
+    assert undo["counts"]["total"] == len(sent)
+    assert undo["journal_id"] == entry.id and undo["kind"] == "apply"
+    assert _writes(desk) == before
+
+
 def test_the_apply_is_the_cli_command_not_a_copy_of_it(apply_client):
     """What the browser writes and what a terminal writes cannot drift
     apart: this is `atoo apply`'s own argv, with the one console the
@@ -444,7 +470,7 @@ def test_the_apply_is_the_cli_command_not_a_copy_of_it(apply_client):
 def test_the_journal_goes_where_the_command_would_have_put_it(apply_client):
     """A confirmed apply from the page names no --journal: the command
     puts it where a terminal's would go -- a new entry in the bundle's
-    journals/ (#81 point 4) -- and the page reads back that
+    journals/ (an earlier change point 4) -- and the page reads back that
     entry, the one this run added."""
     from atoo import journal_stack
 
@@ -506,7 +532,7 @@ def test_an_apply_run_from_the_browser_lands_on_the_bundles_journal_stack(apply_
 
 def test_the_journal_the_page_reads_back_is_this_runs_after_recording(apply_client):
     """`api_apply_run` finds this run's journal as the stack entry it
-    added, and #252 rewrites that entry after the command's write (to
+    added, and an earlier change rewrites that entry after the command's write (to
     stamp it with its `stack_entry` block). The page reads it once the
     command has returned, so what it draws is the recorded run."""
     apply_client.post("/api/apply/run", json=armed(apply_client, "/api/apply/run"))
@@ -873,7 +899,7 @@ def test_shell_html_carries_every_apply_element_apply_js_fills(assets):
 def test_apply_js_reads_every_apply_key_webui_sends(assets):
     """The wire shape `_apply_payload` and `ApplyRun.status()` send. A key
     renamed in Python and not here renders a blank element rather than
-    throwing (`CLAUDE.md`)."""
+    throwing."""
     js = assets.get("/static/apply.js").text
     for key in ("result.summary", "result.dry_run", "result.journal_path",
                 "result.aborted", "result.replies_discarded",
@@ -984,12 +1010,16 @@ def test_there_is_exactly_one_arming_control_on_the_one_screen_that_writes(asset
     assert re.findall(r'id="[^"]*arm[^"]*"', html) == ['id="apply-arm-checkbox"']
     assert re.findall(r'id="[^"]*arm[^"]*"', served) == ['id="apply-arm-checkbox"']
     assert html.count('type="checkbox" id="apply-arm-checkbox"') == 1
-    # An earlier change (the approved mockup): the label is "Arm", and it sits in
-    # one row with the button that says what it arms -- "Arm  Write to
-    # console" reads as one control.
+    # The label is "Arm", in step 3's Arm section; the red button that spends it
+    # is in the section after it, directly under its own header (Write, or
+    # Undo after an undo preview), never beside the tick.
     row = html[html.index('class="apply-run-row apply-arm-row"'):]
     row = row[:row.index("</div>")]
-    assert 'id="apply-arm-checkbox"> <span>Arm</span>' in row and 'id="apply-run-btn"' in row
+    assert 'id="apply-arm-checkbox"> <span>Arm</span>' in row and 'id="apply-run-btn"' not in row
+    box = html[html.index('id="apply-step-3-box"'):html.index('id="journal-stack-panel"')]
+    assert box.index("<h3>Arm</h3>") < box.index('id="apply-arm-checkbox"') < box.index("<h3>Write</h3>")
+    assert box.index("<h3>Write</h3>") < box.index('id="apply-run-btn"') < box.index("<h3>Undo</h3>")
+    assert box.index("<h3>Undo</h3>") < box.index('id="undo-run-btn"')
     assert "<code>--confirm</code>" in html
 
 
@@ -1045,8 +1075,8 @@ def test_styles_css_carries_the_apply_vocabulary(assets):
     for cls in (".apply-shell", ".apply-step", ".desk-strip", ".sp-popup", ".apply-arm-checkbox",
                 ".apply-record", ".apply-record.is-mismatch",
                 ".apply-record.is-unreadable", ".apply-journal-group",
-                ".apply-journal-groups", ".apply-chip", ".apply-warn-caption",
-                ".btn-danger", ".seg-btn"):
+                ".apply-journal-groups", ".apply-chips", ".step-no", ".lock-reason", ".apply-warn-caption",
+                ".btn-danger", ".seg", ".seg-opt", ".switch"):
         assert cls in css, f"styles.css has no rule for {cls}"
 
 
@@ -1080,17 +1110,16 @@ def test_watch_mode_adds_no_write_path_and_no_second_arming_control(assets):
         "the Watch panel's static markup carries a checkbox -- the only checkbox "
         "that means anything near a console is Apply's arming control"
     )
-    # An earlier change (the maintainer, 2026-10-12) supersedes "no checkbox on Watch"
-    # for one thing only: each row's Suppress box, drawn by watch.js,
-    # which hides a row on this page and reaches nothing. Any other
-    # checkbox watch.js makes is still refused -- bar the watch-conditions
-    # editor's value box (a condition's `muted == true`), which is a field
-    # of the file, not a control.
-    assert watch_js.count('.type = "checkbox"') == 1
+    # Watch's rows carry a Hide button, drawn by watch.js, which hides a row
+    # on this page and reaches nothing. It is a button, not a checkbox: the
+    # only checkboxes watch.js makes are none at all, bar the watch-conditions
+    # editor's value box (a condition's `muted == true`), which is a field of
+    # the file, not a control.
+    assert watch_js.count('.type = "checkbox"') == 0
     assert watch_js.count('wcMakeInput("checkbox"') == 1
     assert 'wcMakeInput("checkbox", cond.value, "wc-value-checkbox")' in watch_js
-    maker = watch_js[watch_js.index("function makeSuppressBox("):]
+    maker = watch_js[watch_js.index("function makeHideButton("):]
     maker = maker[:maker.index("\n  }\n")]
-    assert 'box.type = "checkbox"' in maker
-    assert 'box.className = "watch-row-check"' in maker
+    assert 'btn.type = "button"' in maker
+    assert 'btn.className = "btn btn-quiet watch-row-hide"' in maker
     assert "fetch(" not in maker

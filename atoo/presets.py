@@ -1,7 +1,7 @@
 """WING channel preset (`.chn`) and bus preset (`.bus`, see
 `load_bus_preset` and `atoo/bus_presets.py`) loading -- D2's "rules carry policy,
-presets carry values" (docs/product/project-brief.md), now that D7's
-console-recall design is confirmed dead (experiments/wing/spike_preset_recall.py:
+presets carry values" (the project brief), now that D7's
+console-recall design is confirmed dead (an early spike showed it:
 WING has no remote "load this preset" command -- presets are only
 recallable as Scenes inside an open Show, and Scene tags can only be
 assigned by hand on the console screen).
@@ -9,7 +9,7 @@ assigned by hand on the console screen).
 A `.chn` file is plain JSON whose `ch_data` object has exactly the same
 shape as a channel inside a saved show (`ae_data.ch.{n}`) -- the same
 field names Atoo already writes over the network parameter-by-
-parameter (docs/reference/wing-compact-parameter-map.json). That means
+parameter (the Compact parameter map). That means
 Atoo never needs the console's own preset library: it keeps its own
 directory of `.chn` files (seeded from real WING exports) and "recalls" a
 preset by writing its parameter values to the target channel, exactly
@@ -22,10 +22,10 @@ routing), `tags` (DCA/mute-group membership) and `name`/`col`/`icon`
 preset's fields blindly would repatch inputs, wreck routing and rename
 channels from a preset that was only meant to carry a drum sound -- so
 this module enforces an explicit allow-list of processing-only fields
-(see `docs/reference/wing-channel-preset.md` for the full field-by-field
-justification, derived from the WING protocol's own "Library Scopes"
+(derived from the WING protocol's own "Library Scopes"
 taxonomy plus a diff of five real preset exports; the fixtures in
-tests/fixtures/presets/ are now the maintainer's own set). Anything in `ch_data` this module doesn't
+tests/fixtures/presets/ are now the project's own set).
+Anything in `ch_data` this module doesn't
 recognize -- as either in-scope or deliberately excluded -- becomes a
 named warning on the loaded preset, never a silent guess.
 """
@@ -299,13 +299,13 @@ def load_preset(path: str | Path) -> ChannelPreset:
 # plus identity and live state. Beside it, `preins_data` (and
 # `postins_data`) carries the EFFECT the insert names -- `mdl` and every
 # parameter -- and `target_fx` the engines it was saved from, `[pre, post]`
-# with 0 for none (the maintainer's two: `[5, 0]` and `[8, 0]`, each matching its
+# with 0 for none (the project's two: `[5, 0]` and `[8, 0]`, each matching its
 # `preins.ins`).
 #
 # The processing allow-list is the channel preset's, for the nodes a bus
 # has: EQ, dynamics, its crossover and sidechain filter, and the bus's own
 # output delay (WING's DELAY scope, as a channel's input delay is). Not
-# the width (`busmono`: the plan decides mono/stereo, CLAUDE.md), not the
+# the width (`busmono`: the plan decides mono/stereo), not the
 # routing, level, identity or tags -- the same reasons as a channel's.
 # The insert is not written from `ch_data` at all: the engine is a shared
 # desk resource that Atoo allocates (`fx_engines.allocate`), so the
@@ -493,7 +493,7 @@ class PresetLibrary:
         """Every preset whose name normalizes to `name`'s, **newest
         first**.
 
-        Forgiving matching (the maintainer, 2026-09-20): case, and
+        Forgiving matching: case, and
         `-`/`_`/whitespace, are all treated alike, so a conventions file
         saying *"Lead Vox uses the Lead Vocal preset"* finds
         `lead_vocal.chn`. An engineer is writing prose, not a filename,
@@ -514,9 +514,9 @@ class PresetLibrary:
         """The preset called `name`, matched forgivingly.
 
         Raises `PresetError` (never returns None) when nothing matches.
-        When *several* do, the newest wins rather than raising -- the maintainer,
-        2026-09-20: "Two files naming the same name is a Warning, pick the
-        newest one." That reverses this method's original posture, on the
+        When *several* do, the newest wins rather than raising (decided 2026-09-20: two files
+        naming the same name is a Warning, pick the
+        newest one). That reverses this method's original posture, on the
         grounds that a duplicate is a library-hygiene problem and should
         not stop a show being built. Callers that want to *report* the
         ambiguity ask `matches()` for the full list; `verify_plan` does.

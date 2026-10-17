@@ -13,7 +13,7 @@ consequence was a hard failure nobody had hit because nobody had tried:
 
 So a generated plan could pass verification and still be unapplyable.
 
-**Allocation is code's job, not the model's** (D11, #26). Which console
+**Allocation is code's job, not the model's** (D11). Which console
 slot a named DCA occupies is not a judgement about the show -- it is
 bookkeeping, it must be collision-free, and it must match what the
 compiler would have chosen for the same plan. Asking a model for it would
@@ -50,7 +50,7 @@ from atoo import inferred
 # "Same Mainboard as on WING"), so these six counts are family-wide.
 #
 # Recorded as DOCUMENTED-COMMON, not hardware-verified: only the Compact
-# has been walked (2026-09-08). That distinction is why #13 stayed open --
+# has been walked (2026-09-08). That distinction is why the question stays open --
 # but note it can never be closed by walking the other two either, because
 # the address tree is identical across the family whatever the panel has.
 # See `console_facts.CONSOLE_MODELS` for the counts that do differ.
@@ -228,8 +228,8 @@ def allocate_console_indices(
     plan and on a re-run.
 
     Raises `console_facts.UnknownConsoleModel` when `console_model` is
-    missing or unrecognised. Until #13 this returned a warning and skipped
-    the overflow checks; the maintainer, 2026-09-21: an unknown model is a hard
+    missing or unrecognised. It once returned a warning and skipped
+    the overflow checks; an unknown model is now a hard
     stop, because "we have no way of knowing what its capabilities are and
     any plan would be meaningless". A skipped capacity check that reads as
     a pass is exactly the failure this project exists to prevent.
@@ -290,7 +290,7 @@ def allocate_console_indices(
         if name in slots and "index" not in entry:
             # Which strip this entry IS -- a Matrix's `fed_by: {type:
             # main, index: N}` is matched against it -- so a filled index
-            # announces itself (CLAUDE.md: an inferred value that does not
+            # announces itself (an inferred value that does not
             # announce itself is the defect). Verify reports the marker as
             # the INFO `inferred.output-index`. Haiku 4.5 left both indices
             # out of smallband's plan (2026-09-28); Sonnet states them.

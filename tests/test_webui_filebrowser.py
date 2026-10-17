@@ -1,12 +1,12 @@
 """The Setup UI's file browser and copy-into-bundle.
 
-#291 (the maintainer, 2026-09-25): "we need a real modal file browser for
+"we need a real modal file browser for
 selecting existing files, or creating a new show directory or a new
 file." A page cannot see the disk, so the modal asks the server for one
 folder at a time: `GET /api/fs/list` and, for New folder,
 `POST /api/fs/mkdir` (`atoo/fsbrowse.py`).
 
-#292: "If I create a new show in the UI, and then open an input list from
+"If I create a new show in the UI, and then open an input list from
 somewhere, the program should copy the input list into the bundle and
 notify the user that it has done so." -- `POST /api/bundle/adopt`, which
 does the same for instructions.md (the only instructions file `build`
@@ -266,7 +266,6 @@ def _path_requests(home):
         ("/api/build/conventions/new", {"path": str(home / "house.md")}),
         ("/api/config/conventions-default", {"path": str(secret)}),
         ("/api/watch/start", {"source": "console", "watch_conditions_path": str(secret)}),
-        ("/api/amend/run", {"amended_plan": str(secret)}),
     ]
 
 
@@ -325,13 +324,12 @@ def test_a_phone_watching_may_send_back_the_watch_file_the_server_holds(home):
 
 
 # Every Setup write -- to the console, or to the show's files --
-# answers this machine only. The maintainer, 2026-09-26: from the LAN, Watch only.
+# answers this machine only. From the LAN, Watch only.
 # Each body is armed where arming exists, so one that got through would write.
 _ARMED = {"confirm": True, "arm": True}
 _SETUP_WRITES = [
     ("/api/apply/run", _ARMED),
     ("/api/patch/run", {**_ARMED, "change": "add a vocal on A 21"}),
-    ("/api/amend/run", _ARMED),
     ("/api/undo/run", _ARMED),
     ("/api/build/run", {}),
     ("/api/build/stop", {}),
@@ -746,7 +744,7 @@ def test_shell_js_copies_into_the_bundle_and_asks_before_replacing(client):
         assert key in js, f"shell.js never reads {key}"
     for answer in ('id: "replace"', 'id: "keep"', 'id: "cancel"'):
         assert answer in js
-    # A step with unsaved edits (the #290/#293 editors) is asked about
+    # A step with unsaved edits (the editors) is asked about
     # before a chosen file replaces what it shows.
     assert "if (editingStep[slot]) {" in js and 'id: "discard"' in js
     # The old path boxes are gone; each affordance opens the modal.

@@ -13,7 +13,7 @@ from whatever else is holding it, and we would then stop receiving
 silently the moment anything took it back.
 
 **What else on a desk might hold it is narrower than this paragraph used
-to claim.** The maintainer, 2026-09-23: **WING-Edit does not use OSC** -- it
+to claim.** As established 2026-09-23: **WING-Edit does not use OSC** -- it
 speaks the native binary protocol on TCP 2222, so it is not
 a competitor for the subscription at all. Mixing Station's OSC mode is a
 genuine hazard, and so is any other OSC client on the network, including
@@ -27,14 +27,14 @@ scoped, and the one it does offer can be taken away without notice.
 
 **Could a poll simply read less?** `atoo.watch_scope` answers that
 with measured numbers rather than an estimate. The rules
-`watch` runs read 3,823 of a Compact's 6,143 addresses, so a scoped
+`watch` runs read 3,891 of a Compact's 6,195 addresses, so a scoped
 per-leaf pass is ~26s against ~41s -- better, and still six times the 3-4
 second budget -- and it saves the node-dump read (the default) nothing at all,
 because the leaves it drops live inside object nodes the read still has
 to fetch. Scoping alone does not make `watch` responsive. That module is
 not wired into the read path for exactly that reason; see its docstring.
 
-**Names are read at Start and refreshed, not read every pass** (the maintainer's go-ahead 2026-10-01). A node dump cannot carry a name
+**Names are read at Start and refreshed, not read every pass** (2026-10-01). A node dump cannot carry a name
 (`audit.DUMP_UNSAFE_LEAVES`), so on a Compact the 88 strip, bus, DCA and
 mute-group names -- plus the second pass's ~26 source-socket names --
 were separate requests every pass: about a third of a pass's requests.
@@ -80,6 +80,11 @@ NAME_REFRESH_TARGET_SECONDS = 30
 #: standing as `audit.SCOPE_SUMMARY_RULE_ID`.
 NAME_REFRESH_RULE_ID = "W001"
 
+#: The INFO a live watch carries about its clip detection:
+#: that it is listening, or why it is not. A fact about the session, like
+#: W001, not a check over console state.
+CLIP_STATUS_RULE_ID = "W002"
+
 FindingKey = tuple
 
 #: Every watch condition's rule id starts with this
@@ -89,8 +94,7 @@ CONDITION_RULE_PREFIX = "WATCH:"
 
 @dataclass(frozen=True)
 class WatchNote(Diagnostic):
-    """A fact about the watch session itself, not about the desk (issue
-    #503): which strip a scoped name resolved to at Start, that a
+    """A fact about the watch session itself, not about the desk: which strip a scoped name resolved to at Start, that a
     condition is read as a position or as MAIN 1, that a scoped name
     matched nothing and is not watched, that names are refreshed rather
     than read every pass (W001).
@@ -124,8 +128,7 @@ class PresentedFindings:
     folded: dict[FindingKey, list[Finding]] = field(default_factory=dict)
 
 
-#: Plan-bound rules that host a row the way a watch condition does (Issue
-#: #591): CV015 says an FX bus is bypassed, so E003 (and E001)
+#: Plan-bound rules that host a row the way a watch condition does: CV015 says an FX bus is bypassed, so E003 (and E001)
 #: about the same insert fold under it rather than repeat it.
 PLAN_HOST_RULE_IDS = frozenset({"CV015"})
 
@@ -168,10 +171,13 @@ def present_findings(findings: list[Finding]) -> PresentedFindings:
 
 
 def finding_key(f: Finding) -> FindingKey:
-    # (rule_id, addresses) -- addresses is what the rule cited, so the
-    # same rule firing for a *different* channel is correctly treated as
-    # a different finding, not a repeat of one already known about.
-    return (f.rule_id, f.addresses)
+    # (rule_id, addresses, severity) -- addresses is what the rule cited, so
+    # the same rule firing for a *different* channel is correctly treated as
+    # a different finding, not a repeat of one already known about. The
+    # severity is part of it so a finding that is reported at another grade
+    # (C004 at INFO while virtual soundcheck is on, a WARNING once it is
+    # off) is the old row cleared and a new one, not a quiet recolouring.
+    return (f.rule_id, f.addresses, f.severity)
 
 
 @dataclass
@@ -195,6 +201,7 @@ def watch(
     max_iterations: int | None = None,
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], str] = _default_clock,
+    session_notes: Callable[[], list[Finding]] | None = None,
 ) -> Iterator[WatchEvent]:
     """Poll `state_provider()` every `interval` seconds, run `rules`
     (default `audit.DEFAULT_RULES`) against each read, and yield one
@@ -213,6 +220,11 @@ def watch(
     after `max_iterations`). `sleep`/`clock` are injectable so a test (or
     a bounded offline demo cycling through canned states) needs no real
     waiting and no wall-clock dependence.
+
+    `session_notes`, when given, is called every cycle for the notes that
+    are about the watch itself and not about the desk (the Virtual
+    soundcheck switch, `virtual_soundcheck_note`); a caller whose switch
+    changes mid-watch passes a function that reads it.
     """
     previous: dict[FindingKey, Finding] | None = None
     iteration = 0
@@ -230,11 +242,20 @@ def watch(
         # this runs (the Watch page's Save does, `WatchSession.replace_rules`),
         # and the next cycle then audits with the new rules.
         findings = run_audit(state, list(rules) if rules is not None else None)
+        noted = False
         if state.name_refresh is not None and state.name_refresh > 1:
             # The same finding every pass, so it is in the baseline and
             # never "new" or "cleared": announced once and kept (the Watch
             # page shows it in its status line, `present_findings`).
             findings.append(name_refresh_note(state.name_refresh))
+            noted = True
+        if state.clip_status is not None:
+            findings.append(clip_status_note(state.clip_status))
+            noted = True
+        for note in (session_notes() if session_notes is not None else ()):
+            findings.append(note)
+            noted = True
+        if noted:
             findings.sort(key=lambda f: (SEVERITY_ORDER[f.severity], f.rule_id))
         current = {finding_key(f): f for f in findings}
 
@@ -304,6 +325,37 @@ def name_refresh_note(every: int) -> Finding:
         f"names every pass.",
         (),
     ), "Names", short)
+
+
+#: The rule id of the INFO saying the Virtual soundcheck switch is on.
+VIRTUAL_SOUNDCHECK_RULE_ID = "W003"
+
+
+def virtual_soundcheck_note() -> Finding:
+    """W003: the INFO saying Virtual soundcheck is on, and what that
+    changes -- C004 and C005 report at INFO instead of WARNING -- so a quiet
+    desk is never mistaken for one with nothing on its alternate inputs.
+    Present while the switch is on and absent when it is off."""
+    return watch_note(Diagnostic.audit(
+        VIRTUAL_SOUNDCHECK_RULE_ID, Severity.INFO, "watch", "Virtual soundcheck is on",
+        "Virtual soundcheck is on: a channel on its alternate input (C004) and the global "
+        "alternate switch (C005) are reported at INFO, not as warnings, and every one is still "
+        "named. Turn it off when soundcheck ends, and any that is still on its alternate becomes "
+        "a warning at once.",
+        (),
+    ), "Virtual soundcheck", "on, alternate inputs at INFO")
+
+
+def clip_status_note(status) -> Finding:
+    """W002: the INFO saying whether the console's meters are being
+    listened to for clips (`metering.ClipMonitor`), and if not,
+    why -- the connection could not be had, was lost, or no packets come.
+    Keyed on on/off, so the command line says it again when it changes."""
+    title = "Clip detection is on" if status.on else "Clip detection is off"
+    return watch_note(Diagnostic.audit(
+        CLIP_STATUS_RULE_ID, Severity.INFO, "watch", title, status.detail,
+        ("clip:on" if status.on else "clip:off",),
+    ), "Clip detection", status.summary)
 
 
 #: The Watch page's note for a non-default or rejected

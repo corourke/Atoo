@@ -1,22 +1,21 @@
 """`atoo patch`: a change typed in plain English, compiled on its own
 and merged onto the show already on the desk, slices 1 and 2.
 
-The maintainer, 2026-09-25: *"Amend is a special case. The idea is to add
+Amend is a special case. The idea is to add
 something temporary to an existing show or make changes to an existing
-show, typically on the fly and at short notice. So my thinking was to not
-have to spend the time doing a whole rebuild. My thought was if the user
-could just state what is needed in plain English, then we could compile
-just that part, figure out the delta and apply it."*
+show, typically on the fly and at short notice, without spending the time
+on a whole rebuild: the user states what is needed in plain English, and
+only that part is compiled, the delta worked out and applied.
 
 ## Words
 
 What the engineer types is a **change** ("trumpet, sax and trombone on
-A 21-23 for tonight, in the Horns DCA"). What the model hands back is the
+A 21-23, in the Horns DCA"). What the model hands back is the
 change's **change set**: objects to add, objects to drop, and a short name
 for the change. "Patch" is the command's name and, everywhere else in this
 project, still means socket routing -- a channel's `patch` field, the
 `patch.*` findings -- so this module never calls the model's output "the
-patch" (the maintainer, 2026-09-26).
+patch".
 
 ## The front half is new; the back half is amend's, unchanged
 
@@ -40,7 +39,7 @@ patch" (the maintainer, 2026-09-26).
    than written half-connected. Console indices for new busses, DCAs,
    mute groups and outputs are code's job (D11), taken from what is free
    in the base. Sockets the change named are honoured; ones it did not
-   name are chosen and announced at INFO (`CLAUDE.md`'s judgement rule).
+   name are chosen and announced at INFO (the judgement rule).
 4. **The back half** -- `amend.plan_amendment` over `(base, merged)`, and
    then everything `atoo amend` already does: placement on free
    strips, the pre-flight verify and socket check, the review, the one
@@ -90,7 +89,8 @@ from atoo.amend import Change, ChangeKind
 from atoo.json_repair import extract_json_object, loads_with_repair
 from atoo import plan_compat
 from atoo.schema_check import validate as validate_schema
-from atoo.verify_plan import resolve_console_model
+from atoo import verify_plan
+from atoo.verify_plan import PASSIVE_RIBBON_MODELS, resolve_console_model
 
 #: How long a change's short name may be. "A few words" -- it is a row in
 #: a journal listing and a line on a review, not a description.
@@ -181,9 +181,8 @@ class ChangeError(RuntimeError):
 def empty_base(console_model: str | None) -> dict:
     """The plan of a desk nothing has been written to by this bundle and no
     build describes: no channels, no groups, no busses, no outputs. A change
-    compiled onto it builds a show up from an initialized board -- the maintainer:
-    *"I could even see a user building up a show file that way, maybe just
-    dictating one piece at a time."*"""
+    compiled onto it builds a show up from an initialized board, which is a supported
+    way to build up a show file: dictating one piece at a time."""
     plan = {"channels": [], "dcas": {}, "mute_groups": {}, "busses": {}, "outputs": {}}
     if console_model:
         plan["meta"] = {"console_model": console_model}
@@ -271,8 +270,9 @@ def change_user(base: dict, change_text: str, *, conventions: str | None,
 Compile this change. Emit the change set JSON and nothing else."""
 
 
-def parse_change_set(raw: str) -> dict:
-    """A model reply -> a validated change set, or `ChangeError`."""
+def parse_change_set(raw: str, *, infos: list[str] | None = None) -> dict:
+    """A model reply -> a validated change set, or `ChangeError`. What was
+    decided on the way (`validate_change_set`) is appended to `infos`."""
     try:
         change_set = extract_json_object(raw)
     except Exception:  # noqa: BLE001
@@ -282,14 +282,51 @@ def parse_change_set(raw: str) -> dict:
         except Exception as exc:  # noqa: BLE001
             raise ChangeError(f"the model's reply did not contain a usable change set: {exc}",
                               partial_text=raw) from exc
-    return validate_change_set(change_set, partial_text=raw)
+    return validate_change_set(change_set, partial_text=raw, infos=infos)
 
 
-def validate_change_set(change_set, *, partial_text: str = "") -> dict:
+def _fill_omitted_sections(change_set: dict) -> list[str]:
+    """Give every section the reply left out the empty value it means, in
+    place, and return the dotted names of those it filled.
+
+    The format asks for every key, and a model that has nothing to put in
+    a section sometimes leaves the key out -- an `add` of one channel with
+    no `busses`, `dcas`, `mute_groups` or `outputs`. An absent section says
+    exactly what an empty one does, so refusing the change for it would
+    refuse a change that can be applied. A section of the wrong type is
+    not filled; the schema reports it."""
+    def empty_of(section: str, key: str):
+        return [] if section == "drop" or key == "channels" else {}
+
+    filled: list[str] = []
+    for section in ("add", "drop"):
+        if section not in change_set:
+            change_set[section] = {key: empty_of(section, key) for key, _ in OBJECT_KINDS}
+            filled.append(section)
+        elif isinstance(change_set[section], dict):
+            body = change_set[section] = dict(change_set[section])
+            for key, _ in OBJECT_KINDS:
+                if key not in body:
+                    body[key] = empty_of(section, key)
+                    filled.append(f"{section}.{key}")
+    for section in ("modify", "notes"):
+        if section not in change_set:
+            change_set[section] = []
+            filled.append(section)
+    return filled
+
+
+def validate_change_set(change_set, *, partial_text: str = "",
+                        infos: list[str] | None = None) -> dict:
     if not isinstance(change_set, dict):
         raise ChangeError("a change set is a JSON object", partial_text=partial_text)
     change_set = dict(change_set)
     change_set.pop(TEXT_KEY, None)
+    filled = _fill_omitted_sections(change_set)
+    if filled and infos is not None:
+        infos.append(
+            f"the change set left out {', '.join(filled)}; each is read as empty -- "
+            "nothing to add, drop or modify there -- and the rest of the change stands")
     # The same tolerance `generate` extends to a plan: an unconstrained
     # model writing "" for "no notes" means the same as [].
     notes = change_set.get("notes")
@@ -321,8 +358,9 @@ def validate_change_set(change_set, *, partial_text: str = "") -> dict:
 def compile_change(change_text: str, base: dict, *, provider, console_model: str,
                    conventions: str | None = None, conventions_name: str | None = None,
                    instructions: str | None = None, instructions_name: str | None = None,
-                   constrain: bool = True) -> dict:
-    """The typed change -> a change set, by one model call."""
+                   constrain: bool = True, infos: list[str] | None = None) -> dict:
+    """The typed change -> a change set, by one model call. Anything
+    decided while reading the reply is appended to `infos`."""
     raw = provider.complete(
         system=change_system(console_model),
         user=change_user(base, change_text, conventions=conventions,
@@ -331,19 +369,22 @@ def compile_change(change_text: str, base: dict, *, provider, console_model: str
         response_schema=CHANGE_SET_SCHEMA if constrain else None,
         label="change",
     )
-    return parse_change_set(raw)
+    return parse_change_set(raw, infos=infos)
 
 
-def load_change_set(path: str | Path) -> tuple[dict, str | None]:
+def load_change_set(path: str | Path, *,
+                    infos: list[str] | None = None) -> tuple[dict, str | None]:
     """`(change set, the change text it was compiled from or None)` from a
     file `--save-change-set` wrote, or from a `--review-json` file, whose
-    `change.change_set` is the same thing."""
+    `change.change_set` is the same thing. Sections the file leaves out are
+    read as empty and said in `infos`."""
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(payload, dict) and isinstance(payload.get("change"), dict) \
             and isinstance(payload["change"].get("change_set"), dict):
         payload = payload["change"]["change_set"]
     text = payload.get(TEXT_KEY) if isinstance(payload, dict) else None
-    return validate_change_set(payload), (text if isinstance(text, str) else None)
+    return (validate_change_set(payload, infos=infos),
+            (text if isinstance(text, str) else None))
 
 
 def saved_change_set(change_set: dict, text: str | None) -> dict:
@@ -375,6 +416,9 @@ class MergeResult:
     #: (`amend.FieldEdit`, slice 2) -- handed to the back half, which writes
     #: exactly the addresses they own.
     edits: list = field(default_factory=list)
+    #: Source keys of the channels this change drops and adds again --
+    #: "move Playback to Aux 8" is said that way, there being no other.
+    moved: set = field(default_factory=set)
 
     @property
     def refused(self) -> list[Change]:
@@ -404,10 +448,13 @@ def _free_index(taken: set[int], capacity: int) -> int | None:
     return None
 
 
-def _occupied_sockets(plan: dict, occupancy) -> dict[tuple[str, int], str]:
+def _occupied_sockets(plan: dict, occupancy, *,
+                      leaving: frozenset[str] = frozenset()) -> dict[tuple[str, int], str]:
     """Every input socket something already uses, mapped to what uses it:
     each channel of `plan`, and each strip the desk read found patched that
-    is not FREE (a free strip on its factory patch claims nothing)."""
+    is not FREE (a free strip on its factory patch claims nothing). The
+    strips in `leaving` (labels, `ch:13`) are being vacated by a channel
+    that moves, and claim nothing."""
     used: dict[tuple[str, int], str] = {}
     for channel in plan.get("channels") or []:
         if not isinstance(channel, dict):
@@ -418,7 +465,8 @@ def _occupied_sockets(plan: dict, occupancy) -> dict[tuple[str, int], str]:
                 used.setdefault((patch["group"], socket),
                                 f"channel {channel.get('name')!r}")
     for status in occupancy or ():
-        if status.patch is not None and status.state is not amend_engine.StripState.FREE:
+        if status.patch is not None and status.state is not amend_engine.StripState.FREE \
+                and status.label not in leaving:
             used.setdefault(tuple(status.patch), f"{status.label} on the desk")
     return used
 
@@ -517,23 +565,41 @@ def _drop_not_built(word: str, name: str) -> str:
             f"returned to free; nothing returns a {word} to free yet")
 
 
+#: Why a change cannot set the values a preset was expanded into.
+PRESET_RECORD = ("the preset's expanded values are the build's own record, not a setting -- "
+                 "set the processing field itself (processing.hpf_hz, processing.gain_db, ...)")
+
+#: Why a change cannot set the record of where a source came from.
+SOURCE_RECORD = ("which sentence asked for the strip, and on what condition, is the build's "
+                 "own record, not a setting")
+
 #: Fields a change may NOT set on a running object, and why. Everything
-#: else the object's own schema carries may be set, when named.
+#: else the object's own schema carries may be set, when named. A key names
+#: a field and everything under it.
 _FROZEN_FIELDS = {
     "channels": {
         "channel": "moving a running channel to another strip is a renumber, which a change "
                    "never does -- drop it and add it where you want it",
         "bank": "moving a running channel to another bank is a renumber",
-        "source": "the source is how a running strip is recognised; set source.phantom, "
-                  "source.type or source.model, or drop the channel and add the new source",
+        # Of a running strip's source, a change sets what the engineer
+        # reasonably changes in the setup window -- `phantom`, `pair_phantom`,
+        # `model`, `type` -- and not what says WHICH source the strip is.
         "source.input": "the source is how a running strip is recognised -- drop the channel "
-                        "and add the new source",
+                        "and add the new source; the settable parts of a source are "
+                        "source.phantom, source.model and source.type",
+        "source.pair_input": "the second row of a stereo pair is how its strip is recognised "
+                             "-- drop the channel and add the new source",
         "source.stereo": "mono to stereo changes how many sockets and strips the channel "
                          "takes -- drop it and add it again",
+        "source.from": SOURCE_RECORD,
+        "source.quote": SOURCE_RECORD,
+        "source.condition": SOURCE_RECORD,
+        "processing.preset_values": PRESET_RECORD,
         "provenance": "provenance is the build's own record, not a setting",
         "inferred": "the inferred marks are the build's own record, not a setting",
     },
     "busses": {"index": "renumbering a running bus moves every send into it",
+               "preset_values": PRESET_RECORD,
                "provenance": "provenance is the build's own record, not a setting",
                "inferred": "the inferred marks are the build's own record, not a setting"},
     "dcas": {"index": "renumbering a running DCA moves every strip's tag"},
@@ -544,9 +610,46 @@ _FROZEN_FIELDS = {
                 "inferred": "the inferred marks are the build's own record, not a setting"},
 }
 
-_OBJECT_SCHEMAS = {"channels": plan_schema.CHANNEL_SCHEMA, "busses": plan_schema.BUS_SCHEMA,
+#: What a running object is checked against once a change has edited it: the
+#: shape a PLAN holds, not the shape a model is asked for. A running channel
+#: or bus carries what the build wrote into it -- an expanded preset's
+#: values (`preset_values`) -- which the model's shape leaves out, so
+#: checking the edited entry against that shape refuses every edit to
+#: a show built with a preset.
+_OBJECT_SCHEMAS = {"channels": plan_schema.PLAN_CHANNEL_SCHEMA,
+                   "busses": plan_schema.PLAN_BUS_SCHEMA,
                    "dcas": plan_schema.DCA_SCHEMA, "mute_groups": {"type": "object"},
                    "outputs": plan_schema.OUTPUT_SCHEMA}
+
+#: Where a running object names its preset, per kind of object.
+_PRESET_NAME_PATH = {"channels": "processing.preset", "busses": "preset"}
+
+
+def _preset_record(key: str, obj: dict) -> dict | None:
+    """The preset values the build expanded into a running channel or bus
+    (`preset_values`), or `None` for an object that carries none."""
+    record = (obj.get("processing") or {}).get("preset_values") if key == "channels" \
+        else obj.get("preset_values") if key == "busses" else None
+    return record if isinstance(record, dict) else None
+
+
+def _frozen_reason(frozen: dict, path: str) -> str | None:
+    """Why `path` is not something a change sets, when it or a field above
+    it is in `frozen` (a key names a field and everything under it)."""
+    parts = path.split(".")
+    return next((frozen[prefix] for prefix in (".".join(parts[:n]) for n in range(1, len(parts) + 1))
+                 if prefix in frozen), None)
+
+
+def _ribbon_with_phantom(source: dict) -> str | None:
+    """The microphone model, when a source has 48V on and the model is a
+    passive ribbon: 48V destroys the element, and switching it off again
+    does not undo that."""
+    model = verify_plan._norm(source.get("model") or "")
+    if source.get("phantom") and model and any(r in model for r in PASSIVE_RIBBON_MODELS):
+        return str(source["model"])
+    return None
+
 
 _KEY_OF = {word: key for key, word in OBJECT_KINDS}
 
@@ -662,7 +765,7 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
         paths = [str(path).strip() for path in fields]
         for path, value in zip(paths, fields.values()):
             top = path.split(".")[0]
-            why = frozen.get(path) or frozen.get(top)
+            why = _frozen_reason(frozen, path)
             if why:
                 problems.append(f"its {path} is not something a change sets: {why}")
                 continue
@@ -675,6 +778,30 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                     problems.append(f"{path}: {path.rsplit('.', 1)[0]} is not an object")
                     continue
             amend_engine.set_path(edited, path, value)
+        if not problems and key == "channels" and isinstance(edited.get("source"), dict) \
+                and any(p.split(".")[0] == "source" for p in paths):
+            ribbon = _ribbon_with_phantom(edited["source"])
+            if ribbon and not _ribbon_with_phantom(original.get("source") or {}):
+                problems.append(
+                    f"{ribbon!r} is a passive ribbon microphone and the change leaves it with "
+                    "phantom power on -- 48V destroys a ribbon element and switching it off "
+                    "again does not undo the damage; set source.phantom false in the same change")
+        record = _preset_record(key, original)
+        if record is not None and key == "channels" and isinstance(edited.get("processing"), dict):
+            # A whole `processing` object the change restates is the
+            # change's words for the fields in it; the expanded preset
+            # values were never among them, so they stay.
+            edited["processing"].setdefault("preset_values", copy.deepcopy(record))
+        if not problems:
+            # A whole object the change restates (`source`, say) is held to
+            # the same list, field by field: restating what is there moves
+            # nothing, changing a frozen part of it is refused.
+            for path in dict.fromkeys(paths):
+                for leaf, _old, _new in _leaves(path, amend_engine.get_path(original, path),
+                                                amend_engine.get_path(edited, path)):
+                    why = _frozen_reason(frozen, leaf)
+                    if why and leaf != path:
+                        problems.append(f"its {leaf} is not something a change sets: {why}")
         if not problems:
             problems = validate_schema(edited, _OBJECT_SCHEMAS[key], path=f"{word} {name!r}")
         if problems:
@@ -692,6 +819,17 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                                   amend_engine.get_path(edited, path)))
         kept: list[tuple[str, object, object]] = []
         for path, old, new in leaves:
+            if record is not None and path == _PRESET_NAME_PATH[key]:
+                amend_engine.set_path(edited, path, old)
+                changes.append(Change(
+                    ChangeKind.MODIFIED, word, repr(name),
+                    f"{path} {amend_engine.format_value(path, old)} -> "
+                    f"{amend_engine.format_value(path, new)} -- not written: the values of "
+                    f"preset {old!r} were written into this {word} when it was built, and "
+                    "switching a running preset would leave the plan naming one preset and "
+                    "carrying the values of another. Rebuild to change it, or set the "
+                    "processing fields themselves", slot=slot))
+                continue
             if path.split(".")[0] == "fader":
                 muted = path.endswith("muted")
                 if not (_MUTE_WORDS if muted else _FADER_WORDS).search(text or ""):
@@ -810,6 +948,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     drop = change_set.get("drop") or {}
 
     # 1. Drops.
+    dropped_keys: dict[str, str] = {}
     for name in drop.get("channels") or []:
         found = _find_channel(merged["channels"], name)
         if found is None:
@@ -819,6 +958,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                 "to remove, so the change is refused rather than guessed at"))
             continue
         merged["channels"] = [c for c in merged["channels"] if c is not found]
+        dropped_keys[amend_engine._source_key(found)] = amend_engine._slot_label(
+            amend_engine._channel_slot(found)) if isinstance(found.get("channel"), int) else ""
     for key in _NAMED_KINDS:
         word = _WORD[key]
         for name in drop.get(key) or []:
@@ -894,6 +1035,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                 "the change adds two channels of this name -- one strip name, one strip"))
             continue
         seen.add(_norm(name))
+        if amend_engine._source_key(channel) in dropped_keys:
+            result.moved.add(amend_engine._source_key(channel))
         existing = _find_channel(merged["channels"], name) or next(
             (c for c in merged["channels"]
              if amend_engine._source_key(c) == amend_engine._source_key(channel)), None)
@@ -937,7 +1080,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                     "by this change"))
 
     # 5. Sockets.
-    used = _occupied_sockets(merged, occupancy)
+    used = _occupied_sockets(
+        merged, occupancy, leaving=frozenset(dropped_keys[key] for key in result.moved))
     for channel in kept:
         _settle_socket(channel, used, model, infos, warnings)
         patch = channel.get("patch") or {}
@@ -1015,7 +1159,7 @@ def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
                          presets=presets, text=text)
     amendment = amend_engine.plan_amendment(
         base, merge.plan, occupancy, allow_strips=allow_strips, console_model=console_model,
-        by="the change", edits=merge.edits)
+        by="the change", edits=merge.edits, moved=merge.moved)
     amendment.changes = merge.changes + amendment.changes
     amendment.infos = merge.infos + amendment.infos
     amendment.warnings = merge.warnings + amendment.warnings
@@ -1048,7 +1192,7 @@ def change_block(text: str | None, change_set: dict, number: int | None) -> dict
     return {"number": number, "name": name[:CHANGE_NAME_MAX], "text": text}
 
 
-#: `change 3: horns for tonight` -- how a change is named in a message, a
+#: `change 3: Add horns on A 21-23` -- how a change is named in a message, a
 #: journal listing and the UI. One definition, the journal stack's.
 change_label = journal_stack.change_label
 

@@ -32,7 +32,7 @@ def oracle():
     """The plan these tests verify.
 
     It used to be built by shelling out to `build --no-ai`, i.e. by the
-    deterministic compiler. #29 retired that path, so the plan it produced
+    deterministic compiler. An earlier change retired that path, so the plan it produced
     for this fixture pair is checked in -- generated from the compiler at
     `origin/main` immediately before deletion, so every finding asserted
     below is still asserted against the same bytes.
@@ -292,7 +292,7 @@ def test_a_group_with_no_members_at_all_is_flagged(oracle, rows):
     result = verify_plan(plan, rows)
     empty = [f for f in result.findings if f.code == "group.empty"]
     assert any("Empty DCA" in f.message for f in empty)
-    # INFO since 2026-09-25 (FR-6.2, CLAUDE.md's judgement rule): an empty
+    # INFO since 2026-09-25 (FR-6.2, the judgement-vs-patching rule): an empty
     # group is a working desk with one object too many, never a stop.
     assert all(f.severity == "info" for f in empty)
 
@@ -354,7 +354,7 @@ def test_an_output_fanning_out_to_several_sockets_all_get_checked(oracle, rows):
 
 # --- A dedicated output's physical socket(s) depend on the
 # bus's own width. Until 2026-09-25 an unstated one BLOCKED the plan
-# (`bus.unstated-width-for-dedicated-output`); under CLAUDE.md's
+# (`bus.unstated-width-for-dedicated-output`); under the
 # judgement-vs-patching rule it is now decided and announced instead ---
 
 
@@ -422,7 +422,7 @@ def test_a_null_send_mode_is_decided_with_a_note_not_refused(oracle, rows):
     conventions never stated pre/post -- a real conventions file hit this.
     It used to be the ERROR value.send-mode-unknown (after, before that, a
     confusing generic "schema" finding as well). Pre vs post is a
-    judgement call, not a patching fact (CLAUDE.md), so since 2026-09-25
+    judgement call, not a patching fact, so since 2026-09-25
     it is decided -- post into a bus that reaches a Main -- and noted."""
     plan = mutate(oracle, lambda p: p["channels"][0]["bus_sends"][0].__setitem__("mode", None))
     bus = plan["channels"][0]["bus_sends"][0]["bus"]
@@ -506,7 +506,7 @@ def test_aux_sockets_are_refused_on_a_compact_though_the_address_tree_has_them()
     `/io/in/AUX/1..8` is present in the 2026-09-08 walk of the maintainer's
     Compact, so the address-space table says AUX 1..8 are fine. The
     protocol reference (pp. 11-12) says the Compact has no local aux jacks
-    at all -- local Aux I/O is a full-size-WING feature. Before #13 this
+    at all -- local Aux I/O is a full-size-WING feature. Before an earlier change this
     plan verified clean and could not be patched.
     """
     oracle = json.loads((FIXTURES / "touringband.plan.json").read_text())
@@ -542,7 +542,7 @@ def test_local_input_9_is_fine_on_a_compact_and_impossible_on_a_full():
 
 @pytest.mark.parametrize("model", [None, "", "not-a-real-console"])
 def test_an_unstated_or_unknown_console_model_is_an_error(model):
-    """The maintainer, 2026-09-21: "an unknown console-model is a hard stop -- we
+    """"an unknown console-model is a hard stop -- we
     have no way of knowing what its capabilities are and any plan would be
     meaningless.\""""
     oracle = json.loads((FIXTURES / "touringband.plan.json").read_text())
@@ -612,7 +612,7 @@ def _patch_result(sockets, *, stereo=True, group="A"):
         "patch": {"group": group, "sockets": sockets, "stated": True},
     }]}
     result = VerifyResult()
-    # #13 made socket bounds per-model, so _check_patch takes the model.
+    # An earlier change made socket bounds per-model, so _check_patch takes the model.
     # The pairing rule this helper exercises is model-independent (it is a
     # property of the desk's routing hardware, protocol PDF p.225), so any
     # real model serves -- the Compact is what the rest of this module uses.
@@ -665,28 +665,6 @@ def test_the_wrong_socket_count_is_not_also_reported_as_a_pairing_error():
     only makes the report harder to read."""
     result = _patch_result([1, 2, 3])
     assert "patch.stereo-socket-count" in codes(result)
-    assert PAIR_CODE not in codes(result)
-
-
-@pytest.mark.example_guard
-def test_the_shipped_example_plans_stereo_pair_is_legal():
-    """examples/touringband/plan.json patches its one stereo channel to
-    A 15+16. If that ever changes to something the desk cannot form, this
-    check should be what says so.
-
-    Marked `example_guard`: its subject is the shipped example, not the
-    code. A failure here means the example needs looking at, which is
-    different from a regression -- and `pytest -m "not example_guard"`
-    stands it aside while experimenting in `examples/`."""
-    example = ROOT / "examples" / "touringband" / "plan.json"
-    if not example.is_file():
-        pytest.skip(f"{example.relative_to(ROOT)} is not present -- nothing to guard")
-    plan = json.loads(example.read_text())
-    stereo = [c for c in plan["channels"] if c.get("source", {}).get("stereo")]
-    assert stereo, "the example lost its stereo channel -- this test no longer checks anything"
-    from atoo.verify_plan import VerifyResult, _check_patch
-    result = VerifyResult()
-    _check_patch(plan, result, "wing-compact")
     assert PAIR_CODE not in codes(result)
 
 
@@ -768,45 +746,6 @@ def test_a_presend_eq_on_an_aux_strip_is_refused(oracle, rows):
 
 
 # ---------------------------------------------------------------------------
-# The guard that should have existed before 2026-09-21.
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.example_guard
-@pytest.mark.parametrize("show", ["smallband", "touringband"])
-def test_every_shipped_example_plan_still_verifies_clean(show):
-    """A shipped example plan must be applicable, or the walkthrough and
-    the console checklist both tell a user to run a command that exits 2.
-
-    This is not hypothetical. On 2026-09-21 the maintainer took
-    `docs/reference/console-session-checklist.md` to a real desk and item
-    A1's `apply --show touringband` refused: the plan predated
-    `bus.unstated-width-for-dedicated-output` (an ERROR from 2026-09-19
-    until it was retired on 2026-09-25), so four monitor busses
-    carried no width and `apply`'s pre-flight gate blocked all 627 writes.
-    Both shipped plans were in that state. 1036 tests passed throughout,
-    because none of them ever asked the whole plan whether it was still
-    applicable -- only whether individual checks fire on mutations.
-
-    Every check added to the verifier from here on can retire an example
-    plan generated before it. That is the failure mode this closes, and
-    the cost of not closing it is measured in console time.
-
-    Marked `example_guard`: its subject is the shipped example, not the
-    code. A failure means the example needs regenerating or patching --
-    and `pytest -m "not example_guard"` stands it aside while
-    experimenting in `examples/`."""
-    example = ROOT / "examples" / show / "plan.json"
-    if not example.is_file():
-        pytest.skip(f"{example.relative_to(ROOT)} is not present -- nothing to guard")
-    verdict = verify_plan(json.loads(example.read_text()))
-    assert not verdict.errors, (
-        f"examples/{show}/plan.json no longer verifies -- `apply --show {show}` "
-        f"would refuse it:\n{verdict.report()}"
-    )
-
-
-# ---------------------------------------------------------------------------
 # Colour: the plan promising something apply does not do. 
 # ---------------------------------------------------------------------------
 
@@ -852,7 +791,7 @@ def test_a_retired_colour_name_resolves_and_says_which_desk_colour_it_became(ora
     """Atoo called 9 Crimson and 11 Magenta until the desk was asked
     (A24). A conventions file written with them keeps working, and an INFO
     says what the desk will call it -- an inferred value that announces
-    itself (CLAUDE.md)."""
+    itself."""
     plan = copy.deepcopy(oracle)
     for ch in plan["channels"]:
         ch.pop("col", None)
@@ -933,7 +872,7 @@ def _two_strips_on_one_input(oracle):
 
 def test_two_strips_on_one_input_does_not_block_the_apply(oracle, rows):
     """It used to, with the message "one physical source cannot be two
-    channels" -- which is not true. The maintainer, 2026-09-22: a second strip
+    channels" -- which is not true. A second strip
     for monitors, or one socket reused between acts at a festival.
 
     Refusing it meant a monitor-split plan could never be applied, which
@@ -983,7 +922,7 @@ def _patched_from(plan, group, sockets=(1,)):
 
 def test_a_plan_with_no_expansion_bay_patch_says_nothing_about_bays(oracle, rows):
     """The oracle patches AES50-A throughout. A warning on every plan
-    would be noise, and noise is what #138 is already about."""
+    would be noise, and noise is what an earlier change is already about."""
     assert BAY_NOT_CHECKED not in codes(verify_plan(oracle, rows))
 
 
@@ -1042,9 +981,9 @@ def test_the_bay_warning_never_blocks_an_apply(oracle, rows):
 # user_sources: a stereo pair from two disjoint sources
 # --------------------------------------------------------------------------
 #
-# #23 taught the verifier that a stereo pair is [odd, even] and consecutive,
+# An earlier change taught the verifier that a stereo pair is [odd, even] and consecutive,
 # and the desk confirmed the rule by refusing an even-first pair by hand on
-# 2026-09-21. #121 is the case that rule left with nowhere to go: two halves
+# 2026-09-21. An earlier change is the case that rule left with nowhere to go: two halves
 # that are neither adjacent nor in the same group, which the protocol PDF's
 # own example (WLIVE PLAY 1 and WLIVE PLAY 33) is.
 #
@@ -1078,7 +1017,7 @@ def _usr_plan(sockets, user_sources, *, stereo=True):
         "outputs": {"Main": {"kind": "main", "index": 1,
                              "socket": {"group": "LCL", "sockets": [1, 2]}}},
         "user_sources": user_sources,
-        # #13: an unstated console model is a hard error, and the socket
+        # An unstated console model is a hard error, and the socket
         # bounds these tests are about cannot be checked without one.
         "meta": {"console_model": "wing-compact"},
     }
@@ -1096,7 +1035,7 @@ DISJOINT_PAIR = _usr_plan([25, 26], [
 
 
 def test_the_pdfs_own_disjoint_pair_is_now_representable():
-    """The headline of #121: a stereo pair whose halves are CRD 1 and CRD 33
+    """The headline: a stereo pair whose halves are CRD 1 and CRD 33
     could not be written down at all before this. It is one plan now, and
     the only findings it raises are the two that say what was NOT done --
     apply cannot write the slots yet, and nothing offline knows whether the
@@ -1119,7 +1058,7 @@ def test_the_odd_even_rule_still_applies_to_the_usr_slots_themselves():
 
 
 def test_a_usr_patch_with_nothing_defining_the_slot_is_warned_about():
-    """The hidden-desk-state case #121 was filed about: `USR` was already a
+    """The hidden-desk-state case an earlier change was filed about: `USR` was already a
     patchable group, so a plan could point at a slot whose meaning lived only
     in someone's manual setup, and verify said nothing."""
     plan = _usr_plan([25, 26], [])
@@ -1311,14 +1250,14 @@ def test_no_stereo_pair_can_straddle_the_two_kinds_and_no_check_was_needed():
 
 
 def test_a_user_patch_from_an_empty_card_bay_raises_the_bay_warning():
-    """The silence is the same one #115 is about, one hop further back: the
+    """The silence is the same one an earlier change is about, one hop further back: the
     channel patches USR 25, which exists on every console, so nothing notices
     that USR 25 is fed from a slot that may have no card in it."""
     assert BAY_NOT_CHECKED in codes(verify_plan(DISJOINT_PAIR))
 
 
 def test_the_stereo_pair_error_now_names_the_way_forward():
-    """#121's actual complaint about #114: the refusal was correct and
+    """The actual complaint: the refusal was correct and
     offered nothing. A finding that closes off the only route a show has
     should at least say what the desk itself does about it."""
     result = _patch_result([1, 5])
@@ -1443,7 +1382,6 @@ def test_apply_and_console_facts_agree_on_which_groups_have_a_preamp():
 # --------------------------------------------------------------------------
 
 COLLISION = "output.socket-collision"
-EXAMPLE_PLAN = ROOT / "examples" / "touringband" / "plan.json"
 
 
 def _mono_wedge(name: str, index: int, socket: int) -> dict:
@@ -1513,24 +1451,8 @@ def collided():
     }
 
 
-@pytest.mark.example_guard
-def test_the_example_bundle_still_verifies_clean():
-    """The shipped example has no collision and must keep having none --
-    the guard against a check that fires on every plan with two outputs.
-
-    Marked `example_guard`: its subject is the shipped bundle, not the
-    code, and unlike everything else in this section it is *supposed* to
-    read `examples/touringband/`. It asserts that the bundle verifies,
-    never what is in it, so the maintainer can rebuild it freely."""
-    if not EXAMPLE_PLAN.is_file():
-        pytest.skip(f"{EXAMPLE_PLAN.relative_to(ROOT)} is not present -- nothing to guard")
-    result = verify_plan(json.loads(EXAMPLE_PLAN.read_text()))
-    assert COLLISION not in codes(result)
-    assert [f.code for f in result.findings if f.severity == SEVERITY_ERROR] == []
-
-
 def test_two_objects_on_one_output_socket_is_an_error(collided):
-    """CLAUDE.md: a physical setting that cannot work is an error, not a
+    """A physical setting that cannot work is an error, not a
     preference. One XLR carries one signal; the loser is silently dead."""
     hits = [f for f in verify_plan(collided).findings if f.code == COLLISION]
     assert len(hits) == 1, [f.message for f in hits]

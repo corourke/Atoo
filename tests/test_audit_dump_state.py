@@ -1,7 +1,7 @@
 """`audit --dump-state FILE`: save a live read so it can be audited again
 offline.
 
-Decided 2026-09-23 (`WORK_PLAN.md`, "Queued"). The A5 re-score had to be
+Decided 2026-09-23. The A5 re-score had to be
 reconstructed from a `.snap` and `2026-09-21/A0` is unusable, both for
 want of the reading itself: `audit --state` could read a capture, and
 nothing could write one.

@@ -1,4 +1,4 @@
-<!-- The fix-up round's instructions (the maintainer, 2026-09-29).
+<!-- The fix-up round's instructions (2026-09-29).
 
      THIS FILE IS PROSE, NOT CODE. It is appended to the generator's own
      system prompt (plan_generation.md) for the one fix-up call a build

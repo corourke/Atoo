@@ -165,11 +165,11 @@ _PRESET_LEAF_VALUE = {"type": ["number", "string"]}
 
 
 def _preset_values_schema() -> dict:
-    """`processing.preset_values`, the maintainer's design on
+    """`processing.preset_values`, the design settled on
     an earlier change (2026-09-21): `build` expands a named preset INTO the plan, so
     the plan says exactly what will be written.
 
-    Optional and additive, like every processing field since #68: a plan
+    Optional and additive, like every processing field: a plan
     without it is an older plan (or one built with no library) and stays
     valid. `leaves` is keyed by address, which is what makes "one value per
     address" a property of the format rather than of the code: a dict
@@ -222,7 +222,7 @@ def _strip_processing_schema(strips: tuple[str, ...]) -> dict:
         "additionalProperties": False,
     }
 
-# CLAUDE.md, "An error of judgement is not an error of patching": a value
+# An error of judgement is not an error of patching: a value
 # the conventions never stated, but that the board cannot be left without,
 # is DECIDED -- from the conventions first, then domain knowledge and
 # naming -- and the decision announces itself. This is how it announces
@@ -398,8 +398,8 @@ CHANNEL_SCHEMA = {
                 # sockets' (`inferred.socket_phantom`), announced at INFO.
                 "pair_phantom": {"type": "boolean"},
                 # A channel the conventions or instructions ask for that is
-                # not a row of the input list (the maintainer, 2026-09-29;
-                # `instructed_channels.py`): which of the two asked, and the
+                # not a row of the input list
+                # (`instructed_channels.py`): which of the two asked, and the
                 # sentence that did, verbatim. Absent on every channel that
                 # IS a row -- so every plan before this reads unchanged.
                 # verify checks the quote is really there and reports the
@@ -463,7 +463,7 @@ CHANNEL_SCHEMA = {
                 # (apply.py). An earlier change (2026-09-17) closed the
                 # remaining gap by teaching the deterministic
                 # `--strategy compile` parser to produce all six from a
-                # conventions file's "## Processing" section; #29 then
+                # conventions file's "## Processing" section; an earlier change then
                 # retired that parser and its module entirely, so today the
                 # only thing that produces these from conventions text is
                 # the model, working from schema_section()'s prose below --
@@ -534,8 +534,8 @@ CHANNEL_SCHEMA = {
                     "bus": {"type": "string", "minLength": 1},
                     # Nullable, for plans written before 2026-09-25 (the
                     # retired compiler left it unset rather than guessing).
-                    # Pre vs post is a judgement call, not a patching fact
-                    # (CLAUDE.md): a wrong choice displeases at soundcheck,
+                    # Pre vs post is a judgement call, not a patching fact:
+                    # a wrong choice displeases at soundcheck,
                     # a null one used to BLOCK the plan as
                     # value.send-mode-unknown. So the generator now decides
                     # it and marks the send's `inferred`; a plan that still
@@ -654,7 +654,7 @@ BUS_SCHEMA = {
         # physical input source, not a bus.
         #
         # Always DECIDED, never left to whatever the desk had. The width
-        # decides what a dedicated output's physical jack carries, and CLAUDE.md's judgement-vs-patching rule says the
+        # decides what a dedicated output's physical jack carries, and the judgement-vs-patching rule says the
         # mono/stereo decision may not be left undecided. So: stated by the
         # conventions; else decided by the generator and marked in this
         # bus's `inferred`; else -- a plan that still arrives null, from
@@ -683,9 +683,9 @@ BUS_SCHEMA = {
         # name the desk does not have is verify's WARNING
         # `bus.colour-not-writable` and is left unwritten.
         #
-        # The maintainer, 2026-09-28: a bus is coloured when the conventions say
-        # so and stays uncoloured when they don't ("State them in
-        # conventions"). So this is STATED or null, never decided -- it is
+        # A bus is coloured when the conventions say
+        # so and stays uncoloured when they don't (state them in
+        # conventions). So this is STATED or null, never decided -- it is
         # not in INFERABLE_FIELDS and never carries an `inferred` marker.
         # A per-type statement counts ("FX busses are purple"), and so
         # does "take their category's colour", which means the category
@@ -1008,7 +1008,7 @@ PLAN_SCHEMA = {
         # plan that verifies and half-applies.
         "user_sources": {"type": "array", "items": USER_SOURCE_SCHEMA},
         "notes": {"type": "array", "items": NOTE_SCHEMA},
-        # FR-6.2, folded into the build (the maintainer, 2026-09-25: no separate
+        # FR-6.2, folded into the build (no separate
         # pre-compile stage). Where the conventions text itself is at fault
         # -- two statements that disagree with nothing settling it, or
         # something declared that nothing joins -- the generator says so
@@ -1026,7 +1026,7 @@ PLAN_SCHEMA = {
         # `critic_findings` and `verify_findings` -- each `None` when that
         # pass never ran, distinct from `[]`/an empty errors+warnings dict
         # meaning it ran and found nothing. `meta` is an open object, so a
-        # plan built before #153 retired expectations still loads with its
+        # plan built before an earlier change retired expectations still loads with its
         # now-meaningless `expectations_findings` key intact.
         # Optional (never required, and never on the compiler's or a
         # generator's own required list) because it is this project's
@@ -1104,7 +1104,7 @@ EXAMPLE_OUTPUT_PATCH_JSON = __import__('json').dumps(EXAMPLE_OUTPUT["patch"])
 
 # --------------------------------------------------------------------------
 # the REPLY: what the generator writes, before `reply_expand` turns it
-# into a plan (docs/developer/plan-output-compaction.md, slices 2-4)
+# into a plan (output compaction, slices 2-4)
 # --------------------------------------------------------------------------
 #
 # The plan on disk is `PLAN_SCHEMA` and does not change. What the model
@@ -1248,7 +1248,7 @@ REPLY_MUTE_GROUP_SCHEMA = _named_item({
 # required non-null enum here where the plan keeps it nullable for older
 # plans. A send's level is required too (2026-09-29): the slice-C reply
 # let it be left out "for unity", but apply writes nothing for null and a
-# fresh desk's send sits at -144, so every unity send of the maintainer's
+# fresh desk's send sits at -144, so every unity send of a
 # festival build came back silent. Null is still accepted -- it is then
 # decided, unity, and announced (`inferred.send-level`).
 REPLY_SEND_GROUP_SCHEMA = {
@@ -1296,7 +1296,7 @@ REPLY_SCHEMA = {
         "mute_groups": {"type": "array", "items": REPLY_MUTE_GROUP_SCHEMA},
         "busses": {"type": "array", "items": REPLY_BUS_SCHEMA},
         "outputs": {"type": "array", "items": REPLY_OUTPUT_SCHEMA},
-        # The maintainer, 2026-09-29: every row is built unless something the
+        # Every row is built unless something the
         # engineer wrote says to leave it out -- so the reply names the row
         # AND quotes those words (the conventions, the instructions, or the
         # row's own notes). Code checks the quote; a row with none, or one

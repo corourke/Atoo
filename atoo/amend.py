@@ -6,7 +6,7 @@ the plan on the desk before `plan_amendment` sees it (`by="the change"`).
 And since then no confirmed run replaces `plan.json`: the effective plan is
 recorded in the desk's journal entry instead (FR-2.8 as amended). Where
 this docstring or the ones below speak of `plan.json` being replaced, they
-describe the behaviour, now superseded.
+describe the earlier behaviour, now superseded.
 
 The horn section has turned up late in the setup window. The show is
 already built on the desk, there is a mix on it, and **nothing already in
@@ -15,13 +15,11 @@ journal. What they need out is a **delta plan they review before it is
 written**.
 
 **This is a setup-and-rehearsal operation, not a mid-show one, and it is
-not recommended as one.** The maintainer, 2026-09-23: *"We do not recommend
-running amend during a show. After the board is patched, any good
-engineer will save a snapshot so a misstep isn't catastrophic before the
-show starts."* Same answer he gave on D6 in
-`docs/product/feedback/answer-sheet-corourke.md`: *"before doors sure.
-During the show I would not be making configuration changes unless there
-was a problem."* So the stakes here are a reload from the engineer's own
+not recommended as one.** Amend is not for use during a show. After the
+board is patched, any good engineer saves a snapshot so a misstep isn't
+catastrophic before the show starts, and during the show an engineer
+would not be making configuration changes unless there was a problem.
+So the stakes here are a reload from the engineer's own
 snapshot, not a ruined night -- which is a reason to be accurate about
 what this module does, and not a reason to be casual about it. A reload
 costs the rehearsal window, and nobody thanks a tool for one.
@@ -33,8 +31,8 @@ it -- `apply_plan` is unchanged except for one new keyword pair
 (`target_filter`/`journal_scope`), and every write still goes through the
 same readback proof and the same journal.
 
-The word is **amend**, not append: the maintainer, 2026-09-22, *"changes can add
-or take away."* The motivating case is the horn section arriving, but the
+The word is **amend**, not append: changes can add
+or take away. The motivating case is the horn section arriving, but the
 same operation covers a vocalist who has left, a keyboard rig that went
 stereo, and a set of delay speakers dropped from the rider. What this
 module writes is both halves: new objects are placed on free strips, and
@@ -52,7 +50,7 @@ was ours when the plan was applied and is somebody else's now.
    input patch -- and then the name of every socket a strip is patched
    to: about 200 on a Compact's 40+8 strips, against
    `audit.read_console_state`'s full sweep of some six thousand. The
-   budget comes from `mockups/build-page/OPTIONS-H.md` ("~150 addresses
+   budget comes from the Build-page design ("~150 addresses
    and about four seconds"), and the reason is that a sit-down audit is
    not what is available when the horns walk in. It is over that budget
    because the mockup's figure predates knowing where a name lives --
@@ -87,10 +85,10 @@ was ours when the plan was applied and is somebody else's now.
    ones and never renumbering existing ones** (FR-2.1, FR-2.3, D8), and
    produce the `effective_plan` those writes come from.
 
-   Identity is the **strip number**, settled by the maintainer 2026-09-20:
-   *"We need to track channel strips by the channel number, not
-   input/output socket, and not the name -- the channel strips are the
-   limited resource on the board."* The *source* still has to be matched
+   Identity is the **strip number**: channel strips are tracked by the
+   channel number, not the input/output socket and not the name, because
+   the channel strips are the limited resource on the board. The
+   *source* still has to be matched
    by name to tell "this is the Kick we already applied" from "this is a
    new channel that happens to want slot 5", and that is what
    `_source_key` does -- but the thing being protected is the strip.
@@ -146,8 +144,8 @@ was ours when the plan was applied and is somebody else's now.
 (`preflight`): `verify_plan` over the effective plan against
 the desk's model, and the socket check over the sockets this amend
 writes. A socket the desk does not have is refused by name, whatever
-`--skip-verify` says -- it is the one kind of finding `CLAUDE.md` counts
-as an error of patching rather than of judgement.
+`--skip-verify` says -- it is the one kind of finding that counts as an
+error of patching rather than of judgement.
 
 ## Three independent guards, because one is not enough
 
@@ -166,12 +164,12 @@ three ways, and any one of them failing stops the run:
 
 ## Removal: tracked state may be cleared, untracked state may not
 
-An earlier change asked *"what happens to a strip that is taken out of the plan
-but is still patched and live"* and left it open. The maintainer answered it on
-2026-09-23, choosing between "report it", "mute it" and "return it to
-free": *"Whether this is for a rebuild of the plan, or an amend, the
-answer is C. Channels are not an unlimited resource and we want to do
-what the engineer is asking for."*
+An earlier change asked what happens to a strip that is taken out of the plan
+but is still patched and live, and left it open. The answer, chosen on
+2026-09-23 between "report it", "mute it" and "return it to free", is
+to return it to free, whether this is for a rebuild of the plan or an
+amend: channels are not an unlimited resource and the tool should do
+what the engineer is asking for.
 
 So a dropped channel's strip is **returned to free** -- back on its
 factory input patch, its
@@ -187,7 +185,7 @@ nearly free.
 **Two things the first hardware run corrected, an earlier change.** A15 on
 2026-09-23 cleared a strip that came back still muted and still carrying
 the plan's 120Hz high-pass -- neither of which is what an untouched strip
-reads, and both of which the own success test ruled out.
+reads, and both of which the release's own success test ruled out.
 
 * The **mute is a bracket, not an end state**: written ON first so
   nothing pops while the strip is taken apart, and OFF again last. An
@@ -200,20 +198,20 @@ reads, and both of which the own success test ruled out.
   socket, it is shared by every strip on a split, and nobody has said
   what a freed socket's gain should read.
 
-Its **fader goes to -inf** (the maintainer, 2026-09-24), the reading every
+Its **fader goes to -inf**, the reading every
 untouched strip gives, just before the closing unmute -- the one level
 `apply.py` ever sets on a strip no plan is building, and not a choice:
 once the strip is back on its factory socket and routed to Main 1, a
 fader left at the plan's level would pass a stray source to the PA.
 
-**The patch goes back to the factory's, not to OFF** (the maintainer,
-2026-09-24). Off the Compact session: *"A truly initialized channel 19
-would be patched to LCL 19 and have an icon like the other initialized
-channels."* The icon is the LCL socket's glyph shown through the patch,
-so the patch was the one real difference, and of three options he chose
-*"The factory patch, unless the plan uses that socket, otherwise OFF...
-If the rebuilt plan now uses LCL 19 for something else, it stays OFF
-rather than double-patching the socket, and an INFO says so."*
+**The patch goes back to the factory's, not to OFF** (decided
+2026-09-24 off a Compact session). A truly initialized channel 19
+is patched to LCL 19 and has an icon like the other initialized
+channels. The icon is the LCL socket's glyph shown through the patch,
+so the patch was the one real difference, and of three options the choice
+is the factory patch, unless the plan uses that socket, otherwise OFF:
+if the rebuilt plan now uses LCL 19 for something else, it stays OFF
+rather than double-patching the socket, and an INFO says so.
 
 * The socket is the **measured** one (`console_facts.
   measured_factory_input_patch`) and nothing else. The channel-n-from-
@@ -303,7 +301,7 @@ from atoo.verify_plan import resolve_console_model
 # would have been catastrophic and was very nearly invisible: **a name a
 # human types on a WING lands on the SOURCE SOCKET, not the strip**, so a
 # strip read only at `{base}/name` reads as unnamed however plainly a
-# person named it. The maintainer's channel 20 was blank at `/ch/20/name`,
+# person named it. A real show's channel 20 was blank at `/ch/20/name`,
 # carried `'Podium'` at `/io/in/LCL/20/name`, and sat on a Compact's
 # factory patch -- free by every other measure, and somebody's live
 # channel in fact.
@@ -474,8 +472,7 @@ def read_occupancy(console, *, channels: int = facts.CAPACITY["ch"],
     reads three. The one thing it does copy exactly is the value
     extraction -- `OscReply.value()` plus
     `console_facts.correct_readback_index`, because WING's GET reply for
-    a patch connector is one less than the number its SET takes (issue
-    #75) and a patch read without that correction is off by one.
+    a patch connector is one less than the number its SET takes and a patch read without that correction is off by one.
 
     `console_model` rides along on the returned state for the same reason
     it does on a full read: which patch counts as the factory's own is a
@@ -727,11 +724,12 @@ class ChangeKind(str, Enum):
     RENUMBERED = "renumbered"
     #: New, and there was no free slot for it. Refused, by name (FR-2.3).
     UNPLACEABLE = "unplaceable"
-    #: A typed change (`atoo patch`) that names something
-    #: that does not exist -- a send to a bus that is neither on the desk nor
-    #: added by the change, a drop of a channel nobody has. Refused, and the
-    #: whole change with it: a strip sent to nothing is a setting the desk
-    #: cannot be left in (`patch.merge_change`).
+    #: A typed change (`atoo patch`) that asks for something that cannot be
+    #: written -- a send to a bus that is neither on the desk nor added by
+    #: the change, a drop of a channel nobody has, a field the object does
+    #: not carry, a value out of range. Refused, and the whole change with
+    #: it: a strip sent to nothing is a setting the desk cannot be left in
+    #: (`patch.merge_change`).
     REFUSED = "refused"
 
     __str__ = str.__str__
@@ -830,6 +828,10 @@ class FieldEdit:
     #: "ch:12" for a channel -- a channel is identified by its strip, and a
     #: rename must not lose it. None for a named object.
     slot: str | None = None
+    #: False once `plan_amendment` has found that no console address carries
+    #: the field -- a mic model, or phantom on a socket group with no 48V
+    #: address -- so the review does not say it acts on the desk.
+    writes: bool = True
 
     @property
     def word(self) -> str:
@@ -845,6 +847,23 @@ class FieldEdit:
                 or (self.key == "outputs" and top in ("patch", "patches", "fed_by"))
                 or (self.key == "busses" and top in ("destination", "destinations")))
 
+    @property
+    def switches_phantom(self) -> bool:
+        """48V switched on or off on a strip already running. It moves no
+        audio between strips, but it is a live hardware change at the
+        socket (a pop in the PA, and on a passive ribbon it is damage), so
+        the review says it the way it says a repatch."""
+        return (self.key == "channels" and self.writes
+                and self.path in ("source.phantom", "source.pair_phantom"))
+
+    @property
+    def live_marker(self) -> str:
+        """The words a review puts in front of an edit that acts on the
+        desk the moment it is written, or ''."""
+        if self.moves_audio:
+            return "MOVES AUDIO LIVE -- "
+        return "SWITCHES 48V LIVE -- " if self.switches_phantom else ""
+
     def describe(self) -> str:
         """`path old -> new`, and for a send list the sends that differ,
         one by one -- a whole list printed twice hides the one level that
@@ -857,13 +876,12 @@ class FieldEdit:
 
     def line(self) -> str:
         where = f"{self.word} {self.name!r}" + (f" on {self.slot}" if self.slot else "")
-        live = "MOVES AUDIO LIVE -- " if self.moves_audio else ""
-        return f"{live}{where}: {self.describe()}"
+        return f"{self.live_marker}{where}: {self.describe()}"
 
     def to_json(self) -> dict:
         return {"object": self.word, "name": self.name, "slot": self.slot, "path": self.path,
                 "old": self.old, "new": self.new, "moves_audio": self.moves_audio,
-                "line": self.line()}
+                "switches_phantom": self.switches_phantom, "line": self.line()}
 
 
 class AmendScope:
@@ -1038,8 +1056,8 @@ def release_refusal(channel: dict, status: StripStatus | None, *,
 def _source_key(channel: dict) -> str:
     """The identity used to recognise *the same source* across two plans.
 
-    Not the identity of the strip -- that is the channel number, per
-    the maintainer -- but the answer to "is the Kick we already applied the same
+    Not the identity of the strip -- that is the channel number -- but the
+    answer to "is the Kick we already applied the same
     Kick this rebuild is talking about". Normalised the way
     `compare_plans._norm` normalises, and falling back to the strip name
     for a plan whose `source.input` is absent.
@@ -1114,8 +1132,8 @@ class Amendment:
     warnings: list[str] = field(default_factory=list)
     #: Choices this module made that the conventions did not state, said
     #: out loud so the engineer can correct their conventions next time
-    #: (CLAUDE.md: "an inferred value that does not announce itself" is
-    #: the defect, not the inference).
+    #: (an inferred value that does not announce itself is the defect,
+    #: not the inference).
     infos: list[str] = field(default_factory=list)
     #: The applied plan's own entries for the channels this amendment
     #: returns to free -- the entries that BUILT those strips, which is
@@ -1144,7 +1162,7 @@ class Amendment:
     #: mapped to what: a channel of the rebuilt plan, or a strip the
     #: occupancy read found patched to it. A released strip is never put
     #: back on a factory socket named here -- that would be one socket
-    #: patched to two strips (the maintainer, 2026-09-24).
+    #: patched to two strips.
     restore_claims: dict[tuple[str, int], str] = field(default_factory=dict)
     #: The named fields a typed change sets on objects already on the desk, one per leaf, in the order the change gave them.
     edits: list[FieldEdit] = field(default_factory=list)
@@ -1271,7 +1289,8 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                    allow_strips: set[str] | None = None,
                    console_model: str | None = None,
                    by: str = "the rebuild",
-                   edits: list[FieldEdit] | None = None) -> Amendment:
+                   edits: list[FieldEdit] | None = None,
+                   moved: set[str] | None = None) -> Amendment:
     """Work out the delta between an applied plan and a rebuilt one, place
     the new objects on free strips, decide which dropped channels may be
     returned to free, and return the lot for review.
@@ -1315,6 +1334,12 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     the same strip; any difference from the applied plan other than the
     edited fields is still MODIFIED, not written. What each edit writes is
     worked out by `_plan_edits`.
+
+    `moved` are the source keys of channels a typed change both drops and
+    adds again ("move Playback to Aux 8"). One of those whose new strip is
+    not its old one is a move the change asked for by name, not a renumber
+    the rebuild made by accident: its old strip is returned to free like any
+    dropped channel, and it is placed on its new strip like any added one.
     """
     allow_strips = set(allow_strips or ())
     edits = list(edits or ())
@@ -1353,6 +1378,9 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     applied_by_slot = {_channel_slot(c): c for c in applied_channels if c.get("channel") is not None}
     applied_by_source = {_source_key(c): c for c in applied_channels}
     amended_by_source = {_source_key(c): c for c in amended_channels}
+    moving = {key for key in (moved or ())
+              if key in applied_by_source and key in amended_by_source
+              and _channel_slot(applied_by_source[key]) != _channel_slot(amended_by_source[key])}
 
     effective_plan = copy.deepcopy(amended_plan)
     effective_channels = [c for c in effective_plan.get("channels", []) or [] if isinstance(c, dict)]
@@ -1386,7 +1414,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                     slot=_slot_label(slot)))
                 edits = [e for e in edits if e.slot != _slot_label(slot)]
             continue
-        prior = applied_by_source.get(key)
+        prior = None if key in moving else applied_by_source.get(key)
         if prior is not None:
             prior_slot = _channel_slot(prior)
             if (prior_slot != slot
@@ -1455,12 +1483,23 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         changes.append(Change(
             ChangeKind.ADDED, "channel", where, "new channel, placed on a free strip",
             slot=label, proposed=_slot_label(slot), asked_by=by))
+        if key in moving:
+            infos.append(
+                f"channel {where}: {by} drops it from "
+                f"{_slot_label(_channel_slot(applied_by_source[key]))} and adds it again on "
+                f"{label}, so it is moved: the old strip is returned to free and the "
+                "channel is built on the new one")
         scope.grant(f"/{bank}/{placed}", f"new channel {where} on {label}")
 
         patch = effective.get("patch") or {}
         group = patch.get("group")
+        own_sockets = (_patched_sockets({"channels": [applied_by_source[key]]})
+                       if key in moving else set())
         for socket in patch.get("sockets") or []:
             if not isinstance(group, str) or not isinstance(socket, int):
+                continue
+            if (group, socket) in own_sockets:
+                # The channel's own cable: only the strip moves.
                 continue
             if (group, socket) in applied_sockets:
                 warnings.append(
@@ -1486,7 +1525,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     release_scope = AmendScope()
     for channel in applied_channels:
         key = _source_key(channel)
-        if key in amended_by_source:
+        if key in amended_by_source and key not in moving:
             continue
         if channel.get("channel") is not None \
                 and _slot_label(_channel_slot(channel)) in edited_slots:
@@ -1520,15 +1559,16 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             if not isinstance(group, str) or not isinstance(socket, int):
                 continue
             if (group, socket) in keep_sockets:
-                warnings.append(
-                    f"channel {where} is being returned to free, but {group} {socket} still feeds "
-                    f"a strip {by} keeps -- the socket's own name, colour, icon and phantom "
-                    "are left exactly as they are")
+                if key not in moving:
+                    warnings.append(
+                        f"channel {where} is being returned to free, but {group} {socket} "
+                        f"still feeds a strip {by} keeps -- the socket's own name, colour, "
+                        "icon and phantom are left exactly as they are")
                 continue
             release_scope.grant(f"/io/in/{group}/{socket}",
                                 f"the input socket {label} was patched to")
 
-    # What each released strip's patch goes back to (the maintainer, 2026-09-24):
+    # What each released strip's patch goes back to:
     # its measured factory socket, unless something else needs that socket.
     # "Something else" is everything that will still be patched once this
     # run is done -- every channel of the rebuilt plan, including the new
@@ -1610,8 +1650,8 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
 # 2b. Editing the named fields of running objects
 # --------------------------------------------------------------------------
 #
-# The maintainer's rule for a typed change on a running strip, as the coordinator
-# scoped it on 2026-09-28: a change may edit exactly the fields it names and
+# The rule for a typed change on a running strip, as scoped on
+# 2026-09-28: a change may edit exactly the fields it names and
 # no others. `patch.merge_change` enforces the first half -- the merged plan
 # differs from the desk's only in the named fields. This is the second half:
 # which ADDRESSES those fields own. It is worked out by difference rather
@@ -1841,13 +1881,21 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
             extra[address] = target
             edit_scope.grant(address, f"{label}: {edit.path}, taken away by the change")
         if not changed and not vanished:
-            infos.append(f"{edit.line()} -- recorded in the plan the desk holds; no console "
-                         "address carries it, so nothing is written for it")
+            edit = replace(edit, writes=False)
+            infos.append(f"{edit.line()} -- no console address carries it, so nothing is "
+                         "written to the desk for it; it is kept (in the plan the journal "
+                         "entry holds) only when the same change writes something else")
         if edit.moves_audio:
             warnings.append(
                 f"{edit.line()}. This is a PHYSICAL patch change on something already "
                 "running: it moves audio the moment it is written. Check what is plugged in "
                 "where before you arm it.")
+        if edit.switches_phantom and any(not socket_clash(a, edit) for a in changed):
+            warnings.append(
+                f"{edit.line()}. This switches phantom power on something already running, "
+                "the moment it is written: 48V into a passive ribbon microphone destroys it, "
+                "and an unbalanced or active line source can pop the PA. Check what is "
+                "plugged in, and mute the strip, before you arm it.")
         written.append(edit)
 
     # Edits taken one at a time can each change an address that all of them
@@ -1875,10 +1923,10 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
             continue
         labels.append(label)
         mine = [e for e in written if edit_label(e) == label]
-        live = any(e.moves_audio for e in mine)
+        marker = next((e.live_marker for e in mine if e.live_marker), "")
         changes.append(Change(
             ChangeKind.EDITED, edit.word, repr(edit.name),
-            ("MOVES AUDIO LIVE -- " if live else "")
+            marker
             + f"only the field(s) the change names are written ({', '.join(e.path for e in mine)}); "
             f"nothing else on this {edit.word} is touched, and the rest of it is in the "
             "untouched proof", slot=edit.slot))
@@ -2313,7 +2361,7 @@ def witness_requests(witness, *, bulk: bool = True) -> int:
 
     Pure -- it contacts nothing, the same contract `occupancy_read_plan`
     has. The CLI has no use for it; the test suite and the an earlier change
-    measurement do, because "is this inside the maintainer's 3-4s budget" is a
+    measurement do, because "is this inside the 3-4s budget" is a
     question about request counts and the two measured rates in
     `watch_scope.py`, and neither should have to be re-derived by hand.
     """
@@ -2336,7 +2384,7 @@ def read_witness(console, witness, *, progress=None,
 
     `bulk` (default **True**) fetches most of the set with
     node dumps -- one `,s *` query per object rather than one GET per
-    leaf, the same #185 path `audit.read_console_state(bulk=True)` uses.
+    leaf, the same path `audit.read_console_state(bulk=True)` uses.
     On A15's 672-address witness set that is **139 requests instead of
     672**, and at the A11-measured rates (`watch_scope`: 10.30ms per
     node-dump request against 6.75ms per leaf) it takes one pass from
@@ -2531,7 +2579,7 @@ def apply_amendment(amendment: Amendment, console, *, dry_run: bool = True,
 # socket it patches against the model the desk says it is. `amend` did
 # neither: it used the desk's model only to pick a freed strip's factory
 # patch, and would have written a new strip onto LCL 20 of a full-size WING
-# (8 local inputs) without a word. Under CLAUDE.md's rule that is the case
+# (8 local inputs) without a word. That is the case
 # which IS an error -- a socket that does not exist is a physical setting
 # the desk cannot be left in -- so amend now asks the same two questions,
 # with the same answers, before its preview is offered for arming.
@@ -2593,8 +2641,7 @@ def written_sockets_missing(amendment: Amendment, console_model: str) -> list[di
     * the factory patch a strip returned to free goes back on
       (`apply.release_patch_decision` -- the same call `release_targets`
       makes for the wire, so the socket checked is the socket written).
-      Those come from measured data for the model the desk stated (PR
-      #262) and should never fail this; they are checked anyway, because
+      Those come from measured data for the model the desk stated and should never fail this; they are checked anyway, because
       "should never" is not a check;
     * every output socket a new bus or output is granted.
 
@@ -2744,7 +2791,7 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
                                     console_model=desk_model)
 
     if identity_args is not None:
-        # #273's check, handed only what this amend writes -- so across
+        # The check, handed only what this amend writes -- so across
         # models its outcome, and the INFO or WARNING it words, is about
         # those sockets and nothing it leaves alone.
         written = {"channels": [channel for channel, _ in _written_channels(amendment)]}

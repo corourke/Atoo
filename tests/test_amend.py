@@ -431,7 +431,7 @@ def test_nothing_already_applied_is_renumbered():
 
 
 def test_the_skip_announces_itself():
-    """CLAUDE.md: an inferred value that does not announce itself is the
+    """An inferred value that does not announce itself is the
     defect, not the inference."""
     amendment = scenario()
     assert any("proposed ch:20" in i and "ch:21" in i for i in amendment.infos)
@@ -600,7 +600,7 @@ def test_a_socket_shared_with_a_running_strip_is_not_relabelled():
 #
 # --------------------------------------------------------------------------
 #
-# The maintainer, 2026-09-23: *"Whether this is for a rebuild of the plan, or an
+# *"Whether this is for a rebuild of the plan, or an
 # amend, the answer is C. Channels are not an unlimited resource and we
 # want to do what the engineer is asking for."*
 #
@@ -722,7 +722,7 @@ def test_returned_to_free_means_muted_factory_patched_and_blank():
         # two and the release puts them back.
         (f"{MLD_VOX_BASE}/flt/lc", _facts.FACTORY_STRIP_PROCESSING["flt/lc"]),
         (f"{MLD_VOX_BASE}/flt/lcf", _facts.FACTORY_STRIP_PROCESSING["flt/lcf"]),
-        # The factory fader, -inf (the maintainer, 2026-09-24): the strip goes back
+        # The factory fader, -inf: the strip goes back
         # on a live factory socket, so it must not keep the plan's level.
         (f"{MLD_VOX_BASE}/fdr", _facts.FACTORY_STRIP_FADER_DB),
         (f"{MLD_VOX_BASE}/mute", 0),
@@ -1222,7 +1222,7 @@ def test_a_released_strip_reads_unmuted_afterwards():
     """An earlier change, the first of the two properties the first hardware run
     found missing: A15 cleared ch:18 and the strip came back **muted**.
 
-    the own success test is "indistinguishable from a strip the show
+    The own success test is "indistinguishable from a strip the show
     never touched", and an untouched WING strip is unmuted. The mute is a
     bracket around the clear -- on first so nothing pops while the strip
     is taken apart, off last -- and this asserts the END of that, on the
@@ -1251,7 +1251,7 @@ def test_a_released_strip_reads_unmuted_afterwards():
     assert strip_rows[-1] == f"{MLD_VOX_BASE}/mute"
     # The fader: pulled from the raised level `release_console` seeds to
     # the factory -inf, proved on the desk, and BEFORE the unmute
-    # (the maintainer, 2026-09-24) -- silent by level before it stops being
+    #  -- silent by level before it stops being
     # silent by mute.
     faders = [w for w in result.writes if w.address == f"{MLD_VOX_BASE}/fdr"]
     assert [(w.prior_value, w.intended_value, w.status) for w in faders] == [
@@ -1405,7 +1405,7 @@ def test_a_released_strip_reads_as_free_on_the_next_occupancy_read():
     assert status.state is StripState.FREE
     assert status.available is True
     assert status.name == ""
-    # Back on its factory socket (the maintainer, 2026-09-24), and FREE all the
+    # Back on its factory socket, and FREE all the
     # same -- `is_in_use` discounts the patch the model ships with.
     assert status.patch == factory_socket
 
@@ -1600,18 +1600,14 @@ def test_targets_only_carry_the_warnings_the_new_objects_caused():
 # The CLI, offline -- `atoo amend --state FILE` contacts nothing.
 # --------------------------------------------------------------------------
 
-# Frozen copies (2026-09-29) of `examples/amend-demo/` and
-# `examples/smallband/plan.json`, which are the worked walkthrough in
-# `examples/README.md` and `docs/user/applying.md`. The tests below assert
-# on what is in them -- "11 ours, 1 theirs", "'Trumpet' -> ch:12" -- so
-# they must not read the maintainer's living bundle, which a rebuild is entitled
-# to change. The shipped walkthrough is guarded separately,
-# for validity only, by `test_the_shipped_amend_walkthrough_still_runs`.
+# Frozen copies of the amend walkthrough's files (`amend-demo/` and
+# `smallband.plan.json`; the worked example in `docs/user/applying.md`).
+# The tests below assert on what is in them -- "11 ours, 1 theirs",
+# "'Trumpet' -> ch:12" -- so they read these copies, which do not move
+# when a show is rebuilt.
 FIXTURES = Path(__file__).parent / "fixtures"
 DEMO = FIXTURES / "amend-demo"
 SMALLBAND = FIXTURES / "smallband.plan.json"
-SHIPPED_DEMO = Path(__file__).parent.parent / "examples" / "amend-demo"
-SHIPPED_SMALLBAND = Path(__file__).parent.parent / "examples" / "smallband" / "plan.json"
 
 
 def _load_demo_state() -> ConsoleState:
@@ -1630,29 +1626,6 @@ def amend_cli(*extra: str, amended: str = "rebuilt.plan.json",
                      "--amended-plan", str(DEMO / amended),
                      "--state", str(DEMO / state), *extra])
     return code, out.getvalue(), err.getvalue()
-
-
-@pytest.mark.example_guard
-def test_the_shipped_amend_walkthrough_still_runs():
-    """`examples/README.md` and `docs/user/applying.md` tell the reader to
-    run `amend` against `examples/smallband/plan.json` and the files in
-    `examples/amend-demo/`. Marked `example_guard`: its subject is the
-    shipped walkthrough, so it asserts only that the command still runs
-    offline and reaches its review -- never what the review says, which
-    changes whenever smallband is rebuilt."""
-    from atoo.cli import main
-    import io
-    import contextlib
-
-    if not SHIPPED_SMALLBAND.exists():
-        pytest.skip("examples/smallband/plan.json is not present -- nothing to guard")
-    out, err = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        code = main(["amend", "--plan", str(SHIPPED_SMALLBAND),
-                     "--amended-plan", str(SHIPPED_DEMO / "rebuilt.plan.json"),
-                     "--state", str(SHIPPED_DEMO / "occupancy.json")])
-    assert code == 0, err.getvalue()
-    assert "no console was contacted" in out.getvalue()
 
 
 def test_cli_reviews_the_demo_offline():
@@ -1687,7 +1660,7 @@ def test_cli_returns_a_dropped_channel_to_free_offline():
                     "/ch/10/main/1/on", "/ch/10/main/2/on"):
         assert address in out
     assert "unmuted -- an untouched strip is not a muted one" in out
-    # The maintainer, 2026-09-24: the fader goes to the factory reading, -inf.
+    # The fader goes to the factory reading, -inf.
     assert "/ch/10/fdr: returned to free: ch:10 (was 'BG Vox 1') fader to -inf" in out
 
 
@@ -1946,7 +1919,7 @@ def test_the_witness_read_goes_through_the_node_dump_path_and_agrees_with_per_le
 
 
 def test_the_measured_cost_of_the_proof_is_inside_the_budget():
-    """An earlier change, measured the way #196 was: request counts against the
+    """An earlier change, measured the way an earlier change was: request counts against the
     two rates A11 derived (`watch_scope`, net of the 320 unanswered
     addresses). Not an estimate, and not a wall clock -- a wall clock in
     this container measures this container.

@@ -12,7 +12,7 @@ as the new one -- verify, apply, render and the page -- through the one
 reader that knows both (`atoo/plan_compat.py`).
 
 The plans here are built from `tests/fixtures/`, never from a bundle
-under `examples/` (CLAUDE.md).
+under `examples/`.
 """
 
 from __future__ import annotations

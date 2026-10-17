@@ -22,6 +22,7 @@ that exists only under one gate model.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from atoo import console_facts
@@ -137,3 +138,30 @@ class SnapDesk:
 
     def __exit__(self, *exc):
         return False
+
+
+_SOCKET_LEAF = re.compile(r"^/io/in/(\w+)/(\d+)/(g|mode)$")
+
+
+class PairedSnapDesk(SnapDesk):
+    """A `SnapDesk` whose stereo pairs behave as a WING's do: once both
+    sockets of an odd/even pair read mode ST, a gain written to either lands
+    on both, and the pair taking ST mode puts the first socket's gain on the
+    second. Every stereo pair in the captures on file reads the same gain on
+    both sockets, which is what this reproduces."""
+
+    def _store(self, address: str, value: object) -> None:
+        super()._store(address, value)
+        match = _SOCKET_LEAF.match(address)
+        if match is None:
+            return
+        group, number, leaf = match.group(1), int(match.group(2)), match.group(3)
+        first = number if number % 2 else number - 1
+        a, b = f"/io/in/{group}/{first}/", f"/io/in/{group}/{first + 1}/"
+        if not (self.values.get(a + "mode") == "ST" and self.values.get(b + "mode") == "ST"
+                and a + "g" in self.values and b + "g" in self.values):
+            return
+        if leaf == "g":
+            self.values[a + "g"] = self.values[b + "g"] = value
+        else:
+            self.values[b + "g"] = self.values[a + "g"]

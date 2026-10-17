@@ -1,7 +1,7 @@
 """C003: a channel patched from, or an output routed to,
 an expansion bay the desk reports empty.
 
-The deferred half of #115. `apply` refuses to *create* this; the audit
+The deferred half. `apply` refuses to *create* this; the audit
 has to find one that is *already there* -- a show applied before that
 refusal existed, a patch made by hand, a card pulled after load-in. The
 WING accepts a patch from `MOD` with no module fitted and reads it back

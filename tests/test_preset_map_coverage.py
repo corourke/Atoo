@@ -177,13 +177,205 @@ def test_with_no_library_nothing_can_be_called_missing():
 def test_preset_map_items_reads_only_items_under_a_preset_lead_in():
     text = conventions_resolve.conventions_for_model(
         CONVENTIONS + '- Colours:\n  - Kick: "Red"\n- Generic presets:\n  - Generic sax "B Sax"\n')
-    items = {text.splitlines()[i].strip(): names
-             for i, names in conventions_resolve.preset_map_items(text).items()}
+    items = {text.splitlines()[i].strip(): item.names
+             for i, item in conventions_resolve.preset_map_items(text).items()}
 
     assert items == {
-        '- Kick: "Kick In"': ["Kick In"],
-        '- Snare: "Snare Top"': ["Snare Top"],
-        '- "Lead Vox": "Vocal"': ["Vocal"],
-        "- Playback: no preset.": [],
-        '- Generic sax "B Sax"': ["B Sax"],
+        '- Kick: "Kick In"': ("Kick In",),
+        '- Snare: "Snare Top"': ("Snare Top",),
+        '- "Lead Vox": "Vocal"': ("Vocal",),
+        "- Playback: no preset.": (),
+        '- Generic sax "B Sax"': ("B Sax",),
     }
+
+
+# ---------------------------------------------------------------------------
+# the follow-ups from the review
+# ---------------------------------------------------------------------------
+
+BUS_MAP = """\
+## Processing
+- Default bus presets, from my preset library:
+  - Drums: "Mix Bus"
+  - Vocals: "Vox Verb"
+  - Guitars: "Guitar Bus"
+- Start every monitor send at -18dB.
+"""
+
+# Cites one neighbouring line, so the lead-in and every item are uncited.
+CITES_NOTHING_OF_THE_MAP = """\
+# Resolved conventions
+
+## Processing
+- Monitor sends start at -18 dB. [conventions: "Start every monitor send at -18dB."]
+"""
+
+
+def test_a_bus_preset_map_is_looked_up_among_the_bus_presets():
+    # Finding 1: "Mix Bus" is a .bus in the library, not a .chn, and was
+    # called missing.
+    result = _check(BUS_MAP, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+    notes = {f.line: f for f in _uncovered_notes(result)}
+
+    assert '- Drums: "Mix Bus"' in result.preset_lines
+    assert '- Vocals: "Vox Verb"' in result.preset_lines
+    note = notes['- Guitars: "Guitar Bus"']
+    assert '"Guitar Bus", which is not in the preset library' in note.message
+    assert "a bus given it" in note.message
+    assert set(notes) == {'- Guitars: "Guitar Bus"'}
+
+
+def test_a_channel_lead_in_does_not_take_a_bus_preset_for_a_channel_one():
+    # The two name spaces stay apart: "Mix Bus" is not a channel preset.
+    text = BUS_MAP.replace("Default bus presets", "Default channel presets")
+    result = _check(text, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+
+    assert '- Drums: "Mix Bus"' not in result.preset_lines
+    assert any('"Mix Bus", which is not in the preset library' in f.message
+               for f in _uncovered_notes(result))
+
+
+def test_a_lead_in_that_names_neither_kind_takes_either():
+    text = BUS_MAP.replace("Default bus presets", "Default presets") + (
+        '- Other presets:\n  - Kick: "Kick In"\n')
+    result = _check(text, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+
+    assert '- Drums: "Mix Bus"' in result.preset_lines
+    assert '- Kick: "Kick In"' in result.preset_lines
+
+
+def test_an_uncited_lead_in_is_covered_when_an_item_under_it_is_covered_by_the_library():
+    # Finding 2: the result no longer depends on the model citing an item.
+    result = _check(CONVENTIONS, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+    lead_in = "- Default channel presets by source, from my preset library:"
+
+    assert lead_in in result.preset_lines
+    assert lead_in not in result.uncovered
+    assert lead_in in result.verbatim   # covered is not dropped
+    assert lead_in not in {f.line for f in _uncovered_notes(result)}
+
+
+def test_a_lead_in_with_no_covered_item_under_it_is_still_a_note():
+    text = ('## Processing\n- Default channel presets by source, from my preset library:\n'
+            '  - Snare: "Snare Top"\n')
+    result = _check(text, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+
+    assert {f.line for f in _uncovered_notes(result)} == {
+        "- Default channel presets by source, from my preset library:",
+        '- Snare: "Snare Top"'}
+
+
+RULE_TEXT = """\
+## Processing
+- Default bus presets, from my preset library:
+  - Vocals go to the "Vox Verb" bus and get 3 dB more at 3k
+  - Drums: "Mix Bus" -- and cut 2 dB at 400 Hz
+- Default channel presets, from my preset library:
+  - Toms: "H Tom" for the high (or only) rack tom, "M Tom" for a second rack tom.
+"""
+
+
+def test_rule_text_inside_a_map_item_is_not_hidden_by_the_library():
+    # Finding 3.
+    result = _check(RULE_TEXT, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+    notes = {f.line: f for f in _uncovered_notes(result)}
+
+    vocals = '- Vocals go to the "Vox Verb" bus and get 3 dB more at 3k'
+    drums = '- Drums: "Mix Bus" -- and cut 2 dB at 400 Hz'
+    # The bus lead-in has no covered item under it, so it is a note too.
+    assert set(notes) == {vocals, drums, "- Default bus presets, from my preset library:"}
+    assert vocals not in result.preset_lines
+    assert "says more than a preset name" in notes[vocals].message
+    assert "and get 3 dB more at 3k" in notes[vocals].message
+    assert "on a line of its own, outside the preset map" in notes[vocals].fix
+    # Descriptive prose around the names is still just prose.
+    assert ('- Toms: "H Tom" for the high (or only) rack tom, "M Tom" for a second rack tom.'
+            in result.preset_lines)
+
+
+def test_rule_text_after_no_preset_is_not_hidden_either():
+    text = '## Processing\n- Default presets:\n  - Playback: no preset, but pad it 6 dB\n'
+    result = _check(text, CITES_NOTHING_OF_THE_MAP, PresetLibrary(LIBRARY))
+
+    assert [f.line for f in _uncovered_notes(result)] == [
+        "- Default presets:", "- Playback: no preset, but pad it 6 dB"]
+
+
+class _Unreadable:
+    directory = Path("/no/such/library")
+
+    def names(self):
+        from atoo.presets import PresetError
+        raise PresetError("/no/such/library: not a directory")
+
+    def bus_presets(self):
+        return self.names()
+
+
+def test_an_unreadable_library_is_said_at_info_not_passed_in_silence():
+    # Finding 4: every map item still counts as covered, but it announces.
+    result = _check(CONVENTIONS, RESOLVED, _Unreadable())
+    notes = [f for f in result.findings
+             if f.code == conventions_resolve.CODE_LIBRARY_UNREADABLE]
+
+    assert len(notes) == 1
+    assert notes[0].severity.name == "INFO"
+    assert "/no/such/library" in notes[0].message
+    assert "not a directory" in notes[0].message
+    assert "count as covered" in notes[0].message
+    assert '- Snare: "Snare Top"' in result.preset_lines
+
+
+def test_a_library_with_a_damaged_bus_file_still_checks_the_channel_presets(tmp_path):
+    shutil.copytree(LIBRARY, tmp_path / "lib")
+    (tmp_path / "lib" / "Broken.bus").write_text("not a preset")
+    result = _check(CONVENTIONS, RESOLVED, PresetLibrary(tmp_path / "lib"))
+
+    # A channel map only needs the channel presets, so nothing is unchecked
+    # and "Snare Top" is still called missing.
+    assert not [f for f in result.findings
+                if f.code == conventions_resolve.CODE_LIBRARY_UNREADABLE]
+    assert '- Snare: "Snare Top"' in {f.line for f in _uncovered_notes(result)}
+
+
+def test_no_library_at_all_stays_as_it_was_and_adds_no_unreadable_note():
+    result = _check(CONVENTIONS, RESOLVED, None)
+
+    assert not [f for f in result.findings
+                if f.code == conventions_resolve.CODE_LIBRARY_UNREADABLE]
+
+
+def test_resolve_check_says_which_preset_library_it_used(tmp_path, monkeypatch, capsys):
+    for name in ("conventions.md", "conventions.resolved.md"):
+        shutil.copy(BUNDLE / name, tmp_path / name)
+    monkeypatch.setattr("atoo.cli.load_default_presets", lambda: LIBRARY)
+
+    main(["resolve", "--conventions", str(tmp_path / "conventions.md"), "--check"])
+    err = capsys.readouterr().err
+
+    assert f"INFO preset library: {LIBRARY}" in err
+
+
+def test_resolve_check_says_a_default_library_that_is_not_there(tmp_path, monkeypatch, capsys):
+    for name in ("conventions.md", "conventions.resolved.md"):
+        shutil.copy(BUNDLE / name, tmp_path / name)
+    monkeypatch.setattr("atoo.cli.load_default_presets", lambda: tmp_path / "gone")
+
+    main(["resolve", "--conventions", str(tmp_path / "conventions.md"), "--check"])
+    err = capsys.readouterr().err
+
+    assert "no preset library" in err
+    assert "does not exist" in err
+
+
+def test_single_quoted_names_are_read_and_an_apostrophe_is_not_a_quote():
+    text = conventions_resolve.conventions_for_model(
+        "- Default presets:\n  - Kick: 'Kick In'\n  - Snare: \"Snare\" for the kick's neighbour\n"
+        "  - Toms: ‘H Tom’ and 'M Tom'\n  - Drummer's note: no preset\n")
+    items = {text.splitlines()[i].strip(): item.names
+             for i, item in conventions_resolve.preset_map_items(text).items()}
+
+    assert items["- Kick: 'Kick In'"] == ("Kick In",)
+    assert items['- Snare: "Snare" for the kick\'s neighbour'] == ("Snare",)
+    assert items["- Toms: ‘H Tom’ and 'M Tom'"] == ("H Tom", "M Tom")
+    assert items["- Drummer's note: no preset"] == ()

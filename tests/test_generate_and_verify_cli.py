@@ -1,4 +1,4 @@
-"""The #26 architecture as wired into the CLI.
+"""The architecture as wired into the CLI.
 
 Three things get tested here that the experiment could not:
 
@@ -479,7 +479,7 @@ def test_build_log_never_reaches_the_critic_or_watchlist_prompt():
 def test_meta_records_generated_at_and_no_strategy(stub_build, touring):
     """`generated_at` is a real, parseable UTC timestamp -- not a
     placeholder. `strategy` is retired (review 2026-09-28, C5): it had one
-    value since #29, so a new plan does not write it."""
+    value, so a new plan does not write it."""
     stub_build("touringband")
     out = touring / "p.json"
     main(["build", "--console-model", "wing-compact", "--skip-verify",
@@ -719,7 +719,7 @@ def test_meta_verify_findings_null_when_skip_verify(stub_build, touring):
 
 
 def test_meta_no_longer_carries_expectations_findings(stub_build, touring):
-    """#153 retired expectations, so a freshly built plan must not write
+    """An earlier change retired expectations, so a freshly built plan must not write
     the key at all -- neither a value nor a null placeholder for a pass
     that no longer exists."""
     stub_build("touringband")
@@ -734,7 +734,7 @@ def test_meta_no_longer_carries_expectations_findings(stub_build, touring):
 
 
 def test_a_plan_built_before_expectations_was_retired_still_loads(stub_build, touring):
-    """#153's backwards-compatibility rule: `meta` is an open object, so a
+    """The backwards-compatibility rule: `meta` is an open object, so a
     plan.json written last week -- carrying `expectations_findings` -- must
     still verify and apply rather than being refused for an unknown key."""
     stub_build("touringband")
@@ -759,7 +759,7 @@ def test_a_plan_built_before_expectations_was_retired_still_loads(stub_build, to
 def test_apply_ignores_stale_meta_findings_claiming_clean(stub_build, touring, capsys):
     """The same hard guardrail as
     test_apply_ignores_a_hand_edited_meta_claiming_ok above, extended to
-    the new #43 fields: a plan hand-edited so `meta.verify_findings`
+    the new an earlier change fields: a plan hand-edited so `meta.verify_findings`
     claims a spotless run must still be refused by `apply` on a fresh
     `verify_plan()` call, because `apply_cmd`'s gate never reads `meta` at
     all. The retired `expectations_findings` is set too, because an old
@@ -822,8 +822,8 @@ def test_apply_refuses_a_plan_whose_sockets_the_desk_does_not_have(
     console is contacted, so this can only be caught at the handshake, and
     it must be caught there.
 
-    Since 2026-09-24 a different model alone is not a refusal (CLAUDE.md:
-    a judgement call is not an impossible patch -- `test_apply_cross_model`
+    Since 2026-09-24 a different model alone is not a refusal (a
+    judgement call is not an impossible patch -- `test_apply_cross_model`
     covers the rest). A socket the desk lacks still is, so the built plan
     is given one: its first channel moved to LCL 20."""
     stub_build("touringband")
@@ -930,7 +930,7 @@ def test_apply_exits_2_when_a_value_did_not_land(stub_build, touring, capsys, mo
 
 
 def test_apply_exits_1_when_the_console_never_answered(stub_build, touring, capsys, monkeypatch):
-    """The other side of #143's distinction, and the reason the mismatch
+    """The other side of the distinction, and the reason the mismatch
     code had to move rather than this one: a desk that does not answer is
     a transport problem, not a finding about the plan. It stays 1."""
     stub_build("touringband")
@@ -1065,7 +1065,7 @@ def test_apply_refuses_a_plan_patched_from_an_empty_module_bay(
                         _fake_console_with_bays(card="WLIVE", module="NONE"))
     capsys.readouterr()
 
-    # --skip-verify deliberately does NOT suppress this, for #13's reason:
+    # --skip-verify deliberately does NOT suppress this, for the reason:
     # that flag is a judgement about the plan's findings, and this is a
     # fact about the hardware on the other end of the cable.
     code = main(["apply", "--plan", str(plan_path), "--console", "192.0.2.16",

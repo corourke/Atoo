@@ -1,15 +1,17 @@
 """The *"cheaper thing to try first"*: `watch` does not need all
-6,143 addresses, so work out exactly which ones the rules it is running
+6,195 addresses, so work out exactly which ones the rules it is running
 actually consume, and measure what scoping the read to those would buy.
 
 **The answer is: not enough.** The numbers are in `scope_report()` and
-reproduced in `docs/developer/requirements.md`; the short version is that the
+reproduced in the requirements; the short version is that the
 structural catalogue (`audit.DEFAULT_RULES`, which `watch` always runs)
-reads **3,823 of the 6,143** addresses (3,392 of 5,712 when this was
+reads **3,891 of the 6,195** addresses (3,392 of 5,712 when this was
 measured; an earlier change added 96 to both, an earlier change another 304 to both,
-its comms half one more, an earlier change 24 socket widths, and an earlier change three AES50 link states and two monitor sources), and
+its comms half one more, an earlier change 24 socket widths, an earlier change three AES50 link states and two monitor sources, and each local
+socket's own mute 24 more, a DCA's mute 16, and the width of each bus, Main and
+Matrix 28), and
 that is ~26s per-leaf against
-~39s -- nowhere near the maintainer's 3-4 second budget. Node dumps
+~39s -- nowhere near the 3-4 second budget. Node dumps
 (the default read) already get a full read to ~3.1-3.8s
 at these rates, 4.8s measured on 2026-09-24, and scoping does
 **not** improve on that at all, because the leaves scoping drops all live
@@ -66,14 +68,13 @@ for the same reason as any other unknown rule.
 
 ## What actually gets dropped
 
-Only two families, and both are genuinely unread:
+Only one family, and it is genuinely unread:
 
 * `/{ch,aux}/{n}/send/{bus|MXn}/{mode,pon}` -- 2,304 addresses, 40% of
-  the plan. Pre/post and pan-link on a strip's send. `audit.py` reads a
-  send's `on` and `lvl` and nothing else; `diff_against_plan` (which
-  `watch` does not run) does not read them either.
-* `/dca/{n}/mute` -- 16 addresses. CH002 reads a DCA's `fdr`, and its
-  `name` for the label. Nothing reads a DCA's mute.
+  the plan. Pre/post and pan-link on a strip's send. The built-in rules
+  read a send's `on` and `lvl` and nothing else. (CV006, bound to the
+  show's plan, reads a bus send's `mode`; `STRIP_SEND_MODE` keeps it for
+  that rule alone, so the default set still drops it.)
 
 Everything else in `console_read_plan()` is consumed by at least one rule
 the `watch` command runs by default.
@@ -115,8 +116,8 @@ from atoo import audit
 from atoo.audit import AuditRule, DEFAULT_RULES
 
 # --------------------------------------------------------------------------
-# Measured rates, derived from archive/examples/console-runs/2026-09-22-2008/
-# (A11-read-speed.{txt,json}) -- a WING Compact, firmware 3.1.
+# Measured rates, derived from the A11 read-speed run of 2026-09-22
+# -- a WING Compact, firmware 3.1.
 #
 # The capture's wall-clock totals are NOT the rates: 320 of the 6,032
 # addresses it asked for do not exist on the desk, and each one costs
@@ -153,7 +154,7 @@ NODE_DUMP_SECONDS_PER_REQUEST = (
     (A11_NODE_DUMP_SECONDS - A11_TIMEOUT_SECONDS)
     / (A11_NODE_DUMP_REQUESTS - A11_UNANSWERED_ADDRESSES))
 
-#: the maintainer, 2026-09-23: a watch pass should land inside
+#: On an earlier change: a watch pass should land inside
 #: this to feel like a monitor rather than a batch job.
 RESPONSIVENESS_BUDGET_SECONDS = (3.0, 4.0)
 
@@ -182,7 +183,7 @@ STRIP_ALT_PATCH = rf"^{_STRIP}/in/(?:conn/altgrp|set/altsrc)$"
 #: knowable until the patch has been read, so `read_console_state` fetches
 #: these in a second pass. A rule that reads a strip's name
 #: reads this too, because `clink` defaults ON and a name a human types
-#: lands here rather than on the strip (#204, the Podium). Kept as a
+#: lands here rather than on the strip (the Podium). Kept as a
 #: pattern so `ScopedReadPlan` can say whether a scope needs that second
 #: pass; it filters nothing out of the plan, because none of it is in the
 #: plan.
@@ -206,12 +207,20 @@ EXPANSION_BAY = r"^/(?:cards/\$type|\$syscfg/opt_mod)$"
 #: presence, so this family carries discovery as well as value.
 STRIP_SEND_ON = rf"^{_STRIP}/send/(?:\d+|MX\d+)/on$"
 STRIP_SEND_LVL = rf"^{_STRIP}/send/(?:\d+|MX\d+)/lvl$"
+#: A strip's send to a bus: pre or post (CV006, bound to a plan). Rides in
+#: the same node as `on` and `lvl`, so a dump read asks for nothing more.
+STRIP_SEND_MODE = rf"^{_STRIP}/send/\d+/mode$"
 #: A strip's direct route to a Main; `main_route_targets` discovers from it.
 STRIP_MAIN_ON = rf"^{_STRIP}/main/\d+/on$"
 
 BUS_NAME = r"^/bus/\d+/name$"
 BUS_MUTE = r"^/bus/\d+/mute$"
 BUS_FDR = r"^/bus/\d+/fdr$"
+#: A bus's, Main's or Matrix's width, `busmono` (R011, CV020): 1 is mono.
+#: Read with the object's other leaves, in the same node.
+BUS_WIDTH = r"^/bus/\d+/busmono$"
+MAIN_WIDTH = r"^/main/\d+/busmono$"
+MTX_WIDTH = r"^/mtx/\d+/busmono$"
 BUS_SEND_ON = r"^/bus/\d+/send/MX\d+/on$"
 BUS_SEND_LVL = r"^/bus/\d+/send/MX\d+/lvl$"
 BUS_MAIN_ON = r"^/bus/\d+/main/\d+/on$"
@@ -258,6 +267,9 @@ INPUT_PHANTOM = r"^/io/in/(?!USR/)[A-Za-z0-9]+/\d+/vph$"
 #: A jack's width -- `ST` or `M/S` on an odd socket means the strip
 #: patched there takes the next one too (C001).
 INPUT_MODE = r"^/io/in/(?!USR/)[A-Za-z0-9]+/\d+/mode$"
+#: A jack's own mute (C007): a muted socket silences every strip patched
+#: to it. Read beside `vph` and `mode`, in the same node.
+INPUT_MUTE = r"^/io/in/(?!USR/)[A-Za-z0-9]+/\d+/mute$"
 #: What feeds each physical output socket -- both halves, as
 #: `ConsoleState.output_source` reads them together.
 OUTPUT_PATCH = r"^/io/out/[A-Za-z0-9]+/\d+/(?:grp|in)$"
@@ -300,7 +312,7 @@ _REACHING = _OUTPUT_SIDE + (BUS_MAIN_ON, BUS_SEND_ON, MAIN_SEND_ON,
 #: rules Watch adds (`PLAN_RULE_IDS`), and verified end to
 #: end by `tests/test_watch_scope.py` rather than trusted.
 #: The rules Watch adds from the show's plan, not from `DEFAULT_RULES`.
-PLAN_RULE_IDS = ("CV015", "CV016", "CV017")
+PLAN_RULE_IDS = ("CV006", "CV007", "CV015", "CV016", "CV017", "CV018", "CV019", "CV020", "CV021", "CV022")
 
 RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # Is an in-use bus fed by any strip? Bus discovery and label from
@@ -330,6 +342,32 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     "R007": (OUTPUT_PATCH, MTX_PRESENCE, STRIP_NAME, BUS_NAME, SOURCE_NAME,
                 MAIN_PRESENCE, STRIP_SEND_ON, BUS_SEND_ON, MAIN_SEND_ON)
                + _IN_USE_BUS + _REACHING,
+    # A strip in use with no bus send, Matrix send or Main route on: every
+    # strip's sends and routes, which busses, Matrices and Mains exist (so
+    # that "every send was read" can be told), mute and fader, the talk
+    # mic and the monitor sources that exempt a strip, and the names its
+    # label quotes.
+    "R008": (STRIP_MUTE, STRIP_FDR, TALK_ASSIGN, MONITOR_SOURCE, BUS_NAME,
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_SEND_ON, STRIP_MAIN_ON)
+               + _IN_USE_STRIP,
+    # A loop through the sends and routes: each strip's patch (which strips
+    # take a bus, Main or Matrix), the alternate and global switches that
+    # hand a strip to C004 and C005, every send's switch and level, every
+    # route to a Main, and which busses and Mains there are. Names for the
+    # label. R010 reads the same.
+    "R009": (STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, STRIP_SEND_ON, STRIP_SEND_LVL,
+                STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL, BUS_MAIN_ON, MAIN_SEND_ON,
+                MAIN_SEND_LVL, MAIN_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME),
+    "R010": (STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, STRIP_SEND_ON, STRIP_SEND_LVL,
+                STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL, BUS_MAIN_ON, MAIN_SEND_ON,
+                MAIN_SEND_LVL, MAIN_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME),
+    # A stereo bus, Main or Matrix patched on one side only: the output
+    # patch and what makes it complete (AES50 ports, strip patches), each
+    # kind's width, and what makes an object "in use" (a bus's name and
+    # sends, a Main's or Matrix's feeds), with the names the label quotes.
+    "R011": _OUTPUT_SIDE + (BUS_WIDTH, MAIN_WIDTH, MTX_WIDTH, BUS_NAME, STRIP_NAME,
+                SOURCE_NAME, MAIN_PRESENCE, STRIP_SEND_ON, STRIP_MAIN_ON, BUS_SEND_ON,
+                BUS_MAIN_ON, MAIN_SEND_ON),
     # 48V on a jack nothing takes: every strip's patch, every USER PATCH
     # slot's source, the jack's own `vph`, and the width of the socket
     # before it -- a stereo strip takes the even socket too.
@@ -341,10 +379,28 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # NONE. Names for the label, the bay reading from the second pass.
     "C003": (STRIP_PATCH, OUTPUT_PATCH, EXPANSION_BAY, STRIP_NAME,
                 SOURCE_NAME),
+    # An AES50 port's link and what depends on it: the status leaf (already
+    # read for the outputs of a port in use), every strip's patch, the
+    # alternate and global switches that hand a strip to C004 and C005, and
+    # every output's source. Names for the label. C009 reads the same.
+    "C008": (AES50_STATUS, STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, OUTPUT_PATCH,
+                STRIP_NAME, SOURCE_NAME),
+    "C009": (AES50_STATUS, STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, OUTPUT_PATCH,
+                STRIP_NAME, SOURCE_NAME),
     # The switch, the alternate's group, and the main patch the finding
     # says the strip is NOT hearing. Names for the label.
     "C004": (STRIP_ALT_PATCH, STRIP_PATCH, STRIP_NAME, SOURCE_NAME),
     "C005": (GLOBAL_ALT_SWITCH,),
+    # A strip in use with nothing patched: its group, the alternate switch
+    # and group that hand the strip to C004, the global switch, the talk
+    # mic, and what makes it in use.
+    "C006": (STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, TALK_ASSIGN) + _IN_USE_STRIP,
+    # A strip in use whose source socket is muted: the strip's patch, the
+    # alternate and global switches that hand it to C004 and C005, the
+    # socket's mute and width (a stereo source takes the next socket too),
+    # and what makes the strip in use. Names for the label.
+    "C007": (STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, INPUT_MUTE, INPUT_MODE)
+               + _IN_USE_STRIP,
     # An insert and the slot it names. Names for the label; a bus is
     # labelled with its own.
     "E001": (INSERT, FX_MODEL, STRIP_NAME, SOURCE_NAME, BUS_NAME),
@@ -365,6 +421,32 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # strip is the talk mic (exempt).
     "CV017": (STRIP_MUTE, BUS_MUTE, DCA_MUTE, MAIN_PRESENCE, MTX_PRESENCE,
                  BUS_NAME, DCA_NAME, TALK_ASSIGN) + _IN_USE_STRIP,
+    # Added by Watch from a plan with sends: the switch and the pre/post
+    # mode of every send, the buses' names that resolve the plan's, and the
+    # strip's label. The level is `audit --plan`'s; it is read here only
+    # because CV016's finding, which this stands down for, needs it.
+    "CV006": (STRIP_SEND_ON, STRIP_SEND_MODE, STRIP_SEND_LVL, BUS_NAME)
+                + _IN_USE_STRIP,
+    # Added by Watch from a plan: every strip's Main routes. The same
+    # addresses as CV016, whose finding it stands down for.
+    "CV007": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_NAME)
+                + _IN_USE_STRIP,
+    # Added by Watch from a plan: every strip's sends and level (a send at
+    # the floor passes nothing), each bus's Main routes, and the names the
+    # labels quote.
+    "CV018": (STRIP_SEND_ON, STRIP_SEND_LVL, BUS_MAIN_ON, BUS_NAME)
+                + _IN_USE_STRIP,
+    # Added by Watch from a plan that states a phantom: the socket each
+    # strip is patched to, its 48V, and the names its label quotes.
+    "CV019": (STRIP_PATCH, INPUT_PHANTOM, STRIP_NAME, SOURCE_NAME),
+    # Added by Watch from a plan that states a bus width: the width and the
+    # name the label quotes.
+    "CV020": (BUS_WIDTH, BUS_NAME),
+    # Added by Watch from a plan that builds a monitor mix: the talkback
+    # assignment and its destination switches, and the bus name the label
+    # quotes.
+    "CV021": (TALK, BUS_NAME),
+    "CV022": (TALK, BUS_NAME),
     # The assignment and all 56 destination switches.
     "T001": (TALK,),
     # Which strip is the talk mic, and whether it is in use.
@@ -373,6 +455,7 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     "CH001": (STRIP_TAGS, TALK_ASSIGN) + _IN_USE_STRIP,
     "CH002": (STRIP_TAGS, DCA_NAME, DCA_FDR) + _IN_USE_STRIP,
     "CH003": (STRIP_TAGS, MGRP_NAME, MGRP_MUTE) + _IN_USE_STRIP,
+    "CH004": (STRIP_TAGS, DCA_NAME, DCA_MUTE) + _IN_USE_STRIP,
     "N001": (STRIP_NAME, STRIP_PATCH, SOURCE_NAME),
     "N002": (BUS_NAME,),
     # Every send there is, on a strip, a bus or a Main -- `on` to know it
@@ -383,6 +466,10 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
                 MAIN_SEND_ON, MAIN_SEND_LVL),
     "L002": (STRIP_MUTE, STRIP_FDR, BUS_MUTE, BUS_FDR, TALK_ASSIGN)
                + _IN_USE_STRIP + _IN_USE_BUS,
+    # Reads no address at all: the clips come from the console's meter
+    # stream (`atoo.metering`), and the labels it quotes are
+    # the names every pass already reads.
+    "L003": (STRIP_NAME, BUS_NAME, MAIN_PRESENCE),
 }
 
 
@@ -582,12 +669,14 @@ def scope_report(
 
 #: A WING Compact reading its own panel -- the desk A11 was captured on,
 #: and the shape every number in this module and in
-#: `docs/developer/requirements.md` is quoted for.
+#: the requirements is quoted for.
 COMPACT_PLAN_KWARGS = dict(input_sockets={"LCL": 24}, output_sockets={"LCL": 8})
 
 #: A watchlist of the shape a show bundle's `watch.json` carries -- one
-#: condition of every field the vocabulary has, which is the widest a
-#: realistic watchlist gets in address terms however many rows it has.
+#: condition of each field that has its own address family. (The send and
+#: phantom fields read every strip's sends and each jack's 48V, which the
+#: structural rules `watch` runs already keep, so they widen no scope that
+#: has them.)
 REALISTIC_CONDITIONS: tuple[dict, ...] = (
     {"id": "crowd-mic-never-muted", "channel": "Crowd Mic", "field": "muted"},
     {"id": "crowd-mic-fader-capped", "channel": "Crowd Mic", "field": "fader_db"},

@@ -1,7 +1,8 @@
 # Contributing
 
-Thank you for looking. The most useful things you can send are not code,
-so they come first.
+Thank you for looking. Atoo is young, and its one maintainer is not yet
+taking changes to its code, its user guide or its website. What helps now
+is what only someone with a desk can tell us, so that comes first.
 
 ## What helps most, in order
 
@@ -23,62 +24,26 @@ so they come first.
 4. **A bug report**, with the journal file for a write that went wrong
    (`journals/` in the show's folder) or the `verify` output for a plan.
    [Report a bug](../../issues/new?template=bug.yml).
-5. **Code.** Welcome, under the rules below.
 
 Questions, ideas and "how do I" go in
 [Discussions](../../discussions), so the issue list stays a list of
 things to fix.
 
-## Code
+## Pull requests
 
-Start with [`atoo/README.md`](atoo/README.md): setting up a
-working copy, where things are, and the test suite. Then:
+**Not yet.** Pull requests that change the code, the user guide or the
+website are not being accepted at the moment, and will be closed with
+thanks. That is not a judgement on the work. The maintainer is not ready
+to review outside changes, and would rather you did not spend an evening
+on one that cannot be merged.
 
-- **The tests pass.** `python3 -m pytest -q`, with nothing failing.
-  Add tests for what you change. A test never reads `examples/`: those
-  are working show files, and `tests/conftest.py` refuses the read.
-  Freeze what a test needs into `tests/fixtures/`.
-- **The docs change in the same pull request.** A change to what the
-  tool does updates the page that describes it: `docs/user/` for users,
-  `docs/developer/requirements.md` if a requirement changes. Every
-  command shown in a page under `docs/user/` is run before it is
-  committed, and [`docs/user/STYLE.md`](docs/user/STYLE.md) says how
-  those pages are written.
-- **The CLI reference is generated.** After touching a command-line
-  flag, run `python3 tools/gen_cli_reference.py`; a test fails while
-  `docs/user/cli-reference.md` is out of date.
-- **A change to the browser pages is opened in a browser.** The Python
-  tests cannot see `atoo/web/static/`, so a renamed field shows as
-  a blank, not a failure.
-- **The engine stays dependency-free.** Only `atoo ui` may need
-  third-party packages, behind the `ui` extra.
-- **A choice the tool makes for the user is announced at INFO**, saying
-  what was chosen and what it was inferred from. A setting the desk
-  cannot hold is an error; a matter of taste is not.
+If you have found something that needs changing, say so in a bug report or
+in Discussions, and the maintainer will make the change. This page will
+say so when that changes.
 
-Keep a pull request to one change, and say in its description what you
-ran and what you could not check (a model you do not have, a desk you
-do not own).
+## Licence
 
-### AI-written contributions
-
-Welcome, if you say so in the pull request, you have run it, and the
-tests pass. It is the same rule the project holds itself to: [the
-FAQ](docs/user/faq.md#is-this-ai-slop) says how it was built.
-
-## Licence and the contributor agreement
-
-<!-- Depends on the licence decision (AGPL-3.0 plus a commercial licence
-     by agreement). The agreement's text is the maintainer's, drafted with
-     a lawyer, and is linked here when it exists. See
-     docs/product/release-checklist.md. -->
-
-Contributions are under the project's licence: see [LICENSE](LICENSE).
-
-**Code contributions also need a short contributor licence agreement**,
-signed once. The project is offered under a commercial licence as well
-as its open-source one, and it can only offer that on code it holds the
-rights to. The agreement is linked from your first pull request.
-
-Desk test reports, war stories, conventions files and bug reports need
-no agreement.
+Reports and conventions files you send are under the project's licence:
+see [LICENSE](LICENSE). Conventions files shared in Discussions are
+under CC BY 4.0, as above. Because no code is accepted, there is no
+contributor agreement yet.

@@ -1,9 +1,9 @@
 """FR-X.15c: repeated findings are grouped in what a person reads, and kept
 one per item in the data.
 
-The maintainer, 2026-09-30, after a 24-channel build printed about sixty notes:
+After a 24-channel build printed about sixty notes:
 *"The notes noise is way too much."* Every finding here is built in the
-test (CLAUDE.md: a test never reads `examples/`), shaped like the ones
+test (a test never reads `examples/`), shaped like the ones
 that build printed.
 """
 
@@ -177,7 +177,7 @@ def test_empty_dcas_and_mute_groups_become_one_list():
 
 
 def test_an_inferred_value_stays_exact_and_its_reasons_are_listed_once():
-    """CLAUDE.md: an inferred value must announce itself. Grouped, every
+    """An inferred value must announce itself. Grouped, every
     bus is still named and the value decided is still stated exactly --
     only the repetition goes."""
     def width(bus, value, basis):

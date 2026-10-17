@@ -1,0 +1,748 @@
+{
+  "channels": [
+    {
+      "channel": 1,
+      "bank": "ch",
+      "name": "Kick",
+      "color": "Red",
+      "source": {
+        "input": "Kick",
+        "type": "Mic",
+        "model": "Beta 91A",
+        "stereo": false,
+        "phantom": true
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          1
+        ],
+        "stated": true
+      },
+      "processing": {
+        "preset": "Kick In",
+        "gain_db": 20,
+        "trim_db": 0,
+        "hpf_hz": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "preset_values": {
+          "preset": "Kick In",
+          "file": "Kick.chn",
+          "library": "starter/presets",
+          "sha256": "dde0abe953f4656db0666b8c587f6e9d0092f0e4685867530826aae0fad65858",
+          "leaves": {
+            "in/set/dlymode": "FT",
+            "flt/mdl": "TILT",
+            "gate/mdl": "GATE",
+            "gatesc/type": "BP",
+            "eq/mdl": "STD",
+            "eq/leq": "SHV",
+            "eq/heq": "SHV",
+            "dyn/mdl": "COMP",
+            "dynxo/type": "OFF",
+            "dynsc/type": "OFF",
+            "in/set/dly": 0.5,
+            "flt/lcf": 40.19342422,
+            "flt/lcs": "24",
+            "flt/hcf": 11994.41797,
+            "flt/hcs": "12",
+            "flt/tilt": 0.0,
+            "peq/1g": 0.0,
+            "peq/1f": 99.68543243,
+            "peq/1q": 0.997970223,
+            "peq/2g": 0.0,
+            "peq/2f": 999.2504883,
+            "peq/2q": 0.997970223,
+            "peq/3g": 0.0,
+            "peq/3f": 10016.52734,
+            "peq/3q": 0.997970223,
+            "gate/mix": 100.0,
+            "gate/gain": 0.0,
+            "gate/thr": -40.5,
+            "gate/range": 40.0,
+            "gate/att": 0.0,
+            "gate/hld": 50.11872101,
+            "gate/rel": 150.3349457,
+            "gate/acc": 20.0,
+            "gate/ratio": "1:4",
+            "gatesc/f": 69.88167572,
+            "gatesc/q": 3.991646767,
+            "gatesc/src": "SELF",
+            "gatesc/tap": "IN",
+            "eq/mix": 100.0,
+            "eq/lg": 1.200000286,
+            "eq/lf": 119.132431,
+            "eq/lq": 0.997970223,
+            "eq/1g": -5.5,
+            "eq/1f": 135.6063538,
+            "eq/1q": 1.830238461,
+            "eq/2g": -10.10000038,
+            "eq/2f": 396.1913757,
+            "eq/2q": 1.486628652,
+            "eq/3g": 0.0,
+            "eq/3f": 1499.78833,
+            "eq/3q": 0.997970223,
+            "eq/4g": 3.100000381,
+            "eq/4f": 3990.524414,
+            "eq/4q": 1.411322355,
+            "eq/hg": 0.0,
+            "eq/hf": 11999.27539,
+            "eq/hq": 0.997970223,
+            "dyn/mix": 100.0,
+            "dyn/gain": 0.0,
+            "dyn/thr": -20.0,
+            "dyn/ratio": "5.0",
+            "dyn/knee": 0,
+            "dyn/det": "PEAK",
+            "dyn/att": 10.0,
+            "dyn/hld": 1.0,
+            "dyn/rel": 100.4754639,
+            "dyn/env": "LOG",
+            "dyn/auto": 0,
+            "dynxo/depth": 6.0,
+            "dynxo/f": 1002.37439,
+            "dynxo/q": 0.400000006,
+            "dynsc/f": 1002.37439,
+            "dynsc/q": 1.995881796,
+            "dynsc/src": "SELF",
+            "dynsc/tap": "IN",
+            "in/set/dlyon": 0,
+            "flt/lc": 1,
+            "flt/hc": 1,
+            "flt/tf": 0,
+            "peq/on": 0,
+            "gate/on": 1,
+            "eq/on": 1,
+            "dyn/on": 1
+          },
+          "overridden": {}
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Drums"
+      ],
+      "mute_group": [
+        "Band"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Drum IEM",
+          "mode": "pre",
+          "level_db": -18
+        },
+        {
+          "bus": "Drums",
+          "mode": "post",
+          "level_db": 0
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "color": "category table: Drums",
+        "dca": "category table: Drums",
+        "mute_group": "category table: Drums",
+        "fader": "category table: Drums: fader fully down (-144 dB)",
+        "main_routes": "category table: Drums: Main only through its busses",
+        "processing": "category table: Drums: gain 20 dB, trim 0 dB",
+        "patch": "Input list patch column: 'AES50-A 1'",
+        "channel": "numbered ch 1 in the order the reply listed it",
+        "bus_sends": "Drum IEM: Instructions: Kick, Snare, Bass DI, Lead Vox and Playback send to Drum IEM; Conventions: PRE at -18 dB; Drums: Conventions: every drums channel POST at 0 dB"
+      }
+    },
+    {
+      "channel": 10,
+      "bank": "ch",
+      "name": "Lead Vox",
+      "color": "Green",
+      "source": {
+        "input": "Lead Vox",
+        "type": "Mic",
+        "model": "Beta 58A",
+        "stereo": false,
+        "phantom": false
+      },
+      "patch": {
+        "group": "A",
+        "sockets": [
+          13
+        ],
+        "stated": true
+      },
+      "processing": {
+        "preset": "Vocal",
+        "gain_db": 20,
+        "trim_db": 0,
+        "hpf_hz": null,
+        "hi_cut_hz": null,
+        "tilt_db": null,
+        "balance_db": null,
+        "invert": null,
+        "preset_values": {
+          "preset": "Vocal",
+          "file": "Vocal.chn",
+          "library": "starter/presets",
+          "sha256": "e43a94115232164d8c9d46dcc249362465951febcd9a7b7f6bb9dcb0a7fd5b40",
+          "leaves": {
+            "in/set/dlymode": "M",
+            "flt/mdl": "TILT",
+            "gate/mdl": "PSE",
+            "gatesc/type": "OFF",
+            "eq/mdl": "STD",
+            "eq/leq": "SHV",
+            "eq/heq": "SHV",
+            "dyn/mdl": "COMP",
+            "dynxo/type": "OFF",
+            "dynsc/type": "OFF",
+            "in/set/dly": 0.100000001,
+            "flt/lcf": 121.7320709,
+            "flt/lcs": "24",
+            "flt/hcf": 10018.26074,
+            "flt/hcs": "12",
+            "flt/tilt": 0.0,
+            "peq/1g": 0.0,
+            "peq/1f": 99.68543243,
+            "peq/1q": 0.997970223,
+            "peq/2g": 0.0,
+            "peq/2f": 999.2504883,
+            "peq/2q": 0.997970223,
+            "peq/3g": 0.0,
+            "peq/3f": 10016.52734,
+            "peq/3q": 0.997970223,
+            "gate/mix": 100.0,
+            "gate/gain": 0.0,
+            "gate/thr": -24.0,
+            "gate/depth": 16.0,
+            "gate/fast": 1,
+            "gate/peak": 0,
+            "gatesc/f": 1002.37439,
+            "gatesc/q": 1.995881796,
+            "gatesc/src": "SELF",
+            "gatesc/tap": "IN",
+            "eq/mix": 100.0,
+            "eq/lg": 0.0,
+            "eq/lf": 80.19641876,
+            "eq/lq": 0.997970223,
+            "eq/1g": -2.399999857,
+            "eq/1f": 186.1143799,
+            "eq/1q": 1.29419291,
+            "eq/2g": -2.999999762,
+            "eq/2f": 601.3883667,
+            "eq/2q": 2.139127016,
+            "eq/3g": 0.0,
+            "eq/3f": 1499.78833,
+            "eq/3q": 0.997970223,
+            "eq/4g": 0.0,
+            "eq/4f": 3990.524414,
+            "eq/4q": 0.997970223,
+            "eq/hg": 0.0,
+            "eq/hf": 11999.27539,
+            "eq/hq": 0.997970223,
+            "dyn/mix": 100.0,
+            "dyn/gain": 0.0,
+            "dyn/thr": -23.5,
+            "dyn/ratio": "8.0",
+            "dyn/knee": 4,
+            "dyn/det": "RMS",
+            "dyn/att": 25.0,
+            "dyn/hld": 1.0,
+            "dyn/rel": 112.7353287,
+            "dyn/env": "LOG",
+            "dyn/auto": 0,
+            "dynxo/depth": 6.0,
+            "dynxo/f": 1002.37439,
+            "dynxo/q": 0.400000006,
+            "dynsc/f": 1002.37439,
+            "dynsc/q": 1.995881796,
+            "dynsc/src": "SELF",
+            "dynsc/tap": "IN",
+            "in/set/dlyon": 0,
+            "flt/lc": 1,
+            "flt/hc": 0,
+            "flt/tf": 0,
+            "peq/on": 0,
+            "gate/on": 1,
+            "eq/on": 1,
+            "dyn/on": 1
+          },
+          "overridden": {}
+        }
+      },
+      "fader": {
+        "fader_db": -144,
+        "muted": null
+      },
+      "dca": [
+        "Vocals"
+      ],
+      "mute_group": [
+        "Vocals"
+      ],
+      "bus_sends": [
+        {
+          "bus": "Vox Wedge",
+          "mode": "pre",
+          "level_db": -18
+        },
+        {
+          "bus": "Drum IEM",
+          "mode": "pre",
+          "level_db": -18
+        },
+        {
+          "bus": "Vocals",
+          "mode": "post",
+          "level_db": 0
+        },
+        {
+          "bus": "Vox Verb",
+          "mode": "post",
+          "level_db": -6
+        }
+      ],
+      "main_routes": [],
+      "provenance": {
+        "color": "category table: Vocals",
+        "dca": "category table: Vocals",
+        "mute_group": "category table: Vocals",
+        "fader": "category table: Vocals: fader fully down (-144 dB)",
+        "main_routes": "category table: Vocals: Main only through its busses",
+        "processing": "category table: Vocals: gain 20 dB, trim 0 dB",
+        "patch": "Input list patch column: 'AES50-A 13'",
+        "channel": "numbered ch 10 in the order the reply listed it",
+        "bus_sends": "Vox Wedge: Instructions: Lead Vox sends to Vox Wedge; Conventions: monitor sends PRE at -18 dB; Drum IEM: Instructions: Kick, Snare, Bass DI, Lead Vox and Playback send to Drum IEM; Conventions: PRE at -18 dB; Vocals: Conventions: every vocals channel POST at 0 dB; Vox Verb: Conventions: Vox Verb POST at -6 dB from vocals channels"
+      }
+    }
+  ],
+  "busses": {
+    "Vox Wedge": {
+      "mono": true,
+      "color": "White",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Vox Wedge",
+        "patch": {
+          "group": "A",
+          "sockets": [
+            1
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -12,
+        "muted": false
+      },
+      "provenance": "Instructions: Vox Wedge patched to AES50-A output 1; Conventions: wedge mix is mono",
+      "index": 1
+    },
+    "Gtr Wedge": {
+      "mono": true,
+      "color": "White",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Gtr Wedge",
+        "patch": {
+          "group": "A",
+          "sockets": [
+            2
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -12,
+        "muted": false
+      },
+      "provenance": "Instructions: AES50-A output 2; wedge mono",
+      "index": 2
+    },
+    "Keys Wedge": {
+      "mono": true,
+      "color": "White",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Keys Wedge",
+        "patch": {
+          "group": "A",
+          "sockets": [
+            3
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -12,
+        "muted": false
+      },
+      "provenance": "Instructions: AES50-A output 3; wedge mono",
+      "index": 3
+    },
+    "Drum IEM": {
+      "mono": false,
+      "color": "White",
+      "destination": {
+        "type": "dedicated_output",
+        "label": "Drum IEM",
+        "patch": {
+          "group": "A",
+          "sockets": [
+            7,
+            8
+          ],
+          "stated": true
+        }
+      },
+      "fader": {
+        "fader_db": -12,
+        "muted": false
+      },
+      "provenance": "Instructions: AES50-A outputs 7 and 8; Conventions: IEM mix is stereo",
+      "index": 4
+    },
+    "Drums": {
+      "mono": false,
+      "color": "Red",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "preset": "Mix Bus",
+      "provenance": "Conventions: Drums mix bus, stereo",
+      "index": 5,
+      "preset_values": {
+        "preset": "Mix Bus",
+        "file": "Mix Bus.bus",
+        "library": "starter/presets",
+        "sha256": "953c0ebfb7843e71bc498e19a26416a82bce7b1febf891cacd2f0e3934bdf1ff",
+        "leaves": {
+          "eq/mdl": "STD",
+          "eq/leq": "BW18",
+          "eq/heq": "BW24",
+          "dyn/mdl": "COMP",
+          "dynxo/type": "OFF",
+          "dynsc/type": "OFF",
+          "dly/mode": "M",
+          "eq/mix": 100.0,
+          "eq/lg": 0.0,
+          "eq/lf": 50.6005249,
+          "eq/lq": 0.997970223,
+          "eq/1g": 0.0,
+          "eq/1f": 129.8763428,
+          "eq/1q": 0.997970223,
+          "eq/2g": 0.0,
+          "eq/2f": 299.2471619,
+          "eq/2q": 0.997970223,
+          "eq/3g": 0.0,
+          "eq/3f": 699.4875488,
+          "eq/3q": 0.997970223,
+          "eq/4g": 0.0,
+          "eq/4f": 1499.78833,
+          "eq/4q": 0.997970223,
+          "eq/5g": 0.0,
+          "eq/5f": 2992.470947,
+          "eq/5q": 0.997970223,
+          "eq/6g": 0.0,
+          "eq/6f": 6013.883789,
+          "eq/6q": 0.997970223,
+          "eq/hg": 0.0,
+          "eq/hf": 14057.40039,
+          "eq/hq": 0.997970223,
+          "eq/tilt": 0.0,
+          "dyn/mix": 100.0,
+          "dyn/gain": 0.0,
+          "dyn/thr": -20.0,
+          "dyn/ratio": "5.0",
+          "dyn/knee": 4,
+          "dyn/det": "RMS",
+          "dyn/att": 20.0,
+          "dyn/hld": 40.0,
+          "dyn/rel": 150.3349457,
+          "dyn/env": "LOG",
+          "dyn/auto": 1,
+          "dynxo/depth": 6.0,
+          "dynxo/f": 1002.37439,
+          "dynxo/q": 0.400000006,
+          "dynsc/f": 1002.37439,
+          "dynsc/q": 1.995881796,
+          "dynsc/src": "SELF",
+          "dynsc/tap": "BUS",
+          "dly/dly": 0.100000001,
+          "eq/on": 1,
+          "dyn/on": 1,
+          "dly/on": 0
+        },
+        "overridden": {},
+        "inserts": []
+      }
+    },
+    "Vocals": {
+      "mono": false,
+      "color": "Green",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "preset": "Mix Bus",
+      "provenance": "Conventions: Vocals mix bus, stereo",
+      "index": 6,
+      "preset_values": {
+        "preset": "Mix Bus",
+        "file": "Mix Bus.bus",
+        "library": "starter/presets",
+        "sha256": "953c0ebfb7843e71bc498e19a26416a82bce7b1febf891cacd2f0e3934bdf1ff",
+        "leaves": {
+          "eq/mdl": "STD",
+          "eq/leq": "BW18",
+          "eq/heq": "BW24",
+          "dyn/mdl": "COMP",
+          "dynxo/type": "OFF",
+          "dynsc/type": "OFF",
+          "dly/mode": "M",
+          "eq/mix": 100.0,
+          "eq/lg": 0.0,
+          "eq/lf": 50.6005249,
+          "eq/lq": 0.997970223,
+          "eq/1g": 0.0,
+          "eq/1f": 129.8763428,
+          "eq/1q": 0.997970223,
+          "eq/2g": 0.0,
+          "eq/2f": 299.2471619,
+          "eq/2q": 0.997970223,
+          "eq/3g": 0.0,
+          "eq/3f": 699.4875488,
+          "eq/3q": 0.997970223,
+          "eq/4g": 0.0,
+          "eq/4f": 1499.78833,
+          "eq/4q": 0.997970223,
+          "eq/5g": 0.0,
+          "eq/5f": 2992.470947,
+          "eq/5q": 0.997970223,
+          "eq/6g": 0.0,
+          "eq/6f": 6013.883789,
+          "eq/6q": 0.997970223,
+          "eq/hg": 0.0,
+          "eq/hf": 14057.40039,
+          "eq/hq": 0.997970223,
+          "eq/tilt": 0.0,
+          "dyn/mix": 100.0,
+          "dyn/gain": 0.0,
+          "dyn/thr": -20.0,
+          "dyn/ratio": "5.0",
+          "dyn/knee": 4,
+          "dyn/det": "RMS",
+          "dyn/att": 20.0,
+          "dyn/hld": 40.0,
+          "dyn/rel": 150.3349457,
+          "dyn/env": "LOG",
+          "dyn/auto": 1,
+          "dynxo/depth": 6.0,
+          "dynxo/f": 1002.37439,
+          "dynxo/q": 0.400000006,
+          "dynsc/f": 1002.37439,
+          "dynsc/q": 1.995881796,
+          "dynsc/src": "SELF",
+          "dynsc/tap": "BUS",
+          "dly/dly": 0.100000001,
+          "eq/on": 1,
+          "dyn/on": 1,
+          "dly/on": 0
+        },
+        "overridden": {},
+        "inserts": []
+      }
+    },
+    "Vox Verb": {
+      "mono": false,
+      "color": "Purple",
+      "destination": {
+        "type": "main",
+        "index": 1
+      },
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "preset": "Vox Verb",
+      "dca": [
+        "FX"
+      ],
+      "mute_group": [
+        "FX"
+      ],
+      "provenance": "Conventions: FX bus Vox Verb, stereo",
+      "index": 7,
+      "preset_values": {
+        "preset": "Vox Verb",
+        "file": "FX Vox Verb.bus",
+        "library": "starter/presets",
+        "sha256": "2e283e8906b0bd3a7723e450f47cecdbf61b4b2f5579024e49d332f29f0d4734",
+        "leaves": {
+          "eq/mdl": "STD",
+          "eq/leq": "SHV",
+          "eq/heq": "SHV",
+          "dyn/mdl": "COMP",
+          "dynxo/type": "OFF",
+          "dynsc/type": "OFF",
+          "dly/mode": "M",
+          "eq/mix": 100.0,
+          "eq/lg": 0.0,
+          "eq/lf": 60.13883591,
+          "eq/lq": 0.997970223,
+          "eq/1g": 0.0,
+          "eq/1f": 129.8763428,
+          "eq/1q": 0.997970223,
+          "eq/2g": 0.0,
+          "eq/2f": 299.2471619,
+          "eq/2q": 0.997970223,
+          "eq/3g": 0.0,
+          "eq/3f": 699.4875488,
+          "eq/3q": 0.997970223,
+          "eq/4g": 0.0,
+          "eq/4f": 1499.78833,
+          "eq/4q": 0.997970223,
+          "eq/5g": 0.0,
+          "eq/5f": 2992.470947,
+          "eq/5q": 0.997970223,
+          "eq/6g": 0.0,
+          "eq/6f": 6013.883789,
+          "eq/6q": 0.997970223,
+          "eq/hg": 0.0,
+          "eq/hf": 11999.27539,
+          "eq/hq": 0.997970223,
+          "eq/tilt": 0.0,
+          "dyn/mix": 100.0,
+          "dyn/gain": 0.0,
+          "dyn/thr": -10.0,
+          "dyn/ratio": "3.0",
+          "dyn/knee": 3,
+          "dyn/det": "RMS",
+          "dyn/att": 50.0,
+          "dyn/hld": 20.0,
+          "dyn/rel": 150.3349457,
+          "dyn/env": "LOG",
+          "dyn/auto": 1,
+          "dynxo/depth": 6.0,
+          "dynxo/f": 1002.37439,
+          "dynxo/q": 0.400000006,
+          "dynsc/f": 1002.37439,
+          "dynsc/q": 1.995881796,
+          "dynsc/src": "SELF",
+          "dynsc/tap": "BUS",
+          "dly/dly": 0.100000001,
+          "eq/on": 0,
+          "dyn/on": 0,
+          "dly/on": 0
+        },
+        "overridden": {},
+        "inserts": [
+          {
+            "point": "preins",
+            "model": "V-REV",
+            "parameters": {
+              "fxmix": 100,
+              "pdel": 20,
+              "dcy": 1.5,
+              "lmult": 1,
+              "hmult": 0.670000017,
+              "mod": 100,
+              "lc": 194.9004364,
+              "hc": 12030.25,
+              "out": "FRONT",
+              "trans": false
+            },
+            "saved_engine": 5,
+            "saved_on": false,
+            "engine": 5
+          }
+        ]
+      }
+    }
+  },
+  "dcas": {
+    "Drums": {
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "index": 1
+    },
+    "Band": {
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "index": 2
+    },
+    "Vocals": {
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "index": 3
+    },
+    "Playback": {
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "index": 4
+    },
+    "FX": {
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "index": 5
+    }
+  },
+  "mute_groups": {
+    "Band": {
+      "index": 1
+    },
+    "Vocals": {
+      "index": 2
+    },
+    "FX": {
+      "index": 3
+    }
+  },
+  "outputs": {
+    "PA": {
+      "kind": "main",
+      "index": 1,
+      "patch": {
+        "group": "LCL",
+        "sockets": [
+          1,
+          2
+        ],
+        "stated": true
+      },
+      "fader": {
+        "fader_db": 0,
+        "muted": false
+      },
+      "provenance": "Conventions: Main 1 named PA on LCL 1 and 2 at unity"
+    }
+  },
+  "unassigned_inputs": [],
+  "notes": [],
+  "meta": {
+    "console_model": "wing-compact"
+  }
+}

@@ -1,4 +1,4 @@
-"""verify's `routing.channel-misses-main` (the maintainer, 2026-09-29: routing is
+"""verify's `routing.channel-misses-main` (routing is
 checked by code, not by the critic).
 
 The Haiku critic kept reporting channels that reach Main through a mix bus
@@ -7,7 +7,7 @@ audible send (above -144 dB, or `null`: decided unity) into a bus whose
 destination is a Main is now a WARNING -- except a click, guide or
 talkback strip, which the conventions keep off Main.
 
-Built from frozen plans under `tests/fixtures/` (CLAUDE.md: never from a
+Built from frozen plans under `tests/fixtures/` (never from a
 bundle under `examples/`).
 """
 

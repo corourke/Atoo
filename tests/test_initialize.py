@@ -1,6 +1,6 @@
 """A full apply resets the desk to its initialized state first -- an earlier change.
 
-The maintainer, 2026-10-02: *"We still need to first initialize the console before
+*"We still need to first initialize the console before
 we do a full apply so that the console is in a known state."* Atoo
 reads the desk, writes back every setting that differs from the model's
 initialized capture (except what the plan sets itself and the skip-list),
@@ -514,7 +514,8 @@ def test_the_rack_warns_and_the_plan_is_still_applied():
     [warning] = [w for w in result.warnings if w.startswith("WARNING not reset")]
     assert "no initialized capture for the WING Rack" in warning
     assert "save its show file (.snap)" in warning
-    assert "freeze_initialized_capture.py add wing-rack" in warning
+    assert "attach it to a desk test report" in warning
+    assert "freeze_initialized" not in warning
     assert desk.values["/ch/1/name"] == "Kick"
     assert desk.values["/ch/30/fdr"] == -6.0
 

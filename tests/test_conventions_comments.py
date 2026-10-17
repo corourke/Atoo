@@ -1,5 +1,5 @@
 """`<!-- ... -->` in a conventions file or instructions.md: notes the build
-ignores (the maintainer, 2026-09-25).
+ignores.
 
 The file holds rules AND the engineer's notes to himself -- "(We will EQ
 this so it sounds good for a recording.)" is a reminder, not a rule.
@@ -9,7 +9,7 @@ every one before any model sees the text or any quote is checked
 against it. The bytes RECORDED about the file stay whole.
 
 Every text here is built in the test: nothing reads a bundle under
-examples/ (CLAUDE.md; tests/conftest.py enforces it).
+examples/.
 """
 
 from __future__ import annotations
@@ -333,7 +333,7 @@ def test_a_heading_inside_a_comment_is_still_not_a_section_at_any_level():
     assert [name for name, _, _ in ct.split_sections(text)] == ["", "Inputs"]
 
 
-# -- no headings needed anywhere (the maintainer, 2026-09-28) ------------------------
+# -- no headings needed anywhere ------------------------
 
 
 def test_files_with_no_headings_build_and_reach_the_model_whole(stub_build, tmp_path):

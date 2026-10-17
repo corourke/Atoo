@@ -261,7 +261,7 @@ def test_an_index_row_whose_file_is_gone_is_dropped(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_the_stack_keeps_the_newest_five_and_prunes_the_oldest(tmp_path):
-    """The maintainer, 2026-10-02: journals/ is pruned to five entries. Seven
+    """Journals/ is pruned to five entries. Seven
     applies with no desk: the newest five are kept, and the two oldest
     files are gone (the deeper cases are in tests/test_journal_prune.py)."""
     ids = [journal_stack.record(tmp_path, "apply", write_journal(
@@ -336,7 +336,7 @@ def run_cli(monkeypatch, desk, argv):
 
 def test_undoing_an_apply_out_from_under_a_later_amend_is_refused(
         tmp_path, monkeypatch, capsys):
-    """**The fix.** The same command that, before #252, reversed the whole
+    """**The fix.** The same command that,, reversed the whole
     show out from under the amend (exit 0, no warning, no refusal) now
     refuses and names what is above it.
 
@@ -431,7 +431,7 @@ def test_a_journal_from_before_the_stack_is_refused_under_a_stacked_amend(
         tmp_path, monkeypatch, capsys):
     """Found in review. `find` cannot place a journal with no
     `stack_entry`, so the staleness check never ran on one, and this
-    exited 0 having reversed the apply out from under the amend -- #252's
+    exited 0 having reversed the apply out from under the amend -- the
     hazard, intact. A journal that is
     not on the stack predates it (or came from elsewhere), so everything
     standing on the stack is above it.
@@ -601,7 +601,7 @@ def test_undo_show_does_not_read_a_top_level_journal(
 def test_undo_show_reads_the_stack_and_ignores_a_stale_top_level_copy(
         tmp_path, monkeypatch, capsys):
     """The stack is the record. A top-level journal file (a
-    bundle made between #252 and #356 has one, and a `--journal PATH`
+    bundle made between two earlier changes has one, and a `--journal PATH`
     can put one there) is neither read nor reported -- here it is a copy
     of an OLDER apply, and undo must pop the newer one on the stack."""
     old = journal_stack.record(tmp_path, "apply", write_journal(
@@ -732,7 +732,7 @@ def test_an_amend_row_carries_the_scope_the_run_was_held_to(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# An undo that aborted partway (found reviewing #259's PR, 2026-09-24)
+# An undo that aborted partway (found reviewing the PR, 2026-09-24)
 # ---------------------------------------------------------------------------
 
 def _partial_undo_journal(path: Path) -> Path:

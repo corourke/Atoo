@@ -1,4 +1,4 @@
-"""A bundle's history folders keep the newest five -- the maintainer, 2026-10-02:
+"""A bundle's history folders keep the newest five -- 
 *"continually prune the builds, journals, and logs directories to a max of
 5 entries each"*; the build-log folder is now `builds/`.
 
@@ -93,7 +93,7 @@ def test_builds_is_the_folder_and_the_old_name_is_gone():
     assert build_log.DIRNAME == bundle.BUILDS == "builds"
     old = "build" + "-logs"          # spelled apart, so this file is not a hit
     hits = []
-    for top in ("atoo", "docs", "tests", "tools", "README.md", "CLAUDE.md"):
+    for top in ("atoo", "docs", "tests", "README.md", "CLAUDE.md"):
         base = REPO / top
         files = [base] if base.is_file() else [p for p in base.rglob("*") if p.is_file()]
         for path in files:

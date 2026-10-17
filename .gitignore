@@ -1,28 +1,31 @@
+# Python bytecode and packaging
 __pycache__/
+*.py[cod]
 *.egg-info/
-.pytest_cache/
+.eggs/
 build/
 dist/
-.DS_Store
-*.pyc
-experiments/wing/wing_*Z.json
-experiments/wing/wing_*Z.rawlog.txt
-package-lock.json
-.env
 
-
+# Virtual environments
 .venv/
 venv/
 
-# The plan a rebuild replaced (cli._build moves plan.json aside when a
-# show's rebuild starts) -- a local backup, not part of the show.
-plan.previous.json
+# Test and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Claude Code's own local session/agent state (e.g. isolated worktrees for
-# background agents) -- harness-internal, never project source.
-# The one exception is .claude/settings.json: the project's shared settings
-# (the maintainer, 2026-09-24: "Make opus 5.5 the default"), which every session
-# on this repo -- including the scheduled triage runs -- has to see.
-# settings.local.json stays ignored; it is per-machine by design.
-.claude/*
-!.claude/settings.json
+# Operating system and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local settings and secrets
+.env
+
+# The plan a rebuild replaced is kept aside as plan.previous.json: a local
+# backup next to a show, not part of it.
+plan.previous.json

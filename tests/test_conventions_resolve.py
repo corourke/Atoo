@@ -387,7 +387,7 @@ def test_a_refused_resolution_is_written_but_not_used(show, monkeypatch):
 
 
 def test_the_generator_reads_the_rules_without_their_citations(show, monkeypatch):
-    """The maintainer, 2026-09-30: the citations were 60% of his resolved file,
+    """The citations were 60% of his resolved file,
     and every build paid for them. They stay in the file, for the check
     and for him; the generator gets the rules alone."""
     _write_resolved(show)
@@ -527,7 +527,7 @@ def test_resolve_always_makes_the_file_again(show, monkeypatch, capsys):
 # ---------------------------------------------------------------------------
 
 def test_the_resolve_role_runs_on_sonnet_at_high_whatever_the_generator():
-    """The maintainer, 2026-09-30: the reading every build relies on gets the
+    """The reading every build relies on gets the
     careful model, even when the generator is Haiku."""
     for generator in ("claude-sonnet-5", "claude-haiku-4-5", "claude-opus-5"):
         provider = provider_from_env({"ATOO_AI_PROVIDER": "claude",

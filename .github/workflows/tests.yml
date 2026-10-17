@@ -1,0 +1,56 @@
+# Run Atoo's test suite on every push and pull request.
+#
+# It installs the package with its test and browser-UI extras,
+# `pip install -e '.[test,ui]'`, then runs `pytest -q`, on Ubuntu, with the
+# oldest Python that pyproject.toml's `requires-python` allows and the
+# newest stable one. The oldest is read from pyproject.toml each run, so
+# the matrix follows the project's decision, not a copy of it here.
+#
+# The tests that call a real model ("live_model") skip, because no API key
+# is set. The browser tests skip too: they need a Chromium that the runner
+# does not provide at the path they look for (set ATOO_TEST_CHROMIUM to run
+# them on your own machine).
+
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        name: Read the oldest supported Python from pyproject.toml
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, re, tomllib
+          with open("pyproject.toml", "rb") as fh:
+              spec = tomllib.load(fh)["project"]["requires-python"]
+          oldest = re.search(r">=\s*(3\.\d+)", spec).group(1)
+          print("matrix=" + json.dumps([oldest, "3.x"]))
+          PY
+
+  test:
+    needs: python-versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.python-versions.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install -e '.[test,ui]'
+      - name: Test
+        run: pytest -q

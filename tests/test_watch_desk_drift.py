@@ -164,7 +164,7 @@ def test_a_strip_patched_from_aes50_makes_the_read_follow_the_port():
 
 
 def test_a_capture_without_the_status_keeps_its_verdict():
-    """A capture from before #606 holds no port status; standing R002
+    """A capture from before an earlier change holds no port status; standing R002
     down on every stage box it took inputs from would hide the fault
     R002 exists for. It keeps the verdict it had."""
     values = _without_aes50_outputs(_desk())
@@ -335,7 +335,7 @@ def test_a_matrix_the_plan_does_not_use_is_not_judged():
 
 
 def test_audit_with_a_plan_reports_the_mute_once():
-    """CV010 compares a bus's stated mute too; since #609 it reports
+    """CV010 compares a bus's stated mute too; since an earlier change it reports
     only a planned mute found off, so the two do not say it twice."""
     ids = [f.rule_id for f in diff_against_plan(_state(**{"/bus/9/mute": 1}), PLAN)]
     assert ids.count("CV017") == 1

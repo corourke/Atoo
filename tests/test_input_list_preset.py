@@ -1,12 +1,12 @@
-"""The input list's optional `preset` column (the maintainer, 2026-09-28): *"a
+"""The input list's optional `preset` column: *"a
 preset column to the input list which would override anything in
 conventions and instructions (as is currently done with patches) and in
 the input step in the UI have a chooser for the preset name drawing from
 the available presets."*
 
 Every input list and plan here is built in the test; the preset library
-is `tests/fixtures/presets/`. Nothing reads `examples/` (CLAUDE.md: a
-bundle there is a living example, not a fixture).
+is `tests/fixtures/presets/`. Nothing reads `examples/` (a bundle
+there is a living example, not a fixture).
 """
 
 from __future__ import annotations

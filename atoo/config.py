@@ -10,7 +10,7 @@ every time, or copy that file into every working directory just so
 `cli._auto_detect`'s easy-button mode finds it.
 
 **Format.** TOML, matching `critic_expectations.py`'s own precedent (also
-stdlib `tomllib`/`tomli`, also the project's only other user-authored TOML
+stdlib `tomllib`, also the project's only other user-authored TOML
 format) rather than inventing a second one:
 
     [conventions]
@@ -20,14 +20,14 @@ format) rather than inventing a second one:
 `cli._auto_detect` itself would have accepted -- and may use ``~`` for the
 home directory.
 
-**Since #90 this is a fallback for every route, not just one.** It used
+**This is a fallback for every route, not just one.** It used
 to be consulted only when `build`'s auto-detect found exactly one input
 list and no conventions file at all, so `--input x.csv` with a settled
 house file named here still failed. Now any build that reaches the end
 without a conventions file tries it. An explicit ``--conventions`` still
 wins, and a bundle's ``instructions.md`` layers *over* whichever one is
 used rather than replacing it. (It could also name a ``.rules.json`` extracted-rules file
-until #29 retired that format along with the deterministic compile path.)
+until that format was retired along with the deterministic compile path.)
 
 **`[watch_conditions]`, same shape, one section over:**
 
@@ -54,7 +54,7 @@ second, unrelated default.
     timeout = 1.0
 
 `--console <ip>` otherwise has to be retyped on every `ping`, `apply`,
-`audit` and `watch`, and the maintainer asked for this from a desk, where
+`audit` and `watch`, and this was asked for from a desk, where
 working through the console checklist means typing the same IP a dozen
 times and one wrong digit on an `apply --confirm` is a write aimed at
 the wrong box on the network. `ATOO_CONSOLE` covers the same need
@@ -124,20 +124,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Same guarded import as critic_expectations.py, and for the same reason:
-# importing tomllib at module scope broke `import atoo.cli` on Python
-# 3.9 (no tomllib until 3.11), which took the whole test suite down at
-# collection time over a file most runs never read. Kept as this module's
-# own copy rather than importing another module's private `_toml` --
-# config.py has no other reason to depend on one, and the guard is three
-# lines.
-try:  # Python >= 3.11
-    import tomllib as _toml
-except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.9/3.10
-    try:
-        import tomli as _toml  # type: ignore[no-redef]
-    except ModuleNotFoundError:
-        _toml = None  # type: ignore[assignment]
+import tomllib as _toml
 
 CONFIG_FILENAME = ".atoo.config"
 
@@ -166,8 +153,7 @@ def config_path() -> Path:
 def _read_config() -> tuple[Path, dict] | None:
     """``(path, parsed TOML)`` for ``~/.atoo.config``, or None.
 
-    Factored out of `_load_default_from_section` when `[console]` (issue
-    #128) became the first section that does **not** name a path -- an IP
+    Factored out of `_load_default_from_section` when `[console]` became the first section that does **not** name a path -- an IP
     address has nothing to existence-check -- and so could not reuse that
     function while still needing every line of its file handling.
 
@@ -180,15 +166,6 @@ def _read_config() -> tuple[Path, dict] | None:
     """
     path = config_path()
     if not path.is_file():
-        return None
-
-    if _toml is None:
-        print(
-            f"{path} exists, but this Python has no TOML reader to read it "
-            "(tomllib is stdlib from Python 3.11 on; `pip install tomli` "
-            "buys it back on 3.9/3.10) -- ignoring it",
-            file=sys.stderr,
-        )
         return None
 
     try:
@@ -240,7 +217,7 @@ def _load_default_from_section(section: str, *, expect: str = "file") -> Path | 
     # A config file that simply has no `[<section>]` is not a mistake: most
     # people set one or two of these defaults, not all of them, and a line
     # on stderr for every section they left out was printed on every
-    # command (seen 2026-09-25 on the maintainer's own config, whose missing
+    # command (seen 2026-09-25 on one engineer's own config, whose missing
     # [presets] section was announced by every step of a desk session).
     # Only a section that IS there and is the wrong shape is reported --
     # or one that is missing while the file carries a section Atoo
@@ -303,8 +280,8 @@ def load_default_presets() -> Path | None:
     way this differs from `[conventions]` and `[watch_conditions]`. Same
     quiet-but-visible failure posture otherwise.
 
-    House-level rather than per-show, on the maintainer's call (2026-09-20,
-    "Outside"): a preset library is the reusable piece, shared across
+    House-level rather than per-show, by decision (2026-09-20): a preset library is the
+    reusable piece, shared across
     shows, exactly like the conventions file -- so it has no show-bundle
     slot.
     """
@@ -332,7 +309,7 @@ def load_console_defaults() -> dict:
         port = 2223
         timeout = 1.0
 
-    The maintainer asked for this from a console session, alongside
+    This was asked for from a console session, alongside
     ``ATOO_CONSOLE``: ``--console <ip>`` has to be retyped on every
     ``apply``, ``audit``, ``watch`` and ``ping``, and getting one digit
     wrong on an ``apply --confirm`` is a write aimed at the wrong box on
@@ -434,7 +411,7 @@ def conventions_default_setting() -> str | None:
     re-reading this on every request must not print on every request.
     """
     path = config_path()
-    if _toml is None or not path.is_file():
+    if not path.is_file():
         return None
     try:
         data = _toml.loads(path.read_text(encoding="utf-8"))
@@ -480,14 +457,12 @@ def set_default_conventions(target: Path, *, replace: bool = False) -> dict:
 
 
 def set_default_presets(target: Path, *, replace: bool = False) -> dict:
-    """Make the directory ``target`` the ``[presets] default`` (issue
-    #407's `atoo init`) -- see `_set_default`."""
+    """Make the directory ``target`` the ``[presets] default`` (the `atoo init`) -- see `_set_default`."""
     return _set_default("presets", target, replace=replace)
 
 
 def set_default_workspace(target: Path, *, replace: bool = False) -> dict:
-    """Make the directory ``target`` the ``[workspace] default`` (issue
-    #407) -- see `_set_default`."""
+    """Make the directory ``target`` the ``[workspace] default`` -- see `_set_default`."""
     return _set_default("workspace", target, replace=replace)
 
 
@@ -535,12 +510,6 @@ def _set_default(section: str, target: Path, *, replace: bool = False) -> dict:
     # Messages name the file the way a person does -- ~/.atoo.config.
     shown = config_value_for(path)
     result = {"config_path": str(path), "value": value, "previous": None}
-
-    if _toml is None:
-        raise ConfigWriteError(
-            f"this Python has no TOML reader, so {shown} cannot be checked after an edit "
-            "-- nothing was written (tomllib is stdlib from Python 3.11 on; "
-            "`pip install tomli` buys it back on 3.9/3.10)")
 
     if not path.exists():
         text = f"[{section}]\n{line}\n"

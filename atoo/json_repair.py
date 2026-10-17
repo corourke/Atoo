@@ -135,8 +135,8 @@ _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 def extract_json_object(text: str) -> dict:
     """Models routinely wrap JSON in ```json fences, or preface it with a
-    sentence, despite being told not to (found against real models by
-    archive/experiments/archive/spike_ai_conventions.py, 2026-09-10) -- search for
+    sentence, despite being told not to (found against real models in an early
+    spike, 2026-09-10) -- search for
     a fenced
     block anywhere in the response and fall back to the whole text."""
     text = text.strip()
@@ -146,6 +146,6 @@ def extract_json_object(text: str) -> dict:
     return json.loads(text.strip())
 
 
-# The pre-#29 private spelling from extract.py, kept because generate.py and
+# The older private spelling from extract.py, kept because generate.py and
 # its tests were written against it.
 _extract_json_object = extract_json_object

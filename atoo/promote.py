@@ -1,10 +1,10 @@
 """`atoo patch --promote`: keep a change in the show for good, slice 3.
 
-The maintainer, 2026-09-25: *"If I decide that my show file should have
-additional inputs or additional outputs all the time I'm going to just
-change the input list or change my conventions file or instructions file
-and this will be the new show moving forward and I'll just do a rebuild.
-Amend is a special case."* A change typed at the desk is that special case.
+If a show file should have
+additional inputs or additional outputs all the time, the engineer
+changes the input list or the conventions file or instructions file,
+and that is the new show moving forward after a rebuild.
+Amend is a special case. A change typed at the desk is that special case.
 Promoting one turns it into the ordinary case after the fact: its text goes
 into the bundle's `instructions.md`, the inputs it added go onto
 `input.csv`, and from then on a normal rebuild owns them.
@@ -39,7 +39,7 @@ its plan was already a build).
 
 `input.csv` needs a category and a type for each row, and a change's
 channel does not carry a category. Both are inferred and said at INFO
-(`CLAUDE.md`: an inferred value that announces itself is not a defect):
+(an inferred value that announces itself is not a defect):
 
 * **category** -- that of an input already on the list that shares the new
   channel's first DCA (the horns join the category the other Horns-DCA

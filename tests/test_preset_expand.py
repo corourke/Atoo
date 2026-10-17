@@ -10,7 +10,7 @@ two writes whose order decides the outcome.
 
 Everything here runs against `tests/fixtures/` -- a checked-in copy of a
 real plan and five real `.chn` exports -- never a bundle under
-`examples/` (CLAUDE.md: a bundle there is a living example).
+`examples/` (a bundle there is a living example).
 """
 
 from __future__ import annotations
@@ -376,7 +376,7 @@ def _desk_for(plan: dict) -> TypedDesk:
     `/ch/1/...` processing leaf, the way the console's OWN parameter map
     describes it rather than the way the code under test does."""
     if not PARAMETER_MAP.exists():
-        pytest.skip("docs/reference/ is not in the public repository (not approved)")
+        pytest.skip("needs docs/reference/wing-compact-parameter-map.json, which this tree does not have")
     schema = json.loads(PARAMETER_MAP.read_text())["schema"]
     state = {}
     for target in _build_write_targets(plan, True)[0]:
@@ -438,7 +438,7 @@ def test_the_type_table_agrees_with_the_consoles_own_parameter_map():
     """Every entry the map describes is typed as the map types it, and
     every entry the map does NOT describe is recorded as unconfirmed."""
     if not PARAMETER_MAP.exists():
-        pytest.skip("docs/reference/ is not in the public repository (not approved)")
+        pytest.skip("needs docs/reference/wing-compact-parameter-map.json, which this tree does not have")
     schema = json.loads(PARAMETER_MAP.read_text())["schema"]
     for leaf, spec in preset_expand.LEAF_TYPES.items():
         section, _, key = leaf.rpartition(".")
@@ -552,7 +552,7 @@ def test_build_expands_presets_before_verifying(stub_build, tmp_path, capsys):
 
 
 def test_the_setup_page_shows_the_preset_and_how_many_values_it_carries():
-    """CLAUDE.md: the Python suite cannot see the browser code, so assert
+    """The Python suite cannot see the browser code, so assert
     over the served asset (step 04's Preset row)."""
     js = (Path(__file__).parents[1] / "atoo" / "web" / "static" / "setup.js").read_text()
     assert "function presetCount(" in js
@@ -653,7 +653,7 @@ def test_only_the_model_variant_lists_go_unchecked():
     choices change with the strip's model: those are exactly the list-typed
     preset leaves among the parameter map's `variant_templates`."""
     if not PARAMETER_MAP.exists():
-        pytest.skip("docs/reference/ is not in the public repository (not approved)")
+        pytest.skip("needs docs/reference/wing-compact-parameter-map.json, which this tree does not have")
     data = json.loads(PARAMETER_MAP.read_text())
     variant = set()
     for template in data["variant_templates"]:

@@ -1,8 +1,8 @@
-"""The generator's reply, expanded into a plan (docs/developer/plan-output-
-compaction.md, slices 2-4; `build-cost-reduction.md`, slice C).
+"""The generator's reply, expanded into a plan (output compaction, slices 2-4;
+cost reduction, slice C).
 
-The maintainer, 2026-09-27: *"I just see a lot of the same channel parameters in
-the plan over and over."* On the 38-channel festival build the model
+The plan had a lot of the same channel parameters over and over. On the 38-channel
+festival build the model
 wrote ~20K tokens of plan text, and a third of its thinking was
 arithmetic: counting sockets, numbering channels, repeating one send
 decision on every channel. So the model now writes LESS, and this module
@@ -33,8 +33,8 @@ still builds unchanged:
     verify still announces each decided mode at INFO. A group with no
     level is NOT "omitted means null": it is set to unity and marked
     (`inferred.decide_send_level`), because apply writes no level for
-    null and a fresh desk's -144 would leave the send silent (the maintainer's
-    festival build, 2026-09-29).
+    null and a fresh desk's -144 would leave the send silent (a festival
+    build, 2026-09-29).
   * **slips with one meaning are read** (`repair_reply`), before the
     reply's shape is checked: a missing field with one safe default, and
     an unknown field whose value says nothing. One `[repair]` note per
@@ -78,7 +78,7 @@ still builds unchanged:
     other conflict is built as stated and refused by verify.
 
 Every value this module derives rather than copies is announced at INFO
-(CLAUDE.md, "an error of judgement is not an error of patching") and
+(an error of judgement is not an error of patching) and
 cited in the object's `provenance`, so the engineer can see what code
 chose and from what.
 """
@@ -547,8 +547,8 @@ def expand_sends(plan: dict, findings: list | None = None, exclude: dict | None 
                 send["inferred"] = copy.deepcopy(group["inferred"])
             if send["level_db"] is None:
                 # Never left null: apply writes no level for null, and a
-                # fresh desk's -144 would leave the send on and silent
-                # (the maintainer's festival build, 2026-09-29). Decided here by
+                # fresh desk's -144 would leave the send on and silent.
+                # Decided here by
                 # the same rule verify and apply use, and marked, so
                 # verify announces it (`inferred.send-level`).
                 inferred.decide_send_level(send, bus_name)
@@ -664,7 +664,7 @@ def _resolve_instructed(channel: dict, label: str, rows, layers, console_model,
                         repairs: list[str]) -> dict:
     """A compact channel whose `input` is no row of the list: built only
     when the conventions or instructions ask for it AND state its source
-    socket (the maintainer, 2026-09-29; `instructed_channels.py`). Returns
+    socket (`instructed_channels.py`). Returns
     `{quote, layer, group, sockets, cited_by}`; raises `ReplyError` for a
     channel with no verifiable quote or no stated socket -- that one is
     invented, and rule 2 still holds."""
@@ -898,8 +898,8 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
         provenance["patch"] = cite
 
         # -- colour: the channel's own, else the category map's ----------
-        # A `color: null` is "not stated", like an absent key (coordinator
-        # decision C3, review 2026-09-28, R7): the module's rule is that
+        # A `color: null` is "not stated", like an absent key (review
+        # 2026-09-28, R7): the module's rule is that
         # omitted means null, and the prompt asks for `color` only when it
         # is not the category's. Haiku writes null for every field it has
         # nothing to say about, so reading null as "deliberately
@@ -964,7 +964,7 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
     channels.extend(added)
 
     # Every row no channel names and nothing the engineer wrote leaves
-    # out is built here (the maintainer, 2026-09-29), before the alternates are
+    # out is built here, before the alternates are
     # counted, so they see its socket.
     added = build_left_out_rows(plan, rows, sockets=sockets, claimed=paired, colours=colours,
                                 chosen=chosen, layers=layers, findings=findings, rules=rules)
@@ -1027,8 +1027,8 @@ def build_left_out_rows(plan: dict, rows, *, sockets: "_Sockets", claimed: set,
                         rules: "CategoryRules | None" = None) -> list[dict]:
     """Every input-list row no channel names is built as a channel, unless
     the reply's `unassigned_inputs` leaves it out with a quote that is
-    really in the conventions, the instructions or that row's own notes
-    (the maintainer, 2026-09-29). Returns the channels added (already appended to
+    really in the conventions, the instructions or that row's own notes.
+    Returns the channels added (already appended to
     `plan["channels"]`) and rewrites `unassigned_inputs` to the rows
     validly left out, as `{input, quote, from}`.
 
@@ -1331,7 +1331,7 @@ def build_instructed_strips(plan: dict, work: list[dict], *, rules: "CategoryRul
     (`write_instructed_sends`).
 
     Every value code decided rather than read off the strip is said at INFO
-    (CLAUDE.md, "an error of judgement is not an error of patching"):
+    (an error of judgement is not an error of patching):
     stereo from two sockets, the source type, phantom, an unpatched
     strip's reason, the category it took its defaults from."""
     from atoo import instructed_channels as ic
@@ -1816,7 +1816,7 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
         expand_sends(reply, findings, exclude=built)
     else:
         # The plan's own shape, from a replay or an unconstrained provider:
-        # the same reading of a null that says nothing -- after #342's
+        # the same reading of a null that says nothing -- after the
         # renaming, so an old `"socket": null` is kept as `"patch": null`.
         renamed = plan_compat.normalise_plan(reply)
         if renamed is not reply:
@@ -1874,7 +1874,7 @@ def _build_strips_on_full_reply(plan: dict, rows, strips, *, console_model, cate
 
 
 # --------------------------------------------------------------------------
-# the input list's preset column (the maintainer, 2026-09-28)
+# the input list's preset column
 # --------------------------------------------------------------------------
 
 def apply_stated_presets(plan: dict, rows, *, findings: list | None = None,

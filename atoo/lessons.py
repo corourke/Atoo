@@ -1,18 +1,17 @@
 """`atoo lessons` -- mine a bundle's builds for what keeps being
-unclear (docs/developer/build-lessons-2026-09-27.md, part C).
+unclear.
 
-`docs/developer/build-lessons-2026-09-27.md` was written by hand, from
-lines the maintainer copied out of a terminal across several builds of one
-show. That page's own proposal C is a build log (kept by
+The first list of lessons was written by hand, from
+lines copied out of a terminal across several builds of one
+show. Its own proposal was a build log (kept by
 `atoo.progress.ModelCallProgress`) plus this command: a read-only
 report over one bundle's CURRENT `plan.json`, EVERY build's log file,
 and, optionally, the versions git already has of `plan.json`, so the
 same page can be produced any time without anyone copying terminal
 lines by hand.
 
-**One file per build, not one field on the plan.** The maintainer, 2026-09-28:
-*"I'm not sure the plan.json is the best place to keep it."* Since then,
-each build writes `<bundle>/builds/<timestamp>.json`
+**One file per build, not one field on the plan.** plan.json is not the
+best place to keep a build log (2026-09-28). Each build writes `<bundle>/builds/<timestamp>.json`
 (`atoo/build_log.py`) and `plan.json` keeps only a pointer. This
 command reads every file in that folder (newest first, `--last N`
 limits how many), so a lesson can recur across builds that never all
@@ -36,8 +35,8 @@ no NLP) -- see `_topic_for`. Good enough to point a human at the right
 handful of items to read in full; the reading and the writing-down (part
 B of the design doc) stay human work.
 
-**Where the thinking went** (slice D of `docs/developer/build-cost-
-reduction.md`). Every build log that carries notes also gets a time
+**Where the thinking went** (slice D of the build cost
+reduction). Every build log that carries notes also gets a time
 breakdown: each note is filed under one of five buckets by keyword
 (`_bucket_for`, the same substring/regex style as `_topic_for`) --
 *mechanical* (counting, numbering, socket tallies, overflow),
@@ -109,7 +108,7 @@ class Topic:
 # "Where the thinking went": the buckets, in the order they are tried --
 # the first that matches a note owns it, like `_topic_for`'s own
 # first-match rule -- and the seed patterns for each, from the festival
-# build log read in docs/developer/build-cost-reduction.md. Matched against
+# build log read for the cost reduction. Matched against
 # the lower-cased note. `\b` on the leading edge only, so "count" takes
 # "counting" and "counts" but not "accounted". "required" is not counted
 # after "phantom": an input list's "phantom required" is the model
@@ -415,8 +414,7 @@ def _git_versions(directory: Path, plan_rel: str, n: int) -> tuple[list[tuple[st
 def gather(show_dir: str | Path, *, git_n: int = 0, last_n: int = 0) -> LessonsReport:
     """The report for the bundle at `show_dir`: its current `plan.json`
     (findings, conventions-audit entries, inferred markers, notes,
-    verify warnings), every build's log file in `builds/` (issue
-    #240 -- newest first, capped at `last_n` when given), plus (with
+    verify warnings), every build's log file in `builds/` (newest first, capped at `last_n` when given), plus (with
     `git_n`) up to that many older committed versions of `plan.json`
     itself, for a plan built before this shipped and still carrying its
     build log inline (`items_from_plan`'s own `meta.build_log` mining

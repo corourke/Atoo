@@ -1,4 +1,4 @@
-"""Build progress you can read, and a Stop button (the maintainer, 2026-09-26:
+"""Build progress you can read, and a Stop button (
 "Is there any way to show progress updates from the build step or get
 progressive output? It would be nice to be able to stop it if things are
 going haywire.").

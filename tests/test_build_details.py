@@ -1,11 +1,11 @@
 """An earlier change and an earlier change.
 
-#510: some INFOs say how Atoo read the model's reply, not a choice
+Some INFOs say how Atoo read the model's reply, not a choice
 an engineer might disagree with. `finding_groups` names them (build
 details) and the page reads the list from its startup data. Only an INFO
 is ever one.
 
-#514: the critic writes a short `claim`, carried as the finding's
+The critic writes a short `claim`, carried as the finding's
 `title`, with its reasoning as `message`.
 
 Nothing here reads `examples/`: the findings are built in the test, or
@@ -25,7 +25,7 @@ from atoo.diagnostics import Diagnostic, Severity
 FIXTURE = Path(__file__).parent / "fixtures" / "sixpiece_2026-10-01.plan.json"
 
 
-# ---- #510: which findings are build details ----------------------------
+# ---- Which findings are build details ----------------------------
 
 @pytest.mark.parametrize("code", sorted(finding_groups.BUILD_DETAIL_CODES))
 def test_a_build_detail_is_an_info_with_one_of_the_codes(code):
@@ -43,7 +43,7 @@ def test_a_warning_or_error_is_never_a_build_detail(code, severity):
 
 @pytest.mark.parametrize("code", [
     # Choices an engineer might disagree with: announced at INFO and shown
-    # as choices (CLAUDE.md's INFO principle).
+    # as choices (an inferred value announces itself).
     # (`reply.category-rule` was one: it is the Category
     # table obeyed, so a build detail now.) The FX notes that ARE choices
     # stay choices.
@@ -101,7 +101,7 @@ def test_the_page_gets_both_lists_from_python():
     assert startup["detail_note_sources"] == ["repair"]
 
 
-# ---- #514: the critic's claim ------------------------------------------
+# ---- The critic's claim ------------------------------------------
 
 def _reply(**finding) -> str:
     return json.dumps({"findings": [finding]})

@@ -22,12 +22,12 @@
 
      The conventions reach the model with every `<!-- ... -->` comment
      already stripped (atoo/conventions_text.py) -- comments are the
-     engineer's notes to himself and the model never sees one. So rule 4c
+     engineer's notes to themselves and the model never sees one. So rule 4c
      is about parentheses only: they are the one place a note and a rule
      share a syntax.
 
      The quoted examples in rules 4a and 4c are INVENTED, on purpose. They
-     used to be sentences from the maintainer's own conventions verbatim
+     used to be sentences from a real engineer's conventions verbatim
      (frozen in tests/fixtures/examples-conventions.md), and a
      model that recognised its own conventions in the prompt stopped to
      work out why (festival build log, 2026-09-28). tests/test_prompts.py

@@ -7,7 +7,7 @@ against a real desk, and assert the correction turns every one of them
 into a match.
 
 The journal lives in `tests/fixtures/` rather than in the show bundle it
-came from (the maintainer, 2026-09-21: *"examples is really for experimentation
+came from (*"examples is really for experimentation
 and user testing"*). It was `examples/touringband/apply-journal.json`,
 which is a **fixed bundle slot every apply overwrites** -- so a test
 asserting on historical evidence was one console session away from
@@ -239,7 +239,7 @@ def test_a_read_error_is_not_turned_into_a_number():
 def test_read_console_state_applies_it_too():
     """The read that hurt most. `apply` reads an address before deciding
     whether to write it, and `audit`/`watch` read the same leaf for
-    CV005 and #93's `patch` condition -- all of them saw a socket
+    CV005 and the `patch` condition -- all of them saw a socket
     number one lower than the desk really had."""
     from atoo.audit import read_console_state
 

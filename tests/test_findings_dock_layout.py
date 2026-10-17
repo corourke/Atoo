@@ -9,7 +9,7 @@ second fold; and a badge counting only what needs a look.
 The server's part is tested here directly (`finding_groups.label_strips`,
 the `stale` mark that replaced a sentence on every note, the critic's
 claim reaching the dock). The page's part is pinned on the served assets
--- the Python suite cannot see `web/static/` (CLAUDE.md) -- and was
+-- the Python suite cannot see `web/static/` -- and was
 driven in Chromium on copies of two show bundles and the frozen
 `docs/user/demo` bundles. Nothing here reads `examples/`.
 """
@@ -170,7 +170,7 @@ def test_the_page_draws_one_line_per_finding(client):
 def _dock_lines(js: str, findings: list[dict]) -> list[list[str]]:
     """[where, claim] for each finding, as the served `shell.js` draws its
     line: its own `whereOf`/`splitClaim`, run in Node. The Python suite
-    cannot otherwise see what the page makes of a message (CLAUDE.md)."""
+    cannot otherwise see what the page makes of a message."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
@@ -230,19 +230,21 @@ def test_a_possessive_on_the_strip_is_not_cut_off_as_the_claim(client):
 def test_the_badge_counts_what_needs_a_look_and_the_critic_never_blocks(client):
     js = client.get("/static/shell.js").text
     assert "const needsLook = checkRows.length + adviceRows.length;" in js
-    assert 'el("dock-title-count").textContent = String(needsLook);' in js
+    assert 'badge.textContent = String(needsLook);' in js
     assert 'const isAdvice = (entry) => !isInfo(entry) && entry.finding.source === "critic";' in js
     # Blocked counts errors, never the critic's.
     assert ('errors: entries.filter((entry) => entry.finding.severity === "error"\n'
             '        && entry.finding.source !== "critic").length,') in js
-    assert 'badge.textContent = blocked ? "Blocked" : (hasPlan ? "Ready to apply" : "No errors");' in js
+    # Errors first, then a stale plan, then ready.
+    assert 'const verdict = blocked ? "blocked" : (stale ? "stale" : (hasPlan ? "ok" : "none"));' in js
 
 
 def test_a_stale_plan_says_so_once_in_the_verdict(client):
     js = client.get("/static/shell.js").text
     assert "stale: active.some((entry) => !!entry.finding.stale)," in js
-    assert 'if (state === "stale" || counts.stale) {' in js
-    assert "Plan is older than its inputs: the build's and the critic's notes are as built." in js
+    assert 'const stale = hasPlan && (state === "stale" || !!counts.stale);' in js
+    assert "if (stale) {" in js
+    assert "The build's and the critic's notes are as built." in js
 
 
 def test_build_details_are_their_own_fold(client):
@@ -267,7 +269,7 @@ def test_step_04_folds_its_repair_notes(client):
 
 
 def test_the_page_starts_dark_unless_this_browser_chose_otherwise(client):
-    """The maintainer, 2026-10-11: "Dark look is almost always going to be
+    """"Dark look is almost always going to be
     preferred by users." With nothing saved the page is Dark; a saved
     light, dark or auto still wins."""
     html = client.get("/static/shell.html").text
@@ -275,8 +277,9 @@ def test_the_page_starts_dark_unless_this_browser_chose_otherwise(client):
     assert 'var theme = "dark";' in html
     assert 'if (t === "light" || t === "dark" || t === "auto") theme = t;' in html
     assert 'if (theme !== "auto") document.documentElement.dataset.theme = theme;' in html
-    assert ">Theme: Dark</button>" in html
-    assert "localStorage.setItem(THEME_KEY, next);" in js
+    assert 'id="theme-seg" role="radiogroup" aria-label="Theme"' in html
+    assert 'aria-checked="true" tabindex="0" data-value="dark">Dark</button>' in html
+    assert "localStorage.setItem(THEME_KEY, choice);" in js
 
 
 def test_each_section_counts_the_rows_it_draws(client):
@@ -300,3 +303,128 @@ def test_each_section_counts_the_rows_it_draws(client):
     for stale in ('String(check.length)', 'String(choices.length)', 'String(details.length)',
                   'String(advice.length)', 'choices: choices.length'):
         assert stale not in js
+
+
+# ---- The panel to the UI style guide ---------------------------
+# docs/developer/ui-style.md §9. Checked in Chromium, dark then light, at
+# 1440 and 390, on the Demo, a show with errors, a stale plan, a rebuild
+# with a change nobody asked for, and a show with no plan yet.
+
+def _tone(js: str, errors: int, needs_look: int) -> str:
+    """The count badge's state class, as the served `shell.js` picks it,
+    run in Node."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    line = next(l.strip() for l in js.splitlines() if l.strip().startswith("const tone = "))
+    script = (f"const counts = {{ errors: {errors} }}; const needsLook = {needs_look};\n"
+              + line + "\nconsole.log(tone);")
+    return subprocess.run([node, "-e", script], capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+
+def test_the_count_badge_is_neutral_at_zero_red_with_an_error_yellow_with_warnings(client):
+    js = client.get("/static/shell.js").text
+    assert _tone(js, 0, 0) == "is-zero"
+    assert _tone(js, 0, 3) == "is-warn"
+    assert _tone(js, 2, 5) == "is-err"
+    # Set on both badges, the title's and the collapsed tab's, every redraw.
+    assert '["dock-title-count", "dock-tab-count"].forEach((id) => {' in js
+    assert 'badge.classList.remove("is-zero", "is-warn", "is-err");' in js
+    html = client.get("/static/shell.html").text
+    assert '<span class="dock-tab-count is-zero" id="dock-tab-count">0</span>' in html
+    assert '<span class="dock-title-count is-zero" id="dock-title-count"' in html
+    css = client.get("/static/styles.css").text
+    badge = css[css.index(".dock-tab-count, .dock-title-count {"):]
+    badge = badge[:badge.index(".findings-dock {")]
+    # Never brass, and a 3px tag rather than a 9px pill.
+    assert "--accent" not in badge and "border-radius: 9px" not in badge
+    assert "border-radius: 3px;" in badge
+    assert ".dock-title-count.is-warn { background: var(--caution-solid); color: var(--caution-ink); }" in badge
+    assert ".dock-title-count.is-err { background: var(--alarm-solid); color: var(--alarm-ink); }" in badge
+
+
+def test_the_verdict_leads_with_a_large_severity_tag(client):
+    js = client.get("/static/shell.js").text
+    assert ('badge.className = "sev big " + { blocked: "sev-error", stale: "sev-warning", '
+            'ok: "sev-ok", none: "sev-none" }[verdict];') in js
+    assert ('badge.textContent = { blocked: "Blocked", stale: "Stale", ok: "Ready to apply", '
+            'none: "No plan yet" }[verdict];') in js
+    # No plan yet is neutral grey, never blue (blue is information only).
+    assert '"sev-info"' not in js[js.index("function renderVerdict"):js.index("function fill(")]
+    assert "No errors" not in js
+    css = client.get("/static/styles.css").text
+    assert ".sev.sev-none {" in css
+    assert '.dock-verdict[data-state="none"] { border-left-color: var(--border-strong); }' in css
+    # A count is bold white when not zero, dim when it is.
+    assert 'if (!n) li.className = "is-zero";' in js
+    assert ".dock-verdict-lines li.is-zero, .dock-verdict-lines li.is-zero b" in css
+    # The stale line: a Stale state tag, the sentence in meta type, and
+    # Rebuild as a quiet button.
+    assert 'tag.className = "state is-warn";' in js and 'tag.textContent = "Stale";' in js
+    assert 'btn.className = "btn btn-quiet dock-jump";' in js
+
+
+def test_the_panel_uses_the_shared_tags_buttons_and_folds(client):
+    js = client.get("/static/shell.js").text
+    html = client.get("/static/shell.html").text
+    css = client.get("/static/styles.css").text
+    # Each row leads with the severity, as a word, in the shared tint tag.
+    assert 'sev.className = "sev sev-" + severity;' in js
+    # Jump links are quiet buttons; the source is a property tag.
+    assert 'a.className = "btn btn-quiet dock-jump";' in js
+    assert 'src.className = "prop";' in js
+    for gone in ("dock-src", "source-tag", "dock-count-info", "dock-count-dim",
+                 "dock-empty-note", "sev-ready"):
+        assert gone not in js + html + css, gone
+    # Folds: Choices and Addressed are section folds, Build details the
+    # quiet Details fold; one chevron each, drawn by the shared rule.
+    assert '<details class="dock-fold fold dock-info" id="dock-info" hidden>' in html
+    assert '<details class="dock-fold fold-details dock-details" id="dock-details" hidden>' in html
+    assert '<details class="dock-fold fold dock-resolved" id="dock-resolved" hidden>' in html
+    dock_html = html[html.index('id="dock-col"'):html.index("</aside>")]
+    assert 'class="chevron"' not in dock_html
+    # The shared empty state, and a count with no brackets.
+    assert '<p class="empty dock-empty" id="dock-active-empty">' in html
+    assert 'el("dock-resolved-count").textContent = String(resolved);' in js
+
+
+def test_the_panel_has_no_type_under_11px_no_orange_and_no_opacity(client):
+    import re
+
+    css = client.get("/static/styles.css").text
+    assert ".dock-title { font-size: 16px;" in css
+    for m in re.finditer(r"([^{}]*\b(?:dock|findings-dock)[^{}]*)\{([^}]*)\}", css):
+        selector, body = m.group(1).strip(), m.group(2)
+        for size in re.findall(r"font(?:-size)?:\s*(?:\d+\s+)?([\d.]+)px", body):
+            assert float(size) >= 11, (selector, size)
+        assert "--error-fg" not in body, selector
+        assert "opacity" not in body, selector
+        assert "outline: none" not in body, selector
+    # Every control in the panel shows the brass ring.
+    assert ".dock-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }" in css
+    assert (".dock-item-check:focus-visible, .dock-row > summary:focus-visible,\n"
+            ".dock-details > summary:focus-visible { outline: 2px solid var(--accent); "
+            "outline-offset: 2px; }") in css
+
+
+def test_addressed_rows_go_neutral_and_focus_follows_the_fold(client):
+    """Nora's review: a ticked row must not read as a live
+    error, and collapsing or opening the panel keeps keyboard focus."""
+    css = client.get("/static/styles.css").text
+    assert ".dock-item.is-resolved { border-left-color: var(--border-strong); }" in css
+    assert ".dock-item.is-resolved .sev { background: var(--bg-row-alt); color: var(--text-dim); }" in css
+    js = client.get("/static/shell.js").text
+    assert ('dockTab.addEventListener("click", () => { toggleDock(); '
+            'el("dock-collapse-btn").focus(); });') in js
+    assert ('el("dock-collapse-btn").addEventListener("click", () => { toggleDock(); '
+            'dockTab.focus(); });') in js
+    html = client.get("/static/shell.html").text
+    assert "dock-head-advice" not in html + css
+
+
+def test_apply_progress_line_is_a_sentence_not_a_readout(client):
+    """A nowrap readout holding a sentence pushed Apply sideways at 390px;
+    a readout holds sockets and ids (ui-style.md §6)."""
+    html = client.get("/static/shell.html").text
+    assert '<p class="apply-progress-line meta" id="apply-progress-line" hidden></p>' in html

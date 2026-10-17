@@ -60,7 +60,7 @@ def test_the_plan_tile_says_stale_once(assets):
     """The 04 tile's badge says Stale; the badge beside Rebuild plan on
     the same tile no longer says it a second way ("Plan stale")."""
     setup = assets["setup.js"]
-    assert '["Stale", "state-stale"]' in setup
+    assert '["Stale", "is-warn"]' in setup
     assert "Plan stale" not in setup
     assert '&& f.state !== "stale"' in setup
 

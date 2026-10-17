@@ -233,13 +233,13 @@ def test_committed_fixtures_parse(name):
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
     if not (root / "experiments").is_dir():
-        pytest.skip("experiments/ is not in the public repository")
+        pytest.skip("needs experiments/, which this tree does not have")
     expectations = load_critic_expectations(root / "experiments" / "generator" / name)
     assert len(expectations) >= 2
 
 
 def test_scoring_consumes_what_the_product_path_produces():
-    """`parse_critic_findings` is `critique_plan`'s own parser (#37 split
+    """`parse_critic_findings` is `critique_plan`'s own parser (an earlier change split
     it out so the harness could not drift from it). A model reply goes
     through it and straight into the scorer, with no shape translation in
     between -- which is the whole reason both sides speak `Diagnostic`."""

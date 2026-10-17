@@ -1,4 +1,4 @@
-"""The bundle bar's editable console (the maintainer, 2026-09-24).
+"""The bundle bar's editable console.
 
 Asked whether the Apply screen should get the mockup's IP/port/timeout
 fields, the maintainer chose: *"Editable in the bundle bar only -- and the reason
@@ -90,7 +90,7 @@ def test_the_console_endpoint_answers_what_the_bar_shows():
 
 
 def test_an_edit_replaces_the_address_and_says_set_here():
-    """#137's rule turned round: an address typed into the bar says so."""
+    """The rule turned round: an address typed into the bar says so."""
     with fastapi_testclient.TestClient(create_app(initial_console=dict(CONSOLE))) as c:
         r = _set(c, BACKUP)
         assert r.status_code == 200
@@ -203,8 +203,7 @@ def test_a_compact_plan_applies_to_a_rack_from_the_apply_screen(
 
 
 def test_the_apply_screen_no_longer_says_a_different_model_is_refused(apply_client):
-    """The served asset, because the Python suite cannot see the page
-    (`CLAUDE.md`): the console line used to promise a refusal the command
+    """The served asset, because the Python suite cannot see the page: the console line used to promise a refusal the command
     no longer makes. The rule is in the Apply head's '?'."""
     js = apply_client.get("/static/apply.js").text
     assert "refuses a plan built for a different model" not in js
@@ -369,7 +368,7 @@ def test_a_stale_page_may_still_preview(apply_client, apply_desk):
 
 
 # ======================================================================
-# An amend preview on desk A never arms a write to desk B
+# A patch preview on desk A never arms a write to desk B
 # ======================================================================
 
 
@@ -379,6 +378,7 @@ def amend_client(tmp_path, monkeypatch):
     amend_tests._Desk.next_state = amend_tests._desk_state(
         amend_tests.applied_plan(), amend_tests.amended_plan())
     monkeypatch.setattr(console_module, "WingConsole", amend_tests._Desk)
+    amend_tests.fake_model(monkeypatch)
     directory = amend_tests._bundle(tmp_path)
     with fastapi_testclient.TestClient(amend_tests._app(directory, console=CONSOLE)) as c:
         c.bundle_directory = directory
@@ -391,16 +391,15 @@ def test_a_preview_on_one_desk_never_arms_a_write_to_another(amend_client):
     has read. The write is refused -- sent WITHOUT `expected_console`, so
     it is the key and nothing else that refuses it.
 
-    Mutation-checked: drop the console from `_amend_key` and this writes
-    the amendment to the backup."""
+    Mutation-checked: drop the console from `_patch_key` and this writes
+    the change to the backup."""
     status = amend_tests._preview(amend_client)
     assert status["exit_code"] == 0, status["log"]
     _set(amend_client, BACKUP)
     written = len(amend_tests._writes(amend_tests._Desk))
-    r = amend_client.post("/api/amend/run", json=armed(amend_client, "/api/amend/run"))
+    r = amend_tests._write(amend_client)
     assert r.status_code == 409 and "same console" in r.json()["error"]
     assert len(amend_tests._writes(amend_tests._Desk)) == written
-    assert not (amend_client.bundle_directory / "amend-journal.json").exists()
 
 
 def test_back_on_the_desk_it_previewed_the_write_is_armed_again(amend_client):
@@ -409,8 +408,7 @@ def test_back_on_the_desk_it_previewed_the_write_is_armed_again(amend_client):
     amend_tests._preview(amend_client)
     _set(amend_client, BACKUP)
     _set(amend_client, PRIMARY)
-    r = amend_client.post("/api/amend/run", json=armed(
-        amend_client, "/api/amend/run", expected_console=f"{PRIMARY}:2223"))
+    r = amend_tests._write(amend_client, expected_console=f"{PRIMARY}:2223")
     assert r.status_code == 200, r.json()
     status = amend_tests._wait(amend_client)
     assert status["exit_code"] == 0, status["log"]

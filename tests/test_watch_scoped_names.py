@@ -3,7 +3,7 @@
 resolved ONCE at Start to a position and watched by position after that.
 
 Every state here is built in the test -- nothing is read from
-`examples/` (CLAUDE.md, "A bundle under examples/ is a living example").
+`examples/`.
 """
 
 from __future__ import annotations
@@ -161,7 +161,7 @@ def test_row_problems_says_scoped_and_gives_the_canonical_spelling():
 
 def test_merge_treats_two_spellings_of_a_scoped_name_as_one_target():
     existing = {"watch_conditions": [_cond(id="mine", channel="bus drums")]}
-    drafted = _parse(_cond(id="theirs", channel="BUS Drums"),
+    drafted = _parse(_cond(id="theirs", channel="BUS Drums", value=True),
                      _cond(id="other", channel="DCA drums"))
     document, report = merge_drafted_conditions(existing, drafted)
     assert report.overlaps == (("theirs", "mine"),)
@@ -461,7 +461,7 @@ def test_a_watch_file_saying_main_loads():
 
 def test_a_scoped_name_matching_no_strip_of_its_kind_is_not_watched():
     """No fallback to a channel named the whole string (removed 2026-10-01,
-    CLAUDE.md "Backwards compatibility is not a goal"): `MAIN Vox` means
+    backwards compatibility is not a goal): `MAIN Vox` means
     the Main named Vox, and a channel called "Main Vox" is `CH Main Vox`."""
     state = _state(**{"/ch/3/name": "Main Vox", "/ch/3/mute": 1,
                       "/main/1/name": "PA"})

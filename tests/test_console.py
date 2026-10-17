@@ -439,7 +439,7 @@ def test_a_drained_datagram_is_kept_under_the_address_it_names(server_factory):
     datagrams for `/ch/7/tags` first -- the write that the client had
     already given up on, landing two datagrams late.
 
-    Before #144 those were counted and dropped, and `apply` reported a
+    Before an earlier change those were counted and dropped, and `apply` reported a
     MISMATCH for a write that had landed. They are addressed, so they are
     kept."""
     def handler(address, typetag, args):
@@ -460,7 +460,7 @@ def test_a_drained_datagram_is_kept_under_the_address_it_names(server_factory):
 
 def test_a_late_reply_is_offered_only_for_the_address_it_names(server_factory):
     """No nearest-match and no "it was probably about this". An
-    unaddressed value is not evidence (WORK_PLAN lesson 17); the only
+    unaddressed value is not evidence; the only
     reason a drained datagram can be used at all is that it carries its
     own identity."""
     def handler(address, typetag, args):

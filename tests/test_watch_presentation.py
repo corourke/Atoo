@@ -1,11 +1,11 @@
 """What the Watch page's alert table holds.
 
-* **#503 -- notes are not alerts.** A note about the watch itself (a
+* **Notes are not alerts.** A note about the watch itself (a
   scoped name resolved at Start, a condition not watched, W001's
   name refresh) is a `watch.WatchNote`. The CLI prints it at its
   severity as before; the page shows it in a status line, from the
   frame's `notes`, and never as a row.
-* **#504 -- one fault, one row.** A built-in finding whose addresses are
+* **One fault, one row.** A built-in finding whose addresses are
   all cited by a firing `WATCH:` condition is folded under that
   condition's row (`also`), and comes back as its own row when the
   condition stops firing.
@@ -21,7 +21,7 @@ from conftest import require_fastapi_testclient
 
 from atoo.audit import ConsoleState, DEFAULT_RULES, Severity
 from atoo.diagnostics import Diagnostic
-from atoo.watch import (WatchEvent, WatchNote, name_refresh_note, present_findings,
+from atoo.watch import (WatchEvent, WatchNote, finding_key, name_refresh_note, present_findings,
                              watch)
 from atoo.watch_conditions import build_watch_rules, parse_watch_conditions
 
@@ -49,7 +49,7 @@ def _builtin(code, addresses, severity=Severity.WARNING):
     return Diagnostic.audit(code, severity, "channels", "A Built-in Rule", "detail", addresses)
 
 
-# ---- #503: notes ----------------------------------------------------------
+# ---- Notes ----------------------------------------------------------
 
 
 def test_a_scoped_name_resolution_is_a_note_with_a_short_form():
@@ -95,7 +95,7 @@ def test_present_findings_moves_notes_out_of_the_alerts():
     assert [n.summary for n in shown.notes] == ["DCA Band → DCA 1"]
 
 
-# ---- #504: folding --------------------------------------------------------
+# ---- Folding --------------------------------------------------------
 
 
 def test_a_builtin_on_the_same_strip_and_field_folds_under_the_condition():
@@ -105,7 +105,7 @@ def test_a_builtin_on_the_same_strip_and_field_folds_under_the_condition():
     other = _builtin("L002", ("/ch/7/fdr",), Severity.INFO)
     shown = present_findings([same, condition, other])
     assert [f.rule_id for f in shown.alerts] == ["WATCH:band-open", "L002"]
-    assert shown.folded == {(condition.rule_id, condition.addresses): [same]}
+    assert shown.folded == {finding_key(condition): [same]}
 
 
 def test_a_builtin_citing_more_than_the_condition_keeps_its_own_row():

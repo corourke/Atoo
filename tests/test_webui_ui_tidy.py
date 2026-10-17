@@ -2,8 +2,7 @@
 
 The Python suite cannot run the page, so most of these assert on the
 served assets -- crude, but it is what stands between a reworded line and
-its quiet return (CLAUDE.md, "A rename that crosses into
-`atoo/web/static/` is invisible to the test suite"). Where the server
+its quiet return. Where the server
 shapes what the page prints (a path, a run's label), the payload itself is
 asserted.
 """
@@ -52,7 +51,10 @@ def test_step_01_footer_does_not_say_the_house_style_is_set(assets):
 
 def test_stage_headings_carry_no_requirement_ids(assets):
     html = _static(assets, "shell.html")
-    kinds = [line for line in html.splitlines() if 'class="stage-kind"' in line]
+    # A block's notation (`.notation`, ui-style.md §3) is what `.stage-kind`
+    # was; Watch's last one went.
+    kinds = [line for line in html.splitlines()
+             if 'class="stage-kind"' in line or 'class="notation' in line]
     assert kinds
     for line in kinds:
         assert "FR-" not in line and "O2 &middot;" not in line, line
@@ -88,7 +90,7 @@ def test_the_empty_screen_offers_the_demo_show(assets):
     assert "noShowNotice.hidden = !!bundle" in shell
     start = shell.index('el("try-demo-btn")')
     wiring = shell[start:start + 400]
-    assert "consoleKindDemo.checked = true" in wiring and "submitConsoleEdit()" in wiring
+    assert "consoleKindSeg.select(\"demo\")" in wiring and "submitConsoleEdit()" in wiring
 
 
 # ---- The demo's words, and short paths --------------
@@ -119,12 +121,6 @@ def test_the_plan_payload_carries_a_short_display_path(tmp_path):
         body = c.get("/api/plan").json()
     assert body["path"] == str(directory / "plan.json")
     assert body["display_path"] == "touringband/plan.json"
-
-
-def test_patch_rebuild_hint_names_the_bundle_not_its_folder(assets):
-    amend = _static(assets, "amend.js")
-    assert '"atoo build --show " + bundle.name' in amend
-    assert '"atoo build --show " + bundle.directory' not in amend
 
 
 # ---- A preview says so; a run stays in its mode ----

@@ -225,7 +225,7 @@ def test_field_never_read_is_no_finding_no_crash():
 # --- Membership and patch fields ------------------------------
 #
 # `==` asserts the relationship holds ("is a member of", "is patched to"),
-# `!=` asserts it does not -- the maintainer's call on #93. A finding is the
+# `!=` asserts it does not -- the maintainer's call. A finding is the
 # assertion being violated, the same polarity as every scalar field above.
 
 
@@ -315,7 +315,7 @@ def test_mute_group_membership_reads_the_mgrp_tag():
 
 
 def test_unresolvable_group_name_is_no_finding_no_crash():
-    # Nothing live is called "Drums" -- per the maintainer's #93 note, skipped
+    # Nothing live is called "Drums" -- per the maintainer's an earlier change note, skipped
     # this cycle rather than reported, the same precedent an unresolvable
     # channel name already follows.
     state = ConsoleState({"/ch/1/name": "Kick", "/ch/1/tags": "", "/dca/1/name": "Guitars"})

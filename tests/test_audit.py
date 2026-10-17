@@ -597,7 +597,7 @@ def test_diff_patch_match_is_clean():
 def test_diff_null_plan_field_produces_no_finding_even_when_live_is_surprising():
     # fader.muted is None (the conventions didn't say) -- CV001 compares
     # only a stated mute, so it says nothing. CV017 does:
-    # apply writes an unstated mute OFF (`apply.MUTED_DEFAULT`), so a
+    # apply writes an unstated mute OFF (`console_facts.MUTED_DEFAULT`), so a
     # muted channel is muted against the plan as applied.
     plan = {"channels": [_plan_channel(fader={"fader_db": None, "muted": None})]}
     state = ConsoleState({"/ch/1/name": "Kick", "/ch/1/mute": 1})
@@ -696,8 +696,9 @@ def test_diff_main_route_mismatch():
     plan = {"channels": [_plan_channel(main_routes=[{"index": 1}])]}
     state = ConsoleState({"/ch/1/name": "Kick", "/ch/1/main/1/on": 0})
     findings = diff_against_plan(state, plan)
-    # CV016 too: that route was Kick's only planned path.
-    assert _diff_rule_ids(findings) == {"CV007", "CV016"}
+    # That route was Kick's only planned path, so CV016 says it and CV007
+    # stands down: a strip cut off from everything is one row.
+    assert _diff_rule_ids(findings) == {"CV016"}
 
 
 def test_diff_main_route_the_plan_does_not_list_but_the_desk_has_on():
@@ -780,11 +781,11 @@ def test_diff_processing_gain_db_silent_when_group_not_vph_capable():
     assert diff_against_plan(state, plan) == []
 
 
-def test_diff_processing_filter_family_is_never_diffed():
-    """hpf_hz/hi_cut_hz/tilt_db (the {base}/flt/* family) are permanently
-    excluded from this check -- the unconfirmed GET-reply shape --
-    so a wildly contradicting live flt/lcf reading produces no finding at
-    all, even though hpf_hz is stated."""
+def test_diff_processing_filter_family_is_diffed_with_the_readback_tolerance():
+    """hpf_hz/hi_cut_hz/tilt_db (the {base}/flt/* family) are compared: a
+    wildly contradicting live reading is one finding per filter, naming the
+    leaf, and a reading at the desk's nearest step is not a finding.
+    `tests/test_audit_processing_plan.py` has the rest."""
     plan = {"channels": [_plan_channel(
         processing={"hpf_hz": 80.0, "preset": None, "hi_cut_hz": 12000.0, "tilt_db": 3.0},
     )]}
@@ -792,7 +793,13 @@ def test_diff_processing_filter_family_is_never_diffed():
         "/ch/1/name": "Kick",
         "/ch/1/flt/lcf": 500.0, "/ch/1/flt/hcf": 2000.0, "/ch/1/flt/tilt": -3.0,
     })
-    assert diff_against_plan(state, plan) == []
+    findings = diff_against_plan(state, plan)
+    assert _diff_rule_ids(findings) == {"CV008"}
+    assert [f.addresses for f in findings] == [("/ch/1/flt/lcf",), ("/ch/1/flt/hcf",),
+                                                ("/ch/1/flt/tilt",)]
+    near = ConsoleState({"/ch/1/name": "Kick", "/ch/1/flt/lcf": 80.5, "/ch/1/flt/hcf": 12018.0,
+                         "/ch/1/flt/tilt": 3.0})
+    assert diff_against_plan(near, plan) == []
 
 
 # --------------------------------------------------------------------------

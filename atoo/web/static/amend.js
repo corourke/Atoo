@@ -1,24 +1,22 @@
 (() => {
   "use strict";
 
-  // Patch, inside Apply (an earlier change as "Amend", mockup version H phase 5;
-  // an earlier change made it the Patch screen, where a change is typed) -- loaded
-  // by the shell before apply.js, and coded against `window.Atoo`.
+  // Patch, inside Apply (where a change is typed) -- loaded by the shell
+  // before apply.js, and coded against `window.Atoo`.
   //
   // THIS FILE WRITES NOTHING AND ARMS NOTHING. It is a renderer: it draws
-  // the review of one `atoo patch` run (a typed change) or `atoo
-  // amend` run (a rebuilt plan) under Preview, step 2, from the review the
-  // command itself wrote (`--review-json`, `amend.review_payload`) -- the
+  // the review of one `atoo patch` run (a typed change) under Preview,
+  // step 2, from the review the command itself wrote (`--review-json`, `amend.review_payload`) -- the
   // desk itself is drawn as scribble strips by apply.js, from the review's
   // `desk` -- the model call's progress while a change
   // compiles, and the bundle's journal stack (step 4, History) from `GET
   // /api/journals` -- a patch row by its change's short name and text.
-  // Every POST that can reach a console -- apply, patch, amend, undo -- is
+  // Every POST that can reach a console -- apply, patch, undo -- is
   // apply.js's, behind its one arming checkbox. Patch lives inside Apply
-  // precisely so that stays true (OPTIONS-H: "exactly one screen writes to
-  // a console").
+  // precisely so that stays true: exactly one screen writes to
+  // a console.
   //
-  // Words (the maintainer, 2026-09-26): what is typed is a CHANGE. "Patch" in a
+  // Words: what is typed is a CHANGE. "Patch" in a
   // finding or a plan field means socket routing.
   //
   // Three rules this renderer keeps, all from the issue:
@@ -28,7 +26,7 @@
   //     answer. It is never offered as a place to put anything, and there
   //     is no click-to-open on the drawing: the strip to reuse is typed.
   //   * A strip's own name is not the whole truth. On a WING a name typed
-  //     at the desk lands on the source SOCKET ("Podium" on LCL 20, #204),
+  //     at the desk lands on the source SOCKET ("Podium" on LCL 20),
   //     so a strip whose own name is blank can be in use. Where the source
   //     carries the name, that is what is shown, and said to be the source.
   //   * A removal is not an addition. "Returned to free" CLEARS a strip on
@@ -49,7 +47,7 @@
     edited: "Edited: named fields only",
     renumbered: "Refused: renumbered",
     unplaceable: "Refused: no free strip",
-    refused: "Refused: names something that is not there",
+    refused: "Refused: cannot be written as asked",
   };
 
   const KIND_NOTE = {
@@ -64,8 +62,11 @@
       "said in words only, or is a fader the change did not name.",
     edited: "Already on the desk and running. Only the fields the change names are written " +
       "(listed below, old -> new); every other address of it is in the untouched proof.",
-    refused: "The change names a bus, DCA, mute group or channel that is neither on the " +
-      "desk nor added by the change. Nothing is written until it is said again.",
+    refused: "The change asks for something the plan or the desk cannot take: an object " +
+      "that is not there, a field a running object does not carry or a change may not set, " +
+      "a value out of range, or a bus, DCA, mute group or channel that is neither on the " +
+      "desk nor added by the change. The line says which. Nothing is written until it is " +
+      "said again.",
   };
 
   function text(tag, cls, value) {
@@ -154,14 +155,16 @@
 
     // Each named field a change sets on something
     // already running, old -> new -- the command's own line. A physical
-    // repatch (`moves_audio`) is drawn first and in the danger colour: it
-    // moves audio the moment it is written.
+    // repatch (`moves_audio`) and a phantom switch (`switches_phantom`) are
+    // drawn first and in the danger colour: each acts on the desk the
+    // moment it is written.
+    const isLive = (e) => !!(e.moves_audio || e.switches_phantom);
     const edits = (review.edits || []).slice().sort((a, b) =>
-      (b.moves_audio ? 1 : 0) - (a.moves_audio ? 1 : 0));
+      (isLive(b) ? 1 : 0) - (isLive(a) ? 1 : 0));
     el("amend-edits").hidden = !edits.length;
     const ed = el("amend-edits-list");
     ed.textContent = "";
-    edits.forEach((e) => ed.appendChild(text("li", e.moves_audio ? "is-live" : "", e.line)));
+    edits.forEach((e) => ed.appendChild(text("li", isLive(e) ? "is-live" : "", e.line)));
 
     const releases = review.releases || [];
     el("amend-releases").hidden = !releases.length;
@@ -179,11 +182,8 @@
     const groups = el("amend-withheld-groups");
     groups.textContent = "";
     (review.withheld_groups || []).forEach((g) => {
-      const chip = document.createElement("span");
-      chip.className = "apply-chip";
-      chip.appendChild(text("span", "apply-chip-key", g.base));
-      chip.appendChild(document.createTextNode(String(g.count)));
-      groups.appendChild(chip);
+      // A readout (§6): data, not a tag.
+      groups.appendChild(text("span", "readout", g.base + " " + g.count));
     });
 
     const proof = review.proof;
@@ -223,8 +223,8 @@
     (verify.warnings || []).forEach((w) => notes.appendChild(text("li", "is-warning", w)));
   }
 
-  // The change this review is of: "change 3: Horns for tonight", and the
-  // words that were typed. A rebuilt-plan review has no change.
+  // The change this review is of: "change 3: Add Trumpet and Sax on LCL 21-22", and the
+  // words that were typed.
   function renderChange(review) {
     const change = review.change;
     el("patch-change-head").hidden = !change;
@@ -311,9 +311,14 @@
   let stack = { entries: [] };
   // The id of the write this page just made, or null.
   let fresh = null;
+  // What apply.js says about the Preview undo button: `reason` is why it is
+  // locked right now ("" when it is not), `shown` is true while the Preview
+  // box (step 2) is showing an undo preview, so the button reads "Preview
+  // undo again" and points at it.
+  let undoUi = { reason: "", shown: false };
 
-  // Each row names the desk it wrote to (per-desk journal history, the maintainer
-  // 2026-09-24: one plan, a primary and a backup). `on_this_desk` is the
+  // Each row names the desk it wrote to (per-desk journal history: one plan, a
+  // primary and a backup). `on_this_desk` is the
   // server's answer for the console in the bundle bar -- true, false, or
   // null with no console -- and `is_top` is that desk's newest standing
   // write: the one Undo reverses. A row from before entries named their
@@ -341,6 +346,30 @@
     return td;
   }
 
+  // Preview undo, in the last cell of the newest standing row. Brass until it
+  // has been used; then the outline "Preview undo again" with a link to where
+  // the preview is shown. Locked, it says why in words beside the button.
+  function undoPreviewControls(box) {
+    const btn = text("button", undoUi.shown
+      ? "btn btn-secondary btn-sm" : "btn btn-primary btn-sm",
+      undoUi.shown ? "Preview undo again" : "Preview undo");
+    btn.type = "button";
+    btn.id = "undo-preview-btn";
+    btn.disabled = !!undoUi.reason;
+    box.appendChild(btn);
+    if (undoUi.reason) {
+      const note = text("span", "act-note", undoUi.reason);
+      note.id = "undo-preview-reason";
+      btn.setAttribute("aria-describedby", note.id);
+      box.appendChild(note);
+    } else if (undoUi.shown) {
+      const link = text("button", "shown-in", "shown in step 2 \u2191");
+      link.type = "button";
+      link.dataset.shownIn = "1";
+      box.appendChild(link);
+    }
+  }
+
   function renderStack() {
     const rows = el("journal-stack-rows");
     rows.textContent = "";
@@ -353,17 +382,28 @@
       else if (other) tr.className = "is-other-desk";
       // The write this page just made, highlighted at the top.
       if (fresh && entry.id === fresh) tr.classList.add("is-fresh");
-      tr.appendChild(text("td", "readout-cell", (entry.timestamp || "").replace("T", " ").slice(0, 19)));
-      tr.appendChild(text("td", "", entry.kind));
-      const desk = text("td", "journal-desk-cell", deskCell(entry));
+      // Each cell carries its column's name: at phone width a row is a stack
+      // of labelled lines, drawn from `data-l`.
+      const labelled = (td, label) => { td.dataset.l = label; tr.appendChild(td); return td; };
+      labelled(text("td", "readout-cell", (entry.timestamp || "").replace("T", " ").slice(0, 19)),
+               "When (UTC)");
+      labelled(text("td", "", entry.kind), "Kind");
+      const desk = labelled(text("td", "journal-desk-cell", deskCell(entry)), "Desk");
       if (entry.desk_label) desk.title = entry.desk_label;
-      tr.appendChild(desk);
-      tr.appendChild(summaryCell(entry));
-      tr.appendChild(text("td", "", entry.mismatches));
+      labelled(summaryCell(entry), "Summary");
+      labelled(text("td", "", entry.mismatches), "Mismatches");
       const flag = document.createElement("td");
-      if (entry.is_top) flag.appendChild(text("span", "source-tag", "top -- undo reverses this"));
-      else if (entry.undone_by) flag.appendChild(text("span", "source-tag", "undone"));
-      else if (other) flag.appendChild(text("span", "source-tag", "other desk -- left alone"));
+      flag.className = "journal-act-cell";
+      flag.dataset.l = "";
+      const stack_ = document.createElement("div");
+      stack_.className = "act-stack";
+      flag.appendChild(stack_);
+      // A tag holds a word and nothing else: Undone, or Other desk. The
+      // newest standing write on this desk carries Preview undo instead; the
+      // button is the mark. Older rows have none.
+      if (entry.undone_by) stack_.appendChild(text("span", "prop", "Undone"));
+      else if (other) stack_.appendChild(text("span", "prop", "Other desk"));
+      if (entry.is_top) undoPreviewControls(stack_);
       if (entry.kind === "patch" && entry.change && !entry.undone_by && !entry.aborted) {
         const keep = text("button", "btn btn-secondary btn-sm promote-btn", "Keep this in the show");
         keep.type = "button";
@@ -373,17 +413,36 @@
         keep.dataset.label = entry.change_label || "this change";
         keep.title = "Put this change's text in instructions.md and the inputs it added in " +
           "input.csv, so the next rebuild owns them. Previews first.";
-        flag.appendChild(keep);
+        stack_.appendChild(keep);
       }
       tr.appendChild(flag);
       tr.title = entry.path;
       rows.appendChild(tr);
     });
+    // No row yet: the line says so, and where the button will be it holds a
+    // locked Preview undo with its reason in words.
     const empty = el("journal-stack-empty");
     empty.hidden = entries.length > 0;
-    empty.textContent = stack.bundle
-      ? "Nothing written from this show yet."
-      : "No show bundle open.";
+    empty.textContent = "";
+    const demo = !!SP.console().demo;
+    empty.appendChild(text("span", "", !stack.bundle ? "No show bundle open."
+      : demo ? "The Demo show has no history: nothing is written to its simulated desk."
+        : "Nothing written from this show yet."));
+    if (stack.bundle && !entries.length) {
+      const box = document.createElement("div");
+      box.className = "act-stack";
+      const btn = text("button", "btn btn-secondary btn-sm", "Preview undo");
+      btn.type = "button";
+      btn.id = "undo-preview-btn";
+      btn.disabled = true;
+      const note = text("span", "act-note", demo ? "the Demo show is read-only"
+        : "nothing has been written from this show");
+      note.id = "undo-preview-reason";
+      btn.setAttribute("aria-describedby", note.id);
+      box.appendChild(btn);
+      box.appendChild(note);
+      empty.appendChild(box);
+    }
     const deskNote = el("journal-stack-desk");
     deskNote.textContent = !stack.bundle ? ""
       : stack.desk_label
@@ -392,7 +451,7 @@
             ? " Rows match it by address until it is pinged." : "")
         : (SP.console().demo
           // Demo is not a desk, so it has no journal rows either
-          // (apply.js says, under the buttons, that Undo is switched off).
+          // (apply.js says, beside Preview undo, that Undo is switched off).
           ? ""
           : "No console in the bar: Undo has no desk to act on.");
   }
@@ -412,7 +471,7 @@
     return (stack.entries || []).some((e) => e.is_top);
   }
 
-  // The id of the row drawn as "top -- undo reverses this": what a
+  // The id of the newest standing row, the one Preview undo is on: what a
   // confirmed undo sends as `expected_undo_id`, so a write recorded since
   // (from another tab or a terminal) refuses the undo instead of reversing
   // a row this page never showed.
@@ -429,7 +488,7 @@
       subject.textContent = "No show bundle open. Open one in the bar above.";
       return;
     }
-    // Per-desk journals (the maintainer, 2026-09-24): the applied plan is the one
+    // Per-desk journals: the applied plan is the one
     // the bar's desk's own newest write left on it, found by serial, and
     // plan.json only when this bundle has not written to that desk yet.
     // The review's first INFO line says which it was.
@@ -438,10 +497,6 @@
     subject.appendChild(text("code", "", bundle.name));
     subject.appendChild(document.createTextNode(" as it stands on the desk. Strips already " +
       "in use stay where they are. Setup window only, not mid-show."));
-    // The bundle's name, not its absolute path, as step 04's
-    // command line writes it; the folder is on the bundle bar's title.
-    el("amend-build-hint").textContent = "atoo build --show " + bundle.name +
-      "/ --out " + bundle.name + "/rebuilt.plan.json";
   }
 
   // The stack is refreshed by apply.js -- at first paint, on a bundle
@@ -463,5 +518,18 @@
     entries: () => (stack.entries || []).slice(),
     // Highlight one row as the write just made (null clears it).
     setFresh: (id) => { fresh = id || null; renderStack(); },
+    // Preview undo's state, from apply.js: why it is locked ("" when it is
+    // not) and whether the Preview box is showing an undo preview.
+    setUndoUi: (reason, shown) => {
+      const next = { reason: reason || "", shown: !!shown };
+      if (next.reason === undoUi.reason && next.shown === undoUi.shown) return;
+      undoUi = next;
+      renderStack();
+    },
+    // The desk the newest standing row was written to, as its row names it.
+    topDesk: () => {
+      const top = (stack.entries || []).find((e) => e.is_top);
+      return top ? deskCell(top).trim() : "";
+    },
   };
 })();

@@ -44,6 +44,8 @@ _DEFAULTS = {
     "grp": "OFF", "in": 0, "vph": 0,
     "ins": "NONE", "mdl": "NONE",
     "assign": "OFF", "altsw": 0,
+    # A factory desk's busses, Mains and Matrices are all stereo.
+    "busmono": 0,
     # No device on any AES50 port; no monitor source.
     "stat": "-", "src": "OFF",
 }
@@ -66,6 +68,15 @@ CONDITIONS_JSON = json.dumps({"watch_conditions": [
     {"id": "crowd-patch", "description": "Crowd Mic is on LCL 9",
      "channel": "Crowd Mic", "field": "patch", "operator": "==", "value": "LCL 9",
      "severity": "warning"},
+    {"id": "piano-in-iem", "description": "Piano stays on in the drummer IEM",
+     "channel": "Piano", "field": "send_on", "bus": "BUS 9", "operator": "==", "value": True,
+     "severity": "error"},
+    {"id": "piano-iem-level", "description": "Piano stays above -10 in the drummer IEM",
+     "channel": "Piano", "field": "send_db", "bus": "BUS 9", "operator": ">=", "value": -10,
+     "severity": "warning"},
+    {"id": "piano-48v", "description": "48V stays on for the Piano",
+     "channel": "Piano", "field": "phantom", "operator": "==", "value": True,
+     "severity": "error"},
 ]})
 
 
@@ -73,8 +84,15 @@ def _conditions() -> list[dict]:
     return parse_watch_conditions(CONDITIONS_JSON, source="<test>")
 
 
+#: Rules whose evidence is not an address, so a read plan has nothing to
+#: scope for them: L003 reads the console's meter stream (`tests/test_clip_detection.py`). Their row in `watch_scope` is only the
+#: names they quote.
+_NOT_ADDRESS_RULES = frozenset({"L003"})
+
+
 def _rules():
-    return list(DEFAULT_RULES) + build_watch_rules(_conditions())
+    return ([r for r in DEFAULT_RULES if r.id not in _NOT_ADDRESS_RULES]
+            + build_watch_rules(_conditions()))
 
 
 def _full_state() -> ConsoleState:
@@ -123,6 +141,9 @@ def _full_state() -> ConsoleState:
     # CH003: an engaged mute group silencing an active member.
     values["/ch/5/name"], values["/ch/5/tags"] = "Gtr", "#M2"
     values["/mgrp/2/name"], values["/mgrp/2/mute"] = "FX", 1
+    # CH004: a muted DCA over an active member.
+    values["/ch/13/name"], values["/ch/13/tags"] = "Pad", "#D3"
+    values["/dca/3/name"], values["/dca/3/mute"] = "Keys", 1
     # N001 -- two strips sharing a non-default name.
     values["/ch/6/name"] = values["/ch/7/name"] = "Vox"
     # L001, on all three source banks a send can live on.
@@ -144,6 +165,16 @@ def _full_state() -> ConsoleState:
     values["/ch/12/in/set/altsrc"], values["/ch/12/in/conn/altgrp"] = 1, "CRD"
     # C005: the global alternate switch engaged.
     values["/io/altsw"] = 1
+    # C007: a jack muted at the socket under two strips in use (the C002
+    # pair above share LCL 5), and a stereo source on LCL 13/14 with the
+    # left leg unmuted and the right muted.
+    values["/io/in/LCL/5/mute"] = 1
+    values["/io/in/LCL/14/mute"] = 1
+    # ... and a strip with an alternate patch on a muted socket, handed to
+    # C005 while the switch above is engaged; drop either and C007 speaks.
+    values["/ch/20/name"], values["/ch/20/in/conn/altgrp"] = "Alt Mic", "A"
+    values["/ch/20/in/conn/grp"], values["/ch/20/in/conn/in"] = "LCL", 18
+    values["/io/in/LCL/18/mute"] = 1
     # E001: an insert switched on, naming an empty slot.
     values["/ch/13/preins/on"], values["/ch/13/preins/ins"] = 1, "FX1"
     # E002: a reverb loaded that nothing inserts.
@@ -168,14 +199,65 @@ def _full_state() -> ConsoleState:
     values["/io/out/A/1/grp"], values["/io/out/A/1/in"] = "BUS", 13
     values["/bus/7/name"] = "Stage Wedge"
     values["/ch/15/send/7/on"], values["/ch/15/send/7/lvl"] = 1, 0.0
+    # C008: a stage box on AES50-B in error, with a strip patched from it
+    # and an output carrying a source. C009: a stage box on AES50-C that is
+    # updating, with a strip patched from it.
+    values["/$stat/B/stat"], values["/$stat/C/stat"] = "ERR", "UPD"
+    for port in ("B", "C"):
+        for n in range(1, console_facts.OUTPUT_SOCKETS[port] + 1):
+            values[f"/io/out/{port}/{n}/grp"], values[f"/io/out/{port}/{n}/in"] = "OFF", 0
+    values["/io/out/B/3/grp"], values["/io/out/B/3/in"] = "BUS", 3
+    values["/ch/21/name"] = "Stage B In"
+    values["/ch/21/in/conn/grp"], values["/ch/21/in/conn/in"] = "B", 1
+    values["/ch/22/name"] = "Stage C In"
+    values["/ch/22/in/conn/grp"], values["/ch/22/in/conn/in"] = "C", 2
     # Matrix 4, fed by bus 4, is the phones' source. Drop the
     # source from a scope and R006 calls it unpatched.
     values["/bus/4/send/MX4/on"], values["/bus/4/send/MX4/lvl"] = 1, 0.0
     values["/cfg/mon/1/src"] = "MTX.4"
+    # R008: named strips with no send or route on are everywhere in this
+    # state. The aux below is exempt only because a monitor output listens
+    # to it; drop the monitor source from a scope and it is reported.
+    values["/aux/3/name"], values["/cfg/mon/2/src"] = "Cue", "AUX.3"
+    # C006 hands a strip with an alternate patch to C005 while the global
+    # switch (above) is engaged; drop either from a scope and it is reported.
+    values["/ch/16/name"], values["/ch/16/in/conn/altgrp"] = "Alt Strip", "A"
+    # R009: a channel patched from bus 8's left side that sends to bus 8,
+    # and an aux patched from Main 4's left side that routes to Main 4.
+    values["/ch/17/name"] = "FX Return"
+    values["/ch/17/in/conn/grp"], values["/ch/17/in/conn/in"] = "BUS", 15
+    values["/ch/17/send/8/on"], values["/ch/17/send/8/lvl"] = 1, 0.0
+    values["/aux/4/name"] = "Mix Return"
+    values["/aux/4/in/conn/grp"], values["/aux/4/in/conn/in"] = "MAIN", 7
+    values["/aux/4/main/4/on"] = 1
+    # R010: the same, with the send held at the floor (Matrix 5 is a send
+    # target nothing else here uses).
+    values["/ch/18/name"] = "Rec Return"
+    values["/ch/18/in/conn/grp"], values["/ch/18/in/conn/in"] = "MTX", 9
+    values["/ch/18/send/MX5/on"], values["/ch/18/send/MX5/lvl"] = 1, -144.0
+    # ... and a looped strip with an alternate patch, handed to C005 while
+    # the global switch (above) is engaged; drop either and R009 speaks.
+    values["/ch/19/name"], values["/ch/19/in/conn/altgrp"] = "Alt Return", "A"
+    values["/ch/19/in/conn/grp"], values["/ch/19/in/conn/in"] = "BUS", 3
+    values["/ch/19/send/2/on"], values["/ch/19/send/2/lvl"] = 1, 0.0
+    # R011: a named bus, a Main a strip feeds and a Matrix a strip sends to,
+    # all stereo, each patched on its left slot only (bus 6 = slot 11, Main 1
+    # = slot 1, Matrix 7 = slot 13).
+    values["/bus/6/name"] = "Side Fill"
+    values["/io/out/LCL/1/grp"], values["/io/out/LCL/1/in"] = "BUS", 11
+    values["/ch/5/main/1/on"] = 1
+    values["/io/out/LCL/2/grp"], values["/io/out/LCL/2/in"] = "MAIN", 1
+    values["/ch/1/send/MX7/on"] = 1
+    values["/io/out/LCL/4/grp"], values["/io/out/LCL/4/in"] = "MTX", 13
     # The watch conditions: muted when it must not be, fader over its cap,
     # patched somewhere other than LCL 9.
     values["/ch/10/name"], values["/ch/10/mute"], values["/ch/10/fdr"] = "Crowd Mic", 1, -5.0
     values["/ch/10/in/conn/grp"], values["/ch/10/in/conn/in"] = "LCL", 11
+    # The send and phantom conditions: a Piano whose send to bus 9 is off and
+    # low, patched to LCL 15 with no 48V.
+    values["/ch/33/name"] = "Piano"
+    values["/ch/33/send/9/lvl"] = -30.0
+    values["/ch/33/in/conn/grp"], values["/ch/33/in/conn/in"] = "LCL", 15
     return ConsoleState(values)
 
 
@@ -251,7 +333,7 @@ def test_the_scope_is_a_subsequence_of_the_full_plan(scoped):
     assert len(scoped.plan) < len(full)
 
 
-def test_a_compact_plan_is_6143_addresses_and_the_scope_is_3823(scoped):
+def test_a_compact_plan_is_6195_addresses_and_the_scope_is_3891(scoped):
     """The numbers an earlier change is answered with. They are pinned here so a
     plan change that moves them is visible rather than silent.
 
@@ -263,22 +345,25 @@ def test_a_compact_plan_is_6143_addresses_and_the_scope_is_3823(scoped):
     and 3,794 until an earlier change added each phantom-capable socket's width
     (`/io/in/{grp}/{n}/mode`, 24 on a Compact) for C001; 6,138 and
     3,818 until an earlier change added the three AES50 ports' link status
-    and the two monitor sources, which the output-side rules read."""
-    assert len(scoped.full) == 6143
-    assert len(scoped.plan) == 3823
+    and the two monitor sources, which the output-side rules read; 6,167 and
+    3,847 since each local socket's own mute (C007), 24 on a Compact; 3,863
+    since a DCA's mute (CH004), 16 on a Compact, which only the scope grows
+    by: the full plan already held them; 6,195 and 3,891 since the width of
+    each bus, Main and Matrix (`busmono`, R011): 28 on a Compact, in both."""
+    assert len(scoped.full) == 6195
+    assert len(scoped.plan) == 3891
 
 
-def test_only_the_two_unread_families_are_dropped(scoped):
-    """Exactly two address families are dropped, and each is stated in
-    `watch_scope`'s docstring: a strip send's `mode`/`pon`, and a DCA's
-    mute. Anything else showing up here is an address some rule reads."""
+def test_only_the_unread_send_family_is_dropped(scoped):
+    """Exactly one address family is dropped, and it is stated in
+    `watch_scope`'s docstring: a strip send's `mode`/`pon`. (A DCA's mute
+    was the second until CH004 read it.) Anything else showing up here is
+    an address some rule reads."""
     strip_send_extras = re.compile(r"^/(?:ch|aux)/\d+/send/(?:\d+|MX\d+)/(?:mode|pon)$")
-    dca_mute = re.compile(r"^/dca/\d+/mute$")
     dropped = scoped.dropped
-    unexpected = [a for a in dropped
-                  if not strip_send_extras.match(a) and not dca_mute.match(a)]
+    unexpected = [a for a in dropped if not strip_send_extras.match(a)]
     assert unexpected == []
-    assert len(dropped) == 2304 + 16
+    assert len(dropped) == 2304
 
 
 def test_every_default_rule_has_a_scope_entry():
@@ -304,6 +389,157 @@ def test_the_plan_bound_fx_rule_keeps_every_address_it_reads(full_state):
     found = rule.check(state)
     assert found and "switched off" in found[0].message and "holds HALL" in found[0].message
     assert rule.check(_restrict(state, scoped.addresses)) == found
+
+
+def _phantom_rule_and_state(full_state):
+    """CV019 bound to a one-channel plan, and a state where that channel's
+    condenser has no 48V on LCL 23."""
+    plan = {"channels": [{"bank": "ch", "channel": 30, "name": "OH",
+                          "source": {"input": "OH", "phantom": True},
+                          "patch": {"group": "LCL", "sockets": [23]}}]}
+    values = dict(full_state.values)
+    values.update({"/ch/30/name": "OH", "/ch/30/in/conn/grp": "LCL", "/ch/30/in/conn/in": 23,
+                   "/io/in/LCL/23/vph": 0})
+    return audit.phantom_drift_rule(plan), ConsoleState(values)
+
+
+def test_the_plan_bound_phantom_rule_keeps_every_address_it_reads(full_state):
+    """CV019, the rule Watch adds when the show's plan states a phantom,
+    reports the same on a read scoped to it."""
+    rule, state = _phantom_rule_and_state(full_state)
+    scoped = watch_scope.scoped_read_plan(rules=[rule], conditions=[], **COMPACT)
+    assert not scoped.unscoped_rule_ids
+    found = rule.check(state)
+    assert found and "plan has 48V on at LCL 23" in found[0].message
+    assert rule.check(_restrict(state, scoped.addresses, scoped.reads_source_names)) == found
+
+
+@pytest.mark.parametrize("address", ["/ch/30/in/conn/in", "/ch/30/in/conn/grp",
+                                     "/io/in/LCL/23/vph", "/ch/30/name"])
+def test_dropping_a_phantom_rule_address_from_its_scope_is_caught(full_state, address):
+    rule, state = _phantom_rule_and_state(full_state)
+    scoped = watch_scope.scoped_read_plan(rules=[rule], conditions=[], **COMPACT)
+    assert address in scoped.addresses
+    assert rule.check(_restrict(state, scoped.addresses - {address},
+                                scoped.reads_source_names)) != rule.check(state)
+
+
+def _talkback_rules_and_state(full_state):
+    """CV021 and CV022 bound to a plan with one monitor mix (bus 5), and a
+    state where talkback is assigned, reaches a Main, and misses that mix."""
+    plan = {"busses": {"Fill": {"index": 5, "destination": {
+        "type": "dedicated_output", "patch": {"group": "LCL", "sockets": [5]}}}}}
+    values = dict(full_state.values)
+    values.update({"/cfg/talk/assign": "CH40", "/bus/5/name": "Fill Wedge",
+                   "/cfg/talk/A/M1": 1})
+    return (audit.talkback_monitor_rule(plan), audit.talkback_monitors_note_rule(plan),
+            ConsoleState(values))
+
+
+def test_the_plan_bound_talkback_rules_keep_every_address_they_read(full_state):
+    """CV021 and CV022, the rules Watch adds when the show's plan builds a
+    monitor mix, report the same on a read scoped to them. The destination
+    switches are the second pass's, as T001's are."""
+    warn, note, state = _talkback_rules_and_state(full_state)
+    scoped = watch_scope.scoped_read_plan(rules=[warn, note], conditions=[], **COMPACT)
+    assert not scoped.unscoped_rule_ids and scoped.reads_talkback
+    found = warn.check(state) + note.check(state)
+    assert [f.rule_id for f in found] == ["CV021", "CV022"]
+    restricted = _restrict(state, scoped.addresses, scoped.reads_source_names,
+                           scoped.reads_expansion_bays, scoped.reads_talkback)
+    assert warn.check(restricted) + note.check(restricted) == found
+    without = _restrict(state, scoped.addresses, scoped.reads_source_names,
+                        scoped.reads_expansion_bays, False)
+    assert warn.check(without) + note.check(without) != found
+
+
+@pytest.mark.parametrize("address", ["/cfg/talk/assign", "/bus/5/name"])
+def test_dropping_a_talkback_rule_address_from_its_scope_is_caught(full_state, address):
+    warn, note, state = _talkback_rules_and_state(full_state)
+    scoped = watch_scope.scoped_read_plan(rules=[warn, note], conditions=[], **COMPACT)
+    assert address in scoped.addresses
+    restricted = _restrict(state, scoped.addresses - {address}, scoped.reads_source_names,
+                           scoped.reads_expansion_bays, scoped.reads_talkback)
+    assert warn.check(restricted) + note.check(restricted) != warn.check(state) + note.check(state)
+
+
+def _route_rules_and_state(full_state):
+    """CV006, CV007 and CV018 bound to a small plan, and a state tripping
+    each: ch 30 sends to Drums in the wrong mode with a second planned send
+    off, ch 31 has a planned Main route off and an unlisted one on, ch 32
+    sends to a bus and a Matrix the plan does not list, and Wedge bus 11 is
+    on a Main its destinations do not list."""
+    plan = {
+        "busses": {"Drums": {"index": 10, "destination": {"type": "main", "index": 1}},
+                   "Wedge A": {"index": 11, "destination": {"type": "dedicated_output"}}},
+        "channels": [
+            {"bank": "ch", "channel": 30, "name": "Click",
+             "bus_sends": [{"bus": "Drums", "mode": "post", "level_db": 0.0},
+                           {"bus": "Wedge A", "mode": "pre", "level_db": 0.0}],
+             "main_routes": []},
+            {"bank": "ch", "channel": 31, "name": "Bass",
+             "bus_sends": [{"bus": "Drums", "mode": "post", "level_db": 0.0}],
+             "main_routes": [{"index": 2}]},
+            {"bank": "ch", "channel": 32, "name": "Crowd", "bus_sends": [], "main_routes": []},
+        ],
+    }
+    values = dict(full_state.values)
+    values.update({
+        "/bus/10/name": "Drums", "/bus/11/name": "Wedge A",
+        "/ch/30/name": "Click", "/ch/31/name": "Bass", "/ch/32/name": "Crowd",
+        "/ch/30/send/10/on": 1, "/ch/30/send/10/mode": "PRE", "/ch/30/send/10/lvl": 0.0,
+        "/ch/30/send/11/on": 0, "/ch/30/send/11/lvl": 0.0,
+        "/ch/31/send/10/on": 1, "/ch/31/send/10/lvl": 0.0, "/ch/31/send/10/mode": "POST",
+        "/ch/31/main/2/on": 0, "/ch/31/main/3/on": 1,
+        "/ch/32/send/11/on": 1, "/ch/32/send/11/lvl": -6.0,
+        "/ch/32/send/MX2/on": 1, "/ch/32/send/MX2/lvl": -6.0,
+        "/bus/11/main/2/on": 1,
+    })
+    return ({"CV006": audit.bus_send_drift_rule(plan), "CV007": audit.main_route_drift_rule(plan),
+             "CV018": audit.unplanned_route_rule(plan)}, ConsoleState(values))
+
+
+#: The address each plan-bound route rule depends on, per the rule alone.
+ROUTE_RULE_MUTATIONS = [
+    ("CV006", "/ch/30/send/10/mode"), ("CV006", "/ch/30/send/11/on"), ("CV006", "/bus/10/name"),
+    ("CV007", "/ch/31/main/2/on"), ("CV007", "/ch/31/main/3/on"),
+    ("CV018", "/ch/32/send/11/on"), ("CV018", "/ch/32/send/11/lvl"),
+    ("CV018", "/ch/32/send/MX2/on"), ("CV018", "/ch/32/send/MX2/lvl"),
+    ("CV018", "/bus/11/main/2/on"), ("CV018", "/bus/11/name"),
+]
+
+
+def test_the_plan_bound_route_rules_keep_every_address_they_read(full_state):
+    """CV006, CV007 and CV018, which Watch binds to the show's plan,
+    report the same on a read scoped to each."""
+    rules, state = _route_rules_and_state(full_state)
+    for rule_id, rule in rules.items():
+        scoped = watch_scope.scoped_read_plan(rules=[rule], conditions=[], **COMPACT)
+        assert not scoped.unscoped_rule_ids, rule_id
+        found = rule.check(state)
+        assert found, f"{rule_id} does not fire on the fixture"
+        assert rule.check(_restrict(state, scoped.addresses)) == found
+
+
+@pytest.mark.parametrize("rule_id,address", ROUTE_RULE_MUTATIONS,
+                         ids=[f"{r}{a}" for r, a in ROUTE_RULE_MUTATIONS])
+def test_dropping_a_route_rules_address_from_its_scope_is_caught(full_state, rule_id, address):
+    rules, state = _route_rules_and_state(full_state)
+    rule = rules[rule_id]
+    scoped = watch_scope.scoped_read_plan(rules=[rule], conditions=[], **COMPACT)
+    assert address in scoped.addresses
+    assert rule.check(_restrict(state, scoped.addresses - {address})) != rule.check(state)
+
+
+def test_only_the_bound_cv006_reads_a_sends_pre_post_mode():
+    """The default rules still drop `mode`; CV006 bound to a plan keeps it."""
+    mode = "/ch/30/send/10/mode"
+    default = watch_scope.scoped_read_plan(**COMPACT)
+    assert mode not in default.addresses
+    rule = audit.bus_send_drift_rule(
+        {"channels": [{"bank": "ch", "channel": 30, "bus_sends": [{"bus": "A"}]}]})
+    assert mode in watch_scope.scoped_read_plan(rules=[rule], **COMPACT).addresses
+    assert len(default.full) == 6195  # a Compact's read is not larger for it
 
 
 def test_an_unknown_rule_widens_the_scope_to_everything():
@@ -335,17 +571,24 @@ def test_a_watch_rule_with_no_matching_condition_widens_the_scope():
     ("dca", {"/ch/1/name", "/ch/1/tags", "/dca/1/name"}),
     ("mute_group", {"/ch/1/name", "/ch/1/tags", "/mgrp/1/name"}),
     ("patch", {"/ch/1/name", "/ch/1/in/conn/grp", "/ch/1/in/conn/in"}),
+    ("send_on", {"/ch/1/name", "/ch/1/send/5/on", "/bus/5/name"}),
+    ("send_db", {"/ch/1/name", "/ch/1/send/5/lvl", "/bus/5/name"}),
+    ("send_mode", {"/ch/1/name", "/ch/1/send/5/mode", "/bus/5/name"}),
+    ("phantom", {"/ch/1/name", "/ch/1/in/conn/grp", "/ch/1/in/conn/in", "/io/in/LCL/3/vph",
+                 "/io/in/LCL/3/mode", "/io/altsw", "/ch/1/in/set/altsrc"}),
 ])
 def test_each_condition_field_keeps_what_evaluating_it_reads(field, expected):
     """Every strip's `/name` too, not just the named channel's:
     `_resolve_channel_base` matches the condition's channel against all of
     them, so a scope that kept one strip's name would resolve nothing."""
     value = {"muted": False, "fader_db": -10.0, "dca": "Drums",
-             "mute_group": "FX", "patch": "LCL 3"}[field]
-    operator = "<=" if field == "fader_db" else "=="
+             "mute_group": "FX", "patch": "LCL 3", "send_on": True, "send_db": -10.0,
+             "send_mode": "pre", "phantom": True}[field]
+    operator = "<=" if field in ("fader_db", "send_db") else "=="
+    extra = {"bus": "BUS 5"} if field.startswith("send_") else {}
     conditions = parse_watch_conditions(json.dumps({"watch_conditions": [{
         "id": "c", "description": "d", "channel": "Crowd Mic", "field": field,
-        "operator": operator, "value": value, "severity": "warning"}]}))
+        "operator": operator, "value": value, "severity": "warning", **extra}]}))
     result = watch_scope.scoped_read_plan(
         rules=build_watch_rules(conditions), conditions=conditions, **COMPACT)
     assert expected <= result.addresses
@@ -354,6 +597,9 @@ def test_each_condition_field_keeps_what_evaluating_it_reads(field, expected):
     assert "/ch/40/name" in result.addresses
     if field != "fader_db":
         assert "/ch/40/fdr" not in result.addresses
+    # The send conditions name the bus, and a bus's name labels a finding.
+    if field == "send_mode":
+        assert "/ch/40/send/5/mode" in result.addresses
 
 
 # --------------------------------------------------------------------------
@@ -452,6 +698,13 @@ def test_scoping_changes_nothing_on_a_factory_desk(scoped):
             if leaf.endswith(suffix):
                 quiet.values[address] = default
                 break
+    # The fixture's stage boxes are second-pass reads in no plan: a factory
+    # desk has no device on any port and nothing patched to one.
+    for address in list(quiet.values):
+        if re.match(r"^/io/out/[ABC]/\d+/(?:grp|in)$", address):
+            quiet.values[address] = "OFF" if address.endswith("/grp") else 0
+    for n in (21, 22):
+        quiet.values[f"/ch/{n}/in/conn/grp"], quiet.values[f"/ch/{n}/in/conn/in"] = "OFF", 0
     rules = _rules()
     assert run_audit(quiet, rules) == []
     assert run_audit(_restrict(quiet, scoped.addresses, scoped.reads_source_names, scoped.reads_expansion_bays, scoped.reads_talkback), rules) == []
@@ -486,7 +739,52 @@ MUTATIONS = [
     ("C003", "/ch/11/in/conn/grp"),
     ("C004", "/ch/12/in/set/altsrc"),
     ("C004", "/ch/12/in/conn/altgrp"),
+    ("R009", "/ch/17/in/conn/grp"),
+    ("R009", "/ch/17/in/conn/in"),
+    ("R009", "/ch/17/send/8/on"),
+    ("R009", "/aux/4/main/4/on"),
+    ("R009", "/aux/4/in/conn/grp"),
+    ("R009", "/ch/17/name"),
+    ("R009", "/io/altsw"),
+    ("R009", "/ch/19/in/conn/altgrp"),
+    ("R010", "/ch/18/in/conn/grp"),
+    ("R010", "/ch/18/send/MX5/on"),
+    ("R010", "/ch/18/send/MX5/lvl"),
+    ("R010", "/ch/18/name"),
+    ("R011", "/bus/6/busmono"),
+    ("R011", "/main/1/busmono"),
+    ("R011", "/mtx/7/busmono"),
+    ("R011", "/bus/6/name"),
+    ("R011", "/io/out/LCL/1/in"),
+    ("R011", "/io/out/LCL/2/grp"),
+    ("R011", "/ch/5/main/1/on"),
+    ("R011", "/ch/1/send/MX7/on"),
+    ("C008", "/$stat/B/stat"),
+    ("C008", "/ch/21/in/conn/grp"),
+    ("C008", "/ch/21/in/conn/in"),
+    ("C008", "/ch/21/name"),
+    ("C009", "/$stat/C/stat"),
+    ("C009", "/ch/22/in/conn/grp"),
+    ("C009", "/ch/22/name"),
+    ("C007", "/io/in/LCL/5/mute"),
+    ("C007", "/io/in/LCL/14/mute"),
+    ("C007", "/io/in/LCL/13/mode"),
+    ("C007", "/ch/2/in/conn/grp"),
+    ("C007", "/io/altsw"),
+    ("C007", "/ch/20/in/conn/altgrp"),
     ("T001", "/cfg/talk/assign"),
+    # R008 and C006: the name that makes a strip in use, the mute and floor
+    # that excuse it, the talk mic and the monitor source that exempt it,
+    # the patch group, and the alternate that hands a strip to C004/C005.
+    ("R008", "/ch/6/name"),
+    ("R008", "/ch/10/mute"),
+    ("R008", "/ch/9/fdr"),
+    ("R008", "/cfg/talk/assign"),
+    ("R008", "/cfg/mon/2/src"),
+    ("C006", "/ch/6/in/conn/grp"),
+    ("C006", "/cfg/talk/assign"),
+    ("C006", "/io/altsw"),
+    ("C006", "/ch/16/in/conn/altgrp"),
     ("CH001", "/ch/4/tags"),
     ("CH002", "/dca/1/fdr"),
     ("CH002", "/dca/1/name"),
@@ -494,6 +792,9 @@ MUTATIONS = [
     ("CH003", "/mgrp/2/mute"),
     ("CH003", "/mgrp/2/name"),
     ("CH003", "/ch/5/tags"),
+    ("CH004", "/dca/3/mute"),
+    ("CH004", "/dca/3/name"),
+    ("CH004", "/ch/13/tags"),
     ("N001", "/ch/6/name"),
     ("N002", "/bus/3/name"),
     ("L001", "/ch/8/send/4/lvl"),
@@ -508,6 +809,12 @@ MUTATIONS = [
     ("WATCH:bass-not-in-drums", "/ch/4/tags"),
     ("WATCH:gtr-out-of-fx", "/mgrp/2/name"),
     ("WATCH:gtr-out-of-fx", "/ch/5/tags"),
+    ("WATCH:piano-in-iem", "/ch/33/send/9/on"),
+    ("WATCH:piano-in-iem", "/ch/33/name"),
+    ("WATCH:piano-iem-level", "/ch/33/send/9/lvl"),
+    ("WATCH:piano-48v", "/io/in/LCL/15/vph"),
+    ("WATCH:piano-48v", "/ch/33/in/conn/in"),
+    ("WATCH:piano-48v", "/ch/33/in/conn/grp"),
 ]
 
 
@@ -546,7 +853,7 @@ def test_dropping_a_send_mode_changes_nothing(full_state, scoped):
     """The converse, and the reason the scope is worth having: the 2,320
     addresses it drops really are read by nothing."""
     rules = _rules()
-    for address in ("/ch/8/send/4/mode", "/ch/8/send/4/pon", "/dca/1/mute"):
+    for address in ("/ch/8/send/4/mode", "/ch/8/send/4/pon"):
         assert address not in scoped.addresses
         widened = scoped.addresses | {address}
         assert (run_audit(_restrict(full_state, widened, True, True, True), rules)
@@ -596,8 +903,12 @@ def test_watch_conditions_alone_would_fit_the_budget():
     """What scoping CAN buy, and the only thing it can: a `watch` running
     operator conditions and no structural rules reads 312 addresses, ~2.1s
     per-leaf. That is not the thing whose responsiveness was in question,
-    which is why it settles rather than solves #196."""
-    conditions = _conditions()
+    which is why it settles rather than solves an earlier change."""
+    # The five fields the vocabulary had when this was measured. The send and
+    # phantom conditions read every strip's sends and each jack's 48V, which a
+    # watch with no structural rules would have to fetch whole.
+    conditions = [c for c in _conditions()
+                  if c["field"] in ("muted", "fader_db", "dca", "mute_group", "patch")]
     result = watch_scope.scoped_read_plan(
         rules=build_watch_rules(conditions), conditions=conditions, **COMPACT)
     assert len(result.plan) == 312
@@ -609,4 +920,4 @@ def test_scope_report_names_every_scope_and_its_verdict():
     assert "full read plan (no scoping)" in text
     assert "DEFAULT_RULES + realistic watchlist" in text
     assert "OVER the 3-4s budget" in text
-    assert "6143" in text and "3823" in text
+    assert "6195" in text and "3891" in text

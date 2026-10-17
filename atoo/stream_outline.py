@@ -1,10 +1,9 @@
 """Read a JSON document as it streams in, tolerantly, for the live view.
 
-The maintainer, 2026-09-26: *"Is there any way to show progress updates from the
-build step or get progressive output? It would be nice to be able to stop
-it if things are going haywire."* A count of characters says a build is
+The build step needs progress updates, or progressive output, and a way
+to stop it if things are going haywire. A count of characters says a build is
 alive; it does not say whether it is doing the right thing. The goal is
-that he can read "Channels · 14 · Horns -- dca: Vocals" on step 04 and
+that the engineer can read "Channels · 14 · Horns -- dca: Vocals" on step 04 and
 decide to press Stop.
 
 So `StreamOutline` is fed the model's text one chunk at a time, as the

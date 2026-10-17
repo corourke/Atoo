@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoo"
-version = "0.1.0"
+version = "0.2.0"
 description = "Compile console conventions into a plan, apply it, prove it landed."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }
 keywords = ["behringer", "wing", "mixing console", "live sound", "osc"]
 # Read by PyPI only. The licence is not repeated here: `license` above is
@@ -31,9 +31,15 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-# jsonschema is used ONLY by the test suite, to check that the schema we
-# ship is itself well-formed and that real plans satisfy it.
-test = ["pytest", "jsonschema", "httpx2"]
+# Everything the test suite imports, and nothing the tool needs. jsonschema
+# checks that the schema we ship is itself well-formed and that real plans
+# satisfy it; httpx2 is what FastAPI's TestClient is built on; playwright
+# drives the browser tests, which skip without it; pyyaml parses the issue
+# forms; setuptools is what the packaging tests build a wheel with, offline,
+# and a venv made by Python 3.12 or newer no longer carries it. Playwright
+# also needs a Chromium binary, which pip cannot install
+# (`playwright install chromium` fetches one).
+test = ["pytest", "jsonschema", "httpx2", "playwright", "pyyaml", "setuptools>=68"]
 # The engine (compiler, apply, audit, watch) stays dependency-free (D9) --
 # this extra is only for `atoo ui`, a browser client over that same
 # engine. Install once from wherever this machine normally gets packages;
@@ -68,25 +74,14 @@ package-dir = {"atoo.starter" = "starter"}
 # fails both on a file that no glob matches and on a glob that matches no
 # file ("domain/*.json" outlived the last .json in domain/).
 # atoo.starter is `atoo init`'s starter set (never
-# read from examples/ at runtime) and the Demo show.
+# read from examples/ at runtime), the Demo show and the
+# audit demo states `audit --help` and `watch --help` name.
 atoo = ["prompts/*.md", "domain/*.md", "web/static/*", "web/demo_states/*.json",
              "initialized/*"]
-"atoo.starter" = ["*.md", "presets/*", "demo-show/*"]
+"atoo.starter" = ["*.md", "presets/*", "demo-show/*", "audit-demo/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# `example_guard` marks the handful of tests whose subject is a file in
-# `examples/` rather than the code -- they exist to catch a shipped
-# example going stale or invalid. The maintainer, 2026-09-21: "examples is
-# really for experimentation and user testing", so while experimenting
-# there run `pytest -m "not example_guard"` and they stand aside. Every
-# other test reads only `tests/fixtures/`, and since 2026-09-23 that is
-# enforced rather than hoped for: `tests/conftest.py` refuses any read of
-# anything under `examples/` from a test without the marker (touringband
-# only from 2026-09-23, after a rebuild of that bundle turned nine tests
-# red with nothing wrong in the code; the whole directory since
-# 2026-09-29). A marked test asserts the example is VALID, never what is
-# in it.
 #
 # `live_model` marks the prompt-fidelity tests (in
 # tests/test_prompt_fidelity.py), which call a REAL model and so cost real
@@ -104,6 +99,5 @@ testpaths = ["tests"]
 #         ATOO_AI_API_KEY=... python3 -m pytest -m live_model
 #
 markers = [
-    "example_guard: asserts something about a file in examples/, not about the code",
     "live_model: calls a real model and costs money; opt in with ATOO_LIVE_MODEL_TESTS=1",
 ]

@@ -1,4 +1,4 @@
-"""A stale page cannot write (the maintainer's desk session, 2026-09-24).
+"""A stale page cannot write.
 
 A19's script started `atoo ui` on port 8420 against one bundle copy;
 A20's stopped it and started another on the same port against a DIFFERENT
@@ -41,7 +41,7 @@ import test_webui_apply as apply_tests  # noqa: E402
 from webui_page import armed, page_fields  # noqa: E402
 
 APPLY = "/api/apply/run"
-AMEND = "/api/amend/run"
+PATCH = amend_tests.PATCH
 UNDO = "/api/undo/run"
 
 
@@ -216,7 +216,7 @@ def test_a_confirmed_apply_while_a_build_runs_is_refused(two_copies, desk):
 
 
 # ======================================================================
-# Amend
+# Patch
 # ======================================================================
 
 
@@ -226,13 +226,19 @@ def amend_client(tmp_path, monkeypatch):
     amend_tests._Desk.next_state = amend_tests._desk_state(
         amend_tests.applied_plan(), amend_tests.amended_plan())
     monkeypatch.setattr(amend_tests.console_module, "WingConsole", amend_tests._Desk)
+    model = amend_tests.fake_model(monkeypatch)
     directory = amend_tests._bundle(tmp_path)
     with fastapi_testclient.TestClient(amend_tests._app(directory)) as c:
         c.bundle_directory = directory
+        c.model = model
         yield c
 
 
-def test_a_writable_amend_preview_names_its_review(amend_client):
+def _patch_body(c, **fields):
+    return armed(c, PATCH, change=amend_tests.TEXT, **fields)
+
+
+def test_a_writable_patch_preview_names_its_review(amend_client):
     status = amend_tests._preview(amend_client)
     assert status["exit_code"] == 0, status["log"]
     assert status["review"]["review_id"]
@@ -240,38 +246,39 @@ def test_a_writable_amend_preview_names_its_review(amend_client):
 
 def test_a_later_preview_from_another_tab_voids_the_review_this_page_drew(amend_client):
     """The server arms ONE review for the whole process. Tab one previewed;
-    the rebuild was then rewritten and tab two previewed it. Tab one's
-    inputs now describe exactly what the server is armed for -- but the
-    review on tab one's screen is the older one, so its write is refused.
+    the model then answered the same text differently and tab two previewed
+    that. Tab one's inputs now describe exactly what the server is armed
+    for -- but the review on tab one's screen is the older one, so its write
+    is refused.
 
     Mutation-checked: drop the `expected_review_id` comparison and this
-    writes the amendment tab one never saw."""
+    writes the change tab one never saw."""
     amend_tests._preview(amend_client)
-    tab_one = armed(amend_client, AMEND)
-    rebuilt = amend_client.bundle_directory / "rebuilt.plan.json"
-    rebuilt.write_text(json.dumps(json.loads(rebuilt.read_text()), indent=4))
+    tab_one = _patch_body(amend_client)
+    other = amend_tests.horns()
+    other["name"] = "Horns, again"
+    amend_client.model.response = json.dumps(other)
     amend_tests._preview(amend_client)            # tab two
     written = len(amend_tests._writes(amend_tests._Desk))
-    _refused(amend_client.post(AMEND, json=tab_one), "review")
+    _refused(amend_client.post(PATCH, json=tab_one), "review")
     assert len(amend_tests._writes(amend_tests._Desk)) == written
-    assert not (amend_client.bundle_directory / "amend-journal.json").exists()
     # Tab two drew the review the server is armed for, and it writes.
-    r = amend_client.post(AMEND, json=armed(amend_client, AMEND))
+    r = amend_client.post(PATCH, json=_patch_body(amend_client))
     assert r.status_code == 200, r.json()
     assert amend_tests._wait(amend_client)["exit_code"] == 0
 
 
-def test_an_amend_write_that_does_not_name_its_review_is_refused(amend_client):
+def test_a_patch_write_that_does_not_name_its_review_is_refused(amend_client):
     amend_tests._preview(amend_client)
-    body = armed(amend_client, AMEND)
+    body = _patch_body(amend_client)
     del body["expected_review_id"]
-    assert "expected_review_id" in _refused(amend_client.post(AMEND, json=body), "review")
+    assert "expected_review_id" in _refused(amend_client.post(PATCH, json=body), "review")
 
 
-def test_an_amend_from_a_page_showing_another_bundle_is_refused(amend_client, tmp_path):
+def test_a_patch_from_a_page_showing_another_bundle_is_refused(amend_client, tmp_path):
     amend_tests._preview(amend_client)
-    body = armed(amend_client, AMEND, expected_bundle=str(tmp_path / "somewhere-else"))
-    _refused(amend_client.post(AMEND, json=body), "bundle")
+    body = _patch_body(amend_client, expected_bundle=str(tmp_path / "somewhere-else"))
+    _refused(amend_client.post(PATCH, json=body), "bundle")
 
 
 # ======================================================================
@@ -281,7 +288,7 @@ def test_an_amend_from_a_page_showing_another_bundle_is_refused(amend_client, tm
 
 def _amended(c):
     amend_tests._preview(c)
-    r = c.post(AMEND, json=armed(c, AMEND))
+    r = c.post(PATCH, json=_patch_body(c))
     assert r.status_code == 200, r.json()
     assert amend_tests._wait(c)["exit_code"] == 0
 

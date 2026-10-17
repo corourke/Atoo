@@ -1,8 +1,8 @@
 """A show bundle: one directory holding everything for one show.
 
-The maintainer's problem, in his own words: the conventions file is meant to be
-*reusable house style* -- "my preferences and approach to setting up the
-board in general, not specific to a particular input list" -- but its
+The problem: the conventions file is meant to be
+*reusable house style* -- the engineer's preferences and approach to setting up the
+board in general, not specific to a particular input list -- but its
 `## Busses`/`## Outputs` sections had become the place show-specific
 decisions went, because there was nowhere else for them. Meanwhile the
 input list, the watchlist and the plan were independent `--flag path`
@@ -10,14 +10,13 @@ arguments a user had to remember to pass together and keep in sync by
 hand.
 
 A bundle is the answer: a directory, fixed filenames inside it, **no
-manifest**. Convention over configuration -- #81 point 4 is explicit that
-there is no manifest file to author or keep current.
+manifest**. Convention over configuration: there is no manifest file to author or keep current.
 
     my-show/
       input.csv            the input list                  (hand-authored)
       instructions.md      per-show instructions           (hand-authored)
       plan.json            the plan the last build made    (atoo build, and nothing else)
-      watch.json           the watchlist                   (hand today; drafted by #91)
+      watch.json           the watchlist                   (hand today; drafted)
       plan.previous.json   the plan a rebuild replaced     (kept, one generation; the next rebuild
                                                            compares against it, FR-1.4)
       plan.partial.json    a failed build's partial reply  (removed by the next good build)
@@ -27,12 +26,12 @@ there is no manifest file to author or keep current.
       logs/                text transcripts of a rebuild script's runs -- the newest 5
       backups/             the file a copy into a slot replaced, `<name>.bak`
 
-Only plan files and the hand-authored inputs sit at the top level
-(the maintainer, 2026-10-02); everything else Atoo writes goes in a folder.
+Only plan files and the hand-authored inputs sit at the top level;
+everything else Atoo writes goes in a folder.
 
-`plan.json` has ONE writer, `atoo build` (the maintainer, 2026-09-25, an earlier change: *"I don't think we should modify plan.json unless we've modified
-the input list or the conventions file or the instructions file, the
-inputs to plan.json."*). From an earlier change until then a confirmed amend
+`plan.json` has ONE writer, `atoo build`: it is only
+modified when the input list, the conventions file or the instructions
+file, the inputs to plan.json, have changed. Before that a confirmed amend
 replaced it; that is reversed. What a change or an amend puts on a desk is
 recorded by that desk's journal entry, which embeds the plan it left there
 (`journal_stack.DESK_PLAN_BLOCK`), and undo still puts back a plan.json an
@@ -46,15 +45,12 @@ paths is what this module is for; everything about what is inside it --
 the time ordering, the last-N pruning, which entry `atoo undo`
 pops -- lives in `atoo/journal_stack.py`.
 
-`journals/` is the ONLY record of a write. From #252 until
-then, every confirmed apply, amend and patch was also copied over a
+`journals/` is the ONLY record of a write. Before that,
+every confirmed apply, amend and patch was also copied over a
 top-level `apply-journal.json`, `amend-journal.json` or
-`patch-journal.json`; nothing writes those any more (the maintainer, 2026-09-28:
-*"Yes, please retire the apply-journal.json, patch-journal.json and
-amend-journal.json files in favor of the journals/ folder."*), and since
-2026-10-02 nothing reads them either: `atoo undo --show` on a bundle
-with no `journals/` has nothing to undo (the maintainer, 2026-10-02, deleting the
-last bundle in the repo that still had one: *"you can delete them."*).
+`patch-journal.json`; nothing writes those any more (the `journals/` folder replaces
+them), and since 2026-10-02 nothing reads them either: `atoo undo --show`
+on a bundle with no `journals/` has nothing to undo.
 A journal file named on the command line -- `atoo undo PATH` -- is
 read like any journal, wherever it is, and one that carries a
 `stack_entry` block resolves to the entry it copies (`journal_stack.find`).
@@ -65,7 +61,7 @@ error**: it is simply not a slot any more, so nothing reads it and
 nothing reports it. An old show bundle keeps working, and the leftover
 file can be deleted whenever its owner gets to it.
 
-The house conventions file stays **outside** the bundle (#81 point 5) --
+The house conventions file stays **outside** the bundle --
 it is the reusable piece, named by `~/.atoo.config`, and the whole
 reason it isn't per-show.
 
@@ -82,7 +78,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-# The fixed names, per #81 point 4 and #89's table. Named constants rather
+# The fixed names. Named constants rather
 # than string literals at each use site so the set is greppable and a
 # rename is one edit -- these are a user-facing contract the moment
 # someone lays out a directory by hand.
@@ -100,8 +96,8 @@ WATCH_CONDITIONS = "watch.json"
 # greppable from one file.
 JOURNALS = "journals"
 
-# The other history folders (the maintainer, 2026-10-02: *"In the bundle, I'd
-# like to only see plan files at the top level"*). Each grows by one entry
+# The other history folders (the bundle shows only plan files at the
+# top level). Each grows by one entry
 # per run and is pruned to `prune.KEEP` entries after every write into it:
 # `builds/` one JSON per build (`build_log.py`),
 # `logs/` the text transcripts a rebuild script saves, one
@@ -160,7 +156,7 @@ class Bundle:
     def path(self, slot: str) -> Path:
         """The path for one fixed name, whether or not anything is there."""
         if slot not in SLOTS:
-            # `expectations.toml` was a slot until #153 retired it, and a
+            # `expectations.toml` was a slot until an earlier change retired it, and a
             # caller still asking for one is a stale caller, not a user
             # error -- hence ValueError here and silence in `present()`.
             raise ValueError(f"{slot!r} is not a bundle slot; known: {list(SLOTS)}")
@@ -199,7 +195,7 @@ class Bundle:
             raise BundleError(
                 f"{self.directory} is not a usable show bundle: no {slot!r} in it. "
                 f"A bundle is a directory with fixed filenames inside "
-                f"({', '.join(SLOTS)}) -- see docs/user/show-bundles.md."
+                f"({', '.join(SLOTS)}) -- see https://docs.atoo.app/build/show-bundles/"
             )
         return path
 
@@ -219,7 +215,7 @@ def load(directory: str | Path) -> Bundle:
     if not path.exists():
         raise BundleError(
             f"no such directory: {path} -- --show takes a show bundle directory, "
-            f"not a file (see docs/user/show-bundles.md)."
+            f"not a file (see https://docs.atoo.app/build/show-bundles/)."
         )
     if not path.is_dir():
         raise BundleError(

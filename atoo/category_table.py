@@ -8,7 +8,7 @@ sixpiece -- went to applying the same category rules channel by
 channel: "drums: HPF 40, DCA Drums, mute group Band, gain 20, trim 0,
 fader down", thirty times. And it still left stated defaults null (the
 critic's "all faders down" left null on every channel). Prompt wording
-did not fix either. The maintainer approved moving the application
+did not fix either. The application was moved
 into code.
 
 So the resolve step writes, as the LAST section of the resolved file,

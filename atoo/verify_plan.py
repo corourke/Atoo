@@ -18,8 +18,8 @@ Findings are split the way `atoo apply` needs them split:
   warning -- apply is possible but a human should look first.
   info    -- a note: a value was decided where the conventions were silent
              (`inferred.py`), or something declared is used by nothing.
-             CLAUDE.md's "an error of judgement is not an error of
-             patching" -- a choice that may displease is said, not refused.
+             An error of judgement is not an error of
+             patching -- a choice that may displease is said, not refused.
 
 Deliberately NOT checked here: whether the plan is a good reading of the
 conventions. No deterministic code can check that, which is the entire
@@ -42,7 +42,7 @@ from atoo.diagnostics import Diagnostic, Severity
 
 # Reading the input list's free-text `patch` column is shared input
 # parsing, not plan derivation. It used to be borrowed from the compiler;
-# since #29 retired that path it lives with the input list itself, which
+# since that path was retired it lives with the input list itself, which
 # is whose column format it is.
 from atoo.input_list import InputRow, parse_socket_spec as _parse_socket_spec
 from atoo import plan_compat
@@ -68,7 +68,7 @@ PASSIVE_RIBBON_MODELS = (
 
 
 # The canonical type. `Finding` was already the closest of
-# the pre-#18 shapes -- severity, stable code, where, message -- so it is
+# the older shapes -- severity, stable code, where, message -- so it is
 # the name kept here, now pointing at the shared class rather than a
 # fourth private copy of it. Its `__str__` is unchanged:
 # "[error] bus Vocals: ...  (bus.no-members)".
@@ -115,8 +115,8 @@ class VerifyResult:
     def infos(self) -> list[Finding]:
         """Notes: a choice was made where the conventions were silent
         (`inferred.py`), or the conventions declared something nothing
-        uses. Never blocks, never even warns -- CLAUDE.md's "an error of
-        judgement is not an error of patching"."""
+        uses. Never blocks, never even warns (an error of
+        judgement is not an error of patching)."""
         return [f for f in self.findings if f.severity == Severity.INFO]
 
     @property
@@ -279,8 +279,8 @@ def _check_colours_are_writable(plan: dict, r: VerifyResult) -> None:
     Confirmed on hardware 2026-09-21. The touringband plan
     states a colour for all 19 channels; the snapshot taken straight after
     the apply
-    (`archive/examples/console-runs/2026-09-21/A1-touringband.snap`) has `col: 1`
-    on all 40 -- the default, untouched. The maintainer found it by looking at
+    (the A1 snapshot of 2026-09-21) has `col: 1`
+    on all 40 -- the default, untouched. It was found by looking at
     the desk, which is the only place it was visible.
 
     A warning, not an error: nothing about the rest of the plan is unsafe,
@@ -311,7 +311,7 @@ def _check_colours_are_writable(plan: dict, r: VerifyResult) -> None:
     _report_unwritable_colours(r, "strip.colour-not-writable", "strip(s)", "strips", unresolved)
     _report_colour_aliases(r, "strip.colour-alias", aliased)
 
-    # A bus states its colour the same way (the maintainer, 2026-09-28: bus
+    # A bus states its colour the same way (bus
     # colours come from the conventions), and an unknown name is lost the
     # same way, so it is reported the same way -- its own code, because
     # the thing that keeps its old colour is a bus, not a strip.
@@ -746,7 +746,7 @@ def _check_expansion_bays(plan: dict, r: VerifyResult) -> None:
     answers `/io/in/{CRD,MOD}/1..64` on a console with an empty slot, and
     a WING leaves the factory with `/$syscfg/opt_mod` reading `NONE`, so
     `facts.INPUT_SOCKETS`'s 64 is an address space rather than an
-    inventory -- the same distinction #13 draws for the panel counts one
+    inventory -- the same distinction the model-variant table draws for the panel counts one
     layer up. Measured on hardware 2026-09-21: the desk ACCEPTS a patch
     into an empty bay and reads it back unchanged
     (`facts.UNFITTED_BAY_PATCH_IS_ACCEPTED`).
@@ -760,8 +760,8 @@ def _check_expansion_bays(plan: dict, r: VerifyResult) -> None:
     - *Refuse every CRD/MOD patch.* Wrong on any desk that does have the
       card -- which is most desks that patch from it.
     - *Let the plan or a flag state what is fitted.* That is a
-      human-entered claim about hardware, believed over the hardware. #13
-      is the lesson: a walk of the address tree is not a measurement of
+      human-entered claim about hardware, believed over the hardware. The lesson of
+      the model cross-check: a walk of the address tree is not a measurement of
       the console, and neither is a person typing what they remember
       being in the slot.
 
@@ -1092,7 +1092,7 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
                 # several physical sockets -- `patches` (plural) is
                 # authoritative when non-empty; `patch` (singular)
                 # covers a plan that only set the one. plan_compat also
-                # reads the pre-#342 `sockets`/`socket` spelling.
+                # reads the older `sockets`/`socket` spelling.
                 sockets = plan_compat.output_patches(dest)
                 if not sockets:
                     r.add(SEVERITY_ERROR, "bus.unresolved-destination", dwhere,
@@ -1102,7 +1102,7 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
                 # dedicated-output`, 2026-09-19): apply wrote
                 # /bus/{n}/busmono only when stated, so the jack's signal
                 # depended on whatever width the desk had. Retired
-                # 2026-09-25 under CLAUDE.md's judgement-vs-patching rule:
+                # 2026-09-25 under the judgement-vs-patching rule:
                 # the width is now always DECIDED -- by the generator, or
                 # by `inferred.bus_width_fallback` from the socket count --
                 # and apply always writes it. `_check_inferred` reports
@@ -1122,7 +1122,7 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
                     members[member] = members.get(member, 0) + 1
 
     # FR-6.2's deterministic half: something declared that nothing uses.
-    # INFO, not WARNING (2026-09-25, CLAUDE.md's judgement rule): an empty
+    # INFO, not WARNING (2026-09-25, the judgement rule): an empty
     # DCA, mute group or bus is a desk in working order that carries one
     # object too many -- usually a convention written for a band this
     # input list does not have. It says so; it never blocks.
@@ -1165,7 +1165,7 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
         # A Main/Matrix can fan out to several physical sockets
         # at once -- `patches` (plural) is authoritative when non-empty;
         # `patch` (singular) covers a plan that only ever set the one, and
-        # plan_compat reads the pre-#342 `sockets`/`socket` spelling.
+        # plan_compat reads the older `sockets`/`socket` spelling.
         sockets = plan_compat.output_patches(out)
         if not sockets:
             reached = ((out or {}).get("kind") == "main"
@@ -1174,7 +1174,7 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
                 # `output.no-socket`: what is missing is
                 # the patch -- the link to a socket -- not the socket.
                 #
-                # A WARNING, not an ERROR (the maintainer, 2026-10-09): an
+                # A WARNING, not an ERROR: an
                 # unpatched Main or Matrix is a working desk state. Apply
                 # still writes its fader, mute, processing and what feeds
                 # it (`fed_by`); it skips only the `/io/out/...` routing. A
@@ -1229,7 +1229,7 @@ def _report_output_index_duplicates(outputs: dict, r: VerifyResult) -> None:
     One Main is one mix: `FOH` and `Broadcast` both at Main 2 means apply
     patches both socket pairs from Main 2 and writes `/main/2/fdr` twice,
     and whatever the plan meant for the other Main never reaches a jack.
-    That is a physical setting that cannot work (CLAUDE.md), so it is an
+    That is a physical setting that cannot work, so it is an
     error, naming every output that claims the slot. The mirror of
     `output.socket-collision`, which is two sources on one socket.
     """
@@ -1318,8 +1318,8 @@ def _report_output_socket_collisions(claims: dict[tuple[str, int], list[str]],
     shared feed -- it is the last write winning and the other object
     going silently dead, discovered at soundcheck when a wedge or a
     broadcast feed has nothing in it. An engineer cannot resolve that by
-    preference (there is no second jack to prefer), so per CLAUDE.md's
-    "a physical setting that cannot work is an error" this is an ERROR,
+    preference (there is no second jack to prefer), so, because
+    a physical setting that cannot work is an error, this is an ERROR,
     not a warning.
 
     Both claimants are named, because "LCL 7 is taken" without saying by
@@ -1453,7 +1453,7 @@ def _stays_off_main(ch: dict) -> bool:
 
 def _check_channels_reach_main(plan: dict, r: VerifyResult) -> None:
     """A channel whose audio reaches no Main
-    (`routing.channel-misses-main`, a WARNING; the maintainer, 2026-09-29:
+    (`routing.channel-misses-main`, a WARNING; 2026-09-29:
     routing is checked by code, not by the critic). A channel reaches a
     Main by a `main_routes` entry, or by an audible send -- above -144 dB,
     or `null`, decided unity -- into a bus whose destination is a Main.
@@ -1541,12 +1541,11 @@ def _socket_holders(plan: dict, rows) -> dict[tuple[str, int], list[str]]:
 
 def _check_instructed(ch: dict, r: VerifyResult, layers, holders=None) -> None:
     """A channel that is not on the input list and says the conventions
-    or instructions asked for it (`source.from`, `source.quote`; the maintainer,
-    2026-09-29, `instructed_channels.py`). Reported every time, so the
-    engineer sees the one strip his list does not have
+    or instructions asked for it (`source.from`, `source.quote`; 2026-09-29,
+    `instructed_channels.py`). Reported every time, so the
+    engineer sees the one strip their list does not have
     (`reconcile.from-instructions`) -- at INFO when it was asked for
-    explicitly, else as a WARNING (`_explicitly_requested`; the maintainer,
-    2026-10-11). The quote is checked against the
+    explicitly, else as a WARNING (`_explicitly_requested`; 2026-10-11). The quote is checked against the
     texts, the way the critic's are: one that is not there, or that states
     no socket, is invention -- `reconcile.invented-source`, an ERROR. A
     patch other than the stated socket is `patch.contradicts-instructions`.
@@ -1637,10 +1636,10 @@ def _explicitly_requested(quote: str, layer) -> bool:
     """Whether an instructed strip was asked for in so many words, which
     makes `reconcile.from-instructions` an INFO rather than a WARNING.
 
-    The maintainer, 2026-10-11: *"Downgrade reconcile.from-instructions
+    The rule (2026-10-11): downgrade reconcile.from-instructions
     to INFO when the instructions quote the strip verbatim and state its
-    socket. Keep it a WARNING when the strip was inferred, paraphrased or
-    has no stated socket."* So all of:
+    socket; keep it a WARNING when the strip was inferred, paraphrased or
+    has no stated socket. So all of:
 
     - the quote was checked and found in the engineer's own text -- the
       conventions or a show's instructions as written, not the model's
@@ -1696,9 +1695,9 @@ def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,
     by_norm = {_norm(row.name): row for row in rows}
     # Rows `-` in the `order` column left out (FR-1.1): not on the list
     # as far as a build is concerned. A channel for one is a plan built
-    # before the row was skipped -- a WARNING, not an ERROR (coordinator,
-    # 2026-10-10, per CLAUDE.md "an error of judgement is not an error of
-    # patching"): the desk still works, it just builds a strip for an input
+    # before the row was skipped -- a WARNING, not an ERROR (2026-10-10; an
+    # error of judgement is not an error of patching): the desk still works, it just
+    # builds a strip for an input
     # nobody will plug in, and the plan already reads Stale.
     skipped = {_norm(row.name) for row in getattr(rows, "skipped", None) or ()}
     claimed: dict[str, list[str]] = {}
@@ -1797,17 +1796,17 @@ def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,
         elif len(holders) > 1:
             # A warning, not an error, since 2026-09-22. It said "one
             # physical source cannot be two channels", which is simply not
-            # true -- the maintainer: *"there can be a situation where we want
+            # true: there can be a situation where we want
             # another channel strip to share the input but with different
-            # processing, this is generally because we are going to send
-            # that strip to monitors, or we are using one physical socket
-            # for two different instrument types during a festival."*
+            # processing, generally because that strip is sent
+            # to monitors, or one physical socket is used
+            # for two different instrument types during a festival.
             # `atoo/domain/knowledge.md` has both cases.
             #
             # Refusing it meant a monitor-split plan could never be
             # applied, which is the one outcome that is definitely wrong.
             # We still cannot tell from the plan alone whether the share
-            # was ASKED FOR -- his rule is that a deliberate one is called
+            # was ASKED FOR -- the rule is that a deliberate one is called
             # out in the input list or the instructions -- so the finding
             # stays, and says what to check.
             r.add(SEVERITY_WARNING, "reconcile.duplicated-input", where,
@@ -1849,7 +1848,7 @@ def _check_stated_sockets(plan: dict, rows: list[InputRow], r: VerifyResult) -> 
 
 
 def _check_stated_presets(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:
-    """The input list's `preset` column (the maintainer, 2026-09-28) wins over the
+    """The input list's `preset` column wins over the
     conventions and instructions, as a stated patch does -- `build` puts it
     on the channel (`reply_expand.apply_stated_presets`). A plan that
     names a different preset, or none, for a row that states one was
@@ -1858,7 +1857,7 @@ def _check_stated_presets(plan: dict, rows: list[InputRow], r: VerifyResult) -> 
     **A warning, not an error** -- unlike `patch.contradicts-input-list`.
     A preset is a judgement about how the strip sounds, not a physical
     setting that cannot work: the desk is in working order either way
-    (CLAUDE.md, "an error of judgement is not an error of patching").
+    (an error of judgement is not an error of patching).
 
     A stereo pair's two rows naming different presets is said here too:
     the first row's wins (`input_list.stated_preset`), and the engineer
@@ -1934,12 +1933,12 @@ def _check_presets(plan: dict, library, r: VerifyResult) -> None:
     """Report on every channel's preset: the values the plan carries
     from one, and a named preset the plan carries none of.
 
-    **Warnings, not errors** -- the maintainer, 2026-09-20: *"Presets are strip
-    settings so add detail to the patch, but it's not a blocker if the
-    user chooses to ignore the warning."* So nothing here ever stops an
+    **Warnings, not errors**: presets are strip
+    settings that add detail to the patch, but it is not a blocker if the
+    user chooses to ignore the warning. So nothing here ever stops an
     apply; it tells you what the strip will and will not get.
 
-    Since slice B (the maintainer's design, 2026-09-21) `build`
+    Since slice B `build`
     EXPANDS a named preset into the plan (`processing.preset_values`), and
     `apply` writes those values without opening the library. So the two
     halves of this check ask different questions:
@@ -2015,8 +2014,8 @@ def _check_presets(plan: dict, library, r: VerifyResult) -> None:
                   fix="check the spelling, or add the preset to the library")
             continue
         if len(found) > 1:
-            # The maintainer: "Two files naming the same name is a Warning, pick
-            # the newest one." Said out loud because picking silently is
+            # Two files naming the same name is a Warning; pick
+            # the newest one. Said out loud because picking silently is
             # how the wrong one gets applied for a month.
             others = ", ".join(str(p.source_path) for p in found[1:])
             r.add(SEVERITY_WARNING, "preset.ambiguous", where,
@@ -2037,7 +2036,7 @@ def _check_bus_presets(plan: dict, library, r: VerifyResult) -> None:
     The preset half is the channel's (`_check_presets`), at WARNING: a bus
     preset is strip settings, and a missing one is a bus built without
     them. The EFFECT half is an ERROR only for what the desk cannot be put
-    into (CLAUDE.md: an error of patching, not of judgement):
+    into (an error of patching, not of judgement):
 
     - `fx.unknown-model` -- a model no engine offers;
     - `fx.engine-not-offered` -- an engine that cannot hold the model (a
@@ -2207,7 +2206,7 @@ def _check_expanded_presets(channels: list[dict], library, r: VerifyResult) -> N
     summary = []
     for channel in channels:
         # Keyed by name, as every other check is: a number alone does not
-        # say whether it is ch 2 or aux 2 (the maintainer, 2026-10-09).
+        # say whether it is ch 2 or aux 2.
         where = f"channels[{channel.get('name') or (channel.get('bank', 'ch') + ' ' + str(channel.get('channel', '?')))}]"
         bank = channel.get("bank", "ch")
         values = preset_expand.preset_values(channel)
@@ -2279,8 +2278,8 @@ def _check_expanded_presets(channels: list[dict], library, r: VerifyResult) -> N
 def _check_inferred(plan: dict, r: VerifyResult) -> None:
     """Every value the plan DECIDED rather than was told, as an INFO.
 
-    CLAUDE.md: "An inferred value is not a defect to be eliminated. An
-    inferred value that does not announce itself is." The markers are the
+    An inferred value is not a defect to be eliminated; an
+    inferred value that does not announce itself is. The markers are the
     generator's (`inferred` lists on busses, channels and sends), or the
     deterministic fallback's -- an output index `build`'s allocation
     filled, and a bus width or send mode -- which also covers a plan on disk that still
@@ -2294,7 +2293,7 @@ def _check_inferred(plan: dict, r: VerifyResult) -> None:
 
 def _check_talkback(plan: dict, r: VerifyResult) -> None:
     """A talkback strip the desk's talkback cannot use
-    (`talkback.unassignable`, a WARNING; the maintainer, 2026-10-02).
+    (`talkback.unassignable`, a WARNING; 2026-10-02).
 
     Setup -> Audio's talkback assign (`/cfg/talk/assign`) names CH40, AUX8
     or OFF, nothing else: the TALK buttons can only use ch 40 or aux 8. A
@@ -2381,9 +2380,9 @@ def verify_plan(plan: dict, rows: list[InputRow] | None = None, *,
     if not _check_structure(plan, r):
         return r
 
-    # The maintainer, 2026-09-21: an unknown console model is a hard
-    # stop, because "we have no way of knowing what its capabilities are
-    # and any plan would be meaningless". It lands as an ERROR finding
+    # An unknown console model is a hard
+    # stop, because we have no way of knowing what its capabilities are
+    # and any plan would be meaningless. It lands as an ERROR finding
     # rather than an exception to keep this function's never-raises
     # contract -- but the socket checks below genuinely cannot run without
     # it, so they are skipped and *said* to be skipped, the same way the

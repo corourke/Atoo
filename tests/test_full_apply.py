@@ -302,7 +302,7 @@ def test_a_talkback_strip_recognised_by_its_input_name():
 
 
 def test_no_talkback_strip_sets_the_assign_off():
-    """The maintainer, 2026-10-02: a full apply makes the desk the plan, and this
+    """A full apply makes the desk the plan, and this
     plan has no talkback."""
     plan = tiny(("ch", 1, "Kick"), ("ch", 40, "Crowd"))
     assert talkback_assign(plan) is None

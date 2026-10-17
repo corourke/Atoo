@@ -1,9 +1,9 @@
 """Values a plan DECIDED rather than was TOLD -- and the announcing of them.
 
-`CLAUDE.md`, the maintainer, 2026-09-23: *"it is OK to use the conventions and
-domain knowledge to make a reasonable choice here, it is not OK to leave
-the mono/stereo decision undecided because it affects how we patch ...
-This is why we have INFO messages."* The test is **"can the board be put
+The principle (2026-09-23): it is OK to use the conventions and
+domain knowledge to make a reasonable choice here, and not OK to leave
+the mono/stereo decision undecided, because it affects how we patch.
+This is why we have INFO messages. The test is **"can the board be put
 into working order without this, and if we choose wrong, does it break or
 merely displease?"** An inferred value is fine. An inferred value that
 does not announce itself is the defect.
@@ -35,7 +35,7 @@ and deterministic, so the three can never disagree about a value.
 
 ## The field audit -- which nullable fields are on this list, and why
 
-Every nullable field in `plan_schema.py`, asked the CLAUDE.md question.
+Every nullable field in `plan_schema.py`, asked that question.
 
 ON the list (null leaves the board undecided or the plan blocked, and a
 wrong choice displeases rather than breaks):
@@ -60,7 +60,7 @@ wrong choice displeases rather than breaks):
     the send is switched ON and passes nothing, and a mix or FX bus fed
     that way is silent. That is a patch that does not work. The slice-C
     reply prompt said "omit level_db for unity" on the belief that null
-    meant unity to apply; it never did, and the maintainer's festival build of
+    meant unity to apply; it never did, and a festival build of
     2026-09-29 came back with every unity send null. A wrong level is
     heard at soundcheck; an unset one is no signal. Fallback: see
     `send_level_fallback` -- unity, 0 dB.
@@ -83,7 +83,7 @@ OFF the list (rule 4 stands -- null is a working board):
     guess sends a mix into the wrong device, which breaks. So a null patch
     is never guessed. An output with none is still set up -- its feed,
     level and processing -- and routed to no socket, said at WARNING
-    (`output.no-patch`, the maintainer 2026-10-09: a Matrix used as the phones
+    (`output.no-patch`, 2026-10-09: a Matrix used as the phones
     source has no socket, and that is a working desk). A bus whose only
     destination is an unresolved socket is refused
     (`bus.unresolved-destination`).
@@ -155,7 +155,7 @@ CODE_SEND_LEVEL = "inferred.send-level"
 CODE_PAIR_PHANTOM = "inferred.pair-phantom"
 
 # The WING's own width for a bus nobody has set: every bus, Main and
-# Matrix of `tests/fixtures/Initialized-Full.snap` (the maintainer's factory-reset
+# Matrix of `tests/fixtures/Initialized-Full.snap` (a factory-reset
 # capture, 2026-09-23) reads `busmono: false`.
 FACTORY_BUS_MONO = False
 
@@ -280,8 +280,8 @@ def main_index_fallback(main_indices: dict[str, int]) -> tuple[int, str]:
     """Which Main a bus's plain "routes to main" (no number) means, and
     why -- `main_indices` maps each Main output's name to its index.
     Prefers an output literally named "Main"; else the lowest-numbered
-    Main the plan carries; else Main 1 (the maintainer: "'Main' would default to
-    Main 1 unless otherwise specified")."""
+    Main the plan carries; else Main 1 ("Main" defaults to
+    Main 1 unless otherwise specified)."""
     exact = next((name for name in main_indices if name.lower() == "main"), None)
     if exact is not None:
         n = main_indices[exact]

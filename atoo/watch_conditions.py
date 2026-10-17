@@ -17,20 +17,19 @@ per-condition `source` and the top-level `drafted` list -- see
 written down.
 
 **Structured, not plain-English (the own resolved framing).**
-The maintainer's own words on the format: "We need to be able to run watch
-without AI available, and I think that means structured rules ... So the
-user or some other deterministic process or AI model could write it if we
-first define it." This module is that structured format and its
+Watch has to run without AI available, which means structured rules:
+the user or some other deterministic process or AI model could write
+the file once the format is defined. This module is that structured format and its
 evaluator -- zero AI anywhere in this file or in the runtime path that
 uses it. Plain-English/AI-assisted authoring is a deliberately separate,
 later concern (see the issue), not attempted here.
 
-**Field vocabulary: `muted`, `fader_db`, `dca`, `mute_group`, `patch`**
-(the last three added). The first two are scalar -- a plain
-`field <operator> value` comparison. The other three are a different
+**Field vocabulary: `muted`, `fader_db`, `dca`, `mute_group`, `patch`,
+`send_on`, `send_db`, `send_mode`, `phantom`.** `muted` and `fader_db` are
+scalar -- a plain `field <operator> value` comparison. `dca`, `mute_group` and `patch` are a different
 SHAPE of question ("is channel X a member of DCA Y", "is channel X
 patched to AES50-A 12"), and they carry it on the existing two operators
-rather than inventing a third, per the maintainer's call on #93: **`==` asserts
+rather than inventing a third: **`==` asserts
 membership, `!=` asserts non-membership.**
 
     "field": "dca", "operator": "==", "value": "Drums"
@@ -58,9 +57,39 @@ The membership/patch fields accept **`==` and `!=` only** -- an ordering
 operator against a group name is refused at load time, not silently
 turned into a string comparison.
 
-Still not covered, and deliberately not invented here: send on/off and
-send level to a named bus, phantom power, head-amp gain. Nothing has
-asked for them yet.
+**Sends and phantom.** Four fields say something true of one show that
+the fixed rules cannot know: "the click stays on in every in-ear mix", "the
+drummer's in-ear send for Kick stays above -10", "48V stays on for the
+overheads".
+
+    "field": "send_on",   "bus": "BUS 5-8",  "operator": "==", "value": true
+    "field": "send_db",   "bus": "BUS Drums IEM", "operator": ">", "value": -10
+    "field": "send_mode", "bus": "BUS 1-4",  "operator": "==", "value": "pre"
+    "field": "phantom",                      "operator": "==", "value": true
+
+- **`send_on`** (boolean), **`send_db`** (a dB level, every operator) and
+  **`send_mode`** (`"pre"`, `"post"` or `"group"`, `==`/`!=`) are about the
+  strip's send to the bus named by the **`bus`** key, which these three
+  need and no other field takes. `bus` is written the way `channel` is: a
+  bus's name, `BUS 5`, a range `BUS 5-8`, `ALL BUS`, or a kind and a name
+  (`BUS Drums`); and, as a position, `MTX 3` (a Matrix) or `MAIN 1` (a
+  route to a Main, which has a switch and no level or mode, so only
+  `send_on` takes it). A bus's name is matched against the names last read,
+  case-insensitively, and a name matching none or two skips that cycle. A
+  Main's and a Matrix's names are not read, so those are written by position.
+  Only a channel or an aux has sends of this kind.
+- **`phantom`** (boolean) is the 48V on the socket the strip is patched to
+  and, for a stereo source, the socket after it: each must satisfy the
+  condition. A strip patched to a group with no head amp (a card, USB), an
+  unpatched strip, and one on its alternate input have nothing to compare
+  and are skipped.
+
+Every address these read is read already -- a strip's sends, its Main
+routes, the patch and each socket's `vph` -- so they cost no request. They
+reuse the audit's own resolvers (`audit.strip_source_sockets` for the
+sockets a strip hears), and a finding cites the strip's position and name
+as every other one does, once per violating strip, listing the buses or
+sockets that break it.
 
 **No new console reads.** `audit.read_console_state`'s `STRIP_FIELDS`
 already walks `tags`, `in/conn/grp` and `in/conn/in` for every strip, so
@@ -113,7 +142,7 @@ position, a range, a whole kind, or a kind and a name.** See
   optional. A **range**: `DCA 10-16`. A **whole kind**: `ALL AUX`. Each is
   normalised to one display spelling (`CH 10`, `DCA 10-16`, `ALL AUX`):
   `canonical_target`, which the merge keys on and the editor writes back.
-- A **scoped name** (the maintainer, 2026-10-01): a kind word, a space and a name
+- A **scoped name**: a kind word, a space and a name
   -- `BUS Drums`, `CH Kick`, `AUX Tracks`, `DCA Vocals`, `MAIN PA`, `MTX
   Delay` -- is "the one strip of that kind named that". The kind word is
   normalised (`bus drums` -> `BUS drums`); the name keeps its spelling and
@@ -188,9 +217,10 @@ from pathlib import Path
 from typing import Callable
 
 from atoo.audit import (
-    AuditRule, ConsoleState, Finding, Severity, strip_bases, strip_group_membership,
+    AuditRule, ConsoleState, Finding, Severity, bus_indices, strip_bases,
+    strip_group_membership, strip_source_sockets,
 )
-from atoo.console_facts import CAPACITY, INPUT_SOCKETS
+from atoo.console_facts import CAPACITY, INPUT_SOCKETS, PHANTOM_CAPABLE_GROUPS
 from atoo.input_list import format_socket, parse_socket_spec
 from atoo.diagnostics import Diagnostic
 from atoo.watch import watch_note
@@ -200,7 +230,8 @@ from atoo.watch import watch_note
 # silently ignores a misspelled field is worse than no checking tool.
 _REQUIRED_KEYS = frozenset({"id", "description", "channel", "field", "operator", "value", "severity"})
 
-# The one optional key. `source` records who wrote a condition
+# Optional keys. `bus` names where a send goes, and the send fields need it
+# (`_bus_problem`). `source` records who wrote a condition
 # -- "drafted" for one a build proposed, "hand" (the default, and what an
 # absent key means) for one a person wrote. Nothing in the evaluator reads
 # it; it exists so `atoo ui` and a human reading the file can tell a
@@ -209,7 +240,7 @@ _REQUIRED_KEYS = frozenset({"id", "description", "channel", "field", "operator",
 SOURCE_HAND = "hand"
 SOURCE_DRAFTED = "drafted"
 _SOURCES = frozenset({SOURCE_HAND, SOURCE_DRAFTED})
-_OPTIONAL_KEYS = frozenset({"source"})
+_OPTIONAL_KEYS = frozenset({"source", "bus"})
 
 # Top-level, beside "watch_conditions": every id any build has ever
 # drafted into this file. It is what makes a DELETION stick -- see
@@ -224,7 +255,19 @@ DRAFTED_KEY = "drafted"
 _SCALAR_FIELDS = frozenset({"muted", "fader_db"})
 _GROUP_FIELDS = frozenset({"dca", "mute_group"})
 _RELATIONAL_FIELDS = _GROUP_FIELDS | {"patch"}
-_ALLOWED_FIELDS = _SCALAR_FIELDS | _RELATIONAL_FIELDS
+# A send is judged per target and 48V per socket, so neither reduces to one
+# reading per strip (`_assess_send`, `_assess_phantom`). The send fields also
+# need the `bus` key.
+_SEND_FIELDS = frozenset({"send_on", "send_db", "send_mode"})
+_PHANTOM_FIELD = "phantom"
+_ALLOWED_FIELDS = _SCALAR_FIELDS | _RELATIONAL_FIELDS | _SEND_FIELDS | {_PHANTOM_FIELD}
+
+# The fields whose value is a boolean, and so take `==` and `!=` only.
+_BOOLEAN_FIELDS = frozenset({"muted", "send_on", _PHANTOM_FIELD})
+# `send_mode`'s values, as the plan writes a send's mode
+# (`apply._SEND_MODE_TO_WING`), and the words the desk reads back.
+_SEND_MODES = {"pre": "PRE", "post": "POST", "group": "GRP"}
+_SEND_MODE_FACT = {"PRE": "pre-fader", "POST": "post-fader", "GRP": "in group mode"}
 
 _OPERATORS: dict[str, Callable[[object, object], bool]] = {
     "==": _operator.eq,
@@ -244,8 +287,8 @@ _BOOL_COMPATIBLE_OPERATORS = frozenset({"==", "!="})
 # The relational fields answer a yes/no question, so the same two
 # operators carry them -- and for the same reason, `"dca" > "Drums"` is
 # refused at load time rather than quietly doing a string comparison
-# nobody asked for. The maintainer on #93: "`!=` means is not a member of."
-_EQUALITY_ONLY_FIELDS = _RELATIONAL_FIELDS
+# nobody asked for. `!=` means is not a member of.
+_EQUALITY_ONLY_FIELDS = _RELATIONAL_FIELDS | {"send_mode"}
 
 # --------------------------------------------------------------------------
 # Targets: what a condition's `channel` names.
@@ -270,7 +313,7 @@ TARGET_BANKS = tuple(CANONICAL_KIND_WORD)
 
 # After a kind word, a digit or a hyphen marks an attempted POSITION
 # (`CH 10`, `DCA 3-`), and anything else a SCOPED NAME (`BUS Drums`, `CH
-# Kick`; the maintainer, 2026-10-01). Until scoped names existed, `CH x` and `DCA
+# Kick`; 2026-10-01). Until scoped names existed, `CH x` and `DCA
 # Drums` were refused as malformed positions, and `Main Vox` was a bare
 # name; now all three are scoped names.
 
@@ -429,8 +472,7 @@ def parse_target(text: str) -> Target:
         word, rest = CANONICAL_KIND_WORD[bank], m.group(2)
         if not rest:
             if bank == "main":
-                # Coordinator's review, under CLAUDE.md's "an
-                # error of judgement is not an error of patching": `Main`
+                # An error of judgement is not an error of patching: `Main`
                 # alone has a conventional reading -- the main L/R, MAIN
                 # 1 -- and refusing it refuses the whole watch.json. Read
                 # it so, and say so at INFO (`main_default_note`). No
@@ -439,7 +481,7 @@ def parse_target(text: str) -> Target:
                 return Target(text, "main", 1, 1, defaulted=True)
             raise TargetError(f"{stripped!r} has no position or name -- {_TARGET_HELP}")
         if rest[0].isdigit() or rest[0] == "-":
-            # Decision 3 (the maintainer, 2026-10-01): a kind word and a digit is
+            # Decision 3: a kind word and a digit is
             # a position attempt, so `BUS 2 Track` is refused rather than
             # read as the bus named "2 Track". Say what it most likely meant.
             lead = re.match(r"(\d+)\s+\S", rest)
@@ -484,8 +526,9 @@ def main_default_note(target: Target) -> str | None:
 
 
 def target_key(text: str) -> str:
-    """What `merge_drafted_conditions` compares targets by: `ch 10` and
-    `CH10` are one target, `Kick` and `kick` are one name."""
+    """A target's spelling-independent key: `ch 10` and `CH10` are one
+    target, `Kick` and `kick` are one name. (A merge goes further and
+    compares the strips a target covers: `covered_strips`.)"""
     try:
         return parse_target(text).key
     except TargetError:
@@ -504,6 +547,12 @@ _FIELD_BANKS: dict[str, frozenset[str]] = {
     "dca": frozenset({"ch", "aux"}),
     "mute_group": frozenset({"ch", "aux"}),
     "patch": frozenset({"ch", "aux"}),
+    # Only a channel or an aux has sends of the kind these fields read, and
+    # an input patch to put 48V on.
+    "send_on": frozenset({"ch", "aux"}),
+    "send_db": frozenset({"ch", "aux"}),
+    "send_mode": frozenset({"ch", "aux"}),
+    "phantom": frozenset({"ch", "aux"}),
 }
 
 
@@ -512,8 +561,10 @@ def _field_bank_problem(field: str, target: Target) -> str | None:
     if target.bank is None or target.bank in _FIELD_BANKS[field]:
         return None
     word = CANONICAL_KIND_WORD[target.bank]
-    if field == "patch":
+    if field == "patch" or field == _PHANTOM_FIELD:
         why = f"a {word} has no input patch"
+    elif field in _SEND_FIELDS:
+        why = f"a {word} has no sends of this kind"
     elif target.bank == "dca":
         why = "a DCA cannot itself be a member of a DCA or a mute group"
     else:
@@ -521,6 +572,47 @@ def _field_bank_problem(field: str, target: Target) -> str | None:
                f"this could never be checked")
     return (f"field {field!r} does not apply to {target.canonical}: {why} -- "
             f"{word} conditions take 'muted' or 'fader_db'")
+
+
+# --------------------------------------------------------------------------
+# The `bus` key: where a send goes.
+# --------------------------------------------------------------------------
+
+# The banks a send can go to: a bus, a Matrix, or a route to a Main.
+_SEND_BANKS = ("bus", "mtx", "main")
+_BUS_HELP = ("write a bus's name, a position such as BUS 5, a range BUS 5-8, ALL BUS, a kind "
+             "and a name such as BUS Drums, or MTX 3 or MAIN 1 for a Matrix or a Main")
+
+
+def _bus_problem(field: str, bus: object) -> str | None:
+    """Why the `bus` key is wrong for `field`, or None. The three send
+    fields need it and name where the send goes; no other field takes it.
+    The target is read with `parse_target`, as `channel` is."""
+    if field not in _SEND_FIELDS:
+        return None if bus is None else (
+            f"key 'bus' only applies to {', '.join(sorted(_SEND_FIELDS))}, not to {field!r}")
+    if not isinstance(bus, str) or not bus.strip():
+        return (f"field {field!r} needs a 'bus' key naming where the send goes -- {_BUS_HELP}")
+    try:
+        target = parse_target(bus)
+    except TargetError as exc:
+        return f"'bus' {exc}"
+    if target.is_name:
+        return None
+    if target.bank not in _SEND_BANKS:
+        word = CANONICAL_KIND_WORD[target.bank]
+        return (f"'bus' {bus.strip()!r} is a {word}, which a strip does not send to -- {_BUS_HELP}")
+    word = CANONICAL_KIND_WORD[target.bank]
+    if target.is_scoped and target.bank != "bus":
+        return (f"'bus' {bus.strip()!r}: watch does not read a {word}'s name, so write its "
+                f"position, e.g. {word} 1")
+    if target.bank == "main" and field != "send_on":
+        return (f"field {field!r} does not apply to {target.canonical}: a route to a Main has "
+                f"a switch and no level or mode -- use 'send_on'")
+    if target.bank == "mtx" and field == "send_mode":
+        return (f"field 'send_mode' does not apply to {target.canonical}: only a send to a "
+                f"bus is pre or post fader")
+    return None
 
 
 def parse_patch_value(text: str) -> tuple[str, int] | None:
@@ -596,6 +688,22 @@ _FIELD_READ_PATTERNS: dict[str, tuple[str, ...]] = {
     "dca": (r"^/{bank}/\d+/tags$", r"^/dca/\d+/name$"),
     "mute_group": (r"^/{bank}/\d+/tags$", r"^/mgrp/\d+/name$"),
     "patch": (r"^/{bank}/\d+/in/conn/(?:grp|in)$",),
+    # 48V: the socket each strip is patched to, the alternate patch and the
+    # switch that decide whether it is heard, and each jack's 48V and width
+    # (a stereo source takes the next socket).
+    "phantom": (r"^/{bank}/\d+/in/conn/(?:grp|in)$",
+                r"^/{bank}/\d+/in/(?:conn/altgrp|set/altsrc)$",
+                r"^/io/altsw$",
+                r"^/io/in/(?!USR/)[A-Za-z0-9]+/\d+/(?:vph|mode)$"),
+}
+
+# A send's own leaf, per field, and where it sits for each kind of target:
+# a bus, a Matrix, or a route to a Main (which has a switch only).
+_SEND_LEAF = {"send_on": "on", "send_db": "lvl", "send_mode": "mode"}
+_SEND_PATTERNS = {
+    "bus": r"^/{bank}/\d+/send/\d+/{leaf}$",
+    "mtx": r"^/{bank}/\d+/send/MX\d+/{leaf}$",
+    "main": r"^/{bank}/\d+/main/\d+/on$",
 }
 
 # The strip banks a NAME resolves across (`_resolve_channel_base`).
@@ -606,6 +714,11 @@ _NAME_BANKS = r"(?:ch|aux)"
 # overlap INFO (`_name_overlaps`), which asks whether a channel or aux is
 # NAMED like the position.
 _CHANNEL_RESOLUTION_PATTERN = rf"^/{_NAME_BANKS}/\d+/name$"
+
+
+def _bus_target(cond: dict) -> Target:
+    """The parsed `bus` of a validated send condition."""
+    return parse_target(cond["bus"])
 
 
 def condition_address_patterns(cond: dict) -> tuple[str, ...]:
@@ -627,8 +740,16 @@ def condition_address_patterns(cond: dict) -> tuple[str, ...]:
     patterns = [_CHANNEL_RESOLUTION_PATTERN]
     if not target.is_name:
         patterns.append(rf"^/{bank}/\d+/name$")
-    patterns += [p.replace("{bank}", bank) for p in _FIELD_READ_PATTERNS[cond["field"]]]
-    return tuple(dict.fromkeys(patterns))
+    field = cond["field"]
+    if field in _SEND_FIELDS:
+        # The send itself, and the buses' names, which label a finding and
+        # resolve a bus named by its name.
+        bus_bank = _bus_target(cond).bank or "bus"
+        patterns.append(_SEND_PATTERNS[bus_bank].replace("{leaf}", _SEND_LEAF[field]))
+        patterns.append(r"^/bus/\d+/name$")
+    else:
+        patterns += _FIELD_READ_PATTERNS[field]
+    return tuple(dict.fromkeys(p.replace("{bank}", bank) for p in patterns))
 
 
 class WatchConditionsError(ValueError):
@@ -646,12 +767,16 @@ def _fail(source: str, where: str, message: str) -> None:
 def _value_problem(field: str, value: object) -> str | None:
     """Why `value` is not one `field` can take, or None. `field` is
     already known to be one of `_ALLOWED_FIELDS`."""
-    if field == "muted":
+    if field in _BOOLEAN_FIELDS:
         if not isinstance(value, bool):
-            return f"field 'muted' needs a boolean 'value', got {value!r}"
-    elif field == "fader_db":
+            return f"field {field!r} needs a boolean 'value', got {value!r}"
+    elif field in ("fader_db", "send_db"):
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return f"field 'fader_db' needs a numeric 'value', got {value!r}"
+            return f"field {field!r} needs a numeric 'value', got {value!r}"
+    elif field == "send_mode":
+        if value not in _SEND_MODES:
+            return (f"field 'send_mode' needs a 'value' of {', '.join(repr(m) for m in _SEND_MODES)}, "
+                    f"got {value!r}")
     elif field in _GROUP_FIELDS:
         if not isinstance(value, str) or not value.strip():
             return (f"field {field!r} needs a group NAME as a non-empty string 'value' "
@@ -675,7 +800,9 @@ def row_problems(cond: object) -> dict:
     is wrong -- plus, when the channel parses, `"canonical"` (the
     target's display spelling), `"position"` (a position, range or ALL
     form) and `"scoped"` (a kind and a name, `BUS Drums`). The editor
-    writes `canonical` back into the cell for either of the last two.
+    writes `canonical` back into the cell for either of the last two. A
+    send field's `bus` cell is checked the same way: `"bus"` when it is
+    wrong, `"bus_canonical"` when it is fine, which the editor writes back.
 
     The SAME rules `_validate_condition` refuses a file with, called from
     the same helpers, so the editor cannot accept what the loader will
@@ -714,6 +841,12 @@ def row_problems(cond: object) -> dict:
         bank_problem = _field_bank_problem(field, target)
         if bank_problem:
             out["field"] = bank_problem
+    bus = cond.get("bus")
+    bus_problem = _bus_problem(field, bus)
+    if bus_problem:
+        out["bus"] = bus_problem
+    elif field in _SEND_FIELDS:
+        out["bus_canonical"] = canonical_target(bus)
     return out
 
 
@@ -757,9 +890,9 @@ def _validate_condition(cond: object, source: str, index: int) -> dict:
     if operator_ not in _OPERATORS:
         _fail(source, where, f"unknown operator {operator_!r} -- expected one of {sorted(_OPERATORS)}")
 
-    if field == "muted" and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
+    if field in _BOOLEAN_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
         _fail(source, where,
-              f"field 'muted' is a boolean and only supports "
+              f"field {field!r} is a boolean and only supports "
               f"{sorted(_BOOL_COMPATIBLE_OPERATORS)}, not {operator_!r}")
     if field in _EQUALITY_ONLY_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
         _fail(source, where,
@@ -774,6 +907,10 @@ def _validate_condition(cond: object, source: str, index: int) -> dict:
     bank_problem = _field_bank_problem(field, target)
     if bank_problem:
         _fail(source, where, bank_problem)
+
+    bus_problem = _bus_problem(field, cond.get("bus"))
+    if bus_problem:
+        _fail(source, where, bus_problem)
 
     severity = cond["severity"]
     try:
@@ -908,22 +1045,101 @@ class MergeReport:
     #: under different ids. Both survive -- ids are the identity here --
     #: but they can contradict each other, so they are worth naming.
     overlaps: tuple[tuple[str, str], ...] = ()
+    #: (drafted id, existing id) pairs where the draft says what a condition
+    #: already in the file says -- the same strips, field, operator and
+    #: value, whatever the ids, the spelling of the target or the wording of
+    #: the description. The draft's is not added.
+    duplicates: tuple[tuple[str, str], ...] = ()
 
     @property
     def changed(self) -> bool:
         return bool(self.added)
 
 
-def merge_drafted_conditions(existing: dict | None, drafted: list[dict]) -> tuple[dict, MergeReport]:
+#: What two conditions are compared by when a draft is merged: the strips
+#: they cover (`covered_strips`), the field (with the bus, for a send), the
+#: operator and the value. Not
+#: the id, the description or the severity -- a model names the same rule
+#: differently each time it is asked, and a severity is the person's call.
+MEANING = "the same strips, field, operator and value"
+
+_PLAN_BANK_KINDS = {"main": "main", "matrix": "mtx"}
+
+
+def covered_strips(channel: str, plan: dict | None) -> frozenset:
+    """The strips a condition's `channel` names, as `(bank, number)` pairs,
+    so that `Kick`, `CH 1` and `kick` -- or `MAIN PA` and `MAIN 1`, or `DCA
+    Vocals` and `DCA 1-5` -- can be compared as the same strip or a part of
+    one. A position, range or `ALL` form is its own strips; a name is looked
+    up in `plan` (case-insensitively, within its kind). A name the plan does
+    not settle -- absent from it, or on two strips of the kind -- stays a
+    `("name", text)` pair, which equals only the same name."""
+    try:
+        target = parse_target(channel)
+    except TargetError:
+        return frozenset({("name", channel.strip().lower())})
+    if target.is_position:
+        return frozenset((target.bank, n) for n in range(target.first, target.last + 1))
+    name = (target.name if target.is_scoped else target.text).strip().lower()
+    found: set[tuple[str, int]] = set()
+    plan = plan or {}
+    banks = {target.bank} if target.is_scoped else {"ch", "aux"}
+    for entry in plan.get("channels") or []:
+        if isinstance(entry, dict) and entry.get("bank", "ch") in banks \
+                and str(entry.get("name") or "").strip().lower() == name \
+                and isinstance(entry.get("channel"), int):
+            found.add((entry.get("bank", "ch"), entry["channel"]))
+    if target.is_scoped and target.bank in ("bus", "dca"):
+        section = plan.get("busses" if target.bank == "bus" else "dcas") or {}
+        for obj_name, obj in section.items():
+            if str(obj_name).strip().lower() == name and isinstance(obj, dict) \
+                    and isinstance(obj.get("index"), int):
+                found.add((target.bank, obj["index"]))
+    if target.is_scoped and target.bank in ("main", "mtx"):
+        for obj_name, obj in (plan.get("outputs") or {}).items():
+            if str(obj_name).strip().lower() == name and isinstance(obj, dict) \
+                    and _PLAN_BANK_KINDS.get(obj.get("kind")) == target.bank \
+                    and isinstance(obj.get("index"), int):
+                found.add((target.bank, obj["index"]))
+    if len(found) == 1:
+        return frozenset(found)
+    return frozenset({("name", f"{target.bank or ''} {name}".strip())})
+
+
+def _bus_key(cond: dict) -> str:
+    """Where a send condition's send goes, spelled independently of case and
+    form (`bus 5` and `BUS5` are one); empty for every other field."""
+    bus = cond.get("bus")
+    return target_key(bus) if isinstance(bus, str) else ""
+
+
+def _meaning_key(cond: dict) -> tuple:
+    value = cond["value"]
+    if isinstance(value, str):
+        value = value.strip().lower()
+    elif not isinstance(value, bool):
+        value = float(value)
+    return (cond["field"], _bus_key(cond), cond["operator"], value)
+
+
+def merge_drafted_conditions(existing: dict | None, drafted: list[dict],
+                             plan: dict | None = None) -> tuple[dict, MergeReport]:
     """Fold a freshly drafted watchlist into the one already on disk.
 
-    The maintainer, 2026-09-20, asked for a merge rather than the refuse /
-    overwrite / write-alongside options originally offered. The merge is
+    The merge is chosen over the refuse /
+    overwrite / write-alongside options originally offered. It is
     **purely additive**, keyed on `id`:
 
     * a drafted id that is new is added;
     * a drafted id that already exists leaves YOUR condition untouched --
       a rebuild never rewrites a rule you tuned;
+    * a drafted condition that says what one already in the file says is
+      not added, whatever its id (`MEANING`). Ids are what a model makes
+      up afresh each time; the rule is what the person already has. With
+      the `plan`, a name is looked up in it, so `MAIN PA` and `MAIN 1` are
+      one strip, and a drafted `DCA Vocals` is covered by a `DCA 1-5` of
+      the same field, operator and value. This holds among the drafted
+      conditions themselves too;
     * a condition the draft no longer proposes is kept -- a rule you wrote
       about something the model didn't think to watch is exactly the one
       worth keeping.
@@ -948,17 +1164,24 @@ def merge_drafted_conditions(existing: dict | None, drafted: list[dict]) -> tupl
     ever_drafted = {str(i) for i in existing.get(DRAFTED_KEY) or []}
 
     by_id = {c["id"]: c for c in conditions}
-    # (target, field) -> the id already asking about it, for the overlap
-    # caution below. `target_key` lower-cases a name, because names are
-    # resolved case-insensitively at evaluation time (_resolve_channel_base),
-    # and spells a position canonically, so `ch 10` and `CH10`
-    # are the same target.
-    by_target = {(target_key(str(c["channel"])), c["field"]): c["id"] for c in conditions}
+    # meaning -> [(id, strips)] of the conditions in the file, for the
+    # duplicate check below, and field -> the same, for the overlap caution;
+    # drafted ones join both as they are added. Names are compared as the
+    # strips they are in the plan, case-insensitively (names resolve that
+    # way at evaluation time), and positions in their canonical spelling, so
+    # `ch 10` and `CH10` are the same strip.
+    by_meaning: dict[tuple, list[tuple[str, frozenset]]] = {}
+    by_field: dict[tuple[str, str], list[tuple[str, frozenset]]] = {}
+    for c in conditions:
+        strips = covered_strips(str(c["channel"]), plan)
+        by_meaning.setdefault(_meaning_key(c), []).append((c["id"], strips))
+        by_field.setdefault((c["field"], _bus_key(c)), []).append((c["id"], strips))
 
     added: list[str] = []
     kept: list[str] = []
     dismissed: list[str] = []
     overlaps: list[tuple[str, str]] = []
+    duplicates: list[tuple[str, str]] = []
 
     for cond in drafted:
         cond_id = cond["id"]
@@ -968,25 +1191,40 @@ def merge_drafted_conditions(existing: dict | None, drafted: list[dict]) -> tupl
         if cond_id in ever_drafted:
             dismissed.append(cond_id)
             continue
-        target = (target_key(str(cond["channel"])), cond["field"])
-        if target in by_target:
-            overlaps.append((cond_id, by_target[target]))
+        strips = covered_strips(str(cond["channel"]), plan)
+        same = by_meaning.get(_meaning_key(cond), [])
+        if strips and strips <= frozenset().union(*(s for _, s in same)):
+            twin = next(i for i, s in same if s & strips)
+            duplicates.append((cond_id, twin))
+            continue
+        rival = next((i for i, s in by_field.get((cond["field"], _bus_key(cond)), [])
+                      if s & strips), None)
+        if rival is not None:
+            overlaps.append((cond_id, rival))
         entry = dict(cond)
         entry["source"] = SOURCE_DRAFTED
         # A drafted position is written in its canonical spelling; a name
         # stays exactly as the model spelled it (it matches the plan's).
         entry["channel"] = canonical_target(str(cond["channel"]))
+        if isinstance(entry.get("bus"), str):
+            entry["bus"] = canonical_target(entry["bus"])
         conditions.append(entry)
         by_id[cond_id] = entry
-        by_target.setdefault(target, cond_id)
+        by_meaning.setdefault(_meaning_key(cond), []).append((cond_id, strips))
+        by_field.setdefault((cond["field"], _bus_key(cond)), []).append((cond_id, strips))
         added.append(cond_id)
 
     document = dict(existing)
     document["watch_conditions"] = conditions
     # Union, never a replacement: an id drafted by an older build and since
     # deleted has to stay recorded or the deletion stops sticking.
-    document[DRAFTED_KEY] = sorted(ever_drafted | {c["id"] for c in drafted})
-    return document, MergeReport(tuple(added), tuple(kept), tuple(dismissed), tuple(overlaps))
+    # A duplicate is not recorded: it was never put in the file, and if the
+    # rule it duplicated is deleted later, the draft may propose it again.
+    skipped = {new_id for new_id, _ in duplicates}
+    document[DRAFTED_KEY] = sorted(
+        ever_drafted | {c["id"] for c in drafted if c["id"] not in skipped})
+    return document, MergeReport(tuple(added), tuple(kept), tuple(dismissed), tuple(overlaps),
+                                 tuple(duplicates))
 
 
 # --------------------------------------------------------------------------
@@ -1039,9 +1277,9 @@ def _satisfied(
         return _OPERATORS[op_symbol](live, expected)
 
     if field in _GROUP_FIELDS:
-        # `==` asserts membership, `!=` asserts non-membership (the maintainer on
-        # #93). `strip_group_membership` is `audit.diff_against_plan`'s own
-        # resolver, so an unknown or ambiguous group name is skipped here
+        # `==` asserts membership, `!=` asserts non-membership. `strip_group_membership` is
+        # `audit.diff_against_plan`'s own resolver, so an unknown or ambiguous group name
+        # is skipped here
         # exactly as it is there.
         member = strip_group_membership(state, base, field, str(expected))
         if member is None:
@@ -1060,7 +1298,7 @@ def _violation_detail(
 ) -> str:
     """The sentence a `Finding` carries: the strip, what it IS, and the
     condition's own description -- `DCA 1 "DRUMS" is muted -- DCAs should
-    not be muted.` (the maintainer, 2026-10-01: say what is wrong, in the
+    not be muted.` (say what is wrong, in the
     engineer's words, and nothing else). The condition's id, operator and
     wanted value are not repeated: the description says what was wanted,
     and the finding's addresses and rule id carry the rest."""
@@ -1080,10 +1318,114 @@ def _violation_detail(
         live_patch = _live_patch(state, base)
         fact = ("is unpatched" if live_patch is None
                 else f"is patched to {format_socket(*live_patch)}")
+    return _sentence(label, fact, cond)
+
+
+def _sentence(label: str, fact: str, cond: dict) -> str:
+    """`CH 1 "Kick" is patched to LCL 1 -- Kick must stay patched to LCL 5.`:
+    the strip, what it is, and the condition's own description."""
     description = cond["description"].strip()
     if description and description[-1] not in ".!?":
         description += "."
     return f"{label} {fact} -- {description}"
+
+
+@dataclass(frozen=True)
+class _Verdict:
+    """A send or phantom condition judged on one strip: whether it holds,
+    and when it does not, what the strip is doing and the addresses that
+    show it."""
+    holds: bool
+    fact: str = ""
+    addresses: tuple[str, ...] = ()
+
+
+def _and_join(items: list[str]) -> str:
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _send_candidates(state: ConsoleState, target: Target) -> list[tuple[str, int]]:
+    """The `(kind, index)` pairs a send condition's `bus` names: a position,
+    a range or `ALL` as written, and a bus's name (bare, or after the kind
+    word `BUS`) as the one bus that has it among the names last read, or
+    none when no bus or more than one does."""
+    if target.is_name or target.is_scoped:
+        wanted = (target.name if target.is_scoped else target.text).strip().lower()
+        matches = [i for i in bus_indices(state)
+                   if (name := state.name(f"/bus/{i}")) is not None
+                   and name.strip().lower() == wanted]
+        return [("bus", matches[0])] if len(matches) == 1 else []
+    return [(target.bank, n) for n in range(target.first, target.last + 1)]
+
+
+def _send_address(base: str, kind: str, index: int, leaf: str) -> str:
+    """A strip's send to a bus or a Matrix, or its route to a Main (which has
+    a switch and nothing else)."""
+    if kind == "main":
+        return f"{base}/main/{index}/on"
+    return f"{base}/send/{'MX' if kind == 'mtx' else ''}{index}/{leaf}"
+
+
+def _assess_send(state: ConsoleState, base: str, cond: dict, target: Target) -> _Verdict | None:
+    """`send_on`, `send_db` or `send_mode` on one strip, over every bus the
+    condition's `bus` covers. None when none of those sends was read. The
+    strip breaks the condition when any send it covers does."""
+    field, op_symbol, expected = cond["field"], cond["operator"], cond["value"]
+    leaf = _SEND_LEAF[field]
+    reader = {"send_on": state.flag, "send_db": state.number, "send_mode": state.text}[field]
+    wanted = _SEND_MODES[expected] if field == "send_mode" else expected
+    answered = False
+    broken: list[tuple[str, int, object, str]] = []
+    for kind, index in _send_candidates(state, target):
+        address = _send_address(base, kind, index, leaf)
+        live = reader(address)
+        if live is None:
+            continue
+        answered = True
+        if not _OPERATORS[op_symbol](live, wanted):
+            broken.append((kind, index, live, address))
+    if not answered:
+        return None
+    if not broken:
+        return _Verdict(True)
+    noun = "route" if broken[0][0] == "main" else "send"
+    plural = "s" if len(broken) > 1 else ""
+    labels = [_position_label(state, f"/{kind}/{index}") for kind, index, _live, _a in broken]
+    if field == "send_on":
+        fact = (f"has its {noun}{plural} to {_and_join(labels)} switched "
+                f"{'on' if broken[0][2] else 'off'}")
+    elif field == "send_db":
+        shown = [f"{label} at {'-inf' if live == float('-inf') else f'{live:g}'} dB"
+                 for label, (_k, _i, live, _a) in zip(labels, broken)]
+        fact = f"has its {noun}{plural} to {_and_join(shown)}"
+    else:
+        shown = [f"{label} {_SEND_MODE_FACT.get(live, str(live).lower())}"
+                 for label, (_k, _i, live, _a) in zip(labels, broken)]
+        fact = f"has its {noun}{plural} to {_and_join(shown)}"
+    return _Verdict(False, fact, tuple(address for _k, _i, _l, address in broken))
+
+
+def _assess_phantom(state: ConsoleState, base: str, cond: dict) -> _Verdict | None:
+    """`phantom` on one strip: the 48V of each socket it hears
+    (`audit.strip_source_sockets`) must satisfy the condition. None for an
+    unpatched strip, one on its alternate input, a group with no head amp,
+    and when any of its sockets' 48V was not read."""
+    op_symbol, expected = cond["operator"], cond["value"]
+    sockets = strip_source_sockets(state, base)
+    if not sockets or sockets[0][0] not in PHANTOM_CAPABLE_GROUPS:
+        return None
+    readings = [(group, socket, state.input_phantom(group, socket)) for group, socket in sockets]
+    if any(live is None for _g, _s, live in readings):
+        return None
+    broken = [(group, socket, live) for group, socket, live in readings
+              if not _OPERATORS[op_symbol](live, expected)]
+    if not broken:
+        return _Verdict(True)
+    where = _and_join([format_socket(group, socket) for group, socket, _live in broken])
+    return _Verdict(False, f"has 48V {'on' if broken[0][2] else 'off'} at {where}",
+                    tuple(f"/io/in/{group}/{socket}/vph" for group, socket, _live in broken))
 
 
 def _position_label(state: ConsoleState, base: str) -> str:
@@ -1112,8 +1454,8 @@ def _name_overlaps(state: ConsoleState, target: Target) -> list[str]:
 # Scoped names (`BUS Drums`): resolved ONCE, then watched by position.
 # --------------------------------------------------------------------------
 #
-# The maintainer, 2026-10-01: "I'm not sure you need to keep reading names at
-# all, if that is an expensive operation." So a scoped name is matched
+# Names need not be read every cycle, since that is an expensive
+# operation. So a scoped name is matched
 # against the strip names of the session's FIRST reading -- the baseline
 # Start takes -- and the position it matched is what every later cycle
 # evaluates. A rename or a move after Start is not followed until Watch is
@@ -1219,7 +1561,7 @@ def _resolve_scoped(state: ConsoleState, target: Target, cond: dict) -> _Resolut
     notes: list[Finding] = []
     overlaps = _name_overlaps(state, target)
 
-    # Decision 2 (the maintainer, 2026-10-01): the scoped form wins over a
+    # Decision 2: the scoped form wins over a
     # channel or aux literally named "BUS Drums", and says so.
     for base in overlaps:
         _, bank, n = base.split("/")
@@ -1286,9 +1628,22 @@ def _make_check(cond: dict) -> Callable[[ConsoleState], list[Finding]]:
     severity = Severity(cond["severity"])
     rule_id = f"WATCH:{cond['id']}"
     description = cond["description"]
-    addresses = _FIELD_ADDRESSES[field]
+    addresses = _FIELD_ADDRESSES.get(field, ())
+    bus_target = parse_target(cond["bus"]) if field in _SEND_FIELDS else None
+
+    def judge(state: ConsoleState, base: str) -> _Verdict | None:
+        if bus_target is not None:
+            return _assess_send(state, base, cond, bus_target)
+        return _assess_phantom(state, base, cond)
 
     def finding_for(state: ConsoleState, base: str, label: str) -> list[Finding]:
+        if field in _SEND_FIELDS or field == _PHANTOM_FIELD:
+            verdict = judge(state, base)
+            if verdict is None or verdict.holds:
+                return []
+            return [Diagnostic.audit(
+                rule_id, severity, "watch", description,
+                _sentence(label, verdict.fact, cond), verdict.addresses)]
         holds = _satisfied(state, base, field, op_symbol, expected)
         if holds is None:
             # Live state can't answer this cycle (field never read, group

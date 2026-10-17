@@ -1,7 +1,7 @@
 """The AI provider abstraction -- FR-X.9: "swappable behind one interface
 with no vendor SDK in the compiler core... a base-URL swap, not a second
 code path." Every provider here talks plain HTTP via urllib (stdlib), the
-same approach archive/experiments/archive/spike_ai_conventions.py already validated against a
+same approach an early spike already validated against a
 real Ollama endpoint -- no new dependency, and nothing in atoo.rules
 or atoo.generate imports a vendor SDK or knows which provider it's
 talking to.
@@ -14,8 +14,8 @@ against a real endpoint -- there is no API key and no Ollama server in
 this environment (or CI), and there doesn't need to be one: the contract
 under test is "does the caller correctly turn a provider's text response
 into a RulesIR", not "does a specific model produce a good response",
-which is what archive/experiments/archive/spike_ai_conventions.py and the model sweep it feeds
-are for.
+which is what the early spike and the model sweep it fed
+were for.
 """
 
 from __future__ import annotations
@@ -46,11 +46,11 @@ _CLAUDE_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 # critic's $0.46 thinking, to return ~450 tokens. So each role takes its
 # own setting, keyed by the `label` every call already passes; any other
 # label (a patch's "change", say) runs at the generator's effort.
-# The maintainer chose `medium` for the critic and the watchlist.
+# `medium` is the default for the critic and the watchlist.
 #
 # `resolve` (2026-09-30, `conventions_resolve.py`): the one call that
 # rewrites the house conventions and the domain knowledge as resolved
-# rules, made only when either changes. The maintainer, 2026-09-30: Sonnet at
+# rules, made only when either changes. Sonnet at
 # `high` by default, whatever the generator runs on -- it runs rarely,
 # every build of every show reads what it wrote, and a misreading there
 # repeats in each of them, so it is the best-spent thinking in the
@@ -61,20 +61,20 @@ ROLE_EFFORT_ENV = {
     "watchlist": "ATOO_AI_WATCHLIST_EFFORT",
     "resolve": "ATOO_AI_RESOLVE_EFFORT",
 }
-# The maintainer, 2026-10-01: "Use Sonnet 5.5 medium for all stages." One
+# Every stage defaults to Sonnet 5.5 at medium effort: one
 # setting for every role; each still has its own variable.
 ROLE_EFFORT_DEFAULTS = {"generator": "medium", "critic": "medium", "watchlist": "medium",
                         "resolve": "medium"}
 
-# Per-role MODEL (2026-09-28, docs/developer/build-cost-reduction.md, slice
-# A). The generator constructs a whole show; the critic reads one and
+# Per-role MODEL (2026-09-28, cost-reduction slice A). The generator
+# constructs a whole show; the critic reads one and
 # writes a few hundred tokens of findings that gate nothing; the
 # watchlist selects a handful of conditions that are validated before
 # they touch disk. On the one measured festival build the critic's single
 # finding restated the generator's own note, for a quarter of the bill.
-# Until 2026-10-01 the two reading roles ran on Haiku by default. The maintainer,
-# after the Haiku rebuilds: "I don't think we are going to use Haiku as it
-# has too many problems and doesn't save money" -- so every role now runs
+# Until 2026-10-01 the two reading roles ran on Haiku by default. After the
+# Haiku rebuilds showed it had too many problems and did not save money,
+# every role now runs
 # on the current Sonnet (`DEFAULT_MODEL`) unless told otherwise, announced
 # at INFO as before. The generator, and any label not named here (a
 # patch's "change"), run on `model` (ATOO_AI_MODEL), whose default is
@@ -87,8 +87,7 @@ ROLE_MODEL_ENV = {
     "watchlist": "ATOO_AI_WATCHLIST_MODEL",
     "resolve": "ATOO_AI_RESOLVE_MODEL",
 }
-# The maintainer, 2026-10-01: "Sonnet 5.5 is out now. Can we set that as the
-# default?" Same price as Sonnet 5 ($2 / $10 per MTok).
+# Sonnet 5.5 is the default: same price as Sonnet 5 ($2 / $10 per MTok).
 DEFAULT_MODEL = "claude-sonnet-5-5"
 ROLE_MODEL_DEFAULTS = {"critic": DEFAULT_MODEL, "watchlist": DEFAULT_MODEL,
                        "resolve": DEFAULT_MODEL}
@@ -133,8 +132,8 @@ _EFFORT_LEVELS_BY_MODEL = (
 )
 
 
-# Models that are never sent a reply schema (`output_config.format`).
-# The maintainer, 2026-09-29: "Don't try to push a reply schema to haiku." The
+# Models that are never sent a reply schema (`output_config.format`),
+# haiku among them. The
 # reply is validated locally against the full plan format either way; what
 # a schema would add is the guarantee of well-formedness, and on Haiku that
 # is not worth the compile and the risk of a refused schema.
@@ -387,9 +386,8 @@ class ApiKeyProvider:
     stream: bool = True
     show_progress: bool = True
     # This build's own record of each call's thinking-summary notes and
-    # usage, keyed by `label` (docs/developer/build-lessons-2026-09-27.md,
-    # part C). Populated after every call that names a label; `cli.py`
-    # folds it into `plan["meta"]["build_log"]`. Never read back by any
+    # usage, keyed by `label`. Populated after every call that names a
+    # label; `cli.py` folds it into `plan["meta"]["build_log"]`. Never read back by any
     # provider -- it is the human reviewer's record, not the model's.
     build_log: dict = field(default_factory=dict, init=False, repr=False, compare=False)
 
@@ -560,7 +558,7 @@ def _unreachable_hint(exc: BaseException, base_url: str) -> str:
 
 def _undated(model: str) -> str:
     """`claude-haiku-4-5-20251001` -> `claude-haiku-4-5`: a dated snapshot
-    ID prices as its model. The maintainer's sixpiece build of 2026-09-29 named
+    ID prices as its model. A sixpiece build of 2026-09-29 named
     Haiku by its dated ID and its build log recorded no cost at all."""
     return re.sub(r"-\d{8}$", "", model)
 
@@ -607,7 +605,7 @@ class ClaudeProvider:
     # nearly all of it went to thinking that is never returned. The next
     # ceiling, 64000, failed the same way on the 38-row festival show
     # (2026-09-26): ~46,800 thinking plus ~18,100 of plan against 64,000,
-    # short by about 900 (docs/developer/plan-output-compaction.md). So the
+    # short by about 900. So the
     # default is now the model's own output limit (`default_max_tokens`):
     # a ceiling only decides where a run is cut off, and a run cut off
     # bills every token it wrote anyway. Effort, not this, is the cost
@@ -824,8 +822,8 @@ class ClaudeProvider:
         the judgement this provider makes about the request on the page's
         and the bill's behalf, and how to undo it.
 
-        Only a state that is NOT the default is said (the maintainer, 2026-09-30:
-        *"The notes noise is way too much"*). Summaries requested is the
+        Only a state that is NOT the default is said (a
+        build that printed a note for every call was far too noisy). Summaries requested is the
         default on every model that takes them, billed the same either
         way, and changes nothing on the desk, so it is not printed
         (ATOO_AI_THINKING_SUMMARIES=0 still turns it off). A critic
@@ -861,8 +859,8 @@ class ClaudeProvider:
         take it -- and asked once more WITHOUT the schema if the API refuses
         the schema itself (a 400 before any generation, so it costs nothing).
 
-        The reply schema (`plan_schema.REPLY_SCHEMA`, slice C of
-        docs/developer/build-cost-reduction.md) is large, and the API's
+        The reply schema (`plan_schema.REPLY_SCHEMA`, slice C of the
+        cost reduction) is large, and the API's
         structured-output compiler has complexity limits that are not
         published in numbers. A refusal there must not fail every build:
         the reply is validated locally against the full schema either way,
@@ -1507,8 +1505,7 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
       ATOO_AI_CRITIC_MODEL, ATOO_AI_WATCHLIST_MODEL
                                "claude" only: the model the critic and the
                                watchlist draft run on, each claude-haiku-4-5
-                               by default (docs/developer/build-cost-
-                               reduction.md); set one to ATOO_AI_MODEL's
+                               by default; set one to ATOO_AI_MODEL's
                                value to run that role on the generator's
                                model. Announced on the `INFO model and
                                effort by role` line
@@ -1530,7 +1527,7 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
                                for one JSON body instead of a stream, and
                                step 04 then has no live text to show
 
-    **Claude is the default** (changed 2026-10-01, the maintainer). It was
+    **Claude is the default** (changed 2026-10-01). It was
     Ollama from 2026-09-10, so a build would work offline -- but a build
     happens ahead of time at the shop, where there is internet, and
     every build since has run on Claude: with nothing set, a user got a

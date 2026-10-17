@@ -37,13 +37,17 @@ The test is: **would the engineer want to know within seconds, mid-show?**
 Good candidates are the things that are quietly destructive and easy to do
 by accident — a talkback or crowd mic that must stay muted, a DCA a whole
 section depends on, a channel whose patch must not move, a fader that
-should never be pushed past a level. Prefer conditions the plan and the
-show's own instructions make explicit.
+should never be pushed past a level, a send an in-ear mix depends on, 48V
+on a condenser. Prefer conditions the plan and the show's own instructions
+make explicit.
 
 Do **not** draft:
 
 - a condition per channel. A watchlist of forty alerts is a watchlist
   nobody reads. Ten is a lot; three good ones beat ten weak ones.
+- one condition per strip when a rule is about a kind of strip. "No DCA
+  is muted" is ONE condition on a range (`DCA 1-5`), not five. See
+  `channel` below.
 - anything the deterministic audit already catches — phantom power on an
   unpatched socket, a bus with no inputs, a DCA closed over active
   members. Those fire on their own.
@@ -62,7 +66,7 @@ Emit one JSON object and nothing else:
   "watch_conditions": [
     {
       "id": "crowd-mic-muted",
-      "description": "Crowd mic stays muted until the encore",
+      "description": "Crowd L stays muted",
       "channel": "Crowd L",
       "field": "muted",
       "operator": "==",
@@ -75,8 +79,14 @@ Emit one JSON object and nothing else:
 
 - `id` — short, stable, unique within the list. A person will read it in an
   alert and in a file they edit by hand.
-- `description` — why it matters, in the engineer's own terms. This is what
-  they see when it fires at 21:40 with the lights down.
+- `description` — the rule itself, as one short sentence saying what the
+  condition checks: "Main 1 stays unmuted", "No DCA is muted", "Lead Vox
+  fader stays above -40 dB". Nothing else. The alert already says which
+  strip, by number and name, and what was read from the console, so the
+  description does not repeat either. Do not explain why it matters, say
+  what would happen if it failed, or assume anything about the show, the
+  band or the engineer's habits: the engineer knows their own show. Leave
+  out "so", "because" and "otherwise".
 - `channel` — for a channel or an aux, its **name**, spelled exactly as
   the plan spells it. Never a channel number: channels move when the
   input list is reordered. For a **bus** or a **DCA**, write the kind
@@ -87,16 +97,68 @@ Emit one JSON object and nothing else:
   `outputs` entry gives it, written inside `channel`. The plan does not
   name the console's Mains and Matrices, so a name for one would match
   nothing. A bus, DCA, Main or Matrix takes only `muted` or `fader_db`.
+  **A rule about a kind of strip is one condition on a range**, written
+  from the `index` values the plan gives those strips: `DCA 1-5` for every
+  DCA the plan has, `BUS 5-7` for the mix and FX busses when their indexes
+  run together, `BUS 1-4` for monitor busses numbered 1 to 4. A range must hold the
+  strips you mean and no others; where a kind's strips are not contiguous,
+  write one condition per contiguous run. The alert names every strip that
+  breaks it by number and by its name on the console, so a range loses
+  nothing a condition per strip would have said. Name a single strip only
+  for a rule that is about that strip alone (`MAIN 1`, `Lead Vox`).
 - `field` — one of: {fields}
 - `operator` — one of: {operators}
-- `value` — a boolean for `muted`, a number in dB for `fader_db`, and a
-  **name** for `dca`/`mute_group` (the group's name, never an index). For
-  `patch`, a socket written the way an input list writes one: `"AES50-A
-  12"`, `"LCL 3"`, `"AES 1"`.
+- `bus` — **only** on `send_on`, `send_db` and `send_mode`, and required
+  on them: where the strip's send goes. Write it the way `channel` writes a
+  bus: the kind word and the name as the plan spells it (`BUS Drum IEM`),
+  a position (`BUS 5`), or a range (`BUS 5-8`) when the in-ear or monitor
+  busses are numbered together. `MTX 3` is a Matrix and `MAIN 1` a route to
+  a Main (only `send_on` takes a Main). Never put `bus` on any other field.
+- `value` — a boolean for `muted`, `send_on` and `phantom`, a number in dB
+  for `fader_db` and `send_db`, `"pre"`, `"post"` or `"group"` for
+  `send_mode`, and a **name** for `dca`/`mute_group` (the group's name,
+  never an index). For `patch`, a socket written the way an input list
+  writes one: `"AES50-A 12"`, `"LCL 3"`, `"AES 1"`.
 - `severity` — one of: {severities}
 
-A condition has exactly these seven keys and no others: no `index`, no
-`bank`, no `notes`. Anything else is dropped.
+A condition has exactly these seven keys, and `bus` on a send field, and no
+others: no `index`, no `bank`, no `notes`. Anything else is dropped.
+
+**Sends and 48V.** `send_on` is whether a strip's send to the `bus` is
+switched on, `send_db` its level in dB, `send_mode` whether it is pre- or
+post-fader; `phantom` is whether 48V is on at the socket the strip is
+patched to (and, for a stereo source, the next one). They are for a rule the
+show itself states: "the click goes to every in-ear mix", "the drummer's Kick
+stays up in his mix", "48V on for the overhead mics". Draft one only when the
+conventions or the instructions state the requirement. A send level or a
+channel's name in the plan is a starting point, not a rule, and a condition
+invented from either is an alert nobody asked for. Two examples:
+
+```json
+{
+  "watch_conditions": [
+    {
+      "id": "click-in-every-iem",
+      "description": "The click stays on in every in-ear mix",
+      "channel": "Click",
+      "field": "send_on",
+      "bus": "BUS 5-8",
+      "operator": "==",
+      "value": true,
+      "severity": "error"
+    },
+    {
+      "id": "overhead-left-48v",
+      "description": "48V stays on for OH L",
+      "channel": "OH L",
+      "field": "phantom",
+      "operator": "==",
+      "value": true,
+      "severity": "error"
+    }
+  ]
+}
+```
 
 For `dca`, `mute_group` and `patch`, `==` asserts the relationship holds
 and `!=` asserts it does not. `"field": "dca", "operator": "==", "value":

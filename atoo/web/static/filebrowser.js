@@ -1,7 +1,7 @@
 /* The file browser: one modal, used by every "which file?" on the page
- * (the maintainer 2026-09-25: "we need a real modal file browser for
+ * (a real modal file browser for
  * selecting existing files, or creating a new show directory or a new
- * file").
+ * file).
  *
  * A page cannot see the disk, so each folder is asked of the server,
  * which runs on this same laptop: `GET /api/fs/list` (names, types, sizes
@@ -68,8 +68,8 @@
   const selectionEl = el("fb-selection");
   const confirmBtn = el("fb-confirm");
 
-  // Sticky (the maintainer, 2026-09-25: "make the file chooser sticky, use the
-  // location in the file system last used"). The folder the last file or
+  // Sticky: the file chooser uses the
+  // location in the file system last used. The folder the last file or
   // folder was CHOSEN from is where every dialog opens next -- whichever
   // button opened it, across reloads and server restarts. Kept in this
   // browser's storage, a per-viewer convenience: an unavailable storage

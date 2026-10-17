@@ -146,7 +146,7 @@ def test_missing_library_warning_names_the_presets_a_change_adds():
 
 
 def test_the_patch_page_draws_the_missing_library_warning_first():
-    """CLAUDE.md: the suite cannot see the browser -- assert over the asset."""
+    """The suite cannot see the browser -- assert over the asset."""
     js = (Path(__file__).parents[1] / "atoo" / "web" / "static" / "amend.js").read_text()
     assert 'if (review.preset_warning) {' in js
     assert 'text("li", "is-warning", "WARNING " + review.preset_warning)' in js

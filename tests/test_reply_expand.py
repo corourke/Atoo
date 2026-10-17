@@ -3,7 +3,7 @@
 slices 2-4).
 
 Every plan here is frozen under `tests/fixtures/` or built in the test.
-Nothing reads `examples/` (CLAUDE.md: a bundle there is a living example,
+Nothing reads `examples/` (a bundle there is a living example,
 not a fixture). `_compact()` is the test's own inverse of the expander --
 what a model writing the reply format would have written for a plan --
 so the round trip `expand(compact(plan)) == plan` can be checked on the
@@ -233,7 +233,7 @@ def test_an_omitted_field_expands_exactly_as_null_does():
 
 
 # A smaller hosted model writes null for what it has nothing to say about
-# (the maintainer's two Haiku 4.5 smallband builds, 2026-09-28, frozen here from
+# (two Haiku 4.5 smallband builds, frozen here from
 # `plan.json.partial`'s outputs section -- never read from examples/):
 # `fader: null` on an output whose fader is an optional OBJECT, and a
 # null under a key the format does not have at all (`destination` on an
@@ -299,7 +299,7 @@ def test_a_rule_4b_field_left_out_is_refused_not_defaulted():
 
 def test_a_send_level_left_out_is_unity_written_and_marked():
     """Not null: apply writes no level for null, and a fresh desk's -144
-    would leave the send silent (the maintainer's festival build, 2026-09-29;
+    would leave the send silent (a festival build;
     `test_send_levels_and_reply_repair.py`)."""
     reply = _compact(_plans()["smallband"])
     group = reply["busses"][0]["sends"][0]
@@ -566,7 +566,7 @@ def test_a_one_row_channel_is_mono_by_construction():
 
 def test_a_group_that_runs_out_is_a_hard_error_naming_the_choice():
     """The reply chose the group, so it must choose where the overflow
-    goes (CLAUDE.md: a socket that does not exist is an error of
+    goes (a socket that does not exist is an error of
     patching, not of judgement)."""
     rows = "name,category,type,phantom\n" + "".join(f"In {i},misc,Line,FALSE\n" for i in range(1, 4))
     reply = _reply(*({"input": f"In {i}", "patch": {"group": "AES"}} for i in range(1, 4)))

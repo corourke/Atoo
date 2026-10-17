@@ -1,6 +1,6 @@
 """Per-desk journal history -- one bundle, applied to more than one console.
 
-The maintainer, 2026-09-24: *"you might generate a plan, and want to apply it to
+*"you might generate a plan, and want to apply it to
 more than one console, ex: primary console wing compact, backup console
 wing rack (both have similar I/O.)"* The journal stack is one
 per BUNDLE, and until this change it assumed one desk. The hazard that
@@ -289,7 +289,7 @@ def test_with_nothing_left_on_this_desk_it_says_so_and_names_the_other(
 
 def test_a_legacy_entry_is_popped_on_whatever_desk_and_says_so(
         bundle_dir, monkeypatch, capsys):
-    """An entry recorded before entries named their desk. `CLAUDE.md`: an
+    """An entry recorded before entries named their desk. An
     inferred value is fine, an inferred value that does not announce
     itself is not."""
     legacy = journal_stack.record(bundle_dir, "apply", write_journal(
@@ -312,7 +312,7 @@ def test_a_journal_written_to_another_desk_is_refused_naming_both(
     on the line.
 
     Mutation-checked: make `journal_stack.same_desk` return True and this
-    reverses the primary. There is no override (the maintainer, 2026-09-24:
+    reverses the primary. There is no override (
     *"undo can only apply against correct desk / correct journal"*), and the
     refusal no longer offers one."""
     apply_to(monkeypatch, bundle_dir, "198.51.100.5")
@@ -330,7 +330,7 @@ def test_a_journal_written_to_another_desk_is_refused_naming_both(
 
 
 def test_there_is_no_override_for_another_desks_journal(bundle_dir, monkeypatch, capsys):
-    """#272's `--other-desk` is gone: "can only" rules out an escape hatch.
+    """The `--other-desk` is gone: "can only" rules out an escape hatch.
     Passing it is a usage error, and nothing is written.
 
     Mutation-checked: put the flag back (argparse accepts it, `_undo_run`
@@ -443,7 +443,7 @@ def test_an_offline_preview_has_no_desk_and_says_whose_top_it_shows(
 
 # ---------------------------------------------------------------------------
 # File names carry the desk -- its serial, or its address when it has none
-# (the maintainer, 2026-09-24)
+#
 # ---------------------------------------------------------------------------
 
 def _stamp(monkeypatch, *when):

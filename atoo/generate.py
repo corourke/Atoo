@@ -40,7 +40,7 @@ numbers the verifier enforces. If they could drift, a passing verify would
 stop meaning anything.
 
 What the generator writes is not the plan but a shorter REPLY
-(`plan_schema.REPLY_SCHEMA`; docs/developer/plan-output-compaction.md),
+(`plan_schema.REPLY_SCHEMA`),
 which `reply_expand.expand` turns into the plan inside `generate_plan`
 before the plan schema is checked: omitted fields read as null, the
 name-keyed sections arrive as arrays, each bus lists its senders once,
@@ -275,16 +275,16 @@ def _conventions_section(conventions: str, conventions_name: str,
                          category_note: str | None = None) -> str:
     """The conventions text the model reads, as one or two named layers.
 
-    The maintainer, 2026-09-20: *"the show independent
-    conventions file should always be brought in, as well as a show's
-    instructions if it is present. Content in the instructions file
-    overrides the conventions file."*
+    The show-independent
+    conventions file is always brought in, as well as a show's
+    instructions if it is present, and content in the instructions file
+    overrides the conventions file.
 
     The precedence is stated **in the prompt**, deliberately, rather than
-    resolved by merging the two texts here. #81 point 2 settled that: a
+    resolved by merging the two texts here. That was settled early: a
     structural merge would need this code to understand what each
-    sentence means, which is exactly the unbounded problem #26 moved the
-    deterministic boundary away from. Two labelled sections and one rule
+    sentence means, which is exactly the unbounded problem the move to
+    generation took the deterministic boundary away from. Two labelled sections and one rule
     the model can apply is the whole mechanism.
 
     **Comments are stripped here** (`conventions_text.strip_comments`):
@@ -383,8 +383,7 @@ Lay out this show. Emit the plan JSON and nothing else."""
 
 def _plan_for_prompt(plan: dict) -> dict:
     """`plan`, with `meta.build_log` left out -- the one field of the plan
-    that must never reach a model (docs/developer/build-lessons-2026-09-27.md,
-    part C). It is the model's OWN earlier thinking-summary lines, kept
+    that must never reach a model. It is the model's OWN earlier thinking-summary lines, kept
     for a human reviewing a batch of builds later; feeding them back
     would prime a later call with the wording of an earlier one's
     reasoning, which is not what a fresh critic or watchlist pass is for.
@@ -396,6 +395,48 @@ def _plan_for_prompt(plan: dict) -> dict:
     meta = dict(plan["meta"])
     del meta["build_log"]
     out["meta"] = meta
+    return out
+
+
+def _with_starting_levels(entry: object) -> object:
+    """One plan entry with its `fader` block's unstated fields filled in
+    with what `apply` leaves the strip at: unity, unmuted
+    (`console_facts.FADER_DEFAULT_DB`, `MUTED_DEFAULT`). An entry with no
+    `fader` key (a plan older than the field) is returned as it is."""
+    if not isinstance(entry, dict) or "fader" not in entry:
+        return entry
+    fader = entry["fader"] if isinstance(entry["fader"], dict) else {}
+    out = dict(entry)
+    out["fader"] = {
+        **fader,
+        "fader_db": facts.FADER_DEFAULT_DB if fader.get("fader_db") is None else fader["fader_db"],
+        "muted": facts.MUTED_DEFAULT if fader.get("muted") is None else fader["muted"],
+    }
+    return out
+
+
+def _plan_for_critic(plan: dict) -> dict:
+    """The plan as the critic reads it: `_plan_for_prompt`, with every
+    strip's starting level and mute shown as the desk will actually hold
+    them.
+
+    A null `muted` reads to a model as "nothing was decided", so handed
+    one next to a convention that says "unmuted" it asks the engineer to
+    worry about a strip that `apply` leaves unmuted anyway. The fields the
+    format settles by a default are therefore resolved here, in code, from
+    the same constants `apply` writes, and the review is of what the desk
+    will hold. A convention the default does not satisfy ("start muted",
+    "faders all the way down") still reads as a mismatch against the
+    resolved value.
+    Everything else the plan leaves null stays null: a colour, an icon, a
+    filter, a gain, a preset have no default that satisfies a convention."""
+    out = dict(_plan_for_prompt(plan))
+    if isinstance(out.get("channels"), list):
+        out["channels"] = [_with_starting_levels(c) for c in out["channels"]]
+    for section in ("busses", "dcas", "outputs"):
+        if isinstance(out.get(section), dict):
+            out[section] = {name: _with_starting_levels(entry)
+                            for name, entry in out[section].items()}
     return out
 
 
@@ -425,7 +466,7 @@ def critic_user(conventions: str, input_csv: str, plan: dict, *,
 # The plan to review
 
 ```json
-{json.dumps(_plan_for_prompt(plan), indent=None)}
+{json.dumps(_plan_for_critic(plan), indent=None)}
 ```
 
 ---
@@ -459,7 +500,7 @@ CriticFinding = Diagnostic
 # really in the conventions or instructions (`conventions_audit.py`) --
 # a quote that is not there is downgraded to INFO and says so. It is also
 # the kind `info` severity was added to the critic for: "a reasonable
-# choice was made", per CLAUDE.md's judgement-vs-patching rule.
+# choice was made", per the judgement-vs-patching rule.
 CRITIC_KINDS = ("omission", "intent", "invention", "contradiction", "conventions")
 
 
@@ -484,8 +525,7 @@ _STRING_ARRAY_FIELDS = ("unassigned_inputs", "notes")
 def _coerce_string_array_fields(plan: dict) -> list[str]:
     """An unconstrained local model sometimes writes a bare string where
     `notes`/`unassigned_inputs` want an array -- "" for nothing to report
-    rather than [], or one string instead of a one-element list (issue
-    #36). Constrained decoding is the actual guard against this, and
+    rather than [], or one string instead of a one-element list. Constrained decoding is the actual guard against this, and
     --no-constrain is the thing that turns it off; without some tolerance
     here that flag just trades an hour-long grammar-slowed run for an
     instant, equally useless schema-violation report. The meaning is
@@ -658,8 +698,7 @@ def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = Non
                 partial_text=raw, reply=raw,
             ) from exc
 
-    # The reply is shorter than the plan (docs/developer/plan-output-
-    # compaction.md): omitted fields, arrays for the name-keyed maps, and
+    # The reply is shorter than the plan: omitted fields, arrays for the name-keyed maps, and
     # the parts that are arithmetic left to code. Expanded here, before
     # anything below reads it as a plan; an older full-format reply passes
     # through unchanged.
@@ -719,7 +758,7 @@ def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = Non
         {"text": n, "source": "allocation"}
         for n in allocate_console_indices(plan, console_model=console_model))
 
-    # CLAUDE.md, "an error of judgement is not an error of patching": a bus
+    # An error of judgement is not an error of patching: a bus
     # width or send mode the model still left null -- against the prompt,
     # which asks it to decide and mark them -- is decided here by the
     # deterministic fallback and marked `by: "fallback"`, so the plan ON
@@ -749,7 +788,7 @@ def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = Non
 # the fix-up round
 # ---------------------------------------------------------------------------
 
-# The maintainer, 2026-09-29, approving it: when a generated plan fails verify
+# When a generated plan fails verify
 # with ERRORS -- or the reply fails the format check -- the reply and the
 # exact error messages go back to the same model ONCE, for a corrected
 # reply. Exactly one round, never a loop: a model that cannot mend a
@@ -1004,7 +1043,7 @@ def parse_critic_findings(raw: str, *,
     """One model reply -> `CriticFinding`s, or a raised exception.
 
     Split out of `critique_plan` so that a harness which calls the
-    provider itself -- `experiments/generator/sweep.py` times the critic
+    provider itself -- a timing harness that times the critic
     pass separately and archives its raw reply -- does not have to repeat
     the severity coercion, and cannot drift from it. `critique_plan`
     swallows every failure and returns `[]`; this raises, which is what
@@ -1023,7 +1062,7 @@ def parse_critic_findings(raw: str, *,
     def _critic_severity(severity: str) -> "diagnostics.Severity":
         # The critic is a model reading the plan; whether the desk CAN work
         # is code's call (verify), so the critic's worst is WARNING
-        # (the maintainer, 2026-10-02: a "confirm LCL 20/22 are wired" note came
+        # (a "confirm LCL 20/22 are wired" note once came
         # back as ERROR). It never blocked an apply -- it only looked as if
         # it did.
         if severity not in tuple(s.value for s in diagnostics.Severity):
@@ -1067,8 +1106,7 @@ def parse_critic_findings(raw: str, *,
 def watchlist_system() -> str:
     # The vocabulary comes from watch_conditions itself rather than being
     # retyped here. The Watch editor (app.js then, watch.js now) kept its
-    # own copy of this list and drifted from the Python side twice (issues
-    # #93, #18); a prompt is just as capable of telling a model about a
+    # own copy of this list and drifted from the Python side twice; a prompt is just as capable of telling a model about a
     # field the validator will then reject.
     from atoo import watch_conditions as wc
 
@@ -1123,8 +1161,8 @@ def draft_watch_conditions(
 
     **Nothing reaches disk unvalidated.** Every drafted condition goes
     through `_validate_condition` -- the same deterministic check that
-    guards a hand-written file -- so this adds no new trust boundary (D11,
-    #81 point 6). A condition with an invented field or severity is
+    guards a hand-written file -- so this adds no new trust boundary (D11).
+    A condition with an invented field or severity is
     rejected here, not written out and discovered mid-show. It is rejected ALONE (`salvage_drafted_conditions`): a key no
     condition has is dropped, a condition still unusable is left out,
     and each is said at INFO; the rest of the draft is kept.

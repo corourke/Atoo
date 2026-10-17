@@ -1,4 +1,4 @@
-"""One fix-up round (the maintainer, 2026-09-29).
+"""One fix-up round.
 
 When a generated plan fails verify with ERRORS -- or the reply fails the
 format check -- the build sends the model's own reply and the exact error

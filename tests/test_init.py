@@ -42,7 +42,8 @@ def test_init_makes_the_folder_copies_the_starter_set_and_sets_the_config(home, 
     for rel in firstrun.starter_files():
         assert (folder / rel).read_bytes() == (firstrun.STARTER_DIR / rel).read_bytes(), rel
     # No show bundle: which show a user starts with is not ours to guess.
-    assert not [p for p in folder.iterdir() if p.is_dir() and p.name != "presets"]
+    assert not [p for p in folder.iterdir()
+                if p.is_dir() and p.name not in ("presets", firstrun.AUDIT_DEMO_NAME)]
     assert (folder / "presets").is_dir()
     # The Demo show stays in the package: init never copies it.
     assert not (folder / firstrun.DEMO_SHOW_NAME).exists()
@@ -64,12 +65,18 @@ def test_init_makes_the_folder_copies_the_starter_set_and_sets_the_config(home, 
 
 def test_the_starter_set_holds_no_built_artifacts():
     """Only the files a person writes: no plans, logs, journals, captures
-    or resolved conventions."""
+    or resolved conventions. The one exception is `audit-demo/`: three hand-built console states and a plan fixture that
+    `audit --help` and `watch --help` name -- nothing Atoo made."""
     for rel in firstrun.starter_files():
         name = rel.rsplit("/", 1)[-1]
+        assert rel.split("/")[0] in {"README.md", "conventions.md", "presets",
+                                     firstrun.AUDIT_DEMO_NAME}, rel
+        if rel.startswith(firstrun.AUDIT_DEMO_NAME + "/"):
+            assert name in {"audit_demo_plan.json", "audit_demo_state.json",
+                            "audit_demo_state_before.json"}, rel
+            continue
         assert not name.endswith(".json"), rel
         assert "resolved" not in name and "build-log" not in rel and "journal" not in rel, rel
-        assert rel.split("/")[0] in {"README.md", "conventions.md", "presets"}, rel
 
 
 def test_a_second_run_is_a_no_op_that_says_so(home, capsys):
@@ -176,6 +183,29 @@ def test_dir_that_is_a_file_is_refused(home, capsys):
 def test_workspace_is_a_known_section():
     assert "workspace" in config.KNOWN_SECTIONS
     assert "[workspace]" in config.__doc__
+
+
+def test_init_copies_the_audit_demo_states_that_the_help_examples_name(home, capsys):
+    """`audit --help` and `watch --help` name
+    ~/Documents/Atoo/audit-demo/..., which a pipx install has only because
+    `init` copies it from the packaged starter set. The report counts the
+    three files on one line, as it does the presets."""
+    assert main(["init"]) == 0
+    demo = home / "Documents" / "Atoo" / firstrun.AUDIT_DEMO_NAME
+    assert sorted(p.name for p in demo.iterdir()) == [
+        "audit_demo_plan.json", "audit_demo_state.json", "audit_demo_state_before.json"]
+    for path in demo.iterdir():
+        json.loads(path.read_text())
+    out = capsys.readouterr().out
+    assert "audit-demo/                  3 files: 3 created" in out
+    assert "audit_demo_state.json" not in out
+    # A second run, and a file the user edited, are handled like any starter file.
+    (demo / "audit_demo_state.json").write_text("{}")
+    assert main(["init"]) == 0
+    out = capsys.readouterr().out
+    assert "audit-demo/                  3 files: 2 already there, 1 left alone" in out
+    assert "audit_demo_state.json: left alone: it is yours" in out
+    assert (demo / "audit_demo_state.json").read_text() == "{}"
 
 
 def test_init_counts_the_starter_presets_on_one_line(home, capsys, tmp_path, monkeypatch):

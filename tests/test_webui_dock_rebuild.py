@@ -34,7 +34,7 @@ def client():
 
 
 def test_a_build_start_empties_the_dock(client):
-    # The maintainer, 2026-10-09: "The findings panel is still not being cleared
+    # "The findings panel is still not being cleared
     # when I start a new build" -- every producer goes, not only the plan's.
     js = client.get("/static/setup.js").text
     clear = js[js.index("function clearFindingsForBuild()"):]
@@ -73,7 +73,7 @@ def test_apply_rereads_its_preflight_when_a_build_lands(client):
 
 
 def test_the_bundle_message_clears_on_a_step_change_and_a_save(client):
-    # The maintainer, 2026-10-09: "Created .../instructions.md, empty. ..."
+    # "Created .../instructions.md, empty. ..."
     # "never goes away".
     shell = client.get("/static/shell.js").text
     step = shell[shell.index("function activateStep(step)"):]

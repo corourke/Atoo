@@ -1,4 +1,4 @@
-/* The shell: one page, three modes (mockups/build-page/version-h.html).
+/* The shell: one page, three modes.
  *
  * Phase 1 of version H is the chrome every later phase hangs off; phase 2
  * added Build's three file tiles at the bottom of this file. Step 04 --
@@ -53,14 +53,25 @@
 
   const startup = readStartup();
   let bundle = startup.bundle || null;
-  // The ONE console -- mutable since the maintainer's 2026-09-24 decision that
+  // The ONE console -- mutable since the 2026-09-24 decision that
   // the address is editable in this bar (and nowhere else). Replaced
   // wholesale by what `POST /api/console` answers, never patched here.
   let consoleDefaults = startup.console || {};
-  // The working folder `atoo init` made ([workspace] default, issue
-  // #407), or "". Every file-browser start falls back to it while no
+  // The working folder `atoo init` made ([workspace] default), or "". Every file-browser start falls back to it while no
   // bundle is open; with one open, the bundle's own folder wins.
   const workspace = startup.workspace || "";
+
+  // ---- which copy of Atoo this is -------------------------------------
+  // The footer line, from the server's start-up data; hidden when the
+  // server sent none. Its tooltip adds the Python the server runs on.
+  (function showAboutLine() {
+    const info = startup.install;
+    const line = el("about-line");
+    if (!line || !info || !info.line) return;
+    line.textContent = info.line;
+    if (info.python) line.title = "Python: " + info.python;
+    line.hidden = false;
+  })();
 
   // ---- mode switching -------------------------------------------------
   // Client-side, and recorded in the URL fragment: a reload, a bookmark
@@ -92,8 +103,8 @@
         else nav.removeAttribute("aria-current");
       }
     });
-    // The maintainer, 2026-10-01: "On the Watch page, we don't need the findings
-    // sidebar. Those findings are all for build or apply." Watch has its
+    // The Watch page has no need of the findings
+    // sidebar: those findings are all for build or apply. Watch has its
     // own findings table; the dock is hidden there and comes back with
     // Build or Apply.
     const dockCol = el("dock-col");
@@ -119,39 +130,81 @@
   });
   window.addEventListener("hashchange", () => activateMode(modeFromHash()));
 
-  // ---- theme toggle ------------------------------------------------------
-  // The maintainer, 2026-09-25: "Give me a toggle somewhere so that I can see both
-  // the light and dark CSS variants." Auto -> Light -> Dark, kept in this
+  // ---- segmented controls ------------------------------------------------
+  // A chooser among two to four exclusive options (Apply mode, Which
+  // console, Theme): a `.seg` radiogroup holding `.seg-opt` buttons with
+  // `role="radio"` and a `data-value`. One tab stop, on the selected
+  // option; the arrows (with wrap) move AND select, Home and End jump to
+  // the ends, and a click selects. `onChange(value)` fires when the choice
+  // changes by the user; `select(value)` sets it silently. A locked group
+  // (`.is-locked`, `aria-disabled`, each option disabled) ignores the
+  // keys and clicks. Returns { value, select, lock }.
+  function wireSeg(group, onChange) {
+    if (!group) return null;
+    const opts = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+    const isLocked = () => group.getAttribute("aria-disabled") === "true";
+    function value() {
+      const on = opts.find((o) => o.getAttribute("aria-checked") === "true");
+      return on ? on.dataset.value : null;
+    }
+    function select(v) {
+      opts.forEach((o) => {
+        const on = o.dataset.value === v;
+        o.setAttribute("aria-checked", on ? "true" : "false");
+        o.tabIndex = on ? 0 : -1;
+      });
+    }
+    function pick(o) {
+      if (isLocked() || o.disabled) return;
+      const changed = value() !== o.dataset.value;
+      select(o.dataset.value);
+      o.focus();
+      if (changed && onChange) onChange(o.dataset.value);
+    }
+    function lock(on) {
+      group.classList.toggle("is-locked", !!on);
+      if (on) group.setAttribute("aria-disabled", "true");
+      else group.removeAttribute("aria-disabled");
+      opts.forEach((o) => { o.disabled = !!on; });
+    }
+    opts.forEach((o, i) => {
+      o.addEventListener("click", () => pick(o));
+      o.addEventListener("keydown", (ev) => {
+        let j = null;
+        if (ev.key === "ArrowRight" || ev.key === "ArrowDown") j = (i + 1) % opts.length;
+        else if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") j = (i - 1 + opts.length) % opts.length;
+        else if (ev.key === "Home") j = 0;
+        else if (ev.key === "End") j = opts.length - 1;
+        if (j === null) return;
+        ev.preventDefault();
+        pick(opts[j]);
+      });
+    });
+    select(value());
+    return { value: value, select: select, lock: lock };
+  }
+
+  // ---- theme -------------------------------------------------------------
+  // Auto (follows the system), Light or Dark, chosen directly. Kept in this
   // browser's storage (a per-viewer convenience); shell.html's head script
   // applies it before first paint. It changes how the page looks, nothing
   // else, so the stale-page banner leaves it working. Dark is the default
-  // with nothing saved (the maintainer, 2026-10-11), so Auto is saved as "auto".
+  // with nothing saved, so Auto is saved as "auto".
   const THEME_KEY = "atoo.theme";
-  const THEME_NEXT = { auto: "light", light: "dark", dark: "auto" };
-  const themeBtn = el("theme-toggle");
   function currentTheme() {
     const t = document.documentElement.dataset.theme;
     return t === "light" || t === "dark" ? t : "auto";
   }
-  function showTheme() {
-    if (!themeBtn) return;
-    const t = currentTheme();
-    themeBtn.textContent = "Theme: " + t.charAt(0).toUpperCase() + t.slice(1);
-  }
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      const next = THEME_NEXT[currentTheme()];
-      if (next === "auto") delete document.documentElement.dataset.theme;
-      else document.documentElement.dataset.theme = next;
-      try {
-        localStorage.setItem(THEME_KEY, next);
-      } catch (e) { /* not kept; the page still switches */ }
-      showTheme();
-    });
-    showTheme();
-  }
+  const themeSeg = wireSeg(el("theme-seg"), (choice) => {
+    if (choice === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = choice;
+    try {
+      localStorage.setItem(THEME_KEY, choice);
+    } catch (e) { /* not kept; the page still switches */ }
+  });
+  if (themeSeg) themeSeg.select(currentTheme());
 
-  // ---- popups (mockups/apply-flow/) ----------------------
+  // ---- popups ----------------------
   // Any button with `data-popup="<id>"` opens that `.sp-popup` over a
   // scrim; `data-popup-close`, Escape and a click on the scrim close it.
   // One at a time. Focus goes to the popup's own button, and back after.
@@ -256,8 +309,8 @@
     bundleName.title = bundle.directory;
 
     // The "Also in this bundle" strip that listed the remaining fixed
-    // filenames is gone (the maintainer, 2026-09-25: "We don't need this in the
-    // UI"). Each file the page uses is shown by the step that reads it.
+    // filenames is gone (the UI does not need it). Each file the page
+    // uses is shown by the step that reads it.
   }
 
   // Change... and New show... open the file browser (filebrowser.js). Before it, each was a path box under the bar; the
@@ -386,25 +439,26 @@
   // ---- the console readout, its editor, and Ping -------------------------
   // One round trip, nothing read, safe mid-show -- `atoo ping`
   //  behind a button. The address is resolved once by the
-  // server at startup (ATOO_CONSOLE / ~/.atoo.config [console]) and, per #137, the page SAYS SO rather than presenting a
+  // server at startup (ATOO_CONSOLE / ~/.atoo.config [console]) and the page SAYS SO rather than presenting a
   // value nobody typed as one someone did.
   //
-  // It is EDITABLE HERE AND NOWHERE ELSE (the maintainer, 2026-09-24): "you might
-  // generate a plan, and want to apply it to more than one console, ex:
-  // primary console wing compact, backup console wing rack". One address,
+  // It is EDITABLE HERE AND NOWHERE ELSE, because one plan may be applied
+  // to more than one console (a primary Compact and a backup Rack, say).
+  // One address,
   // used by Ping, Apply, Patch, Undo and Watch alike. After an edit its
   // provenance reads "set here" -- the converse of the rule. The server
   // refuses an edit while any write is running (a write never switches
   // desks part way through), and apply.js greys the button meanwhile.
   //
-  // DEMO is chosen in the same editor, beside the address (the maintainer 2026-10-01: "Just call it 'Demo' and be sure the IP address
-  // area in the status header reflects this ... no need to repeat the IP
-  // address"). The server's console is then `{demo: true, address: null}`:
+  // DEMO is chosen in the same editor, beside the address (it
+  // is just called 'Demo', and the IP address area in the status header
+  // reflects this, with no need to repeat the IP
+  // address). The server's console is then `{demo: true, address: null}`:
   // the bar reads "Demo" and nothing else, Ping is off (there is no desk to
   // ask), Watch runs on the demo rig, and every write screen refuses for
   // want of an address -- closed by default.
   //
-  // Demo is the DEMO SHOW too (the maintainer, 2026-10-01): the
+  // Demo is the DEMO SHOW too: the
   // server opens the packaged, read-only demo show in the same request
   // and answers with it (`bundle`, `bundle_changed`), so this page redraws
   // the bar and every mode from one reply. An address chosen while Demo is
@@ -425,10 +479,15 @@
   const consoleSetBtn = el("console-set-btn");
   const consoleKindDesk = el("console-kind-desk");
   const consoleKindDemo = el("console-kind-demo");
+  // Address or Demo: a segmented control; renderConsoleKind follows the choice.
+  const consoleKindSeg = wireSeg(el("console-kind-seg"), () => renderConsoleKind());
+  const isDemoKind = () => !!consoleKindSeg && consoleKindSeg.value() === "demo";
   const consoleEditHint = el("console-edit-hint");
   const consoleDemoHint = el("console-demo-hint");
   const consoleMessage = el("console-message");
   const pingPill = el("ping-pill");
+  const pingDetail = el("ping-detail");
+  const pingLock = el("ping-lock");
   const pingBtn = el("ping-btn");
   const consoleListeners = [];
   const pingListeners = [];
@@ -463,8 +522,8 @@
       consoleSource.textContent = "";
       consoleSource.hidden = true;
     } else if (address && consoleDefaults.address_source === CONSOLE_SET_HERE) {
-      // Typed into the bar itself: the bar needs no label to say so
-      // (the maintainer, 2026-10-11). Write screens still say "set here".
+      // Typed into the bar itself: the bar needs no label to say so.
+      // Write screens still say "set here".
       consoleSource.textContent = "";
       consoleSource.hidden = true;
     } else if (address && consoleDefaults.address_source) {
@@ -481,12 +540,26 @@
       consoleSource.textContent = "";
       consoleSource.hidden = true;
     }
-    pingBtn.disabled = !address;
-    pingBtn.title = demo ? "Demo is not a console -- there is no desk to ping" : "";
+    // A Ping that would do nothing is locked, and says why;
+    // its answer tag has nothing to say until then.
+    const pingReason = pingLockReason();
+    pingBtn.disabled = !!pingReason;
+    pingBtn.title = pingReason;
+    pingLock.textContent = pingReason;
+    pingLock.hidden = !pingReason;
+    pingPill.hidden = !!pingReason;
+    pingDetail.hidden = !!pingReason || !pingDetail.textContent;
     consoleChangeBtn.disabled = !!consoleLock;
     consoleChangeBtn.title = consoleLock || "Change the console Ping, Apply, Patch, Undo " +
       "and Watch use";
     consoleSetBtn.disabled = !!consoleLock;
+  }
+
+  // Why Ping cannot be pressed now, or "" when it can.
+  function pingLockReason() {
+    if (consoleDefaults.demo) return "the Demo has no desk to ping";
+    if (!consoleDefaults.address) return "no console set. Choose one with Change\u2026";
+    return "";
   }
 
   function showConsoleMessage(text) {
@@ -498,7 +571,7 @@
   // hint, so what "Use this console" will do is on screen before it is
   // pressed.
   function renderConsoleKind() {
-    const demo = !!(consoleKindDemo && consoleKindDemo.checked);
+    const demo = isDemoKind();
     consoleEditAddress.disabled = demo;
     consoleEditPort.disabled = demo;
     if (consoleEditHint) consoleEditHint.hidden = demo;
@@ -510,8 +583,7 @@
     const from = consoleDefaults.demo ? (lastDesk || {}) : consoleDefaults;
     consoleEditAddress.value = from.address || "";
     consoleEditPort.value = from.port || consoleDefaults.port || 2223;
-    if (consoleKindDemo) consoleKindDemo.checked = !!consoleDefaults.demo;
-    if (consoleKindDesk) consoleKindDesk.checked = !consoleDefaults.demo;
+    consoleKindSeg.select(consoleDefaults.demo ? "demo" : "desk");
     renderConsoleKind();
     showConsoleMessage("");
     consoleEdit.classList.add("is-open");
@@ -530,7 +602,7 @@
 
   async function submitConsoleEdit() {
     let body;
-    if (consoleKindDemo && consoleKindDemo.checked) {
+    if (isDemoKind()) {
       body = { demo: true };
     } else {
       const address = (consoleEditAddress.value || "").trim();
@@ -597,9 +669,9 @@
     if (consoleDefaults.address) lastDesk = Object.assign({}, consoleDefaults);
     renderConsole();
     if (consoleLabel(consoleDefaults) !== before) {
-      // Demo has nothing to ping, and says so on the pill rather than
-      // leaving "not pinged" there as if a ping were still to come.
-      setPingPill(consoleDefaults.demo ? "nothing to ping" : "not pinged", "");
+      // A different desk has not been pinged. With nothing to ping (no
+      // address, or the Demo) the tag is hidden and the lock says why.
+      setPingPill("Not pinged", "");
       pingPill.title = "";
     }
     consoleListeners.forEach((fn) => fn(Object.assign({}, consoleDefaults)));
@@ -609,17 +681,13 @@
   consoleSetBtn.addEventListener("click", submitConsoleEdit);
   // The no-show notice's button is Console: Change... -> Demo.
   const tryDemoBtn = el("try-demo-btn");
-  if (tryDemoBtn && consoleKindDemo) {
+  if (tryDemoBtn && consoleKindSeg) {
     tryDemoBtn.addEventListener("click", () => {
-      consoleKindDemo.checked = true;
-      if (consoleKindDesk) consoleKindDesk.checked = false;
+      consoleKindSeg.select("demo");
       submitConsoleEdit();
     });
   }
   el("console-cancel-btn").addEventListener("click", closeConsoleEdit);
-  [consoleKindDesk, consoleKindDemo].forEach((radio) => {
-    if (radio) radio.addEventListener("change", renderConsoleKind);
-  });
   [consoleEditAddress, consoleEditPort, consoleKindDesk, consoleKindDemo].forEach((input) => {
     if (!input) return;
     input.addEventListener("keydown", (ev) => {
@@ -628,13 +696,18 @@
     });
   });
 
-  function setPingPill(text, state) {
-    pingPill.textContent = text;
-    pingPill.className = "ping-pill" + (state ? " " + state : "");
+  // The Ping answer: a state tag -- `is-ok` on an answer,
+  // `is-err` on a failure, neutral before one -- and, beside it in meta
+  // type, what the desk said or why it did not answer.
+  function setPingPill(word, state, detail) {
+    pingPill.textContent = word;
+    pingPill.className = "state" + (state ? " " + state : "");
+    pingDetail.textContent = detail || "";
+    pingDetail.hidden = !detail || pingPill.hidden;
   }
 
   async function runPing() {
-    setPingPill("pinging…", "");
+    setPingPill("Pinging…", "");
     pingBtn.disabled = true;
     try {
       const r = await fetch("/api/ping", {
@@ -644,14 +717,14 @@
       });
       const data = await r.json();
       if (!r.ok) {
-        setPingPill(data.error || "ping failed", "is-bad");
+        setPingPill("Failed", "is-err", data.error || "ping failed");
         return;
       }
       if (!data.ok) {
         // A desk that did not answer is a 200 with ok:false -- the
         // question was asked and the answer was no. It reads as a red
-        // pill, not as a broken page.
-        setPingPill(data.error || "no reply", "is-bad");
+        // tag and its sentence, not as a broken page.
+        setPingPill("No reply", "is-err", data.error || "no reply");
         return;
       }
       // What the desk said about itself, in the order `atoo ping`
@@ -662,22 +735,22 @@
       else parts.push("model not recognised");
       parts.push(data.address + ":" + data.port);
       if (data.elapsed_ms != null) parts.push(Math.round(data.elapsed_ms) + " ms");
-      setPingPill(parts.join(" · "), "is-ok");
+      setPingPill("Answered", "is-ok", parts.join(" · "));
       pingPill.title = (data.identity || []).join(", ");
       // The server now knows this desk's serial; the journal stack can
       // say which rows it wrote.
       pingListeners.forEach((fn) => fn(data));
     } catch (e) {
-      setPingPill(String(e), "is-bad");
+      setPingPill("Failed", "is-err", String(e));
     } finally {
-      pingBtn.disabled = !consoleDefaults.address;
+      pingBtn.disabled = !!pingLockReason();
     }
   }
 
   pingBtn.addEventListener("click", runPing);
 
   // ---- the stale-page banner ---------------------------------------------
-  // The maintainer's desk session, 2026-09-24: A19's script started `atoo ui`
+  // From a desk session, 2026-09-24: A19's script started `atoo ui`
   // on one bundle copy, A20's stopped it and started another on the same
   // port and a DIFFERENT copy, and the tab A19 had opened kept showing
   // A19's journal stack against A20's server. Harmless as a display; not
@@ -874,7 +947,7 @@
   }
 
   // ---- one line per finding -------------------------------
-  // The maintainer approved `mockups/findings-dock/` on 2026-10-11, as shown.
+  // The design was approved on 2026-10-11, as shown.
   // Each finding is ONE line -- where it is, the way the desk names it,
   // and its claim -- clamped to two at the dock's 300 px; a click opens
   // the explanation, the Fix, the code, the source and the jump links.
@@ -887,7 +960,7 @@
   // CLAIM: a producer's own short `title` -- the critic's `claim`, an audit rule's name -- else the message up to its first
   // colon, semicolon or " -- ", with the strip prefix taken off, and
   // the "'s" after it ("pre-insert: V-REV goes into FX5"). A
-  // critic finding from before #514 has no claim and is cut at its
+  // critic finding from before an earlier change has no claim and is cut at its
   // first sentence as well, and at twelve words.
 
   const BANK_WORDS = { ch: "CH", channel: "CH", aux: "AUX", bus: "BUS", mtx: "MTX",
@@ -993,12 +1066,14 @@
       String(finding.message || "").slice(0, 80)].join("\u0000");
   }
 
+  // Each jump is a quiet button: brass words, 13px,
+  // and the brass focus ring every `.btn` has.
   function jumpLinks(jumps) {
     const links = document.createElement("div");
     links.className = "dock-item-links";
     jumps.forEach((jump) => {
       const a = document.createElement("a");
-      a.className = "dock-jump";
+      a.className = "btn btn-quiet dock-jump";
       a.href = jump.target || "#";
       a.textContent = (jump.label || "Go there") + " →";
       a.addEventListener("click", (ev) => { ev.preventDefault(); jumpTo(jump); });
@@ -1058,6 +1133,12 @@
     const summary = document.createElement("summary");
     const line = document.createElement("span");
     line.className = "dock-line";
+    // The severity, as a word, in the shared tint tag.
+    const sev = document.createElement("span");
+    sev.className = "sev sev-" + severity;
+    sev.textContent = severity === "error" ? "Error" : (severity === "warning" ? "Warning" : "Info");
+    line.appendChild(sev);
+    line.appendChild(document.createTextNode(" "));
     const [claim, rest] = splitClaim(finding);
     const where = document.createElement("span");
     where.className = "dock-where";
@@ -1122,8 +1203,9 @@
       foot.appendChild(code);
     }
     if (finding.source) {
+      // A fact about the finding: the property tag (§6).
       const src = document.createElement("span");
-      src.className = "dock-src";
+      src.className = "prop";
       src.textContent = finding.source;
       foot.appendChild(src);
     }
@@ -1142,8 +1224,8 @@
   }
   // ---- what the dock shows: one row per finding, said once ------------
   //
-  // An earlier change (the maintainer, 2026-10-02: "have all the findings go to the
-  // sidebar like they're supposed to with no duplication"). Two passes can
+  // All the findings go to the
+  // sidebar, with no duplication. Two passes can
   // say the same thing: step 04's plan carries the verify its build ran,
   // and Apply's pre-flight runs that verify again on the same plan.json;
   // the build and its verify each announce the preset values a plan
@@ -1205,7 +1287,7 @@
 
   // ---- the dock's sections --------------------------------
   //
-  //   the verdict      Ready to apply / Blocked, and three counts
+  //   the verdict      Ready to apply / Stale / Blocked, and three counts
   //   To check         errors, then warnings; desk before files
   //   Advice           the critic's warnings: a second model's opinion,
   //                    still WARNING and counted, never blocking Apply
@@ -1276,8 +1358,8 @@
     return out;
   }
 
-  // A rebuild's change nobody asked for is one row per strip, always
-  // (the maintainer, 2026-10-13): three strips with the same "gain 20 -> 26 dB"
+  // A rebuild's change nobody asked for is one row per strip, always:
+  // three strips with the same "gain 20 -> 26 dB"
   // are three things to check, not one.
   const NEVER_GATHERED = new Set(["rebuild.unasked-change"]);
   const checkKey = (f) => (isDesk(f) && !(f.members && f.members.length) && !NEVER_GATHERED.has(f.code)
@@ -1299,6 +1381,25 @@
     }
   }
 
+  // What a stale plan is stale against, in the engineer's words: the
+  // files `plan_freshness` named as changed ("the input list and the
+  // conventions"). The Apply screen says it the same way (`SP.stalePlanWhat`).
+  const STALE_SLOT_WORDS = {
+    conventions: "the conventions",
+    input_list: "the input list",
+    instructions: "the instructions",
+  };
+  function stalePlanWhat(freshness) {
+    const words = [];
+    ((freshness && freshness.reasons) || []).forEach((reason) => {
+      const w = STALE_SLOT_WORDS[reason.slot];
+      if (w && words.indexOf(w) < 0) words.push(w);
+    });
+    if (!words.length) return "An input";
+    const joined = words.length > 1 ? words.slice(0, -1).join(", ") + " and " + words[words.length - 1] : words[0];
+    return joined.charAt(0).toUpperCase() + joined.slice(1);
+  }
+
   let lastCounts = null;
   function renderVerdict(counts) {
     if (counts) lastCounts = counts;
@@ -1310,27 +1411,38 @@
     dockVerdict.hidden = !hasPlan && counts.rows === 0;
     if (dockVerdict.hidden) return;
     const blocked = counts.errors > 0;
-    dockVerdict.dataset.state = blocked ? "blocked" : "ok";
+    // A plan older than the files it was built from is not ready to apply:
+    // it does not include the edit. The same freshness the Plan tile reads
+    // (`plan_freshness`), so the tile and the verdict cannot disagree.
+    const stale = hasPlan && (state === "stale" || !!counts.stale);
+    // A large severity tag leads -- green Ready to apply, yellow Stale,
+    // red Blocked -- and with no plan yet a neutral grey No plan yet (blue
+    // is information only). The left edge follows. Errors come first: a
+    // plan that cannot be applied says so before it says it is old.
+    const verdict = blocked ? "blocked" : (stale ? "stale" : (hasPlan ? "ok" : "none"));
+    dockVerdict.dataset.state = verdict;
     const head = document.createElement("div");
     head.className = "dock-verdict-head";
     const badge = document.createElement("span");
-    badge.className = "sev-badge " + (blocked ? "sev-error" : (hasPlan ? "sev-ready" : "sev-info"));
-    badge.textContent = blocked ? "Blocked" : (hasPlan ? "Ready to apply" : "No errors");
+    badge.className = "sev big " + { blocked: "sev-error", stale: "sev-warning", ok: "sev-ok", none: "sev-none" }[verdict];
+    badge.textContent = { blocked: "Blocked", stale: "Stale", ok: "Ready to apply", none: "No plan yet" }[verdict];
     head.appendChild(badge);
     const sub = document.createElement("span");
-    sub.className = "dock-verdict-sub";
-    // The maintainer, 2026-10-13: a warning reads beside the verdict --
+    sub.className = "meta dock-verdict-sub";
+    // A warning reads beside the verdict --
     // "Ready to apply · 1 to check" -- and never blocks Apply. A rebuild's
     // change nobody asked for is one of them.
     sub.textContent = blocked ? counts.errors + " error" + (counts.errors === 1 ? "" : "s")
-      : (hasPlan ? (counts.check ? "· " + counts.check + " to check" : "no errors") : "no plan yet");
+      : (counts.check ? "· " + counts.check + " to check" : "no errors");
     head.appendChild(sub);
     dockVerdict.appendChild(head);
     const lines = document.createElement("ul");
     lines.className = "dock-verdict-lines";
+    // A count is bold white when it is not zero, and dim when it is.
     [[counts.check, "to check"], [counts.advice, "advice from the critic"],
       [counts.choices, "notes on choices the build made"]].forEach(([n, words]) => {
       const li = document.createElement("li");
+      if (!n) li.className = "is-zero";
       const b = document.createElement("b");
       b.textContent = String(n);
       li.appendChild(b);
@@ -1339,12 +1451,32 @@
     });
     dockVerdict.appendChild(lines);
     // Said ONCE, here, rather than after every build and critic note.
-    if (state === "stale" || counts.stale) {
-      const stale = document.createElement("p");
-      stale.className = "dock-verdict-stale";
-      stale.textContent = "Plan is older than its inputs: the build's and the critic's notes are as built. ";
-      stale.appendChild(jumpLinks([{ label: "Rebuild", mode: "build", target: "#tab-plan" }]));
-      dockVerdict.appendChild(stale);
+    // A state tag, the sentence beside it in meta type, and Rebuild as a
+    // quiet button (§6: a tag holds a word, never a sentence).
+    if (stale) {
+      const note = document.createElement("p");
+      note.className = "dock-verdict-stale";
+      // The badge above already says Stale; under Blocked the tag does.
+      if (verdict !== "stale") {
+        const tag = document.createElement("span");
+        tag.className = "state is-warn";
+        tag.textContent = "Stale";
+        note.appendChild(tag);
+      }
+      const words = document.createElement("span");
+      words.className = "meta";
+      words.textContent = stalePlanWhat((buildPending || build || {}).plan_freshness) +
+        " changed since the last build: rebuild before applying. " +
+        "The build's and the critic's notes are as built.";
+      note.appendChild(words);
+      const rebuild = { label: "Rebuild", mode: "build", target: "#tab-plan" };
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-quiet dock-jump";
+      btn.textContent = "Rebuild";
+      btn.addEventListener("click", () => jumpTo(rebuild));
+      note.appendChild(btn);
+      dockVerdict.appendChild(note);
     }
   }
 
@@ -1409,18 +1541,26 @@
     // critic's included -- not every row; in rows, as the
     // sections below it count.
     const needsLook = checkRows.length + adviceRows.length;
-    renderVerdict({
+    const counts = {
       rows: active.length,
       errors: entries.filter((entry) => entry.finding.severity === "error"
         && entry.finding.source !== "critic").length,
       check: checkRows.length, advice: adviceRows.length, choices: choiceRows.length,
       stale: active.some((entry) => !!entry.finding.stale),
-    });
+    };
+    renderVerdict(counts);
     dockActiveEmpty.hidden = active.length > 0 || (!!planState() && planState() !== "none");
     dockResolved.hidden = resolved === 0;
-    el("dock-resolved-count").textContent = "(" + resolved + ")";
-    el("dock-title-count").textContent = String(needsLook);
-    el("dock-tab-count").textContent = String(needsLook);
+    el("dock-resolved-count").textContent = String(resolved);
+    // The count badge: neutral grey at 0, red with any
+    // error, yellow with warnings only. Never brass.
+    const tone = counts.errors > 0 ? "is-err" : (needsLook > 0 ? "is-warn" : "is-zero");
+    ["dock-title-count", "dock-tab-count"].forEach((id) => {
+      const badge = el(id);
+      badge.textContent = String(needsLook);
+      badge.classList.remove("is-zero", "is-warn", "is-err");
+      badge.classList.add(tone);
+    });
 
     if (refocusKey != null) {
       const moved = document.querySelector(
@@ -1491,8 +1631,10 @@
     dockTab.setAttribute("aria-expanded", String(!collapsed));
   }
 
-  dockTab.addEventListener("click", toggleDock);
-  el("dock-collapse-btn").addEventListener("click", toggleDock);
+  // Focus follows the control that replaces the one pressed (the jump
+  // links call toggleDock too, and keep their own focus).
+  dockTab.addEventListener("click", () => { toggleDock(); el("dock-collapse-btn").focus(); });
+  el("dock-collapse-btn").addEventListener("click", () => { toggleDock(); dockTab.focus(); });
 
   function setFindings(list) {
     findings = (Array.isArray(list) ? list : []).map((f) => Object.assign({}, f));
@@ -1525,13 +1667,15 @@
     instructions: "03 Instructions",
     plan: "04 Plan",
   };
-  // H's badge vocabulary. `stale` is the only one the server cannot
-  // answer -- it is a comparison between two reads (see `absorb` below).
+  // The tile's state tag (`.state`):
+  // Loaded is green, Stale yellow, Missing red, Not set neutral grey.
+  // `stale` is the only one the server cannot answer -- it is a
+  // comparison between two reads (see `absorb` below).
   const STATE_BADGE = {
-    loaded: { text: "Loaded", cls: "state-loaded" },
-    missing: { text: "Missing", cls: "state-missing" },
-    notset: { text: "Not set", cls: "state-notset" },
-    stale: { text: "Stale", cls: "state-stale" },
+    loaded: { text: "Loaded", cls: "is-ok" },
+    missing: { text: "Missing", cls: "is-err" },
+    notset: { text: "Not set", cls: "" },
+    stale: { text: "Stale", cls: "is-warn" },
   };
 
   const slotId = (slot) => slot.replace(/_/g, "-");
@@ -1548,10 +1692,16 @@
   // once their editor's text differs from the file, step 02 once a cell
   // has been changed. A step being edited is not redrawn by a re-read.
   const editingStep = { conventions: false, instructions: false, input_list: false };
+
+  // Whether step 02 has an input list on screen. Save, Discard and the
+  // read-only reason are in the block header, which is always there, so
+  // they are tied to this rather than to the rows' toolbar.
+  let inputListLoaded = false;
   // Fired with the build payload whenever it is re-read -- setup.js draws
   // the plan's Stale badge and Rebuild button from `plan_freshness`.
   const buildListeners = [];
-  // The dock's verdict says Ready to apply only once a plan is there.
+  // The dock's verdict says Ready to apply only once a plan is there, and
+  // Stale instead while the plan is older than its files.
   buildListeners.push(() => renderVerdict());
   // Fired whenever step 02's rows change -- an edit, a row added or
   // removed, a redraw after Save or Discard -- with where the change came
@@ -1564,7 +1714,7 @@
   // were about the plan the build replaced.
   const planBuiltListeners = [];
   let inputKeySeq = 0;
-  // The input list's `order` column (FR-1.1, the maintainer 2026-10-09): the
+  // The input list's `order` column (FR-1.1, 2026-10-09): the
   // band's own input number, `-` for skip (the row stays in the file and
   // the next build leaves it out), or blank. input_list.SKIP_MARK.
   const SKIP_MARK = "-";
@@ -1589,7 +1739,7 @@
     if (STEPS.indexOf(step) === -1) return;
     // The bundle bar's message is about what was just done ("Created
     // .../instructions.md, empty..."): moving to another step is moving
-    // on from it (the maintainer, 2026-10-09: "never goes away").
+    // on from it, so the message does not stay up.
     if (step !== currentStep) showBundleMessage("");
     currentStep = step;
     STEPS.forEach((name) => {
@@ -1640,10 +1790,13 @@
     if (!badge || !hint) return;
 
     const stale = staleSlots.indexOf(slot) !== -1;
-    const state = STATE_BADGE[stale ? "stale" : (source ? source.state : "notset")]
-      || STATE_BADGE.notset;
+    // instructions.md is optional: a bundle without
+    // one is Not set, neutral, never a red Missing.
+    let key = stale ? "stale" : (source ? source.state : "notset");
+    if (slot === "instructions" && key === "missing") key = "notset";
+    const state = STATE_BADGE[key] || STATE_BADGE.notset;
     badge.textContent = state.text;
-    badge.className = "state-badge " + state.cls;
+    badge.className = "state" + (state.cls ? " " + state.cls : "");
 
     // The derived path, exactly as the server composed it -- the page
     // never joins a folder and a filename itself, because a path the
@@ -1734,7 +1887,7 @@
     // Where that file came from: "recorded in touringband/plan.json"
     // when the bundle's plan names the file it was built from, else the
     // config default or a typed path. `display_origin` is absent from a
-    // server older than #236, so the span stays empty rather than
+    // server older than an earlier change, so the span stays empty rather than
     // printing "undefined".
     const origin = el("conv-house-origin");
     if (origin) {
@@ -1742,9 +1895,8 @@
         ? "(" + source.display_origin + ")" : "";
     }
     renderTextEditor("conventions", source,
-      "No house conventions file. It is named in ~/.atoo.config's "
-      + "[conventions] section, or here with Change file -- or press New file on "
-      + "the tile to start an empty one.");
+      "No house conventions file yet: choose one with Change file on the tile, "
+      + "or start an empty one with New file.");
   }
 
   // ---- 02 Input list -----------------------------------------------------
@@ -1777,8 +1929,13 @@
     markInputProblems();
 
     wrap.hidden = !loaded;
+    const table = el("input-table");
+    if (table) table.classList.toggle("is-readonly", inputReadOnly());
+    const addRow = el("input-add-row");
+    if (addRow) addRow.hidden = inputReadOnly();
     const toolbar = el("input-edit-toolbar");
     if (toolbar) toolbar.hidden = !loaded;
+    inputListLoaded = loaded;
     empty.hidden = loaded && records.length > 0 && !!(source && source.rows);
     if (!loaded) {
       empty.textContent = "No input list. It is input.csv inside the show bundle.";
@@ -1838,9 +1995,8 @@
     const source = buildSource("instructions");
     renderStack();
     renderTextEditor("instructions", source,
-      "No instructions.md in this bundle. The house conventions apply in full, "
-      + "with nothing overridden for this show.");
-    // New file on the tile, and "New instructions.md" under the empty message --
+      "No instructions.md in this bundle, so the house conventions apply in full.");
+    // New file on the tile, and "Create instructions.md" under the empty message --
     // only when there is a bundle to write it into and it has none. The
     // server refuses to overwrite regardless; hiding it is the courtesy.
     const canCreate = !!(bundle && source && source.state === "missing");
@@ -1885,11 +2041,15 @@
     const layersEl = el("status-layers");
     if (layersEl) {
       // On step 03's tile, where "layers" needs no
-      // qualifier; the title says it in full.
-      layersEl.textContent = layers + " layer" + (layers === 1 ? "" : "s");
+      // qualifier; the title says it in full. A count, not a state, so it
+      // is meta text like 02's "16 input rows".
+      layersEl.textContent = "";
+      const count = document.createElement("strong");
+      count.textContent = String(layers);
+      layersEl.appendChild(count);
+      layersEl.appendChild(document.createTextNode(" layer" + (layers === 1 ? "" : "s")));
       layersEl.title = layers + " conventions layer" + (layers === 1 ? "" : "s") +
         ": the house conventions, then this show's instructions -- each overrides the one above it";
-      layersEl.className = "state-badge " + (layers ? "state-loaded" : "state-notset");
     }
 
     // Each file's findings count is drawn on its own tile (renderTile),
@@ -2004,13 +2164,13 @@
   // Each tile's Change file opens the modal (filebrowser.js) on the kind
   // of file that step reads. What choosing does depends on the step:
   //
-  //   01 Conventions  the house file is used WHERE IT IS (#81 point 5) --
+  //   01 Conventions  the house file is used WHERE IT IS --
   //                   `POST /api/build/sources/load`, a pointer for this
   //                   session, exactly as before.
   //   02, 03          a file from outside the open bundle is COPIED into it
-  //                   as input.csv / instructions.md (the maintainer:
-  //                   "the program should copy the input list into the
-  //                   bundle and notify the user that it has done so") --
+  //                   as input.csv / instructions.md (the program
+  //                   copies the input list into the
+  //                   bundle and notifies the user that it has done so) --
   //                   `POST /api/bundle/adopt`. One already there is never
   //                   replaced without asking, in the modal: replace / keep
   //                   the bundle's / cancel. With no bundle open there is
@@ -2201,10 +2361,10 @@
   });
 
   // ---- "New file" (step 01) and "New instructions.md" (step 03) ----------
-  // The maintainer, 2026-09-25: there was no way to introduce either file from
-  // the page. Both create an EMPTY file (the maintainer, 2026-09-28: "provide the
-  // templated new conventions and instructions files as suggestions only"
-  // -- the template is the Example beside each editor), and never over a
+  // There was no way to introduce either file from
+  // the page. Both create an EMPTY file (the templated new conventions and
+  // instructions files are suggestions only: the template is the Example
+  // beside each editor), and never over a
   // file that exists. They write files only; nothing here goes near a
   // console.
   //
@@ -2364,7 +2524,7 @@
   // ---- "View source" -----------------------------------------------------
 
   // Step 02 only: steps 01 and 03 ARE their source (one editor each,
-  // the maintainer 2026-09-28), so they have nothing to toggle.
+  // with no sections view), so they have nothing to toggle.
   [
     ["input-source-toggle-btn", "input-source", "input-table-wrap"],
   ].forEach(([buttonId, preId, viewId]) => {
@@ -2376,7 +2536,7 @@
       const showing = pre.hidden;
       pre.hidden = !showing;
       view.hidden = showing;
-      button.textContent = showing ? "View sections" : "View source";
+      button.textContent = showing ? "View table" : "View source";
     });
   });
 
@@ -2392,12 +2552,12 @@
 
   // ---- Editing: steps 01 and 03, step 02 -------
   //
-  // The maintainer edits these files in Obsidian too, so this page is a second
-  // editor of a file that is his, and it behaves like one:
+  // These files are also edited in other editors, so this page is a second
+  // editor of a file that is the user's, and it behaves like one:
   //
   //   * Steps 01 and 03 are one editor each over the whole file, headings
-  //     and comments as written (the maintainer, 2026-09-28: "eliminate the
-  //     sections view"); Save sends the editor's text and the server
+  //     and comments as written (there is no
+  //     sections view); Save sends the editor's text and the server
   //     writes it in the file's own line ending. Step 02's Save sends only
   //     the rows that changed, spliced into the file
   //     (atoo/source_edit.py). A save with no change writes nothing.
@@ -2407,16 +2567,16 @@
   //   * Save carries the bundle the page shows (FR-6.11), and every Save
   //     and Rebuild button goes off with the stale-page banner.
   //   * The HOUSE file (step 01) is edited the same way as step 03's
-  //     instructions (the maintainer, 2026-09-25, superseding OPTIONS-H decision
-  //     6's "read-only until Edit house style..."). While it has unsaved
+  //     instructions (it was once read-only until
+  //     "Edit house style" was chosen). While it has unsaved
   //     changes, a warning names the blast radius: every show that names
   //     the file builds from it.
   //   * New file writes an EMPTY file. The example beside each editor is
-  //     a suggestion (the maintainer, 2026-09-28): Insert puts it -- or the part
+  //     a suggestion: Insert puts it -- or the part
   //     of it selected -- at the cursor, and only Save writes it.
   //
-  // Watch conditions are edited on the Watch page and nowhere else
-  // (OPTIONS-H point 3); there is no watch editor here.
+  // Watch conditions are edited on the Watch page and nowhere else;
+  // there is no watch editor here.
 
   const EDITOR = {
     conventions: {
@@ -2447,7 +2607,7 @@
   const PATCH_COLUMNS = ["patch", "socket"];
   // What the server says the columns are (`source.columns`), else those.
   let inputColumns = INPUT_COLUMNS;
-  // The order step 02's table DRAWS them in (the maintainer, 2026-09-28): the
+  // The order step 02's table DRAWS them in: the
   // patch last, just before the row's ✕. The data keeps its own column
   // names and order; only the table moves.
   function inputDisplayColumns() {
@@ -2509,7 +2669,7 @@
     const badge = el("conv-ro-badge");
     if (badge) {
       badge.textContent = "Editing house style";
-      badge.className = "state-badge state-drafted";
+      badge.className = "state is-warn";
       badge.hidden = !editingStep.conventions;
     }
     const warning = el("conv-edit-warning");
@@ -2748,7 +2908,7 @@
     return null;
   }
 
-  // Step 02's Notes cell (the maintainer, 2026-09-28): a small icon, filled when
+  // Step 02's Notes cell: a small icon, filled when
   // the row has a note and hollow when not, with the note as its tooltip.
   // Clicking it opens #note-dialog. The note itself is still an <input>
   // with `data-col="notes"` -- hidden -- so collectRows, inputRowsNow,
@@ -2876,7 +3036,7 @@
     dialog.addEventListener("click", (ev) => { if (ev.target === dialog) closeNoteDialog(false); });
   })();
 
-  // Step 02's Patch cell (the maintainer, 2026-09-28): a filled patch is a badge,
+  // Step 02's Patch cell: a filled patch is a badge,
   // like step 04's patch chips; an empty one is a quiet "+ add". Clicking
   // either edits it in place -- Enter, ✓ or leaving the box commits, Esc
   // cancels. A commit is checked by GET /api/build/validate-patch (the
@@ -3130,7 +3290,82 @@
     return td;
   }
 
+  // A cell is an input
+  // only when it can be edited and saved. On a read-only show (the Demo)
+  // step 02's table is text: no inputs, no drag handle, no move, insert
+  // or remove buttons. Each cell still carries its value in a hidden
+  // <input data-col> -- what markInputProblems, inputRowsNow and
+  // collectRows read -- so nothing downstream needs a second path.
+  function inputReadOnly() {
+    return isDemoShow();
+  }
+
+  function readOnlyInputCell(column, value) {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.dataset.col = column;
+    input.dataset.original = value;
+    input.value = value;
+    td.appendChild(input);
+    const text = String(value || "").trim();
+    const show = (node) => td.appendChild(node);
+    const prop = (word) => {
+      const tag = document.createElement("span");
+      tag.className = "prop";
+      tag.textContent = word;
+      return tag;
+    };
+    if (column === "order") {
+      td.className = "col-order";
+      if (text === SKIP_MARK) {
+        const tag = prop("Skip");
+        tag.title = "Skip: the row stays in input.csv and the next build leaves it out";
+        show(tag);
+      } else {
+        show(document.createTextNode(text));
+      }
+    } else if (column === "phantom") {
+      td.className = "col-phantom";
+      const on = phantomOn(value);
+      input.checked = on === true;
+      if (on === true) show(prop("48V"));
+      else if (on === null && text) show(document.createTextNode(text));
+    } else if (PATCH_COLUMNS.indexOf(column) !== -1) {
+      td.className = "col-sock";
+      if (text) {
+        const chip = document.createElement("span");
+        chip.className = "readout";
+        chip.textContent = text;
+        show(chip);
+      }
+    } else if (column === "notes") {
+      td.className = "col-notes col-notes-text";
+      td.title = text;
+      show(document.createTextNode(text));
+    } else {
+      if (column === "preset") td.className = "col-preset";
+      else if (column === "name") td.className = "col-name";
+      show(document.createTextNode(text));
+    }
+    return td;
+  }
+
+  function readOnlyInputRow(line, values) {
+    const tr = document.createElement("tr");
+    tr.dataset.line = line == null ? "" : String(line);
+    tr.dataset.key = String(++inputKeySeq);
+    inputDisplayColumns().forEach((column) => {
+      const v = values || {};
+      const value = column === "patch" && v.patch == null ? v.socket : v[column];
+      tr.appendChild(readOnlyInputCell(column, value == null ? "" : String(value)));
+    });
+    syncSkip(tr);
+    return tr;
+  }
+
   function inputRow(line, values, isNew) {
+    if (!isNew && inputReadOnly()) return readOnlyInputRow(line, values);
     const tr = document.createElement("tr");
     tr.dataset.line = line == null ? "" : String(line);
     // A handle that survives an edit to every cell: step 04 addresses a
@@ -3157,7 +3392,7 @@
       markInputProblems();
       notifyInput("input-list");
     });
-    // Insert (the maintainer, 2026-10-09): a blank row directly BELOW this one.
+    // Insert: a blank row directly BELOW this one.
     // "+ Add row" under the table still adds one at the end.
     const insert = document.createElement("button");
     insert.type = "button";
@@ -3190,7 +3425,7 @@
     return tr;
   }
 
-  // Reordering (the maintainer, 2026-10-09): drag a row by its handle, or move
+  // Reordering: drag a row by its handle, or move
   // it with the up/down buttons, or Alt+Up / Alt+Down from anywhere in
   // the row -- so it is never mouse-only. The order on screen is the
   // order Save writes (`collectRows` sends the rows as they stand); the
@@ -3316,7 +3551,7 @@
     });
   }
 
-  // Step 02's Preset chooser (the maintainer, 2026-09-28): the preset library's
+  // Step 02's Preset chooser: the preset library's
   // names, from GET /api/build/presets -- `ui --presets`, else the
   // [presets] default, the library a build uses. A <datalist>, not a
   // <select>, so a name is still free text: with no library configured,
@@ -3361,8 +3596,7 @@
     note.hidden = !text;
   }
 
-  // Marked on the row, and each empty required cell outlined (Issue
-  // #554); the loader's own verdict still arrives as a finding after Save
+  // Marked on the row, and each empty required cell outlined; the loader's own verdict still arrives as a finding after Save
   // (input-list.invalid). Save asks once before writing a list these
   // marks say will not load -- see saveInputList.
   function markInputProblems() {
@@ -3424,8 +3658,8 @@
       if (badge) badge.hidden = !dirty;
     });
     // A Save/Discard pair with nothing to save is hidden, not locked: it
-    // comes up with the Unsaved changes tag, as steps 01 and 03's do
-    // (docs/developer/ui-style.md §4). Step 04's only where its Input
+    // comes up with the Unsaved changes tag, as steps 01 and 03's do.
+    // Step 04's only where its Input
     // cells are the editable list.
     const planTable = el("plan-channels-table");
     const planEditable = !!(planTable && planTable.dataset.editable === "1");
@@ -3437,10 +3671,15 @@
       const discard = el(id);
       if (discard) discard.disabled = !dirty;
     });
+    // A read-only show keeps the pair up, locked, with the
+    // reason beside it: the table says it cannot be edited, in words.
+    const locked = inputReadOnly();
     ["input-save-btn", "input-discard-btn"].forEach((id) => {
       const node = el(id);
-      if (node) node.hidden = !dirty;
+      if (node) node.hidden = !inputListLoaded || (!dirty && !locked);
     });
+    const lockReason = el("input-lock-reason");
+    if (lockReason) lockReason.hidden = !inputListLoaded || !locked;
     ["plan-input-save-btn", "plan-input-discard-btn"].forEach((id) => {
       const node = el(id);
       if (node) node.hidden = !dirty || !planEditable;
@@ -3657,7 +3896,6 @@
   // ---- first paint -----------------------------------------------------
   renderBundle();
   renderConsole();
-  if (consoleDefaults.demo) setPingPill("nothing to ping", "");
   setFindings(startup.findings || []);
   renderBuild();
   activateStep("conventions");
@@ -3666,6 +3904,8 @@
   // ---- the contract later phases code against --------------------------
   window.Atoo = {
     activateMode: activateMode,
+    // The segmented control's behaviour (see wireSeg): Apply mode uses it.
+    wireSeg: wireSeg,
     currentMode: () => currentMode,
     // The findings dock. `list` is atoo.diagnostics.Diagnostic
     // dicts, each optionally carrying a `jumps` list (see above).
@@ -3749,6 +3989,7 @@
     // `refreshBuild()` re-reads now (setup.js, after a build lands).
     buildSources: () => buildPending || build,
     planFreshness: () => ((buildPending || build) || {}).plan_freshness || null,
+    stalePlanWhat: stalePlanWhat,
     onBuildChange: (fn) => { if (typeof fn === "function") buildListeners.push(fn); },
     refreshBuild: () => refreshBuild(false),
     // Step 04's build wrote a new plan.json: setup.js calls `planBuilt()`,

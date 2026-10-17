@@ -8,8 +8,8 @@ deliberate. A monitor send counts at any level, since the conventions
 start monitor sends all the way down and raise them at soundcheck (the
 festival plan's click, sent only to the monitors at -144, is routed).
 
-Built from the frozen `tests/fixtures/smallband.plan.json` (CLAUDE.md:
-never from a bundle under `examples/`).
+Built from the frozen `tests/fixtures/smallband.plan.json` (never
+from a bundle under `examples/`).
 """
 
 from __future__ import annotations

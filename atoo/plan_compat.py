@@ -1,7 +1,7 @@
 """Where an output or a bus's dedicated output is patched -- read the same
 way whatever a plan on disk calls it.
 
-The maintainer's vocabulary, 2026-09-28: a **socket** is the physical input or
+The vocabulary, fixed 2026-09-28: a **socket** is the physical input or
 output on the desk; a **patch** is the connection between a channel or
 bus and a socket. So an output's plan entry says where it is *patched*:
 
@@ -14,7 +14,7 @@ bus's `destination` of type `dedicated_output` carries the same pair.
 once -- and is authoritative when it is not empty; `patch` is
 the first, or only, one.
 
-Plans written before #342 call these `socket` and `sockets`. Those plans
+Plans written before an earlier change call these `socket` and `sockets`. Those plans
 are on disk -- in every show bundle built before 2026-09-28 -- and still
 have to verify, apply, render and open on the page, so EVERY reader goes
 through this module rather than reading the keys itself. That is the
@@ -26,7 +26,7 @@ sockets the connection lands on.
 
 from __future__ import annotations
 
-#: The pre-#342 key -> the key a plan uses now, on an `outputs` entry and
+#: The older key -> the key a plan uses now, on an `outputs` entry and
 #: on a bus's `destination`.
 RENAMED_KEYS = {"socket": "patch", "sockets": "patches"}
 
@@ -54,7 +54,7 @@ def normalise_plan(plan):
     """`plan` with every output and dedicated-output destination read by
     `normalise_entry` -- a copy of only what changed, the input never
     mutated. What `verify_plan` checks the schema against, so a plan built
-    before #342 is not refused for a field it spelled the old way."""
+    is not refused for a field it spelled the old way."""
     if not isinstance(plan, dict):
         return plan
     out = plan

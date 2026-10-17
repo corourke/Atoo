@@ -655,7 +655,7 @@ def test_allocation_notes_are_tagged_allocation():
 
 @pytest.mark.parametrize("model", [None, "", "not-a-real-console"])
 def test_an_unknown_console_model_is_a_hard_stop(model):
-    """The maintainer, 2026-09-21: "an unknown console-model is a hard
+    """"an unknown console-model is a hard
     stop -- we have no way of knowing what its capabilities are and any
     plan would be meaningless."
 
@@ -712,7 +712,7 @@ def test_render_plan_surfaces_the_note_source():
     from atoo.render import render_plan
 
     # An overflow provokes the "allocation"-tagged line; an unknown
-    # console model used to, and is a hard stop since #13.
+    # console model used to, and is a hard stop.
     source = _generated()
     source["dcas"] = {f"DCA {n}": {"members": []} for n in range(1, 19)}
     plan = generate_plan(
@@ -901,40 +901,12 @@ def test_processing_new_fields_are_optional_not_required():
         assert field not in proc["required"]
 
 
-@pytest.mark.example_guard
-def test_example_plans_stay_valid_against_the_updated_schema():
-    """Concrete backward-compatibility check, not just a synthetic case:
-    the real example plan shipped in this repo, built before this issue,
-    must still validate against the updated PLAN_SCHEMA -- proving the new
-    `processing` fields really are additive rather than a breaking change.
-
-    `examples/touringband/plan.json` is the only `*.plan.json` example
-    this repo ships. It predates the tagged-notes format (its
-    `notes` entries are bare strings, not `{"text", "source"}` objects) --
-    an unrelated, pre-existing gap this PR does not touch or fix, so
-    `notes` is excluded from the whole-plan check below rather than
-    masking what this test actually verifies. Every channel (the part
-    this PR changes) is still validated directly against CHANNEL_SCHEMA,
-    and the notes-removed whole-plan check confirms nothing else
-    regressed."""
-    from atoo.plan_schema import PLAN_SCHEMA
-
-    example = ROOT / "examples" / "touringband" / "plan.json"
-    if not example.is_file():
-        pytest.skip(f"{example.relative_to(ROOT)} is not present -- nothing to guard")
-    plan = normalise_plan(json.loads(example.read_text()))
-    for ch in plan["channels"]:
-        validate(ch, CHANNEL_SCHEMA)
-    plan_without_notes = {k: v for k, v in plan.items() if k != "notes"}
-    validate(plan_without_notes, PLAN_SCHEMA)
-
-
 def test_every_compiled_fixture_satisfies_the_format_schema():
     """The schema describes the format, not one path's view of it -- proved
     by running it over four real plans for four real shows.
 
     These used to be built by shelling out to the deterministic compiler.
-    #29 retired it, so the plans are checked in (generated from the
+    An earlier change retired it, so the plans are checked in (generated from the
     compiler at `origin/main` immediately before deletion). The point of
     the test is unchanged: the schema has to accept plans for shows of
     very different shapes, from 9 channels to 38.
@@ -1052,7 +1024,7 @@ def test_a_bus_has_a_tilt_field_and_a_channels_eq_block_does_not():
 
 def test_the_prompt_tells_the_model_the_band_counts_it_must_respect():
     """A schema that enforces a fact the prompt never states produces a
-    model that keeps generating rejected plans -- #113's lesson, one
+    model that keeps generating rejected plans -- the lesson, one
     field over: when a fact moves, grep for every RENDERER of it, not
     just every consumer."""
     section = schema_section()

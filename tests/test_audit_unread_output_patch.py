@@ -84,7 +84,7 @@ def test_neither_rule_fires_when_the_output_patch_was_never_read():
 def test_the_read_says_the_check_could_not_be_made():
     """Silence is not the fix. A report that drops two rules and says
     nothing reads exactly like a report that ran them and found nothing
-    -- the same argument #160 made for the four rules already withheld
+    -- the same argument an earlier change made for the four rules already withheld
     here."""
     state = ConsoleState(DRUMS_WITH_THE_OUTPUT_PATCH_UNREAD)
     assert not output_patch_was_read(state)
@@ -170,7 +170,7 @@ def unread_output_state(tmp_path):
 
 
 def test_watch_leads_with_the_coverage_caveat(unread_output_state, capsys):
-    """Until #245 `watch` printed the coverage paragraph AFTER the
+    """Until an earlier change `watch` printed the coverage paragraph AFTER the
     baseline findings and never again, so a bare ERROR arriving on pass
     47 of a live watch carried no caveat at all. The one-line form now
     comes first, and again with every change event."""

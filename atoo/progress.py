@@ -1,10 +1,10 @@
 """Say what a long, silent console read is doing while it does it.
 
-A live `audit --console` asks a WING Compact for 6,143
+A live `audit --console` asks a WING Compact for 6,195
 addresses -- one at a time, then; 323 requests by node dump, pipelined
 eight in flight, today -- and, until this
-module existed, printed **nothing at all** until it was finished. The maintainer ran one at the desk mid-session and could not tell
-it from a hang.
+module existed, printed **nothing at all** until it was finished. Run at the desk
+mid-session, it could not be told from a hang.
 
 That is the second time this exact shape has cost a run. On 2026-09-22 a
 correct `watch` produced a zero-byte log for minutes -- Python
@@ -41,17 +41,16 @@ on a hosted model spends minutes thinking before it writes a character;
 on a local one, the better part of an hour. Until 2026-09-25 that wait
 printed one "sending" line when stderr was not a terminal -- which is
 every build the Setup UI runs -- and then nothing until the call ended
-(the maintainer: "Show me progress while build is running"). A model call has a
+(progress while a build is running was asked for). A model call has a
 third consumer a console read does not: the Setup UI's Build step 04,
 which wants the numbers, not a line of text to scrape. So a model call
 also reports to a *listener* -- a callable the caller registers for its
 own thread with `model_progress_listener()` -- and the web UI's build
 runner is the one that does.
 
-**Stop, and what the model is writing** (the maintainer, 2026-09-26: "Is there
-any way to show progress updates from the build step or get progressive
-output? It would be nice to be able to stop it if things are going
-haywire."). Two more things live here for that:
+**Stop, and what the model is writing** (progress updates from the
+build step, or progressive output, and a way to stop it if things are
+going haywire). Two more things live here for that:
 
 - `StopSignal`, registered for a thread with `stop_scope()` the same way
   a listener is. `StopSignal.stop()` -- the Setup UI's Stop button --
@@ -158,6 +157,9 @@ class ReadProgress:
         self.done = 0
         self.answered = 0
         self.unanswered = 0
+        # Set by a write phase before `finish`: how many of the settings it
+        # went through it actually wrote (see `summary`).
+        self.written: int | None = None
         self.unanswered_addresses: list[str] = []
         # Family -> how many of it the read did not ask for,
         # after enough of it went unanswered (`audit.UnansweredFamilies`).
@@ -215,8 +217,7 @@ class ReadProgress:
 
     def skip_address(self, address: str, family: str) -> None:
         """An address the read decided not to ask for, because its family
-        has already gone unanswered with the desk still answering (issue
-        #249). It counts toward `done` so the bar still reaches its
+        has already gone unanswered with the desk still answering. It counts toward `done` so the bar still reaches its
         total, and is named by family in the summary -- never as
         answered, and never as a default."""
         self.done += 1
@@ -268,6 +269,11 @@ class ReadProgress:
         parts = [f"  {self.label}: {self.done} of {self.total} {self.noun} "
                  f"in {self.elapsed:.1f}s"]
         if not self.answers:
+            # A write phase that checks more settings than it writes says
+            # how many it wrote: the count of settings alone reads as every
+            # one of them having been sent.
+            if self.written is not None:
+                parts[0] += f" -- {self.written} written and read back"
             return parts[0]
         if self.unanswered:
             cost = ""
@@ -425,7 +431,7 @@ TAIL_CHARS = 2048
 # sentences; the page shows one line of it.
 THINKING_LINE_CHARS = 240
 
-# Build-log bounds (docs/developer/build-lessons-2026-09-27.md, part C): the
+# Build-log bounds: the
 # notes are for a human reviewing a batch of builds later, not a live
 # transcript, so they are capped hard rather than left to grow with a
 # call's length. ~200 notes at ~400 chars is on the order of a plan's own
@@ -711,7 +717,7 @@ class ModelCallProgress:
         self._tail = ""
         self._thinking_tail = ""
         self._outline = StreamOutline()
-        # The build log (docs/developer/build-lessons-2026-09-27.md, part C):
+        # The build log:
         # every distinct thinking-SUMMARY line seen, with its elapsed
         # seconds, for a human reviewing a batch of builds later (or the
         # host's own reasoning text, where it streams that instead of a
@@ -812,9 +818,8 @@ class ModelCallProgress:
     def build_log_notes(self) -> list[dict]:
         """Every distinct thinking-summary line seen, `{"t", "text"}`,
         flushing anything still buffered without a trailing newline.
-        Call once, after `finish()` -- for the build log
-        (docs/developer/build-lessons-2026-09-27.md), never sent to a
-        model."""
+        Call once, after `finish()` -- for the build log,
+        never sent to a model."""
         if self._notes_buf.strip():
             self._record_note(self._notes_buf)
             self._notes_buf = ""

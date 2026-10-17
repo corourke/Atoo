@@ -3,7 +3,7 @@ write a desk.
 
 At the desk on 2026-10-12, `apply --confirm` printed its verify block and
 then nothing until it finished -- the reset's read alone took 39.6s -- and
-was taken for a hang: the failure, on the command #185 never
+was taken for a hang: the failure, on the command an earlier change never
 reached. Each long phase now reports on **stderr** through
 `atoo/progress.py`, named so the slow one can be told apart, and
 `--no-progress` silences it. Nothing on stdout and nothing in the journal
@@ -133,6 +133,29 @@ def test_a_confirmed_apply_names_the_reset_read_the_reset_writes_and_the_plan_wr
     after_write = err[err.index(_summary(err, WRITE)):].splitlines()[1:2]
     assert not any("answered" in line for line in after_write)
     assert PREVIEW not in err
+
+
+def test_the_plans_stretch_says_how_many_of_the_settings_it_looked_at_it_wrote(
+        desk, plan, tmp_path, capsys):
+    """The count of a write phase is of settings looked at; reading it as a
+    count of writes made a one-row change look like a rewrite of the desk."""
+    journal = tmp_path / "j.json"
+    assert _apply(plan, "--confirm", "--journal", str(journal)) == 0
+    captured = capsys.readouterr()
+    rows = json.loads(journal.read_text())["writes"]
+    plan_rows = [r for r in rows if not r["description"].startswith("reset to initialized")]
+    wrote = sum(1 for r in plan_rows if r["status"] in ("match", "mismatch", "unreadable"))
+    looked_at = len(plan_rows)
+    assert 0 < wrote < looked_at
+    line = _summary(captured.err, WRITE)
+    assert f": {looked_at} of {looked_at} settings in " in line
+    assert line.endswith(f" -- {wrote} written and read back")
+    # The reset's stretch writes everything it counts, and says nothing more.
+    assert "written and read back" not in _summary(captured.err, RESET)
+    # The command's own summary agrees with the line and the journal.
+    reset_wrote = sum(1 for r in rows if r["description"].startswith("reset to initialized")
+                      and r["status"] in ("match", "mismatch", "unreadable"))
+    assert f"{wrote + reset_wrote} written" in captured.out
 
 
 def _stdout_and_journal(plan: Path, journal: Path, *extra: str, capsys):

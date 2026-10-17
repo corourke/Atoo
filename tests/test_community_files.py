@@ -42,7 +42,10 @@ def test_contributing_links_each_issue_form_by_its_file_name():
 
 def test_issue_forms_parse_and_their_labels_are_on_the_release_checklist():
     yaml = pytest.importorskip("yaml")
-    checklist = (REPO / "docs" / "product" / "release-checklist.md").read_text(encoding="utf-8")
+    # The checklist is the maintainer's own page; without it (the public
+    # tree) the forms are still parsed, and only the label check stands down.
+    checklist_path = REPO / "docs" / "product" / "release-checklist.md"
+    checklist = checklist_path.read_text(encoding="utf-8") if checklist_path.is_file() else None
     for form in FORMS:
         data = yaml.safe_load((TEMPLATES / form).read_text(encoding="utf-8"))
         assert data["name"] and data["description"], form
@@ -50,7 +53,7 @@ def test_issue_forms_parse_and_their_labels_are_on_the_release_checklist():
         assert len(ids) == len(set(ids)), f"{form}: duplicate field ids {ids}"
         for item in data["body"]:
             assert item["type"] in {"markdown", "textarea", "input", "dropdown", "checkboxes"}
-        for label in data.get("labels", []):
+        for label in data.get("labels", []) if checklist is not None else []:
             assert f"`{label}`" in checklist, (
                 f"{form} applies the label {label!r}, which the release checklist does not "
                 "say to create -- GitHub drops a label that does not exist")

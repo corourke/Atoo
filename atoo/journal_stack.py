@@ -17,11 +17,11 @@ them a hazard:
 2. **Each kind kept exactly one.** A second amend overwrote the first
    amend's journal, and the step before last was simply gone.
 
-The maintainer, 2026-09-24: *"every apply or amend should be timestamped, and
+Every apply or amend is timestamped, and
 the last n actions kept, regardless of type, such that each undo walks us
-back one step in time. I don't see how it makes sense to undo an apply
-out from under a subsequent amend. So it would be one virtual journal,
-one arm button, and one undo button."*
+back one step in time. It makes no sense to undo an apply
+out from under a subsequent amend. So it is one virtual journal,
+one arm button, and one undo button.
 
 ## What is on disk
 
@@ -47,7 +47,7 @@ desk moves from the home network to the gig network. An entry recorded
 before this change is named `<stamp>-<kind>.json`, and is read, listed,
 sorted and undone exactly as before (`parse_entry_name`).
 
-**`journals/` is the only record**. From #252 until then,
+**`journals/` is the only record**. Before that,
 each confirmed apply, amend and patch was also copied over a top-level
 `apply-journal.json`, `amend-journal.json` or `patch-journal.json`, the
 newest of its kind; nothing writes those any more. A confirmed run in a
@@ -60,9 +60,9 @@ A bundle with no `journals/` directory has recorded nothing: `entries()`
 answers with an empty list, `find()` with None, and `atoo undo --show`
 says there is nothing to undo. Until 2026-10-02 it fell back to a
 top-level `apply-journal.json` an earlier version had written; the last
-bundle in the repo that had one was cleaned up, and the fallback went
-with it (the maintainer: *"you can delete them."*). A top-level copy a bundle
-made between #252 and #356 still holds is neither read nor reported.
+bundle that had one was cleaned up, and the fallback went
+with it. A top-level copy that a bundle made in between still holds is
+neither read nor reported.
 `atoo undo <a journal file>` reads any journal by its path, and one
 that carries a `stack_entry` block resolves to the entry it copies.
 Nothing migrates anything.
@@ -78,7 +78,7 @@ others, so the run underneath still stands and stays the top (`_live`),
 and the next `undo --show` finishes it.
 
 `undo` **pops**. Asked whether a second press should step back two or
-redo the first, the maintainer chose *steps back two*, so after undoing the
+redo the first, the choice was *steps back two*, so after undoing the
 amend the top of the stack is the apply. The undo's own journal is still
 written and still recorded -- it is a set of writes, and FR-X.3 gets no
 exception, and it is the only file that carries the `_refusal_record`
@@ -108,18 +108,18 @@ copied without its index, or an entry written by another version, is
 listed rather than lost. The journals are the evidence; the index is
 only how they are found quickly.
 
-## The plan an amend replaced -- entries recorded before #279
+## The plan an amend replaced -- entries recorded
 
 **No run replaces `plan.json`**: only a build writes it,
 and what a patch or an amend put on a desk is that desk's entry's
-`desk_plan` (below). What follows is how entries recorded between #259 and
-#279 behave, and they must still undo correctly, so all of it stays.
+`desk_plan` (below). What follows is how entries recorded in between behave, and they
+must still undo correctly, so all of it stays.
 
 A confirmed `amend --show DIR` replaced `DIR/plan.json` with the amended
 show, so that `verify`, `watch` and the next amend read what is actually
 on the desk -- before this, a second amend from the same rebuild saw the
 strips the first one had filled as somebody else's and placed the same
-channels again. The maintainer chose (2026-09-24) to replace the file rather than
+channels again. The choice (2026-09-24) was to replace the file rather than
 add an applied-plan file beside it, **and to keep the plan it replaced in
 that amend's journal entry, so undo puts it back.**
 
@@ -137,11 +137,10 @@ put it back carries its own `bundle_plan` block, the mirror image -- which
 is how the redo (`atoo undo <the .undo.json>`) re-installs the amended
 plan under exactly the same rule, without a special case.
 
-## Which desk an entry wrote to (the maintainer, 2026-09-24)
+## Which desk an entry wrote to
 
-One plan can be applied to more than one console -- *"you might generate a
-plan, and want to apply it to more than one console, ex: primary console
-wing compact, backup console wing rack"*. The stack is still one per
+One plan can be applied to more than one console -- a primary Compact
+and a backup Rack, say. The stack is still one per
 bundle, but "the newest write" now has to mean the newest write **to the
 desk on the line**, or this happens:
 
@@ -160,13 +159,12 @@ names the file, the address is where the run reached it.
 
 ## Journals and undo are strict to the desk; apply and amend are not
 
-The maintainer, 2026-09-24: *"Per-desk journal for both apply and amend ...
-undo can only apply against correct desk / correct journal"*, and, the
-same day, *"serial number is a fine idea. In general, I want to strictly
-track journals and undo to the specific desk, but allow apply and
-subsequent amends to be relatively permissive to allow for multiple desks
-or the IP number changing on the desk (say, going from home network to gig
-network)."*
+The journal is per desk, for both apply and amend: undo can only apply
+against the correct desk and the correct journal. The serial number is the
+identity. Journals and undo are tracked strictly to the specific desk,
+while apply and subsequent amends are relatively permissive, to allow for
+multiple desks or the IP number changing on the desk (say, going from a
+home network to a gig network).
 
 So **a desk is its serial** (`same_desk`): two blocks that both state one
 are the same desk exactly when the serials match, whatever their
@@ -189,12 +187,12 @@ Apply and amend are permissive: apply writes to any desk, and amend finds
 the connected desk's own applied plan by serial (below), falling back to
 `plan.json`, with an INFO, for a desk that has no entry yet.
 
-**An entry recorded before #272 carries no desk**, and counts as being on
+**An entry recorded before an earlier change carries no desk**, and counts as being on
 whichever desk is connected (`on_desk`): the single-desk assumption was
 true when it was written, there is nothing recorded to be strict against,
 and refusing it would strand the one undo those runs have. Undo's own
 per-address guard still applies to it. `atoo undo` says so at INFO
-when it relies on it, per `CLAUDE.md`'s rule that an inferred value
+when it relies on it, because an inferred value
 announces itself.
 
 ## The plan each entry left on its desk
@@ -206,7 +204,7 @@ the primary's new strips its own and reported "Nothing to add". So every
 confirmed apply and amend entry also embeds **the plan it left on its desk**
 (`DESK_PLAN_BLOCK`, `desk_plan`): the applied plan for an apply, the
 effective plan for an amend (for an amend that aborted partway, the plan
-it started from -- the reasoning: it at least describes everything that
+it started from, because it at least describes everything that
 was there before). `desk_plan()` reads the connected desk's newest standing
 entry's copy, which is what `amend --show` and `patch --show` compare
 against. Because it is
@@ -220,14 +218,14 @@ no new case.
 A `patch` entry -- a change typed in plain English -- carries its change
 (`CHANGE_BLOCK`: its number on this bundle's stack, its short name, and the
 text), in the entry and in its index row, so a listing reads as a list of
-changes (`change 3: horns for tonight`). `changes_on_desk` is the changes
+changes (`change 3: Add horns on A 21-23`). `changes_on_desk` is the changes
 and amends standing on a desk above its newest apply: what a full apply
 would replace, and what `replaced_changes_diagnostic` warns about.
 
 ## Pruning: the newest five, and never what a desk still depends on
 
-The maintainer, 2026-10-02: *"continually prune the builds, journals, and logs
-directories to a max of 5 entries each."* So `record` keeps `keep_limit()`
+The builds, journals, and logs
+directories are continually pruned to a max of 5 entries each. So `record` keeps `keep_limit()`
 entries (`prune.KEEP`, five; `index.json` is not an entry) and deletes the
 rest, in the same call that rewrites the index -- the index never names a
 deleted file. Until then the limit was 200, so that nothing ever pruned.
@@ -1113,7 +1111,7 @@ def _live(all_entries: list[Entry]) -> tuple[list[Entry], dict[str, str]]:
       means.
     * **Which entries are stack POSITIONS** -- apply and amend only. An
       undo is the mirror of the entry above it, never a new position, so
-      it is never what the next `undo` pops (the maintainer: a second press
+      it is never what the next `undo` pops (a second press
       "steps back two").
 
     Oldest first: everything is pushed as standing; a position is also
@@ -1357,7 +1355,7 @@ def saved_plan_bytes(block: dict) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# The plan each entry left on its desk (the maintainer, 2026-09-24)
+# The plan each entry left on its desk
 # ---------------------------------------------------------------------------
 
 #: The top-level key an apply or amend entry carries: the plan that run left
@@ -1390,7 +1388,7 @@ def desk_plan(bundle_dir: str | Path, desk: dict | None) -> tuple[Entry | None, 
     a plan on this particular console would be a guess. So:
 
     * `(None, None)` -- no desk, or no standing write recorded on it;
-    * `(entry, None)` -- its newest write predates saved plans (#272, or
+    * `(entry, None)` -- its newest write predates saved plans (or
       a legacy entry), so the caller falls back to `plan.json` and says so;
     * `(entry, plan)` -- the plan.
     """
@@ -1419,7 +1417,7 @@ CHANGE_BLOCK = "change"
 
 
 def change_label(block: dict | None) -> str:
-    """`change 3: horns for tonight`."""
+    """`change 3: Add horns on A 21-23`."""
     if not isinstance(block, dict):
         return "change"
     number, name = block.get("number"), block.get("name") or ""
@@ -1478,7 +1476,7 @@ def replaced_changes_diagnostic(bundle_dir: str | Path, desk: dict | None):
     """The WARNING a full apply gives before it replaces changes that are
     not in plan.json (decision 7), or None when there are none.
 
-    A WARNING, not an error, per `CLAUDE.md`: a full apply replacing ad-hoc
+    A WARNING, not an error: a full apply replacing ad-hoc
     changes is expected -- it is how a rebuilt show goes back on the desk --
     but it should be seen before it happens, not discovered at soundcheck.
     Shared by `atoo apply` and the Apply screen's pre-flight, so the two

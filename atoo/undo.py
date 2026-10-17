@@ -23,10 +23,10 @@ admitted the gap in as many words.
 
 ## Why this exists when the engineer already saves a snapshot
 
-The maintainer, 2026-09-23: *"after the board is patched, any good engineer will
+After the board is patched, any good engineer will
 save a snapshot so a misstep isn't catastrophic before the show starts.
-Still, the project description says 'journalled writes, full undo' so we
-will eventually want to include those safety features."*
+Still, the project promises 'journalled writes, full undo', so those
+safety features belong here too.
 
 That is the whole argument for building it, and it is exactly what D6's
 **"independent of console snapshots"** means. A snapshot reverses **the
@@ -51,7 +51,7 @@ still prove we own.
 
 The comparison is `apply._values_equal`, **never `!=`**.
 WING's fader/log parameters are stepped, so a value read back after a
-write is the nearest step rather than the number sent: on the maintainer's
+write is the nearest step rather than the number sent: on the
 631-address A1 run three `flt/lcf` addresses sat at 100.237Hz where the
 plan said 100Hz, a difference the desk cannot represent. Plain inequality
 here would turn every one of those into a phantom "changed since"
@@ -124,7 +124,7 @@ separate mechanism for it.
 On the stack that journal is kept but is **never a step
 forward**: it pops the entry it reversed rather than becoming a new
 position, so a second undo steps back two rather than redoing the first
-(the maintainer's call). That is less a rule than a description of the file --
+(a deliberate choice). That is less a rule than a description of the file --
 `_restore` below deliberately inverts `prior_value` and `intended_value`,
 so an undo journal is the *mirror* of the entry above it. It is kept
 because it is the only file carrying `_refusal_record` rows for the
@@ -363,6 +363,123 @@ class UndoResult:
             lines.append(f"  {len(self.warnings)} warning(s), listed below")
         return "\n".join(lines)
 
+    def to_dict(self) -> dict:
+        """The run as data, for a page: one row per journal address this run
+        decided something about (`_undo_row`), the counts by verdict, one
+        word for the whole run (`_undo_outcome`) and the command's own
+        summary line. Written by `atoo undo --result-json`."""
+        rows = [_undo_row(step) for step in self.steps]
+        counts = {verdict: 0 for verdict in sorted(set(ROW_VERDICTS.values()))}
+        for row in rows:
+            counts[row["verdict"]] = counts.get(row["verdict"], 0) + 1
+        counts["total"] = len(rows)
+        counts["never_written"] = self.never_written
+        counts["not_selected"] = self.not_selected
+        return {
+            "dry_run": self.dry_run,
+            "source_journal": self.source_journal,
+            "outcome": _undo_outcome(self, counts),
+            "counts": counts,
+            "rows": rows,
+            "summary": self.summary(detail=False),
+            "warnings": list(self.warnings),
+            "aborted": self.aborted,
+            "abort_reason": self.abort_reason,
+            "journal_path": self.journal_path,
+            "selection": list(self.selection),
+        }
+
+
+#: What a row of `UndoResult.to_dict()` calls each verdict. The first four
+#: are what an engineer reads before pressing Undo; the rest only occur once
+#: a reversal has been sent.
+ROW_VERDICTS = {
+    WOULD_REVERSE: "goes-back",
+    REVERSED: "went-back",
+    ALREADY_RESTORED: "already-back",
+    REFUSED_CHANGED: "changed-since",
+    REFUSED_UNREADABLE: "unreadable",
+    UNREVERSIBLE_NO_PRIOR: "no-earlier-value",
+    REVERSAL_MISMATCH: "did-not-land",
+    REVERSAL_UNREADABLE: "did-not-land",
+}
+
+_STRIP_ADDRESS_RE = re.compile(r"^/(ch|aux|bus|main|mtx|dca|mgrp)/(\d+)(?:/|$)")
+_SOCKET_ADDRESS_RE = re.compile(r"^/io/(in|out)/([A-Za-z0-9]+)/(\d+)(?:/|$)")
+_DESCRIPTION_RE = re.compile(r"^(?P<what>[^:]*?)(?: \((?P<name>[^)]*)\))?: (?P<control>.+)$")
+
+
+def strip_of(address: str) -> str:
+    """The object an address belongs to, as the page labels it: `ch:21`,
+    `bus:4`, `dca:6`, or `A 21` for a source socket (`/io/in/A/21/...`) and
+    `out A 3` for an output one. An address that belongs to none of those
+    (a console-wide setting) is labelled with its first two path segments."""
+    match = _STRIP_ADDRESS_RE.match(address)
+    if match:
+        return f"{match.group(1)}:{match.group(2)}"
+    match = _SOCKET_ADDRESS_RE.match(address)
+    if match:
+        direction, group, number = match.groups()
+        return f"{group} {number}" if direction == "in" else f"out {group} {number}"
+    return "/".join(address.split("/")[:3]) or address
+
+
+def split_description(description: str) -> tuple[str, str]:
+    """`("Trumpet", "patch socket")` from a journal description such as
+    `ch 21 (Trumpet): patch socket`; the strip's name is "" where the
+    description names none, and the control is the whole description where
+    it has no `label: control` shape. The journal records these words, not
+    a structured control name or unit."""
+    match = _DESCRIPTION_RE.match(description or "")
+    if not match:
+        return "", description or ""
+    name = match.group("name")
+    if name is None:
+        quoted = re.search(r"'([^']*)'", match.group("what"))
+        name = quoted.group(1) if quoted else ""
+    return name, match.group("control")
+
+
+def _undo_row(step: UndoStep) -> dict:
+    name, control = split_description(step.description)
+    return {
+        "address": step.address,
+        "strip": strip_of(step.address),
+        "strip_name": name,
+        "control": control,
+        # What the run wrote, what is on the desk now, and the value an undo
+        # puts back: bare values, as the journal holds them.
+        "written": step.applied_value,
+        "now": step.current_value,
+        "goes_back_to": step.restore_value,
+        "verdict": ROW_VERDICTS.get(step.verdict, step.verdict),
+        "detail": step.detail,
+    }
+
+
+def _undo_outcome(result: "UndoResult", counts: dict) -> str:
+    """One word for the whole run, for a state tag.
+
+    A preview: `nothing-to-undo`, `safe` (every address goes back or is
+    already back) or `differs` (something has moved since, cannot be read,
+    or has no earlier value, and will be left as it is). A confirmed run:
+    `aborted`, `did-not-land`, `partly-undone` or `undone`."""
+    held_back = (counts["changed-since"] + counts["unreadable"]
+                 + counts["no-earlier-value"])
+    if result.dry_run:
+        if held_back:
+            return "differs"
+        if not counts["goes-back"]:
+            return "nothing-to-undo"
+        return "safe"
+    if result.aborted:
+        return "aborted"
+    if counts["did-not-land"]:
+        return "did-not-land"
+    if held_back:
+        return "partly-undone"
+    return "undone"
+
 
 def load_journal(path: str) -> dict:
     """Read a journal, or raise `UndoError` with a message fit to print.
@@ -392,8 +509,7 @@ def load_journal(path: str) -> dict:
 def journal_records(journal: dict) -> list[WriteRecord]:
     """The journal's `writes` as `WriteRecord`s.
 
-    `value_type` defaults to `"s"` for a journal written before issue
-    #142 added the field: a string compares exactly, which is the
+    `value_type` defaults to `"s"` for a journal written before an earlier change added the field: a string compares exactly, which is the
     conservative direction -- a float address in such a journal is more
     likely to be refused than wrongly reversed."""
     records = []

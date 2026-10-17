@@ -79,6 +79,15 @@ to find what is wrong with it while that is still cheap.
    source with no head amp (USB, a card, a player) has no gain to set,
    so its `gain_db` is rightly null.
 
+   **A strip's starting fader and mute are shown to you as the desk will
+   hold them.** Where the plan states none, you see unity (0 dB) and
+   `"muted": false`: the format's defaults, written by the apply step
+   whether or not the plan says them. They are never an invention and
+   never "not set". A convention they already satisfy ("unmuted", "at
+   unity") is met, so say nothing about it. A convention they do not
+   satisfy ("start muted", "faders all the way down") is a mismatch with
+   the value you see; report that.
+
 3. Then invented detail -- values that appear in the plan but nowhere in
    the conventions or input list, and are NOT marked "inferred".
 

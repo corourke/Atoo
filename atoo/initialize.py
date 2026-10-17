@@ -1,8 +1,8 @@
 """Put the desk into its initialized state before a full apply -- an earlier change.
 
-The maintainer, 2026-10-02: *"We still need to first initialize the console before
-we do a full apply so that the console is in a known state."* He chose to
-have Atoo do it, rather than asking the engineer to press Initialize
+The console has to be initialized before
+a full apply so that it is in a known state, and Atoo does that itself,
+rather than asking the engineer to press Initialize
 by hand. So before a full apply (`atoo apply`, and the Apply page that
 runs it) writes the plan, it:
 
@@ -22,8 +22,8 @@ as the `.snap` the desk itself exported (only its `ae_data` is read; the
 file's `ce_data` is the console environment -- panel lights, display
 preferences -- and is never touched). The OSC type each leaf is written
 with comes from `initialized/leaf_types.json`, a table built from the
-parameter map (`docs/reference/wing-compact-parameter-map.json`, the desk
-describing its own parameters) by `tools/freeze_initialized_capture.py`.
+parameter map (the desk
+describing its own parameters) by a script in the development repository.
 A capture leaf with no entry in that table has no address we know how to
 set, and is skipped and counted (`unsettable`).
 
@@ -111,7 +111,8 @@ CAPTURE_DIR = Path(__file__).parent / "initialized"
 LEAF_TYPES_FILE = "leaf_types.json"
 
 #: Model -> (file under `initialized/`, where the capture came from).
-#: To add a model, see `tools/freeze_initialized_capture.py`.
+#: A model is added in the development repository, from the `.snap` an
+#: initialized desk of that model exported.
 CAPTURES: dict[str, tuple[str, str]] = {
     "wing-compact": (
         "wing-compact.snap",
@@ -124,11 +125,12 @@ CAPTURES: dict[str, tuple[str, str]] = {
         "(frozen copy: tests/fixtures/Initialized-Full.snap)"),
 }
 
-#: How a desk with no capture gets one -- said in the WARNING, in the docs
-#: and in the tool's docstring.
+#: How a desk with no capture gets one -- said in the WARNING. A capture is
+#: frozen into the package by the project, so the user's part is to send one.
 HOW_TO_CAPTURE = (
-    "initialize the desk, save its show file (.snap) from the desk or WING Edit, then "
-    "`python3 tools/freeze_initialized_capture.py add {model} <that .snap>`")
+    "initialize the desk, save its show file (.snap) from the desk or WING Edit, and attach "
+    "it to a desk test report "
+    "(https://github.com/corourke/Atoo/issues/new?template=desk-test-report.yml)")
 
 
 @dataclass(frozen=True)
@@ -299,7 +301,7 @@ def no_capture_warning(model: str | None, desk_token: str | None = None) -> str:
     return (f"WARNING not reset to initialized first: there is no initialized capture for the "
             f"{label}. The plan is applied as it stands; anything the plan does not write keeps "
             f"what the desk holds. Initialize the desk by hand first if it carries an old show. "
-            f"To give Atoo a capture: " + HOW_TO_CAPTURE.format(model=model) + ".")
+            f"To give Atoo a capture: " + HOW_TO_CAPTURE + ".")
 
 
 NO_INIT_NOTE = ("INFO not reset to initialized first (--no-init): anything the plan does not "

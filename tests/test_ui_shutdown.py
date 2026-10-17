@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import re
+import select
 import signal
 import subprocess
 import sys
@@ -44,7 +45,8 @@ def ui_server(tmp_path):
         cwd=tmp_path, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
     try:
-        line = proc.stdout.readline()
+        # The first line says which copy of Atoo this is; the banner is the next.
+        line = proc.stdout.readline() + proc.stdout.readline()
         match = re.search(r"http://([\d.]+):(\d+)", line)
         assert match, f"no URL banner from `atoo ui`: {line!r}"
         yield proc, f"ws://{match.group(1)}:{match.group(2)}/ws/watch"
@@ -70,3 +72,34 @@ def test_ui_exits_on_signal_with_a_watch_socket_open(ui_server, sig):
             pytest.fail(f"`atoo ui` still running {EXIT_WITHIN}s after {sig.name} "
                         "with a Watch socket open")
     assert time.monotonic() - started < EXIT_WITHIN
+
+
+def test_the_url_banner_reaches_a_pipe_without_unbuffered_python(tmp_path):
+    """The banner is how a launcher (or `atoo ui | tee`) learns the port. Python
+    holds stdout back until a block fills when it is not a terminal, so the
+    announcement is flushed before the server blocks. The fixture above
+    inherits `PYTHONUNBUFFERED` from the environment, which hides this."""
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONUNBUFFERED"}
+    env.update(HOME=str(tmp_path),
+               PYTHONPATH=os.pathsep.join(filter(None, [repo, os.environ.get("PYTHONPATH")])))
+    proc = subprocess.Popen(
+        [sys.executable, "-c", "import sys; from atoo.cli import main; sys.exit(main())",
+         "ui", "--port", "0", "--no-browser"],
+        cwd=tmp_path, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    seen = b""
+    try:
+        deadline = time.monotonic() + 20.0
+        while time.monotonic() < deadline and b"http://" not in seen:
+            ready, _, _ = select.select([proc.stdout], [], [], 0.5)
+            if ready:
+                chunk = os.read(proc.stdout.fileno(), 65536)
+                if not chunk:
+                    break
+                seen += chunk
+    finally:
+        proc.kill()
+        proc.wait()
+        proc.stdout.close()
+    assert b"http://" in seen, f"no URL banner on the pipe within 20 s: {seen!r}"

@@ -1,4 +1,4 @@
-"""Progress while a model call runs (the maintainer, 2026-09-25: "Show me progress
+"""Progress while a model call runs ("Show me progress
 while build is running").
 
 A real build in the Setup UI printed a "sending" line and then nothing for
@@ -479,7 +479,7 @@ def test_ollama_records_its_thinking_field_in_its_build_log(monkeypatch):
 
 
 def test_claude_with_thinking_display_omitted_records_no_notes(monkeypatch):
-    """The other side of #340: Claude with display omitted streams empty
+    """The other side: Claude with display omitted streams empty
     thinking deltas, and those must not become blank notes."""
     raw = _sse(
         {"type": "content_block_start", "index": 0,

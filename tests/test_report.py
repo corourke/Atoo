@@ -36,7 +36,7 @@ def test_verify_at_generation_status_blocked_by_verify_errors():
 
 
 def test_verify_at_generation_status_counts_only_the_verifier():
-    """#153 retired expectations, and with it the second error source this
+    """An earlier change retired expectations, and with it the second error source this
     status used to fold in. The verifier's own count is the whole count."""
     verdict = VerifyResult()
     verdict.add("warning", "preset.unknown", "channels[Kick]", "no such preset")

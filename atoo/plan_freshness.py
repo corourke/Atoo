@@ -1,8 +1,7 @@
 """Is a plan still what its inputs would build?
 
-The maintainer, 2026-09-25: *"the input list is meant to be editable on this
-tab. The plan will then show 'stale' and there will be a button to
-rebuild the plan per the mockup."* The same holds for the house
+The input list is meant to be editable on its tab. The plan then
+shows 'stale', with a button to rebuild it. The same holds for the house
 conventions and the show's `instructions.md`: a plan built from one text
 and applied after another was edited is the plan as built, not as the
 engineer now means it -- and nothing on screen said so.
@@ -27,7 +26,7 @@ Read-only: nothing here writes, and nothing refuses. Staleness announces
 itself -- on the Build page's plan tile and status line, and as a
 WARNING in Apply's pre-flight -- and never blocks: applying a plan
 built before an edit is a choice an engineer may make on purpose
-(CLAUDE.md: a judgement call is announced, not refused).
+(a judgement call is announced, not refused).
 """
 
 from __future__ import annotations
@@ -166,7 +165,7 @@ def stale_diagnostic(assessment: dict, plan_display: str = "plan.json"):
                  + " ".join(reason["message"] for reason in assessment["reasons"])
                  + " Applying writes the plan as it was built, without those edits."),
         fix="rebuild it (Build step 04, Rebuild) so the edits reach the desk -- or apply as "
-            "it is, if they are not meant for tonight",
+            "it is, if those edits are not meant to reach the desk",
     )
 
 

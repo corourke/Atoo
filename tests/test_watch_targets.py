@@ -3,7 +3,7 @@
 as well as by name.
 
 Every state here is built in the test -- nothing is read from
-`examples/` (CLAUDE.md, "A bundle under examples/ is a living example").
+`examples/`.
 """
 
 from __future__ import annotations
@@ -296,7 +296,7 @@ def test_no_overlap_info_when_no_strip_is_named_like_the_position():
 
 def test_merge_treats_two_spellings_of_a_position_as_one_target():
     existing = {"watch_conditions": [_cond(id="mine", channel="ch 10")]}
-    drafted = _parse(_cond(id="theirs", channel="CH10"))
+    drafted = _parse(_cond(id="theirs", channel="CH10", value=True))
     document, report = merge_drafted_conditions(existing, drafted)
     assert report.overlaps == (("theirs", "mine"),)
     # A drafted position is written canonically; yours is left as you wrote it.

@@ -4,7 +4,7 @@ asked of an amend.
 Before this, `atoo apply` verified a plan and checked every socket it
 patches against the model the desk says it is, and `atoo amend` did
 neither: it would write a new strip onto LCL 20 of a full-size WING, which
-has 8 local inputs. Under `CLAUDE.md`'s rule that is the case which IS an
+has 8 local inputs. Under the rule that a judgement call is not an error of patching, that is the case which IS an
 error -- a socket that does not exist is a physical setting the desk cannot
 be left in -- so it is refused by name, in the preview as well as on
 `--confirm`, and `--skip-verify` does not get past it. A model difference
@@ -77,8 +77,7 @@ def applied_to(show: Path, ip: str, capsys) -> None:
     model, so apply proceeds on each of these desks.
 
     `--no-init`: these desks are seeded with stand-in factory values (0, ''),
-    not a real WING's initialized capture, so a reset to initialized (Issue
-    #443) would rewrite the very occupancy these tests are about."""
+    not a real WING's initialized capture, so a reset to initialized would rewrite the very occupancy these tests are about."""
     code = cli.main(["apply", "--show", str(show), "--console", ip, "--confirm",
                      "--skip-verify", "--no-init"])
     assert code == 0, capsys.readouterr()

@@ -16,7 +16,7 @@ with no errors and no warnings. Each cause is tested here:
 * Watch listed L002 for every fader the plan itself puts at the floor.
 
 The end-to-end check replays that build with no model: the generator's
-reply recovered from his plan (`tools/demo_reply_from_plan.py`) and his
+reply recovered from his plan (by a script in the development repository) and his
 resolved conventions, both frozen in `tests/fixtures/demo_2026-10-13/`
 with the conventions, input list and instructions he built from.
 """

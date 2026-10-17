@@ -1,5 +1,4 @@
-"""Input list (CSV) loading and validation -- FR-1.1, schema in
-docs/developer/artifact-formats.md.
+"""Input list (CSV) loading and validation -- FR-1.1.
 
 One row per physical input. Every input socket on a WING is mono, so a row is one mono source and nothing else -- there is no
 such thing as a stereo input to list.
@@ -25,7 +24,7 @@ REQUIRED_COLUMNS = ("name", "category", "type", "phantom")
 # csv.DictReader, by header name -- so a file in any order loads the same.
 # It matters to the person holding the sheet: `patch` leads because it is
 # what you check against the stage box, `notes` trails because nothing
-# reads it. `preset` is optional (the maintainer, 2026-09-28) and sits just before
+# reads it. `preset` is optional and sits just before
 # `notes`; a Save adds it to a file's header only when a row sets one
 # (`source_edit.splice_input_list`), at the end, so a file's own column
 # order is never rewritten.
@@ -33,7 +32,7 @@ CANONICAL_COLUMNS = (
     "order", "patch", "name", "category", "type", "model", "phantom", "preset", "notes",
 )
 
-# The `order` column (the maintainer, 2026-10-09; FR-1.1). Optional. A cell holds
+# The `order` column (FR-1.1). Optional. A cell holds
 # the band's OWN input number -- usually the split from their IEM rack, or
 # the way they patch a stage box -- or `-`, which means "skip": the row
 # stays in the file and is left out of the next build entirely. Blank is
@@ -58,7 +57,7 @@ OLD_PATCH_COLUMN = "socket"
 
 def patch_column(header) -> str:
     """Which of a header's columns holds the patch: `socket` only when the
-    file says `socket` and not `patch` (a list written before #342),
+    file says `socket` and not `patch` (a list written before the rename),
     otherwise `patch` -- the name a new file, or a new column, gets."""
     names = set(header or ())
     if OLD_PATCH_COLUMN in names and PATCH_COLUMN not in names:
@@ -117,7 +116,7 @@ class InputRow:
     # it belongs here, on the input list, same as model/phantom.
     patch: str = ""
     # Optional: the name of a preset in Atoo's preset library (the
-    # `preset` column, the maintainer 2026-09-28). Like a stated patch it is the
+    # `preset` column). Like a stated patch it is the
     # engineer's word about this row and WINS over whatever the conventions
     # and instructions led the model to choose -- `reply_expand.
     # apply_stated_presets` puts it on the channel after the reply is
@@ -322,7 +321,7 @@ def skip_finding(rows: list[InputRow], where: str = "input list"):
 # --------------------------------------------------------------------------
 
 # Physical input/output group vocabulary, confirmed against real hardware
-# and Behringer's WING Remote Protocols document (docs/reference/wing-console-model.md) --
+# and Behringer's WING Remote Protocols document --
 # io.in/io.out.{group}.{n}. Used for both a row's own `patch` column
 # (FR-1.5's patch) and a conventions file's physical-output-socket clause
 # (FR-1.9). Includes PLAY (the console's own USB-stick player, 4 sources)
@@ -349,11 +348,11 @@ _GROUP_ALIASES = {
 
 # An earlier change, 2026-09-20: `"sdcard": "CRD"` was removed from the table
 # above, and it is worth saying why out loud because the entry looked
-# harmless for as long as it existed. The maintainer: **"CRD is the expansion
-# card, not the SD card. The SD card is used by WING LIVE"** -- so an
+# harmless for as long as it existed. **CRD is the expansion
+# card, not the SD card; the SD card is used by WING LIVE** -- so an
 # input list whose patch column said "SD card 3" was silently patched to
 # socket 3 of the *expansion card*, a different piece of hardware, and
-# nothing anywhere reported it. That is the precise failure #99 was filed
+# nothing anywhere reported it. That is the precise failure an earlier change was filed
 # about: a confident wrong friendly name producing a plausible patch
 # nobody catches.
 #
@@ -366,8 +365,8 @@ _GROUP_ALIASES = {
 # LIVE, whose patching this project cannot yet represent.
 #
 # `"module": "MOD"` stayed while `console_facts` dropped MOD's friendly
-# label -- a deliberate asymmetry, flagged on #99 for the maintainer to overrule
-# if he disagreed. The question is moot now rather than answered: #99
+# label -- a deliberate asymmetry, flagged on an earlier change for the engineer to overrule
+# if they disagreed. The question is moot now rather than answered: an earlier change
 # settled MOD on 2026-09-21 as the AoIP module bay (Dante or WSG, 64 in
 # and 64 out, `/$syscfg/opt_mod`) from the protocol PDF and our own walk,
 # so both tables point the same way and "Module 3" means what the console
@@ -442,13 +441,13 @@ def format_socket(group: str, n: int) -> str:
     return f"{_GROUP_DISPLAY.get(group, group)} {n}"
 
 
-# The pre-#29 private spelling, kept as an alias because `verify_plan.py`
+# The older private spelling, kept as an alias because `verify_plan.py`
 # and the tests were written against it.
 _parse_socket_spec = parse_socket_spec
 
 
 # --------------------------------------------------------------------------
-# One patch cell, checked the way the build will read it (the maintainer's UI
+# One patch cell, checked the way the build will read it (found in UI
 # testing, 2026-09-28: step 02's Patch is edited in place, and a value that
 # cannot be a socket is refused inline). This is NOT a second grammar: the
 # parse is `parse_socket_spec` above, the spelling is `format_socket`, and
@@ -530,7 +529,7 @@ def check_patch(raw: str | None, console_model: str | None = None) -> dict:
 
 
 # --------------------------------------------------------------------------
-# The `preset` column (the maintainer, 2026-09-28): which rows feed a plan channel,
+# The `preset` column: which rows feed a plan channel,
 # and the preset they state for it. Shared by `reply_expand` (which puts it
 # on the channel) and `verify_plan` (which checks a plan agrees), so the two
 # can never read the column differently.

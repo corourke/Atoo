@@ -6,15 +6,15 @@ Why: across three real Sonnet builds (smallband, festival, sixpiece),
 same reading of the house conventions -- per-category HPF, DCA, mute
 group, monitor sends, "in a mix bus, so no direct Main route", head-amp
 scope, whether an empty group is declared, where Talkback goes. That work
-does not depend on the show. The maintainer's proposal: *"generate [a]
+does not depend on the show. The proposal: generate a
 replacement, exceedingly clear prompt that replaces both the domain and
-conventions text"*, re-made only when either changes.
+conventions text, re-made only when either changes.
 
 So one model call, its own role `resolve`, reads the house conventions and
 the domain knowledge (`generate._domain_knowledge`) and writes
 `<conventions stem>.resolved.md` beside the conventions file. It is PROSE,
-not a schema -- `docs/developer/build-strategy-study.md` idea 8 records why
-the original fixed-vocabulary conventions IR was abandoned, and nothing
+not a schema -- the original fixed-vocabulary conventions IR was abandoned,
+and nothing
 here parses a rule's meaning. In the prose, code relies on two pieces of syntax:
 
   * a citation, `[conventions: "..."]` or `[domain: "..."]`, the verbatim
@@ -110,6 +110,7 @@ NO_EFFECT_HEADING = "Lines with no effect"
 CODE_QUOTE = "resolve.quote-not-found"
 CODE_UNCOVERED = "resolve.line-not-covered"
 CODE_REFUSED = "resolve.refused"
+CODE_LIBRARY_UNREADABLE = "resolve.preset-library-unreadable"
 CODE_FAILED = "resolve.failed"
 CODE_NOT_WRITTEN = "resolve.not-written"
 
@@ -155,8 +156,8 @@ def _sha(text: str) -> str:
 def made_by() -> str:
     """Which Atoo wrote a resolved file: the package version, and the
     git commit when it runs from a checkout. Recorded in the header so a
-    file that reads stale on another machine says what made it (the maintainer,
-    2026-10-02: one resolve on one machine hashed what no committed code
+    file that reads stale on another machine says what made it (2026-10-02: one resolve on
+    one machine hashed what no committed code
     or text produces -- most likely a checkout not yet pulled)."""
     from atoo import __version__
     try:
@@ -509,14 +510,67 @@ def _items_under(lines: list[str], i: int) -> list[int]:
 _LIST_ITEM_RE = re.compile(r"[,;:]")
 
 
-# A quoted name in a preset-map item, straight or curly quotes.
-_QUOTED_NAME_RE = re.compile(r"[\"“]([^\"“”]+)[\"”]")
+# A quoted name in a preset-map item: double quotes, straight or curly,
+# or single ones. A single quote only opens after a
+# non-word character and only closes before one, so the apostrophe of
+# "Kick's" or "Drummer's" is never read as a quote.
+_QUOTED_NAME_RE = re.compile(
+    r"[\"“]([^\"“”]+)[\"”]|(?<!\w)['‘]([^'‘’]+)['’](?!\w)")
 _NO_PRESET_RE = re.compile(r"\bno\s+preset\b", re.IGNORECASE)
 
+# What a preset-map item may say besides its names: the names
+# themselves, with a few connecting words ("for the high (or only) rack
+# tom"). A number, a processing word, or a long stretch of prose is a rule,
+# and a rule the resolver did not cite is not carried out by the preset
+# choice, so the item is not covered by the library.
+_RULE_WORD_RE = re.compile(
+    r"\d|\b(?:db|hz|khz|ms|boost\w*|cut|cuts|raise\w*|lower\w*|reduc\w*|increas\w*|more|less|"
+    r"louder|quieter|gain|trim|fader|mute\w*|pan|filter\w*|hpf|lpf|eq|compress\w*|gate\w*|"
+    r"reverb|delay|threshold|ratio|start|always|never|must|should)\b", re.IGNORECASE)
+_MAX_CONNECTIVE_WORDS = 10
 
-def preset_map_items(conventions: str) -> dict[int, list[str]]:
-    """The preset map's items: line index -> the preset names the item
-    quotes, or [] for an item that says "no preset".
+_BUS_WORD_RE = re.compile(r"\bbus(?:es|ses|s)?\b", re.IGNORECASE)
+_CHANNEL_WORD_RE = re.compile(r"\bchannels?\b", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class MapItem:
+    """One preset-map item: the names it quotes (`()` for "no preset"),
+    the lead-in line it sits under, which preset kinds it can name
+    (`"channel"` and/or `"bus"`: a bus-preset lead-in is looked up among
+    the `.bus` files, a channel one among the `.chn`, one that says both,
+    or neither, among both), and `rule_text`, whatever else it says that is
+    more than connecting prose ("" when nothing)."""
+
+    names: tuple[str, ...]
+    lead_in: int
+    kinds: frozenset
+    rule_text: str = ""
+
+
+def _kinds_of(lead_in: str) -> frozenset:
+    bus, channel = bool(_BUS_WORD_RE.search(lead_in)), bool(_CHANNEL_WORD_RE.search(lead_in))
+    if bus and not channel:
+        return frozenset({"bus"})
+    if channel and not bus:
+        return frozenset({"channel"})
+    return frozenset({"channel", "bus"})
+
+
+def _rule_text(rest: str) -> str:
+    """What `rest` (an item without its label) says besides the names it
+    quotes and light connecting prose: "" for none, else the offending
+    stretch ("and get 3 dB more at 3k")."""
+    rest = _NO_PRESET_RE.sub(" ", _QUOTED_NAME_RE.sub(" | ", rest))
+    for piece in rest.split("|"):
+        piece = re.sub(r"\s+", " ", piece).strip(" \t.,;:-()")
+        if piece and (_RULE_WORD_RE.search(piece) or len(piece.split()) > _MAX_CONNECTIVE_WORDS):
+            return piece
+    return ""
+
+
+def preset_map_items(conventions: str) -> dict[int, MapItem]:
+    """The preset map's items: line index -> the `MapItem`.
 
     The map is the items indented under a lead-in line that ends in a
     colon and mentions a preset ("- Default channel presets by source,
@@ -526,34 +580,45 @@ def preset_map_items(conventions: str) -> dict[int, list[str]]:
     is not read as a preset. An item that quotes nothing and does not say
     "no preset" is not a map entry, and is checked like any other line."""
     lines = conventions.splitlines()
-    out: dict[int, list[str]] = {}
+    out: dict[int, MapItem] = {}
     for i, line in enumerate(lines):
         if not line.rstrip().endswith(":") or "preset" not in line.casefold():
             continue
+        kinds = _kinds_of(line)
         for j in _items_under(lines, i):
             item = _unlisted(lines[j])
             _label, colon, rest = item.partition(":")
-            names = [n.strip() for n in _QUOTED_NAME_RE.findall(rest if colon else item)
-                     if n.strip()]
-            if names:
-                out[j] = names
-            elif _NO_PRESET_RE.search(item):
-                out[j] = []
+            rest = rest if colon else item
+            names = [(m[0] or m[1]).strip() for m in _QUOTED_NAME_RE.findall(rest)
+                     if (m[0] or m[1]).strip()]
+            if names or _NO_PRESET_RE.search(item):
+                out[j] = MapItem(tuple(names), i, kinds, _rule_text(rest))
     return out
 
 
-def _library_names(preset_library) -> "set[str] | None":
-    """Every channel preset name in `preset_library`, normalised as a
-    lookup normalises it (`presets.normalize_preset_name`); None when
-    there is no library or it cannot be read."""
+def _library_names(preset_library) -> "tuple[dict[str, set[str] | None], str]":
+    """The names in `preset_library`, normalised as a lookup normalises
+    them (`presets.normalize_preset_name`), by kind: `{"channel": {...},
+    "bus": {...}}`, a kind None when its files cannot be read (a file
+    that is damaged, a directory that is gone), with the reason ("" when
+    all could be read). With no library, every kind is None and the reason
+    empty -- the build says `preset.no-library` on its own."""
     if preset_library is None:
-        return None
+        return {"channel": None, "bus": None}, ""
     from atoo.presets import PresetError, normalize_preset_name
 
-    try:
-        return {normalize_preset_name(name) for name in preset_library.names()}
-    except (PresetError, OSError, ValueError):
-        return None
+    names: "dict[str, set[str] | None]" = {}
+    reasons: list[str] = []
+    for kind, read in (("channel", lambda: preset_library.names()),
+                       ("bus", lambda: [p.name for p in preset_library.bus_presets()])):
+        try:
+            names[kind] = {normalize_preset_name(n) for n in read()}
+        except (PresetError, OSError, ValueError) as exc:
+            names[kind] = None
+            reason = str(exc) or type(exc).__name__
+            if reason not in reasons:
+                reasons.append(reason)
+    return names, "; ".join(reasons)
 
 
 def check(resolved_text: str, conventions_raw: str, *, conventions_name: str = "conventions",
@@ -564,9 +629,13 @@ def check(resolved_text: str, conventions_raw: str, *, conventions_name: str = "
     the build takes presets from. A preset-map item no rule cites is
     covered when every name it quotes is in it, or when it says "no
     preset"; one naming a preset the library has not got is still a note,
-    saying so. With no library, nothing can be called
-    missing (the build says `preset.no-library` on its own), so every
-    map item is covered."""
+    saying so. A name is looked up among the channel presets
+    or the bus presets as its lead-in says (`MapItem.kinds`); an item
+    that also states a rule is not covered; a lead-in line
+    is covered when any item under it is. With no library, nothing can be
+    called missing (the build says `preset.no-library` on its own), so
+    every map item is covered; a library that cannot be read is said at
+    INFO (`resolve.preset-library-unreadable`) and counts the same."""
     from atoo import generate
 
     conventions = conventions_for_model(conventions_raw)
@@ -611,23 +680,66 @@ def check(resolved_text: str, conventions_raw: str, *, conventions_name: str = "
     # back cited line by line in one run and half uncited in the next).
     # It is covered when the library has every preset it names.
     preset_map = preset_map_items(conventions)
-    library = _library_names(preset_library)
-    not_in_library: dict[str, list[str]] = {}
+    library, unreadable = _library_names(preset_library)
+    not_in_library: dict[str, tuple[list[str], frozenset]] = {}
+    with_rule_text: dict[str, str] = {}
+    unchecked: list[str] = []   # items passed because the library could not be read
+
+    def lookup(item: MapItem) -> "list[str] | None":
+        """The names of `item` the library has not got; None when it cannot
+        say (a kind it might be in could not be read)."""
+        from atoo.presets import normalize_preset_name
+
+        sets = [library[kind] for kind in item.kinds]
+        missing = [name for name in item.names
+                   if not any(known is not None and normalize_preset_name(name) in known
+                              for known in sets)]
+        if missing and any(known is None for known in sets):
+            return None
+        return missing
+
+    # An item is covered by the library when it names nothing the library
+    # lacks and states no rule of its own; a lead-in is covered when any
+    # item under it is, cited or not -- the lead-in is only a heading for
+    # them, so the result must not depend on which of them the resolver
+    # happened to cite.
+    preset_covered: set[int] = set()
+    substantive_set = set(substantive)
+    for i, item in preset_map.items():
+        if i not in covered and i in substantive_set and not item.rule_text:
+            found = lookup(item)
+            if found is None and preset_library is not None:
+                unchecked.append(lines[i].strip())
+            if found is None or not found:
+                preset_covered.add(i)
+    led_in = {item.lead_in for j, item in preset_map.items() if j in covered or j in preset_covered}
     for i in substantive:
         if i in covered:
             continue
         line = lines[i].strip()
         result.verbatim.append(line)
+        if i in preset_covered or i in led_in:
+            result.preset_lines.append(line)
+            continue
         if i in preset_map:
-            from atoo.presets import normalize_preset_name
-
-            missing = [name for name in preset_map[i] if library is not None
-                       and normalize_preset_name(name) not in library]
-            if not missing:
-                result.preset_lines.append(line)
-                continue
-            not_in_library[line] = missing
+            item = preset_map[i]
+            if item.rule_text:
+                with_rule_text[line] = item.rule_text
+            else:
+                not_in_library[line] = (lookup(item) or [], item.kinds)
         result.uncovered.append(line)
+
+    if unchecked:
+        where_lib = getattr(preset_library, "directory", None)
+        result.findings.append(Diagnostic(
+            severity=Severity.INFO, code=CODE_LIBRARY_UNREADABLE, where=conventions_name,
+            line=unchecked[0], source="build",
+            message=(f"the preset library{f' {where_lib}' if where_lib else ''} could not be "
+                     f"read ({unreadable}) -- the preset map's names were not checked against "
+                     f"it, so {len(unchecked)} map line(s) count as covered, whether the "
+                     "library has their presets or not"),
+            fix=("fix or replace the library (`atoo presets` lists what it holds), then check "
+                 "again (`atoo resolve --check`)")))
 
     for c in result.missing:
         where = f"{resolved_name} § {c.section}" if c.section else resolved_name
@@ -642,20 +754,32 @@ def check(resolved_text: str, conventions_raw: str, *, conventions_name: str = "
                  "reword the conventions line it was meant to cite")))
     for line in result.uncovered:
         if line in not_in_library:
-            missing = not_in_library[line]
+            missing, kinds = not_in_library[line]
             quoted = ", ".join(f'"{name}"' for name in missing)
             where_lib = getattr(preset_library, "directory", None)
+            target = "bus" if kinds == {"bus"} else "channel"
             result.findings.append(Diagnostic(
                 severity=Severity.INFO, code=CODE_UNCOVERED, where=conventions_name,
                 line=line, source="build",
                 message=(f'the preset map line "{line}" names {quoted}, which '
                          f'{"is" if len(missing) == 1 else "are"} not in the preset library'
                          + (f" ({where_lib})" if where_lib else "")
-                         + " -- a channel given "
+                         + f" -- a {target} given "
                          + ("it" if len(missing) == 1 else "one of them")
                          + " is built without its processing"),
                 fix=("export a preset saved under that name into the library, or change the "
                      "line to a name `atoo presets` lists")))
+            continue
+        if line in with_rule_text:
+            result.findings.append(Diagnostic(
+                severity=Severity.INFO, code=CODE_UNCOVERED, where=conventions_name,
+                line=line, source="build",
+                message=(f'the preset map line "{line}" says more than a preset name '
+                         f'("{with_rule_text[line]}"), and no rule in {resolved_name} cites it '
+                         "-- the preset choice reads only the name, so the rest reaches the "
+                         "generator verbatim instead"),
+                fix=("put that rule on a line of its own, outside the preset map, or resolve "
+                     "again (`atoo resolve`)")))
             continue
         result.findings.append(Diagnostic(
             severity=Severity.INFO, code=CODE_UNCOVERED, where=conventions_name,
@@ -687,7 +811,7 @@ def check(resolved_text: str, conventions_raw: str, *, conventions_name: str = "
 def strip_citations(text: str) -> str:
     """`text` with every `[conventions: "..."]` / `[domain: "..."]` taken
     out. The citations are for the check and for the engineer reading the
-    file; they are ~60% of it (the maintainer's first high-effort resolve,
+    file; they are ~60% of it (the first high-effort resolve,
     2026-09-30: 26K of 43K characters), and the generator needs the rule,
     not where it came from."""
     return "\n".join(_ANY_CITATION_RE.sub("", line).rstrip()

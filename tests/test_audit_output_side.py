@@ -69,7 +69,7 @@ def test_a_matrix_fed_from_a_main_is_not_an_orphan():
     code on every hardware run so far (nothing read `/io/out/*`, so the
     rule returned early); the moment sockets ARE read it would have
     reported the shipped example rig as an ERROR. Same one-hop blindness
-    #145 fixed in R005, in the rule directly above it."""
+    an earlier change fixed in R005, in the rule directly above it."""
     assert "R003" not in _rule_ids(run_audit(ConsoleState(MAIN_FEEDS_MATRIX)))
 
 
@@ -125,7 +125,7 @@ MATRIX_LOST_ITS_OUTPUT = {
 
 
 def test_a_fed_matrix_that_lost_its_output_is_reported():
-    """The gap #235 names: until this rule, the case above audited clean."""
+    """The gap an earlier change names: until this rule, the case above audited clean."""
     findings = [f for f in run_audit(ConsoleState(MATRIX_LOST_ITS_OUTPUT))
                 if f.rule_id == "R006"]
     assert [f.addresses for f in findings] == [("/mtx/1",)]
@@ -147,7 +147,7 @@ def test_the_finding_names_the_output_sockets_it_looked_at():
                                   "/main/1/send/MX1/on"])
 def test_any_feed_makes_an_unpatched_matrix_a_finding(feed):
     """A strip, a bus or a Main -- the three sources R003 learned in
-    #160 -- all count, because they are the same `_matrix_is_fed`."""
+    all count, because they are the same `_matrix_is_fed`."""
     state = ConsoleState({feed: 1, "/io/out/LCL/1/grp": "OFF", "/io/out/LCL/1/in": 0})
     assert "R006" in _rule_ids(run_audit(state))
 
@@ -194,7 +194,7 @@ def test_sp_r003_and_sp_r006_never_both_fire_on_one_matrix():
 
 def test_read_console_state_reads_matrix_sends_on_mains_and_busses():
     """`apply.py` writes a matrix feed on `/main/{n}/send/MX{m}` and
-    `/bus/{n}/send/MX{m}`; until #160 the audit read `send/MX*` for
+    `/bus/{n}/send/MX{m}`; until an earlier change the audit read `send/MX*` for
     `/ch` and `/aux` only, so the matrix hop had nothing to walk.
 
     `on` and `lvl` are the whole of it. A bus's and a
@@ -231,7 +231,7 @@ def test_a_strips_matrix_send_still_asks_for_mode_and_pon():
 
 def test_read_console_state_still_reads_no_sockets_when_told_nothing():
     """The library default is deliberate and unchanged (a walk of the
-    address tree is not a measurement of the hardware). #160 moves the
+    address tree is not a measurement of the hardware). An earlier change moves the
     DEFAULT the CLI passes, not this one."""
     console = RecordingConsole()
     read_console_state(console, channels=1, aux=0, buses=0, mains=0,
@@ -286,7 +286,7 @@ TRACE_RIG = {
 
 
 def test_a_trace_follows_a_mix_through_a_matrix_to_the_pa():
-    """Before #160 the graph had no `main:->mtx:` edge at all, so
+    """Before an earlier change the graph had no `main:->mtx:` edge at all, so
     `audit --trace` answered "no routing path exists" for the standard
     way of EQing a room."""
     result = _trace(TRACE_RIG, "input:LCL:1", "output:LCL:7")
@@ -381,23 +381,6 @@ def test_a_plan_socket_beyond_the_address_space_is_not_read():
 def test_a_plan_with_an_unknown_group_is_not_read():
     plan = {"channels": [{"patch": {"group": "NOPE", "sockets": [1]}}]}
     assert socket_groups_to_read(None, plan) == ({}, {})
-
-
-@pytest.mark.example_guard
-def test_the_shipped_example_plan_makes_every_socket_rule_answerable():
-    """The whole point, stated as the outcome rather than the mechanism:
-    a `--show examples/touringband` run against a Compact reads the
-    sockets R003/R004/CV009/C001 need.
-
-    Marked `example_guard`: its subject is the shipped bundle, not the
-    code. It asserts only that the bundle yields sockets to read -- never
-    which ones -- so the maintainer can rebuild it freely."""
-    example = Path(__file__).parent.parent / "examples/touringband/plan.json"
-    if not example.is_file():
-        pytest.skip("examples/touringband/plan.json is not present -- nothing to guard")
-    plan = json.loads(example.read_text())
-    inputs, outputs = socket_groups_to_read("wing-compact", plan)
-    assert inputs and outputs
 
 
 # --------------------------------------------------------------------------

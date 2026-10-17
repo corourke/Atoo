@@ -1,6 +1,6 @@
 """One bundle, two desks, applied and then amended -- per-desk journals.
 
-The maintainer, 2026-09-24: *"Per-desk journal for both apply and amend ... undo
+*"Per-desk journal for both apply and amend ... undo
 can only apply against correct desk / correct journal"*, revised the same
 day: *"serial number is a fine idea. In general, I want to strictly track
 journals and undo to the specific desk, but allow apply and subsequent
@@ -132,8 +132,7 @@ def show(tmp_path):
 
 def apply_to(show: Path, ip: str) -> int:
     # `--no-init`: `fresh_state` is stand-in factory values (0, ''), not a
-    # real WING's initialized capture, so a reset to initialized (Issue
-    # #443) would rewrite the occupancy these tests are about.
+    # real WING's initialized capture, so a reset to initialized would rewrite the occupancy these tests are about.
     code = cli.main(["apply", "--show", str(show), "--console", ip, "--confirm",
                      "--skip-verify", "--no-init"])
     if ip in NETWORK:
@@ -207,7 +206,7 @@ def test_amending_the_backup_after_the_primary_gives_it_the_channels(
 
 
 def test_a_second_amend_of_the_same_desk_still_places_nothing(show, desks, capsys):
-    """#259's guarantee survives per desk: amending the primary twice from
+    """The guarantee survives per desk: amending the primary twice from
     the same rebuild writes nothing the second time -- the primary's own
     plan now claims the horns."""
     primary = desks[PRIMARY_IP]

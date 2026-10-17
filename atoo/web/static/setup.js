@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  // Build step 04, Plan (mockup version H) -- loaded by the
+  // Build step 04, Plan (version H) -- loaded by the
   // shell (`/`) after shell.js, and coded against `window.Atoo`.
   //
   // Two halves. The first is the plan RENDERER that was the read-only
@@ -10,7 +10,7 @@
   // is prose for `atoo build --pretty` and is not imported here).
   // `/setup` retired when step 04 landed; its renderers did not, and this
   // is still the only thing that draws a plan -- since 2026-09-26 as
-  // mockup H's combined Input+Plan table, whose Input cells are step
+  // version H's combined Input+Plan table, whose Input cells are step
   // 02's own editor (`SP.inputEditor`), not a copy of it.
   //
   // The second half runs the build: `POST /api/build/run` starts
@@ -100,7 +100,7 @@
     const bits = [];
     if (processing.hpf_hz != null) bits.push(`HPF ${processing.hpf_hz}Hz`);
     // The fields, phase 1 and then phase 2a. The phase 1 six had
-    // been representable, writable and rendered by render.py since #68
+    // been representable, writable and rendered by render.py
     // while this function still showed only two of them -- a page that
     // silently omits a stated value is the same class of failure as one
     // that silently blanks a renamed one.
@@ -227,17 +227,17 @@
       `<dl class="setup-kv">${rows}</dl></details>`;
   }
 
-  // ---- Channels / busses / outputs, as tables (mockup version H) ---------
+  // ---- Channels / busses / outputs, as tables (version H) ---------
   //
-  // The maintainer, 2026-09-26: *"Per mockup version H, the step for Plan output
-  // is tabular, with a disclosure for more detail instead of cards."* So
+  // Per version H, the step for Plan output
+  // is tabular, with a disclosure for more detail instead of cards. So
   // channels are H's combined Input+Plan table -- one row per input,
   // Input columns (collapsed to Socket + Name by default) beside the
   // plan's Ch #, DCAs and Mute Groups -- and every row has a disclosure
   // for the rest: HPF, preset, fader, colour, sends, where the name is
   // actually written, provenance. Busses and outputs are two compact
   // tables of the same kind below it (H draws channels only; the
-  // coordinator decided the rest, 2026-09-26).
+  // rest was decided 2026-09-26).
   //
   // Nothing the cards printed is lost: the card's header and every
   // `<dt>` it drew is a column or a detail line here.
@@ -266,8 +266,8 @@
       "</button></td>";
   }
 
-  // A stereo channel (the maintainer, 2026-09-28: "stereo channels are
-  // visible"): the source is linked as a pair, which is what apply writes
+  // A stereo channel (stereo channels are
+  // visible): the source is linked as a pair, which is what apply writes
   // (`source.stereo` -> the socket's mode "ST"), or the plan patches it
   // to two sockets. Either says two input rows are one strip.
   function isStereo(ch) {
@@ -278,7 +278,7 @@
     const title = partner
       ? `The second input of ${ch.name}: the same stereo channel as the row above`
       : `Stereo channel: this row and the next are one stereo strip, ${ch.name}`;
-    return `<span class="st-badge${partner ? " st-badge-partner" : ""}" title="${esc(title)}">` +
+    return `<span class="prop ct-st" title="${esc(title)}">` +
       `${partner ? "&#8627; ST" : "ST"}</span>`;
   }
 
@@ -287,7 +287,7 @@
   function phantomCell(ch) {
     const on = !!(ch && ch.source && ch.source.phantom);
     return `<td class="cell-plan col-plan-phantom">${on
-      ? '<span class="phantom-badge" title="Phantom power (48V) on: the plan sets it on this ' +
+      ? '<span class="prop" title="Phantom power (48V) on: the plan sets it on this ' +
         'channel\'s socket">48V</span>'
       : '<span class="setup-dim" title="Phantom power off">—</span>'}</td>`;
   }
@@ -494,8 +494,8 @@
   const INPUT_COLS = ["category", "type", "model", "phantom", "notes"];
 
   // `deskName` is html for under the Name cell: the name the plan puts on
-  // the strip, when it is not the input's own (the maintainer, 2026-09-28: the
-  // Strip column that said it was "totally redundant" otherwise).
+  // the strip, when it is not the input's own (a separate Strip column
+  // would be redundant).
   function inputCells(row, editable, deskName) {
     const v = row.values;
     const cell = (col, extra) => {
@@ -532,8 +532,7 @@
 
   // The Plan group: Patch (where the input is patched -- the input list's
   // `patch` column), Phantom (as the plan sets it), DCAs,
-  // Mute Groups. There is no Strip column (the maintainer, 2026-09-28: "totally
-  // redundant"): the strip's number and colour are the Ch chip, a name
+  // Mute Groups. There is no Strip column (it would be redundant): the strip's number and colour are the Ch chip, a name
   // the plan changed is under the Name cell, a stereo pair's second row
   // says whose it is, and "unassigned" / "not in this plan" sit beside
   // the patch they qualify.
@@ -577,7 +576,7 @@
         // only when the two differ ("Keys L" -> "Keys L/R"): the same name
         // twice was the Strip column's redundancy.
         const deskName = row && row.values.name !== ch.name
-          ? `<span class="ct-desk-name" title="The strip's name in the plan -- what the desk will ` +
+          ? `<span class="meta ct-desk-name" title="The strip's name in the plan -- what the desk will ` +
             `show, not the input's own">on desk: ${esc(ch.name)}</span>`
           : "";
         const stereo = isStereo(ch);
@@ -887,7 +886,7 @@
   }
 
   // ---- the Findings column ---------------------------------------------
-  // The maintainer, 2026-09-28: per row, coloured badges counting that row's
+  // One per row: coloured badges counting that row's
   // findings in the dock -- E (errors, red), W (warnings, amber) and I
   // (info, quiet: an inferred choice announces itself at INFO, so it is
   // worth a glance, but it is drawn outlined so it never outshouts a
@@ -952,9 +951,9 @@
   }
 
   // ---- Build status -- surfaces plan["meta"] as an earlier change left it, minus
-  // its findings. An earlier change (the maintainer, 2026-10-02: "after a plan is rebuilt
-  // there's typically a very long list of warnings and info findings down
-  // the page under the build status. That is what the sidebar is for"):
+  // its findings. After a plan is rebuilt
+  // there is typically a very long list of warnings and info findings down
+  // the page under the build status, and that is what the sidebar is for:
   // the plan's verify, critic and build findings are listed in the dock
   // and only there. This step keeps ONE line counting them, with a link
   // that opens the dock -- and says whether verify and the critic ran at
@@ -1000,7 +999,7 @@
     }
   }
 
-  // docs/developer/build-lessons-2026-09-27.md, part C: each role's own
+  // Build log: each role's own
   // thinking-SUMMARY lines, with elapsed seconds -- kept for a human
   // reviewing a batch of builds later (`atoo lessons`), never
   // recomputed or re-sent anywhere from here. Collapsed by default: it
@@ -1050,11 +1049,10 @@
   }
 
   // ---- Step 04's Plan block -------------------------------
-  // One block, three sections, in the maintainer's order: Options (in
+  // One block, three sections, in this order: Options (in
   // shell.html), Build output, and Changed since the last build. The
   // tables follow as blocks of their own. A block's header sits outside
-  // its box; a section inside it has a grey caps heading
-  // (docs/developer/setup-ui-design.md, "Blocks and sections").
+  // its box; a section inside it has a grey caps heading.
 
   // The console models' names, for "built ... for a WING Compact": set by
   // the controller below from the startup data.
@@ -1088,7 +1086,7 @@
       : "The plan (no path recorded)";
     if (meta.generated_at) html += `, built ${esc(fmtWhen(meta.generated_at))}`;
     // Which WING this plan's socket numbers were checked
-    // against. A plan built before #13 has no such field; say so rather
+    // against. A plan built before an earlier change has no such field; say so rather
     // than leave it out.
     html += meta.console_model
       ? ` for a <b>${esc(consoleNames[meta.console_model] || meta.console_model)}</b>.`
@@ -1110,7 +1108,7 @@
     const v = (current && current.verify_now) || meta.verify_at_generation;
     let html = "";
     if (v) {
-      // Severity tags (docs/developer/ui-style.md §6); a skipped verify is
+      // Severity tags; a skipped verify is
       // a neutral state, not a note.
       let cls = "state";
       let label = v.summary || "Skipped";
@@ -1126,8 +1124,7 @@
     return html + '<span class="findings-summary" id="plan-findings-summary"></span>';
   }
 
-  // The plan in one line of counts (the maintainer: "the plan stats ... could
-  // be condensed a lot").
+  // The plan in one line of counts (the plan stats could be condensed a lot).
   function factsLine(plan) {
     const channels = (plan.channels || []).filter((c) => c && typeof c === "object");
     const aux = channels.filter((c) => c.bank === "aux");
@@ -1147,9 +1144,9 @@
       "</p>";
   }
 
-  // The maintainer, 2026-10-13: the model's notes and the build details go
+  // The model's notes and the build details go
   // together under ONE folded Details line, no more prominent than the
-  // notes (*"I'm trying to reduce some of the clutter"*). A
+  // notes, to reduce clutter. A
   // `repair` note says how a slip in the model's reply was read -- build
   // plumbing, not a note about the show -- and is the "build details"
   // half.
@@ -1250,7 +1247,7 @@
     if (!strip) return "";
     const unasked = strip.severity === "WARNING";
     const kind = String(strip.kind || "changed");
-    // A state tag (docs/developer/ui-style.md §6): yellow when nobody asked
+    // A state tag: yellow when nobody asked
     // for it, neutral when the edit did.
     return `<span class="state chg-state${unasked ? " is-warn" : ""}" title="${esc(
       (unasked ? "Not asked for: " : "Since the last build: ") + (strip.summary || kind) +
@@ -1338,6 +1335,7 @@
     changeMarks = changeMarksFor(plan);
     renderBuildOutput(plan, current);
     renderChanges(plan);
+    renderApplyDifference();
 
     // Counted as Build output's line counts them: channels and aux apart,
     // stereo among the channels.
@@ -1461,7 +1459,7 @@
     consoleNames[model.id] = model.label;
   });
 
-  // ---- Options folds (the maintainer, 2026-10-13) -----------------------------
+  // ---- Options folds -----------------------------
   // First in the Plan block, and collapsible. Its summary names what is
   // chosen, so a closed fold still says which WING and whether the critic
   // runs. Open by default; the viewer's choice is kept (a private window
@@ -1493,7 +1491,7 @@
     if (stated && !modelSelect.value && modelSelect.querySelector('option[value="' + stated + '"]')) {
       modelSelect.value = stated;
       modelNote.textContent = "Chosen from the plan on screen (meta.console_model) -- "
-        + "change it if tonight's desk is a different WING.";
+        + "change it if this desk is a different WING.";
       modelNote.hidden = false;
     }
   }
@@ -1517,20 +1515,20 @@
     const hint = el("hint-plan");
     const bundle = SP.bundle();
     const states = {
-      running: ["Building…", "state-stale"],
-      failed: ["Failed", "state-missing"],
+      running: ["Building…", "is-live"],
+      failed: ["Failed", "is-err"],
     };
-    let label = current ? ["Loaded", "state-loaded"] : ["Not built", "state-notset"];
+    let label = current ? ["Loaded", "is-ok"] : ["Not built", ""];
     if (states[run.state]) label = states[run.state];
-    else if (planIsStale()) label = ["Stale", "state-stale"];
-    else if (run.state === "done" && current) label = ["Built", "state-loaded"];
+    else if (planIsStale()) label = ["Stale", "is-warn"];
+    else if (run.state === "done" && current) label = ["Built", "is-ok"];
     badge.textContent = label[0];
-    badge.className = "state-badge " + label[1];
+    badge.className = "state" + (label[1] ? " " + label[1] : "");
     badge.title = planIsStale() ? staleReasons().join(" ") : "";
     hint.textContent = bundle ? bundle.name + "/plan.json" : "no show bundle open";
     hint.title = (current && current.path) || "";
     runBtn.disabled = run.state === "running" || !bundle || !!bundle.demo || SP.isStale();
-    // A locked control says why, in words (docs/developer/ui-style.md §4).
+    // A locked control says why, in words.
     const lock = el("run-build-lock");
     if (lock) {
       const why = run.state === "running" ? "a build is running"
@@ -1616,9 +1614,8 @@
       rebuild.textContent = stalePlan ? "Rebuild plan" : "Rebuild to record it";
       rebuild.disabled = running || !SP.bundle() || SP.isStale();
     }
-    // The status line's plan badge beside a Rebuild button, on the tile
-    // since #408. It says only what the tile's own badge does not (Issue
-    // #695): a stale plan or a build under way is already the tile's
+    // The status line's plan badge beside a Rebuild button, on the tile.
+    // It says only what the tile's own badge does not: a stale plan or a build under way is already the tile's
     // **Stale** or **Building…**, and one word said twice on one tile
     // read as two different states (the old status-line wording).
     const badge = el("status-plan-badge");
@@ -1628,10 +1625,10 @@
       const shown = !running && !!(current && f) && f.state !== "stale";
       badge.hidden = sep.hidden = !shown;
       if (shown) {
-        const words = { unknown: ["Plan: can't tell", "state-notset"],
-                        current: ["Plan current", "state-loaded"] }[f.state] || ["Plan", "state-notset"];
+        const words = { unknown: ["Plan: can't tell", ""],
+                        current: ["Plan current", "is-ok"] }[f.state] || ["Plan", ""];
         badge.textContent = words[0];
-        badge.className = "state-badge " + words[1];
+        badge.className = "state" + (words[1] ? " " + words[1] : "");
         badge.title = "";
       }
     }
@@ -1639,7 +1636,34 @@
       statusRebuild.hidden = !stalePlan || running;
       statusRebuild.disabled = !SP.bundle() || SP.isStale();
     }
+    renderApplyDifference();
   }
+
+  // ---- Apply the difference ----------------------------------------------
+  // After a rebuild that changed something, a line in Build output with the
+  // shortcut to Apply: Full build chosen and the preview already run, so the
+  // next thing read is how many addresses will change. A Full build writes
+  // only the addresses where the desk differs from the plan, so this is not
+  // a second way to write; it is the first step of the same one. Shown only
+  // for the bundle's own plan while it is current: a stale plan is rebuilt
+  // first, and a plan opened from somewhere else is not what Apply writes.
+  function renderApplyDifference() {
+    const box = el("plan-apply-diff");
+    if (!box) return;
+    const f = freshness();
+    const changes = changesOf(current && current.plan);
+    const n = changes ? changes.strips.length : 0;
+    const show = !!(n && f && f.state === "current" && run.state !== "running" && SP.bundle());
+    box.hidden = !show;
+    if (!show) return;
+    el("plan-apply-diff-text").textContent = n + (n === 1 ? " strip differs" : " strips differ") +
+      " from the last build. A full build writes only what differs; this opens Apply with the preview run.";
+    el("plan-apply-diff-btn").disabled = SP.isStale();
+  }
+
+  el("plan-apply-diff-btn").addEventListener("click", () => {
+    if (SP.applyTheDifference) SP.applyTheDifference();
+  });
 
   // Rebuild is Build plan, from wherever the Stale badge is: the same
   // `POST /api/build/run`, with the model and critic choice step 04 holds.
@@ -1675,8 +1699,8 @@
     const link = el("plan-input-edit-link");
     if (link) link.hidden = editable || !SP.bundle() || !!(SP.bundle() && SP.bundle().demo);
     const dirty = editable && SP.inputEditor && SP.inputEditor.dirty();
-    // Hidden until there is something to save (docs/developer/ui-style.md
-    // §4), and only where these cells are the editable list.
+    // Hidden until there is something to save, and only where these cells are
+    // the editable list.
     ["plan-input-save-btn", "plan-input-discard-btn"].forEach((id) => {
       const node = el(id);
       if (node) node.hidden = !editable || !dirty;
@@ -1720,7 +1744,7 @@
       renderInputToolbar();
     } catch (e) {
       // A render failure must not be silent: an empty step looks exactly
-      // like "no plan", which is what made #45's tag-ordering bug so
+      // like "no plan", which is what made the tag-ordering bug so
       // hard to notice.
       console.error("Build step 04: failed to render the plan", e);
       showRunMessage("Could not display this plan -- see the browser console.");
@@ -1780,8 +1804,8 @@
 
   // A finding about the conventions TEXT (FR-6.2) jumps to the step whose
   // file it quotes, and selects the quoted line in that step's editor.
-  // Steps 01 and 03 are one editor each over the whole file (the maintainer,
-  // 2026-09-28: no sections view), so there is no section card to land
+  // Steps 01 and 03 are one editor each over the whole file (there is no
+  // sections view), so there is no section card to land
   // on: `where` says which file ("instructions § Busses" is step 03's,
   // anything else step 01's) and `line` is the quote conventions_audit.py
   // checked is really there. A finding with no verified quote gets no
@@ -1849,7 +1873,7 @@
 
   function publishRunFindings(list) {
     replaceFindings("run", (list || []).map((finding) => {
-      // OPTIONS-H point 3: Build has no watch step, so the one finding
+      // Build has no watch step, so the one finding
       // that says a build drafted watch conditions opens Watch, on the
       // rules editor whose Source column marks them Drafted.
       // Switching mode is what makes watch.js re-read watch.json, so the
@@ -1861,12 +1885,10 @@
     }));
   }
 
-  // The maintainer, 2026-09-28: *"when I do a rebuild, the list of findings in
-  // the side bar is not cleared."* And again on 2026-10-09: *"The findings
-  // panel is still not being cleared when I start a new build."* The first
+  // A rebuild has to clear the list of findings in the side bar. The first
   // fix cleared only the producers that describe the plan ("plan", "run",
   // "apply-preflight", "build-refusal") and kept the rest, which read to
-  // him as a dock that was not cleared. So a build now empties the dock:
+  // the engineer as a dock that was not cleared. So a build now empties the dock:
   // the last apply's ("apply") was about a plan this build replaces, and a
   // copy's provenance ("bundle-copy") was said once, when the copy was
   // made. Steps 01-03's findings ("build") are about the three source
@@ -2327,7 +2349,7 @@
       run = data;
       clearFindingsForBuild();
       // The build moves plan.json aside as it starts: the plan on screen
-      // is the one being replaced, not current (the maintainer, 2026-10-02).
+      // is the one being replaced, not current.
       current = null;
       renderCurrentPlan();
       renderRun();

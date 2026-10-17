@@ -38,7 +38,7 @@ from atoo.console import OscReply
 FIXTURES = Path(__file__).parent / "fixtures"
 
 # Plans these tests used to build by running the deterministic compiler over
-# a few lines of conventions. That path was retired in #29, so the exact
+# a few lines of conventions. That path was retired, so the exact
 # plans it produced are checked in instead -- generated from the compiler at
 # `origin/main` immediately before deletion, so every assertion below is
 # still made against the same bytes it was written against. These are
@@ -94,7 +94,7 @@ class FakeConsole:
         # two unsolicited datagrams carrying '#D7,#M1' afterwards, and
         # the maintainer confirming at the desk that the tags were there. Before
         # this existed nothing in 1149 tests could express a peer that
-        # answers late -- WORK_PLAN lesson 16.
+        # answers late.
         self.answer_late: set[str] = set()
         # address -> the value its late datagram carries, when that is
         # NOT the value that was written. A console volunteering an
@@ -578,7 +578,7 @@ def test_channel_name_and_patch_written(plan):
 
 def test_an_unstated_patch_socket_warns_in_words_that_are_still_true(plan):
     """This string is read by an operator standing at a desk,
-    and it named the compiler #94 deleted. `stated: False` now means the
+    and it named the compiler an earlier change deleted. `stated: False` now means the
     MODEL chose the socket during generate -- a stronger reason to check
     it before the write lands, so the warning has to say that and not
     point at a component that no longer exists."""
@@ -766,7 +766,7 @@ def test_bus_routes_to_a_stated_main_index(plan):
     # Both keys are set deliberately. `apply` reads `destinations` (the
     # list) and only falls back to the singular `destination`
     # when that is absent, so setting the singular alone changes nothing.
-    # Until #29 this test set only `destination` and still passed --
+    # Until an earlier change this test set only `destination` and still passed --
     # because the compiler happened to put the *same dict object* in both
     # places and `copy.deepcopy` preserved that aliasing. Reading the plan
     # from a file (as every real caller does, and as this test now does)
@@ -880,7 +880,7 @@ def test_bus_mono_width_false_writes_zero_not_skipped(plan):
 
 
 def test_bus_mono_width_unstated_is_decided_and_written(plan):
-    """CLAUDE.md: the mono/stereo decision may not be left to whatever the
+    """The mono/stereo decision may not be left to whatever the
     desk had. An unstated width used to write nothing; now the fallback
     (`inferred.bus_width_fallback`) decides it -- Drums reaches only a
     Main, so no jack depends on it and it takes the factory stereo -- and
@@ -2334,7 +2334,7 @@ def test_a_write_the_console_never_accepted_is_still_a_mismatch(plan):
     DIFFERENT address. Neither may be borrowed.
 
     Renamed from `test_a_value_that_really_did_not_land_is_still_a_
-    mismatch` when #144 added the late-reply path; the old name described
+    mismatch` when an earlier change added the late-reply path; the old name described
     a re-read that is no longer the only thing being guarded."""
     console = FakeConsole(_seed_all(plan))
     # 'Lead Vox' has a space, so it goes the unacked set_param way -- the
@@ -2491,7 +2491,7 @@ def test_the_journal_records_which_reading_settled_a_verdict(plan, tmp_path):
 
 
 def test_the_name_goes_on_the_source_socket(plan):
-    """The maintainer, 2026-09-22: *"set the name, icon and color on the source,
+    """*"set the name, icon and color on the source,
     and let the 'Link Customization to Source' flag flow the
     customization to the channel since that is the default."*
 
@@ -2655,7 +2655,7 @@ def test_two_strips_asking_for_different_phantom_is_surfaced(plan):
 
 
 def test_no_address_is_ever_written_twice(plan):
-    """#14 slice B's standing requirement, and the shared-socket case is
+    """An earlier change slice B's standing requirement, and the shared-socket case is
     what made it real: two strips on one socket each emitted that
     socket's phantom and stereo-mode write."""
     for candidate in (plan, _share_a_socket(plan)):
@@ -2671,7 +2671,7 @@ def test_no_address_is_ever_written_twice(plan):
 
 
 def test_a_colour_stated_in_words_is_written(plan):
-    """The half of #133 that needed a desk. The plan carries free-text
+    """The half of an earlier change that needed a desk. The plan carries free-text
     `color` ("Red"); the console takes an integer 1..18. With no mapping
     the word was silently dropped at write time -- reaching the plan,
     reading as though it would apply, and changing nothing."""
@@ -2781,7 +2781,7 @@ def test_values_equal_knows_the_desks_floors_and_steps(address, a, b, equal):
 
 
 def test_a_dca_gets_its_starting_fader_and_mute():
-    """The maintainer, 2026-10-01: "All created DCAs should start with fader at
+    """"All created DCAs should start with fader at
     unity" reached the plan and never the desk -- apply wrote only the
     DCA's name."""
     plan = {"channels": [], "busses": {}, "mute_groups": {}, "outputs": {},
@@ -2797,7 +2797,7 @@ def test_a_dca_gets_its_starting_fader_and_mute():
     assert not [t for t in quiet if t.address.endswith(("/fdr", "/mute"))]
 
 
-# The maintainer, 2026-10-09, through a Behringer stage box on AES50 A: "Got a
+# Through a Behringer stage box on AES50 A: "Got a
 # bunch of errors on the gain" -- 16 MISMATCHes, every one half a dB high
 # (20.0 asked, 20.5 held; 0.0 asked, 0.5 held). The box answers on its own
 # steps. Within half a dB it set the gain; beyond that it did not.
@@ -2847,7 +2847,7 @@ def test_a_stage_box_gain_is_a_match_and_says_so():
 
 
 def test_a_main_and_a_matrix_get_their_names():
-    """The maintainer, 2026-10-09: "Its not setting my main or matrix bus names
+    """"Its not setting my main or matrix bus names
     even though they are in the plan." The plan's key is the name, and it
     is written whether or not a socket is patched."""
     plan = {"channels": [], "busses": {}, "mute_groups": {}, "dcas": {},

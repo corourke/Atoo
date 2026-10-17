@@ -64,28 +64,16 @@ def _shingles(text: str, n: int = 6) -> set[str]:
     return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
 
 
-@pytest.mark.parametrize("conventions", [
-    pytest.param(Path(__file__).parent / "fixtures" / "examples-conventions.md",
-                 id="frozen"),
-    pytest.param(Path(__file__).parent.parent / "examples" / "conventions.md",
-                 id="shipped", marks=pytest.mark.example_guard),
-])
-def test_the_prompt_does_not_quote_the_engineers_own_conventions(conventions):
+def test_the_prompt_does_not_quote_the_engineers_own_conventions():
     """Rules 4a and 4c used to illustrate themselves with sentences copied
-    verbatim from `examples/conventions.md`, and the festival build log
-    (2026-09-28) shows the model stopping to work out why its prompt was
-    quoting its own conventions back at it. The examples are invented now.
+    verbatim from an engineer's conventions file, and a build log showed
+    the model stopping to work out why its prompt was quoting its own
+    conventions back at it. The examples are invented now.
 
-    This asserts on the SHIPPED prompt only; the conventions are read as
-    data and nothing about their contents is asserted. The `frozen` case
-    compares against `tests/fixtures/examples-conventions.md`, a copy of
-    `examples/conventions.md` taken 2026-09-29, so the default run never
-    reads `examples/`. The `shipped` case compares against the maintainer's
-    living file itself and is marked `example_guard` (CLAUDE.md, "A
-    bundle under examples/ is a living example"); if that file is absent
-    there is nothing to compare against."""
-    if not conventions.exists():
-        pytest.skip(f"no {conventions.name} to compare against")
+    This asserts on the SHIPPED prompt only; the conventions
+    (`tests/fixtures/engineer-conventions.md`, a real engineer's file) are
+    read as data and nothing about their contents is asserted."""
+    conventions = Path(__file__).parent / "fixtures" / "engineer-conventions.md"
     shared = _shingles(generate.generator_system("wing-compact")) & _shingles(
         conventions.read_text())
     assert not shared, (
@@ -157,7 +145,7 @@ def test_socket_groups_are_named_the_way_an_input_list_spells_them():
 
 
 def test_the_module_bay_is_named_in_the_prompt_now_that_it_is_known():
-    """#99, settled 2026-09-21. `MOD` was rendered bare while its identity
+    """An earlier change, settled 2026-09-21. `MOD` was rendered bare while its identity
     was unconfirmed, because a guessed label in this prompt becomes a
     guessed patch. It is confirmed now -- the AoIP module bay, a different
     slot from the expansion card (PDF pp.10/256, `/$syscfg.opt_mod`) -- so
@@ -176,7 +164,7 @@ def test_a_missing_domain_knowledge_file_raises_rather_than_substituting(monkeyp
     continued, laid out the whole show without the audio vocabulary, and
     the only sign was a parenthetical inside a prompt nobody reads at
     runtime. On a wheel install (where the file was genuinely absent until
-    the package-data fix) that was every run."""
+    The package-data fix) that was every run."""
     monkeypatch.setattr(generate, "_DOMAIN", tmp_path / "gone" / "knowledge.md")
     for build in (
         lambda: generate.generator_user("conventions", "name\n", conventions_name="c.md", input_name="i.csv"),
@@ -243,7 +231,7 @@ def test_the_prompt_states_the_stereo_pairing_rule_the_verifier_enforces():
     this asserts the wiring, not a copy of the words."""
     from atoo import console_facts as facts
 
-    # #13 made the prompt per-model; the pairing rule is not (it is a
+    # An earlier change made the prompt per-model; the pairing rule is not (it is a
     # property of the desk's routing hardware), so it must appear for
     # every model rather than only the one this test happens to pick.
     for model in ("wing-compact", "wing-full", "wing-rack"):
@@ -273,8 +261,8 @@ def test_the_prompts_spell_out_the_bus_width_tri_state():
     # decoder and verify_plan share.
     schema = plan_schema.schema_section()
     # Since 2026-09-25 the third state is gone for this field: an unstated
-    # width is DECIDED and marked, never null (CLAUDE.md's
-    # judgement-vs-patching rule, rule 4b). What #130 was about -- a
+    # width is DECIDED and marked, never null (the
+    # judgement-vs-patching rule, rule 4b). What an earlier change was about -- a
     # stated false read as silence -- still has to be spelled out.
     assert "false is as stated as true" in schema
     assert "never\n                                      null (rule 4b)" in schema
@@ -296,7 +284,7 @@ def test_the_prompts_spell_out_the_bus_width_tri_state():
 
 
 def test_rule_4_keeps_its_teeth_and_the_carve_out_is_named_and_narrow():
-    """CLAUDE.md, "An error of judgement is not an error of patching":
+    """"An error of judgement is not an error of patching":
     a bus width, a send's pre/post, a mix bus's route to Main and a stereo
     pairing are DECIDED where the conventions are silent, and announced.
     Everything else keeps rule 4 -- null, never a plausible guess. Both
@@ -349,12 +337,12 @@ def test_both_prompts_ask_for_the_conventions_audit_with_quotes():
 
 
 def test_a_parenthetical_is_read_as_part_of_its_sentence_and_background_is_not_built():
-    """The maintainer, 2026-09-25: "Let's at least instruct the AI to be wary of
+    """"Let's at least instruct the AI to be wary of
     things in parentheses." The same file uses them for rules ("(L/R,
     Left/Right)", "(but not drums)", a compressor's settings) and for
     notes to himself ("(We will EQ this ...)"). The generator acts on the
     first kind, builds and asks nothing about the second, and says how it
-    read one it could not place -- announced, never silent (CLAUDE.md).
+    read one it could not place -- announced, never silent.
     The critic gets the matching sentence, so a background parenthetical
     is not reported as an unbuilt convention."""
     gen = " ".join(generate.generator_system("wing-compact").split())
@@ -372,7 +360,7 @@ def test_a_parenthetical_is_read_as_part_of_its_sentence_and_background_is_not_b
 
 def test_comments_in_the_conventions_never_reach_any_prompt():
     """`<!-- ... -->` is where the engineer keeps notes the build must not
-    act on (the maintainer, 2026-09-25). `_conventions_section` is the one place
+    act on. `_conventions_section` is the one place
     every prompt embeds the conventions through -- generator, critic,
     watchlist -- so a comment in either layer reaches none of them."""
     house = "## Outputs\n- Main feeds Matrix 1. <!-- NOTE-HOUSE: EQ for the recording -->\n"
@@ -462,26 +450,27 @@ def test_the_critic_is_told_its_two_haiku_false_positives_2026_09_29():
 
 
 def test_the_critic_is_no_longer_asked_to_check_routing():
-    """The maintainer, 2026-09-29: routing is checked by code, not the critic.
+    """Routing is checked by code, not the critic.
     The prompt no longer explains how a channel reaches Main, nor lists
     routing among the rules to check or a bus feeding nothing among the
     contradictions -- and it is no larger than before the change (5558
     characters), plus the short `claim` field and the paragraph
     asking for it (5900 since 2026-10-11), plus the sentence that a
     preset taken for an unqualified instrument is not an invention (6000
-    since 2026-10-13)."""
+    since 2026-10-13), plus the paragraph saying a strip's starting fader and
+    mute are shown as the desk will hold them (6600)."""
     crit = " ".join(generate.critic_system().split())
     assert "A channel reaches Main by" not in crit
     assert "no route to Main" not in crit
     assert "Rules about routing" not in crit
     assert "a bus feeding nothing" not in crit
-    assert len(generate.critic_system()) <= 6000
+    assert len(generate.critic_system()) <= 6600
 
 
 def test_the_change_prompt_chooses_an_unqualified_instruments_preset_and_says_so():
     """"sax" with presets for alto and baritone came back
     with no preset and a question ("Sax type ... not stated, so no preset
-    was assigned"): a strip with none of its processing, against CLAUDE.md's
+    was assigned"): a strip with none of its processing, against the
     INFO principle. The prompt the model is sent -- not just the file --
     tells it to take the most common kind and say so in `notes`, which
     `patch` prints at INFO, naming the alternative."""
@@ -499,7 +488,7 @@ def test_the_build_prompt_chooses_an_unqualified_instruments_preset_and_says_so(
     """An earlier change, the build half. An input list row
     saying just "Sax", with presets in the conventions for alto and
     baritone, left `processing.preset` null under rule 4: a strip with none
-    of its processing, against CLAUDE.md's INFO principle. The prompt the
+    of its processing, against the INFO principle. The prompt the
     model is sent tells it to take the most common kind and say so in
     "notes", naming the alternative -- and rule 4 no longer covers it."""
     gen = generate.generator_system("wing-compact")

@@ -1,6 +1,6 @@
 """The dock's verify findings are asked again, not read from the plan.
 
-The maintainer, 2026-10-09: *"Still getting this for matrix 4 'outputs[Phones]
+*"Still getting this for matrix 4 'outputs[Phones]
 -- output has no patch -- no physical socket is stated for it, so apply
 has nothing to write'"* -- after `output.no-patch` had become a WARNING
 with other words. The dock read the `meta.verify_findings` the build
@@ -84,7 +84,7 @@ def test_step_04s_verdict_is_todays_too(tmp_path):
 
 
 def test_a_build_note_on_an_out_of_date_plan_says_so(tmp_path):
-    """The maintainer, 2026-10-09: a `reply.socket-skipped` note about OH L+R
+    """A `reply.socket-skipped` note about OH L+R
     stayed after he moved channels on the input list. It was true of the
     plan as built; the dock now says so when the plan is older than its
     inputs -- once, in the verdict: each note is marked

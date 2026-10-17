@@ -96,8 +96,8 @@ Full build or Patch preview runs the real command on a scratch copy of
 the demo show, against the simulated WING `demo_desk.DemoDesk` answers
 on localhost (the initialized Compact capture with `before.json` laid
 over it), so the preview read is the same code a desk gets; a write --
-Apply, Patch or Amend with `confirm` -- is refused before anything starts
-(`_demo_write_refusal`), and Undo and a rebuilt-plan preview refuse too,
+Apply or Patch with `confirm` -- is refused before anything starts
+(`_demo_write_refusal`), and Undo refuses too,
 because a write with nowhere to go must not look like one that landed.
 A typed change needs a model, which the Demo does not bring: with none
 configured, a Demo Patch preview is refused and the page says so at
@@ -105,7 +105,7 @@ INFO. **The demo show is immutable**: every write endpoint refuses it
 with a `403` (`_refuse_demo`), and any path inside the packaged demo
 folder whatever show is open (`_inside_demo`); the page's greyed
 controls are a courtesy. Its plan is rebuilt, with no model, only in the
-repository (`tools/build_demo_show.py`).
+development repository, by its Demo-show builder.
 `web/demo_states/before.json` -- the clean WING Compact rig the demo
 show describes, as if its plan had been applied -- is the fixed base.
 On top of it, `_DEMO_ISSUES`
@@ -128,22 +128,21 @@ paint. The console address
 **says where a seeded value came from** rather than presenting it as
 something the operator typed.
 
-**One console, editable in the bundle bar and nowhere else** (the maintainer,
-2026-09-24, FR-6.9): *"you might generate a plan, and want to apply it to
-more than one console, ex: primary console wing compact, backup console
-wing rack."* `POST /api/console` changes it without a restart, and Ping,
-Apply, Amend, Undo and Watch all read `app.state.console_defaults`. It is
+**One console, editable in the bundle bar and nowhere else** (FR-6.9,
+2026-09-24): one plan may be applied to more than one console, say a
+primary Compact and a backup Rack. `POST /api/console` changes it without a restart, and Ping,
+Apply, Patch, Undo and Watch all read `app.state.console_defaults`. It is
 refused while a write runs (`console_lock`), a confirmed write naming a
-different desk than the bar holds is refused (`expected_console`), and an
-amend review is keyed on the console too. After an edit the provenance is
+different desk than the bar holds is refused (`expected_console`), and a
+patch review is keyed on the console too. After an edit the provenance is
 `CONSOLE_SET_HERE`.
 
-**A stale page cannot write** (FR-6.11; the maintainer's desk session,
+**A stale page cannot write** (FR-6.11; from a desk session,
 2026-09-24: a tab kept open across a server restart onto a different
 bundle copy kept showing the old show). The desk check above guards WHICH
-desk; this guards WHAT is written. Every confirmed apply, amend and undo
+desk; this guards WHAT is written. Every confirmed apply, patch and undo
 carries what the page reviewed -- the bundle it shows, and the plan's
-sha256, the amend review's id or the journal-stack top -- and is refused
+sha256, the patch review's id or the journal-stack top -- and is refused
 (409, `stale`) when any differs from what the server would act on or is
 missing (`_stale_bundle` and the checks beside it). And each server
 process has a random `instance` id, embedded at first paint and answered
@@ -178,7 +177,7 @@ from pydantic import BaseModel
 
 from atoo import report as report_module
 from atoo import build_log as build_log_module
-from atoo import bundle, config, console_facts, firstrun
+from atoo import bundle, config, console_facts, firstrun, install_info
 from atoo import input_list as input_list_module
 from atoo import conventions_ref
 from atoo import conventions_text
@@ -192,7 +191,9 @@ from atoo.audit import (AuditRule, ConsoleState, DEFAULT_RULES, Finding,
                              coverage_caveat, position_label, read_console_state,
                              strip_label)
 from atoo.diagnostics import Diagnostic, Severity
-from atoo.watch import WatchEvent, WatchNote, finding_key, present_findings, watch
+from atoo.metering import ClipStatus, ClipTracker
+from atoo.watch import (WatchEvent, WatchNote, finding_key, present_findings,
+                        virtual_soundcheck_note, watch)
 
 _STATIC_DIR = Path(__file__).parent / "web" / "static"
 _DEMO_DIR = Path(__file__).parent / "web" / "demo_states"
@@ -204,14 +205,14 @@ _DEMO_DIR = Path(__file__).parent / "web" / "demo_states"
 #: set, holding the show (`demo-show/`) beside the starter conventions and
 #: presets it was built from -- one copy of each. Every file under it is
 #: refused to every write endpoint (`_inside_demo`). It is changed only in
-#: the repository (`tools/build_demo_show.py`).
+#: the development repository, by its Demo-show builder.
 DEMO_ROOT = firstrun.STARTER_DIR
 DEMO_SHOW_DIR = DEMO_ROOT / firstrun.DEMO_SHOW_NAME
 DEMO_CONVENTIONS = DEMO_ROOT / "conventions.md"
 #: The demo show's own preset library, the starter's: the
 #: `.chn` files its conventions name, read instead of the user's library while the demo
-#: show is open, as its conventions are. `tools/build_demo_show.py`
-#: expands them into the plan; until they are there the plan names
+#: show is open, as its conventions are. The development repository's
+#: Demo-show builder expands them into the plan; until they are there the plan names
 #: presets it carries no values for, and verify says so once
 #: (`preset.no-library`), never per strip against an unrelated library.
 DEMO_PRESETS = DEMO_ROOT / firstrun.PRESETS_NAME
@@ -262,7 +263,7 @@ CONSOLE_SET_HERE = "set here"
 
 #: What the bar names the demo console: "Just call it 'Demo'".
 #: The console dict for it is `{"demo": True, "address": None, ...}` and
-#: carries NO address. Apply, Patch and Amend refuse a write to it first,
+#: carries NO address. Apply and Patch refuse a write to it first,
 #: armed or not (`_demo_write_refusal`), and preview
 #: against the simulated WING; an endpoint that does not know the Demo
 #: finds no address and refuses it as it refuses "no console".
@@ -355,9 +356,8 @@ ProviderFactory = Callable[[], tuple[StateProvider, "Callable[[], None] | None"]
 
 class ConnectRequest(BaseModel):
     # pydantic evaluates these annotations at class-definition time (even
-    # under `from __future__ import annotations`), so they can't use the
-    # `X | None` syntax -- that's a 3.10+ runtime feature and this module
-    # supports Python 3.9 (pyproject.toml's requires-python).
+    # under `from __future__ import annotations`), so they spell optional
+    # fields `Optional[X]` rather than `X | None`, in every model below.
     # "console": the bundle bar's (or `console`, a scripted override).
     # An earlier change removed "demo": Demo is chosen in the bar, with the show.
     source: str = "console"
@@ -383,13 +383,20 @@ class ConnectRequest(BaseModel):
     # sends): `watch.DEFAULT_NAME_REFRESH`, or 1 with `per_leaf`. The
     # page has no control for it; 1 reads names every reading.
     name_refresh: Optional[int] = None
+    # The Virtual soundcheck switch as it stands at Start: channels on their
+    # alternate input (C004) and the global alternate switch (C005) are
+    # reported at INFO. Absent (False) is the default every Start begins
+    # from; nothing is remembered between watches.
+    virtual_soundcheck: bool = False
+
+
+class VirtualSoundcheckRequest(BaseModel):
+    on: bool
 
 
 class PlanLoadRequest(BaseModel):
-    # Same Python-3.9-safe annotation posture as ConnectRequest above --
-    # no `X | None` here either, even though this field happens not to
-    # need one; keeping the same style avoids reintroducing that crash the
-    # next time a field here does.
+    # Same annotation style as ConnectRequest above (`Optional[X]`, not
+    # `X | None`), even though this field happens not to need one.
     path: str
 
 
@@ -403,7 +410,7 @@ class WatchConditionsLoadRequest(BaseModel):
 class BundleOpenRequest(BaseModel):
     # Mockup version H's bundle bar: `Show bundle: touringband/  [Change...]
     # [New show...]`. Both buttons POST here; `create` is what tells them
-    # apart. Same Python-3.9-safe annotations as every model above.
+    # apart. Same annotation style as every model above.
     directory: str
     create: bool = False
 
@@ -412,7 +419,7 @@ class BuildSourceLoadRequest(BaseModel):
     # Version H's per-tile "Change file" affordance (Build steps 01-03).
     # `slot` is one of `_BUILD_SLOTS` below -- the three files a build
     # reads -- and `path` is what to read instead of the derived default.
-    # Same Python-3.9-safe annotations as every model above.
+    # Same annotation style as every model above.
     slot: str
     path: str
 
@@ -438,7 +445,7 @@ class ConventionsDefaultRequest(BaseModel):
 
 class SectionsSaveRequest(BaseModel):
     """Save on Build step 01 (house conventions) or step 03 (instructions)
-    -- Same Python-3.9-safe annotations as every model above.
+    -- Same annotation style as every model above.
 
     `slot` is "conventions" or "instructions"; the FILE is whatever that
     step shows, resolved by the server -- the page never sends a path to
@@ -449,8 +456,8 @@ class SectionsSaveRequest(BaseModel):
     never written over. `expected_bundle` is the show bundle the page
     shows (FR-6.11), refused when it is not the one the server has open.
 
-    `text` is the whole file, as the step's one editor holds it (the maintainer,
-    2026-09-28: no sections view) -- written as given, in the file's own
+    `text` is the whole file, as the step's one editor holds it (there is no
+    sections view) -- written as given, in the file's own
     line ending (`source_edit.replace_text`). The path keeps its old name
     ("sections") because it is an API; there are no sections any more.
 
@@ -458,7 +465,7 @@ class SectionsSaveRequest(BaseModel):
     outside the bundle and every show that names it builds from it, so a
     save to it is refused without it. The page sends it while step 01 is
     being edited, with the warning naming that blast radius on screen
-    (the maintainer, 2026-09-25: step 01 is edited like step 03, no gate)."""
+    (step 01 is edited like step 03, no gate)."""
 
     slot: str
     expected_path: Optional[str] = None
@@ -476,7 +483,7 @@ class InputListSaveRequest(BaseModel):
     (`_build_source_payload`'s `records`) or null for a new row, and
     `values` the canonical columns the operator changed (all of them for
     a new row). The staleness fields are `SectionsSaveRequest`'s. Same
-    Python-3.9-safe annotations as every model above."""
+    annotation style as every model above."""
 
     expected_path: Optional[str] = None
     expected_sha256: Optional[str] = None
@@ -497,7 +504,7 @@ class BuildRunRequest(BaseModel):
     # build -- an unstated model is a hard stop there -- and it
     # is Optional here only so a request that forgot it gets that refusal
     # in Atoo's words rather than FastAPI's 422. Same
-    # Python-3.9-safe annotations as every model above.
+    # annotation style as every model above.
     console_model: Optional[str] = None
     critic: bool = False
     # The show bundle the page shows (FR-6.11). A build writes plan.json
@@ -521,7 +528,7 @@ class ApplyRunRequest(BaseModel):
 
     There is no console field here and none on the screen. There is ONE
     console, in the bundle bar -- resolved at startup (FR-X.17)
-    and editable there (the maintainer, 2026-09-24) -- and a second place to type
+    and editable there -- and a second place to type
     an address is a second chance to write to the wrong desk.
 
     `expected_console` is not a way to choose one. It is the desk the page
@@ -531,7 +538,7 @@ class ApplyRunRequest(BaseModel):
     it does not name. Absent, nothing is compared -- a scripted client that
     never saw a page has no stale view to guard against.
 
-    **What the page reviewed** (the maintainer's desk session, 2026-09-24: a tab
+    **What the page reviewed** (from a desk session, 2026-09-24: a tab
     kept open across a server restart onto a different bundle copy).
     `expected_bundle` is the show bundle directory the page shows, and
     `expected_plan_sha256` the sha256 of the `plan.json` its pre-flight
@@ -542,7 +549,7 @@ class ApplyRunRequest(BaseModel):
     reviewed against is a page from before this guard existed, which is
     exactly the stale tab it is for. See `_stale_bundle`.
 
-    Same Python-3.9-safe annotations as every model above.
+    Same annotation style as every model above.
     """
 
     confirm: bool = False
@@ -552,45 +559,6 @@ class ApplyRunRequest(BaseModel):
     expected_console: Optional[str] = None
     expected_bundle: Optional[str] = None
     expected_plan_sha256: Optional[str] = None
-
-
-class AmendRunRequest(BaseModel):
-    """Amend's Preview and Write buttons -- Apply's other mode.
-
-    **The same two booleans as `ApplyRunRequest`, for the same reason,
-    and checked against the same checkbox.** There is no second arming
-    control: Amend lives inside Apply precisely so that one checkbox,
-    `#apply-arm-checkbox`, is `--confirm` for every write this page can
-    make (OPTIONS-H).
-
-    `amended_plan` is the rebuild -- a path, resolved against the open
-    bundle when relative, and `rebuilt.plan.json` in it when omitted,
-    which is where `docs/user/applying.md` tells you to put one.
-    `allow_strips` is `--allow-strip`, one label per entry, typed rather
-    than clicked: opening a strip the desk says is occupied, or that
-    never answered, is a decision made by looking at the desk, and a
-    click on a grid cell is too routine a gesture to carry it.
-
-    Same Python-3.9-safe annotations as every model above.
-    """
-
-    confirm: bool = False
-    arm: bool = False
-    amended_plan: Optional[str] = None
-    allow_strips: list[str] = []
-    # The desk the page shows, as on `ApplyRunRequest`. The amend review
-    # key carries the console as well, so a preview against one desk never
-    # arms a write to another even for a client that sends none.
-    expected_console: Optional[str] = None
-    # The bundle the page shows, as on `ApplyRunRequest` -- required on a
-    # confirmed write. And `expected_review_id`: the `review_id` the
-    # preview this page DREW came back with (`GET /api/apply/status`'s
-    # `review.review_id`). The server arms one review at a time, for the
-    # whole process, so without it a second tab's preview -- of a rebuild
-    # made since -- would arm this tab's button for an amendment this page
-    # never showed.
-    expected_bundle: Optional[str] = None
-    expected_review_id: Optional[str] = None
 
 
 class PromoteRequest(BaseModel):
@@ -609,8 +577,8 @@ class PatchRunRequest(BaseModel):
     """The Patch screen's Preview change and Write the change buttons
     -- `atoo patch --show DIR` with a typed change.
 
-    **The same two booleans, the same one checkbox, the same guards as
-    `AmendRunRequest`.** `change` is the text the engineer typed. A preview
+    **The same two booleans and the same one checkbox as Apply's write.**
+    `change` is the text the engineer typed. A preview
     compiles it (one model call) and reads the desk; the server keeps the
     change set that preview compiled, and a confirmed write hands the
     command THAT change set (`--change-set`), never a fresh compile -- a
@@ -620,7 +588,7 @@ class PatchRunRequest(BaseModel):
     the last clean preview reviewed, and `expected_review_id` names that
     review.
 
-    Same Python-3.9-safe annotations as every model above.
+    Same annotation style as every model above.
     """
 
     confirm: bool = False
@@ -637,7 +605,7 @@ class UndoRunRequest(BaseModel):
     `atoo undo --show DIR`, which pops the newest write still
     standing. An undo is a write, so it is armed by the same one checkbox
     as every other write on this page -- `confirm` without `arm` is
-    refused, exactly as for an apply. Same Python-3.9-safe annotations as
+    refused, exactly as for an apply. Same annotation style as
     every model above.
 
     The command pops the newest write **on the desk it reaches** (per-desk
@@ -668,21 +636,19 @@ class PingRequest(BaseModel):
 
 
 class ConsoleSetRequest(BaseModel):
-    """The bundle bar's console edit (the maintainer, 2026-09-24): *"Editable in
-    the bundle bar only -- ... you might generate a plan, and want to apply
-    it to more than one console, ex: primary console wing compact, backup
-    console wing rack."*
+    """The bundle bar's console edit: editable in the bundle bar only,
+    because one plan may be applied to more than one console, say a
+    primary Compact and a backup Rack.
 
     `port` omitted keeps the port in force. There is no timeout here: it is
     how long to wait for a reply, not which desk, and it stays what the
-    startup configuration said. Same Python-3.9-safe annotations as every
+    startup configuration said. Same annotation style as every
     model above."""
 
     address: Optional[str] = None
     port: Optional[int] = None
-    # An earlier change (the maintainer, 2026-10-01): "Set where we choose a demo console
-    # on the same dialog as where we choose the IP address. Just call it
-    # 'Demo'." `demo` opens the packaged demo show AND
+    # The demo console is chosen on the same dialog as the IP
+    # address, and called 'Demo'. `demo` opens the packaged demo show AND
     # sets the Demo console, as one action -- there is no Demo console on
     # any other show. `address` and `port` are ignored when it is set.
     demo: bool = False
@@ -711,7 +677,7 @@ class WatchConditionsCheckRequest(BaseModel):
 
 
 # ---- The file browser and copy-into-bundle ----------
-# Same Python-3.9-safe annotations as every model above.
+# Same annotation style as every model above.
 
 class FsMkdirRequest(BaseModel):
     # The file browser's New folder: `path` is the new folder, absolute or
@@ -838,7 +804,7 @@ class _WatchPresenter:
         It rides on the event rather than being fetched separately because
         the Watch page has exactly one channel, and a caveat that arrives out
         of band arrives after the finding it qualifies. **A field the page
-        must read**: since #245 R002/R005 stand down on a read with no
+        must read**: since an earlier change R002/R005 stand down on a read with no
         output patch in it, and a page that shows the shorter list with no
         note cannot be told apart from a page showing a clean desk -- the
         exact FR-4.2 failure this issue is about, in the one place
@@ -941,9 +907,9 @@ def _plan_finding(raw: dict, source: str) -> dict:
     this mostly passes them through. What it adds is for the plan.json
     files already on someone's disk, which the page must still open:
 
-    * the critic's `kind` became `category` in #18 -- read either;
-    * a pre-#18 critic finding has no `code`, and gets the
-      `critic.<category>` one #18 gave it;
+    * the critic's `kind` became `category` -- read either;
+    * an older critic finding has no `code`, and gets the
+      `critic.<category>` one it was later given;
     * `critical` was a severity until 2026-09-23 and is `error` now;
     * `output.no-socket` is `output.no-patch`;
     * `source` is filled in from the block the finding was found in, so
@@ -968,7 +934,7 @@ def _plan_findings(plan: "dict | None", fresh_verify: "list[dict] | None" = None
     """The verify, critic and build findings of a plan, as dock findings.
 
     **Verify's are `fresh_verify` when the caller has them**: `verify_plan`
-    run now, as `atoo apply` runs it. The maintainer, 2026-10-09: a plan
+    run now, as `atoo apply` runs it. A plan
     built before `output.no-patch` became a WARNING kept showing the old
     ERROR -- and the old wording -- because the dock read the
     `meta.verify_findings` the build recorded, and verify's rules had
@@ -1011,7 +977,7 @@ _DIFF_WHERE = {"channels": "channels", "busses": "busses", "outputs": "outputs",
 def _rebuild_findings(plan: "dict | None") -> list[dict]:
     """One WARNING per strip this rebuild changed although nothing it is
     made from changed (`meta.changes_since_previous`, `plan_diff`): the
-    model rewrote it. The maintainer, 2026-10-13: it counts under "to check" in
+    model rewrote it. It counts under "to check" in
     the Findings panel, one per change, and never blocks Apply -- the plan
     may still be right. A change the edit asked for is INFO and stays in
     step 04's "Changed since the last build" list only: the dock is for
@@ -1354,6 +1320,11 @@ def _write_records(journal: dict) -> list:
             status=row.get("status", ""),
             timestamp=row.get("timestamp", ""),
             readback_source=row.get("readback_source"),
+            # A value its selector's change forces to be written is a write
+            # even when it already reads the plan's value; without this a
+            # preview's "will change" left those out and the write that
+            # followed sent more than the page had said.
+            forced_by=row.get("forced_by"),
         )
         for row in journal.get("writes") or []
     ]
@@ -1459,6 +1430,9 @@ def _apply_payload(journal: dict, journal_path: "str | None",
             "would_change": len([w for w in writes
                                  if w.status == "dry_run" and w.would_change]),
             "written": len(result.changed),
+            # Looked at in the write and already as the plan says: not sent,
+            # and the part of a write's total that "written" leaves out.
+            "unchanged": len([w for w in writes if w.status == "skipped_no_change"]),
             "mismatch": len(result.mismatches),
             "unreadable": len(unreadable),
             "cleaned": len(result.cleaned),
@@ -1559,39 +1533,34 @@ def _withheld_groups(addresses: list) -> list[dict]:
     return [{"base": base, "count": count} for base, count in groups.items()]
 
 
-def _amend_findings(review: "dict | None", payload: "dict | None", address: str,
-                    kind: str = "amend") -> list[dict]:
-    """What one patch or amend puts in the findings dock, on top of the
-    journal's own (`_apply_findings`). The review is drawn in full on the
-    screen; the dock gets the things that STOP it, and the proof if it
-    failed -- one finding per class, never one per strip.
-
-    `kind` is "patch" (a typed change) or "amend" (a rebuilt plan): it names
-    the codes (`patch.blocked`, `amend.blocked`) and the words, since a
-    change is refused for reasons a rebuild never is -- a reference to
-    something that does not exist."""
+def _patch_findings(review: "dict | None", payload: "dict | None",
+                    address: str) -> list[dict]:
+    """What one patch puts in the findings dock, on top of the journal's
+    own (`_apply_findings`). The review is drawn in full on the screen; the
+    dock gets the things that STOP it, and the proof if it failed -- one
+    finding per class, never one per strip. A change is refused for reasons
+    a rebuild never is -- a reference to something that does not exist --
+    and the words say so."""
     findings: list[dict] = []
-    what = "change" if kind == "patch" else "amend"
     where = "Apply · Patch"
     if review is not None:
         blocked = [c for c in review.get("changes", [])
                    if c.get("kind") in ("renumbered", "unplaceable", "refused")]
         if blocked:
             findings.append(Diagnostic(
-                severity=Severity.ERROR, code=f"{kind}.blocked",
-                message=f"This {what} is refused, and nothing was written: "
+                severity=Severity.ERROR, code="patch.blocked",
+                message="This change is refused, and nothing was written: "
                         + "; ".join(c.get("line", "").strip() for c in blocked),
-                where=where, source=kind,
-                fix=("a change that names a bus, DCA or mute group that is neither on the "
-                     "desk nor added by it, or a channel that is not there to drop, is "
-                     "refused whole -- say it again naming what is there, or add the "
-                     "missing object in the same change." if kind == "patch" else
-                     "a strip the rebuild renumbered, or a channel with no free strip, is "
-                     "never shuffled into place -- change the rebuild, or open one strip "
-                     "you have looked at with --allow-strip."),
+                where=where, source="patch",
+                fix="a change is refused whole when any part of it cannot be written -- an "
+                    "object that is not there (a bus, DCA or mute group neither on the desk "
+                    "nor added by it, a channel to drop that is not there), a field a "
+                    "running object does not carry, or a value out of range. Each line "
+                    "above says which; say the change again without it, or add the missing "
+                    "object in the same change.",
             ).to_dict())
-        # Apply's pre-flight, asked of the amend. The refusal is
-        # the command's own text; its last line names the socket and the
+        # Apply's pre-flight, asked of the change. The refusal is the
+        # command's own text; its last line names the socket and the
         # channel on its own, so the dock carries that line and the review
         # panel carries the whole of it.
         preflight = review.get("preflight") or {}
@@ -1599,33 +1568,89 @@ def _amend_findings(review: "dict | None", payload: "dict | None", address: str,
             lines = [line for line in preflight["refusal"].splitlines() if line.strip()]
             findings.append(Diagnostic(
                 severity=Severity.ERROR,
-                code=preflight.get("refusal_code") or f"{kind}.preflight",
+                code=preflight.get("refusal_code") or "patch.preflight",
                 message=lines[-1] if lines else preflight["refusal"],
-                where=where, source=kind,
+                where=where, source="patch",
                 fix="the review's pre-flight panel lists every socket, or every verify "
                     "error, in full.",
             ).to_dict())
         if review.get("collisions"):
             findings.append(Diagnostic(
-                severity=Severity.ERROR, code=f"{kind}.collision",
-                message=f"{len(review['collisions'])} address(es) in this {what}'s scope are "
+                severity=Severity.ERROR, code="patch.collision",
+                message=f"{len(review['collisions'])} address(es) in this change's scope are "
                         "also written by the applied plan -- the scope is wrong, so it "
                         "refused rather than writing.",
-                where=where, source=kind,
+                where=where, source="patch",
             ).to_dict())
         proof = review.get("proof") or {}
         if proof.get("moved"):
             findings.append(Diagnostic(
-                severity=Severity.ERROR, code=f"{kind}.moved",
-                message=f"{len(proof['moved'])} address(es) belonging to strips this {what} "
+                severity=Severity.ERROR, code="patch.moved",
+                message=f"{len(proof['moved'])} address(es) belonging to strips this change "
                         "does not own CHANGED across the write -- the failure the untouched-strip "
                         "proof's before/after read exists to catch.",
-                where=where, source=kind,
+                where=where, source="patch",
                 fix="the run log names each one with its before and after values.",
             ).to_dict())
     if payload is not None:
         findings.extend(_apply_findings(payload, address))
     return findings
+
+
+def _undo_payload(data: dict, bundle_dir: Path) -> dict:
+    """`result.undo`: one undo run, preview or confirmed, as the page draws
+    it -- `atoo undo --result-json`'s own data (per-address rows, counts and
+    one word for the whole run), plus which journal row it reverses.
+
+    The rows are sent whole: the page sees every address the run decided
+    something about, not the last 200 lines of the log."""
+    from atoo import journal_stack
+
+    source = str(data.get("source_journal") or "")
+    entry = None
+    try:
+        entry = journal_stack.find(bundle_dir, source) if source else None
+    except (journal_stack.JournalStackError, OSError):
+        entry = None
+    return {
+        **data,
+        # The row of History this reverses, so the page can say which one
+        # and can tell when the stack has moved on from it.
+        "journal_id": entry.id if entry is not None else Path(source).name,
+        "kind": entry.kind if entry is not None else None,
+        "timestamp": entry.timestamp if entry is not None else None,
+        "change_label": (journal_stack.change_label(entry.change)
+                         if entry is not None and entry.change else None),
+    }
+
+
+def _undo_findings(payload: "dict | None") -> list[dict]:
+    """What a confirmed undo that did not put everything back says in the
+    findings dock. A preview says all it has to under its own button."""
+    if payload is None or payload.get("dry_run"):
+        return []
+    counts = payload.get("counts") or {}
+    outcome = payload.get("outcome")
+    if outcome == "did-not-land":
+        return [Diagnostic(
+            severity=Severity.ERROR, code="undo.did-not-land",
+            message=f"{counts.get('did-not-land', 0)} reversal(s) did not land: the desk "
+                    "does not read back the value that was sent.",
+            where="Apply · History", source="undo",
+            fix="the History panel lists each address with the value on the desk now.",
+        ).to_dict()]
+    if outcome == "partly-undone":
+        held = (counts.get("changed-since", 0) + counts.get("unreadable", 0)
+                + counts.get("no-earlier-value", 0))
+        return [Diagnostic(
+            severity=Severity.WARNING, code="undo.partial",
+            message=f"The undo put back what it could, and left {held} address(es) as they "
+                    "are: changed since the write, unreadable, or with no earlier value "
+                    "recorded.",
+            where="Apply · History", source="undo",
+            fix="the History panel lists each one with the value on the desk now.",
+        ).to_dict()]
+    return []
 
 
 def _watch_condition_ids(path: Path) -> set:
@@ -1688,8 +1713,8 @@ def _bundle_payload(show: "bundle.Bundle") -> dict:
 
     The bar shows the directory's own name (`touringband/`) and **every
     file hint under it is derived from that one value** -- `input.csv`,
-    `plan.json` and the rest are fixed names (`atoo.bundle.SLOTS`,
-    #81 point 4), never separately chosen, which is exactly why version H
+    `plan.json` and the rest are fixed names (`atoo.bundle.SLOTS`), never separately
+    chosen, which is exactly why version H
     replaced four path inputs with one. So the browser is sent the derived
     paths rather than left to join strings itself: a path the page
     composed and a path the server would open are two chances to disagree
@@ -1778,20 +1803,20 @@ class _RunJournal:
 
 # `instructions` are bundle slots (`bundle.INPUT_LIST` / `.INSTRUCTIONS`);
 # `conventions` deliberately is NOT -- the house conventions file lives
-# OUTSIDE the bundle (#81 point 5), which is the whole reason step 01 is
+# OUTSIDE the bundle, which is the whole reason step 01 is
 # drawn with a "House" tag and its own path.
 _BUILD_SLOTS = ("conventions", "input_list", "instructions")
 
 # The two Build slots that are bundle files, and so the two a file chosen
 # from elsewhere is copied INTO the bundle as. The house
-# conventions file is not one: it lives outside the bundle by design (#81
-# point 5), and its tile's Change file stays a pointer.
+# conventions file is not one: it lives outside the bundle by design,
+# and its tile's Change file stays a pointer.
 _BUILD_SLOT_FILES = {"input_list": bundle.INPUT_LIST, "instructions": bundle.INSTRUCTIONS}
 
 #: Every file `POST /api/bundle/adopt` copies into a bundle: Build's two,
-#: and Watch's watch-conditions file (the maintainer 2026-10-01: "The
-#: `watch.json` file always needs to go with the current bundle. Make its
-#: file handling consistent with the way we handle other files").
+#: and Watch's watch-conditions file (the
+#: `watch.json` file always goes with the current bundle, handled
+#: consistently with the other files).
 _ADOPT_SLOT_FILES = {**_BUILD_SLOT_FILES, "watch": bundle.WATCH_CONDITIONS}
 
 
@@ -1806,13 +1831,12 @@ def _same_file(a: Path, b: Path) -> bool:
     except (OSError, RuntimeError):
         return False
 
-# The canonical headings, from docs/developer/artifact-formats.md §2 --
+# The canonical headings, from the artifact-formats reference --
 # used ONLY to lay out the example files below. Nothing reads a heading:
 # a conventions file is Markdown prose that the model reads whole
 # (`generate._conventions_section`), with or without headings, and the
-# Setup page edits it as one text (the maintainer, 2026-09-28: *"eliminate the
-# sections view for both conventions and instructions since the section
-# headers aren't really used"*).
+# Setup page edits it as one text (there is no sections view, since the
+# section headers aren't really used).
 # tests/test_webui.py checks this list against that document.
 CANONICAL_CONVENTION_SECTIONS = (
     "Inputs", "Channels", "Processing", "DCAs",
@@ -1822,8 +1846,8 @@ CANONICAL_CONVENTION_SECTIONS = (
 
 # ---- Example files: a suggestion beside steps 01 and 03 ------------------
 #
-# The maintainer, 2026-09-28: *"provide the templated new conventions and
-# instructions files as suggestions only."* New file creates an EMPTY
+# The templated new conventions and instructions files are provided as
+# suggestions only. New file creates an EMPTY
 # file; this text is shown beside the editor under "Example", and reaches
 # a file only when the engineer presses Insert (whole, or the part of it
 # he selected) and then Save. No endpoint writes it (the build payload's
@@ -1839,7 +1863,7 @@ CANONICAL_CONVENTION_SECTIONS = (
 # comments and headings and asserts nothing is left.
 
 # What each canonical heading is FOR -- a description, never an example.
-# The maintainer's own wording, verbatim: the examples carry it as
+# The wording is fixed, verbatim: the examples carry it as
 # the comment under each heading.
 CONVENTION_SECTION_NOTES = {
     "Inputs": "Describe the input categories, input patching order, color coding, "
@@ -2078,8 +2102,8 @@ def _build_source_payload(
     so the page can make it.
 
     **A file that is simply not there yet is a to-do, not a finding**
-    (the maintainer, 2026-10-02: a new show's dock filling with
-    errors "seems a little premature"). Such a slot carries `todo`, one
+    (2026-10-02: a new show's dock filling with
+    errors is premature). Such a slot carries `todo`, one
     line the tile shows beside its Change file / New file buttons, and --
     for the two files a build cannot run without -- `missing`, the ERROR
     `POST /api/build/run` refuses with when Build is pressed. Neither is
@@ -2186,7 +2210,7 @@ def _build_source_payload(
             # .
             #
             # `values` always calls the patch column `patch`, whatever the
-            # file's header says (`socket` in a list written before #342):
+            # file's header says (`socket` in a list written before the rename):
             # the page knows one name, and a Save maps it back onto the
             # header the file has (`source_edit.splice_input_list`), so
             # the header is never rewritten. `header` stays as written.
@@ -2254,7 +2278,7 @@ def _recorded_conventions_findings(
     plan_display: str, show: "bundle.Bundle",
 ) -> list[Diagnostic]:
     """Every way the conventions file on the tile differs from the one the
-    bundle's plan records. `CLAUDE.md`: an inferred value that
+    bundle's plan records. An inferred value that
     does not announce itself is the defect, so each fallback says so.
 
     * **recorded file gone** -- WARNING. The tile falls back (to the
@@ -2368,7 +2392,7 @@ def _build_payload(
     Same list, same order, same words -- so what the page shows and what
     a built plan records cannot disagree. Each entry also carries
     `conventions_ref.layer_record`'s `absolute_path`,
-    `bundle_relative_path` and `sha256`, as a plan built since #236 does.
+    `bundle_relative_path` and `sha256`, as a plan built since an earlier change does.
 
     **Which conventions file step 01 shows.** A path typed into
     the tile's Change file box wins; then the file the bundle's
@@ -2377,7 +2401,7 @@ def _build_payload(
     a bundle built against `house-A.md` opens showing `house-A.md`, not
     whatever the config names today -- and a Run from the page rebuilds
     against it. Every fallback and disagreement is a finding on the tile
-    (`_recorded_conventions_findings`); a plan from before #236 records
+    (`_recorded_conventions_findings`); a plan from before an earlier change records
     no resolvable path and opens exactly as it always did.
     """
     # The demo show reads its own packaged house conventions,
@@ -2498,7 +2522,7 @@ def _build_payload(
         "stack": stack,
         "plan_freshness": freshness,
         # The example text steps 01 and 03 show beside their editors
-        # (the maintainer, 2026-09-28: "templates as suggestions only"). Read-only:
+        # ("templates as suggestions only"). Read-only:
         # it reaches a file only when the engineer presses Insert and then
         # Save, and no endpoint writes it (`conventions_example`).
         "examples": {
@@ -2523,8 +2547,7 @@ def _load_watch_conditions_from_path(path: str) -> tuple[list[dict] | None, str 
     (conditions, None) on success, or (None, message) on failure. Same
     OSError/WatchConditionsError split as `cli.py`'s own
     `_load_watch_conditions_file`, but returns the message instead of
-    printing to stderr -- this is reached from a browser request (issue
-    #71: `GET /api/watch-conditions`'s startup path, `POST
+    printing to stderr -- this is reached from a browser request (`GET /api/watch-conditions`'s startup path, `POST
     /api/watch-conditions/load`, `POST /api/watch/start`), never a CLI
     failure path. The single place this module validates a
     watch-conditions path, reused by all three call sites above rather
@@ -2581,8 +2604,8 @@ def _reload_drafted_watch_conditions(state, watch_path: Path) -> None:
 # can activate any subset in any combination with no interaction between
 # them. One is Severity.ERROR (main_not_patched), so the demo shows the
 # full severity range and not just warning/info -- matrix_orphan was the
-# second until R003 became a WARNING (docs/developer/audit-rules.md,
-# 2026-09-23).
+# second until R003 became a WARNING
+# (2026-09-23).
 _DEMO_ISSUES: dict[str, dict[str, object]] = {
     # C001 Phantom Power On Unpatched Socket (warning) -- LCL 9, which
     # nothing in the Demo show uses.
@@ -2590,7 +2613,7 @@ _DEMO_ISSUES: dict[str, dict[str, object]] = {
     # L001 Send On But Near-Silent (warning) -- Snare's send to Drums.
     "near_silent_send": {"/ch/2/send/5/lvl": -105.0},
     # L002 Active Strip Fader At Floor (info) -- the Drums mix bus (bus
-    # 5), which also trips the show's own `drums-bus-fader-low` watch
+    # 5), which also trips the show's own `mix-bus-fader-low` watch
     # condition. Not a channel: the Demo's conventions start every channel
     # fader at the floor, so the clean rig already has them there.
     "fader_at_floor": {"/bus/5/fdr": -144.0},
@@ -2635,6 +2658,16 @@ _DEMO_ISSUES: dict[str, dict[str, object]] = {
 }
 
 
+#: The Demo's simulated clips: which strips (all in the Demo
+#: rig), how often a read brings one, and what its status note says.
+DEMO_CLIP_STRIPS = ("/ch/10", "/ch/1", "/bus/5", "/bus/6", "/main/1")
+DEMO_CLIP_CHANCE = 0.2
+DEMO_CLIP_STATUS = ClipStatus(
+    True, "simulated",
+    "The Demo has no console to listen to, so it simulates an occasional clip on one strip. "
+    "A strip that clips again inside the minute restarts its timer, as it would on a desk.")
+
+
 def demo_provider_factory(rng: Optional[random.Random] = None) -> tuple[StateProvider, None]:
     """A live-feeling demo over the bundled `before.json` rig: each read,
     randomly arms or clears one `_DEMO_ISSUES` entry against a running
@@ -2648,7 +2681,7 @@ def demo_provider_factory(rng: Optional[random.Random] = None) -> tuple[StatePro
     `rng` is injectable so a test can seed it; real callers (this module's
     own `/api/watch/start`) leave it out and get real randomness -- unless
     `ATOO_DEMO_SEED` is set, which makes the faults the same run after
-    run, so `tools/doc_screenshots.py` can retake a shot of Watch running
+    run, so a screenshot script can retake a shot of Watch running
     and get the same picture.
     """
     if rng is None:
@@ -2658,6 +2691,14 @@ def demo_provider_factory(rng: Optional[random.Random] = None) -> tuple[StatePro
     names = list(_DEMO_ISSUES)
     active: set[str] = set()
     first_call = True
+    # The Demo has no meters, so it simulates an occasional clip
+    # on one of a few strips, through the same tracker a live watch uses --
+    # a clip that clips again inside the minute restarts its timer, which
+    # the finding's sentence shows. Its own random stream, so the Demo's
+    # faults above come in the same order as ever for a given seed.
+    seed = os.environ.get("ATOO_DEMO_SEED")
+    clip_rng = random.Random(f"{seed}-clips") if seed else random.Random()
+    clip_tracker = ClipTracker()
 
     def provider() -> ConsoleState:
         nonlocal first_call
@@ -2666,15 +2707,19 @@ def demo_provider_factory(rng: Optional[random.Random] = None) -> tuple[StatePro
         # starts from the same clean, legible "nothing wrong yet" rig
         # `before.json` itself represents, exactly like a real console
         # before an operator has touched anything.
+        first_call_was = first_call
         if not first_call and rng.random() < 0.6:
             name = rng.choice(names)
             active.symmetric_difference_update({name})
         first_call = False
 
+        if not first_call_was and clip_rng.random() < DEMO_CLIP_CHANCE:
+            clip_tracker.observe(time.monotonic(), {clip_rng.choice(DEMO_CLIP_STRIPS)})
         values = dict(base)
         for name in active:
             values.update(_DEMO_ISSUES[name])
-        return ConsoleState(values)
+        return ConsoleState(values, clips=clip_tracker.snapshot(time.monotonic()),
+                            clip_status=DEMO_CLIP_STATUS)
 
     return provider, None
 
@@ -2695,8 +2740,15 @@ def console_provider_factory(
     start_name_addresses: list[str] | None = None,
     name_refresh: int = 1,
     plan: dict | None = None,
+    clip_detection: bool = True,
 ) -> tuple[StateProvider, Callable[[], None]]:
-    """`start_name_addresses` (`watch_conditions.start_name_addresses`):
+    """`clip_detection`: also listen to the console's meters
+    for clips (`atoo.metering`), which adds L003 and one INFO to every
+    reading. It opens a native connection on the console's port 2222 on a
+    thread of its own; if that cannot be had, Watch says so at INFO and
+    carries on.
+
+    `start_name_addresses` (`watch_conditions.start_name_addresses`):
     names a scoped watch target needs that the poll does not read -- a
     Main's or a Matrix's -- read ONCE, into the first state only.
 
@@ -2723,7 +2775,7 @@ def console_provider_factory(
     # no physical sockets at all and four rules would go quiet in the
     # browser only. The open show's plan is passed too,
     # as `audit --plan` passes it: the model's panel alone read LCL 1-8 on
-    # the maintainer's Compact and called six wedges on AES50-A unrouted. (The
+    # a Compact and called six wedges on AES50-A unrouted. (The
     # read's second pass also follows any AES50 port with a device on it.)
     from atoo.audit import socket_groups_to_read
     from atoo import console_facts
@@ -2746,7 +2798,17 @@ def console_provider_factory(
 
         provider = read_names_at_start(provider, console_name_reader(console),
                                        list(start_name_addresses))
-    return provider, console.close
+    closer = console.close
+    if clip_detection:
+        from atoo.metering import with_clip_detection
+
+        provider, stop_listening = with_clip_detection(provider, ip)
+
+        def closer() -> None:
+            stop_listening()
+            console.close()
+
+    return provider, closer
 
 
 class WatchSession:
@@ -2779,10 +2841,17 @@ class WatchSession:
         # The rules the running loop audits with, and the watch-conditions
         # file they came from (None: built-in rules only). Held as one
         # list object that `watch()` re-reads every cycle, so Save can
-        # swap a new watch list in without restarting (the maintainer,
-        # 2026-10-01): see `replace_rules`.
+        # swap a new watch list in without restarting
+        # (2026-10-01): see `replace_rules`.
         self.rules: list[AuditRule] | None = None
         self.watch_path: str | None = None
+        # The Virtual soundcheck switch: while on, the loop's C004 and C005
+        # report at INFO (`audit.virtual_soundcheck_rules`) and a note says
+        # so. Every Start begins from the request's value (off by default)
+        # and a stopped session forgets it. `_base_rules` are the rules as
+        # built, which the switch is applied to and lifted from.
+        self.virtual_soundcheck = False
+        self._base_rules: list[AuditRule] | None = None
 
     def subscribe(self, loop: asyncio.AbstractEventLoop) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
@@ -2797,12 +2866,34 @@ class WatchSession:
             self._subscribers.discard(q)
 
     def status(self) -> dict:
-        return {"running": self.running, "label": self.label, "error": self.error}
+        return {"running": self.running, "label": self.label, "error": self.error,
+                "virtual_soundcheck": self.virtual_soundcheck}
+
+    def _effective_rules(self, base: list[AuditRule]) -> list[AuditRule]:
+        """`base` as the loop audits with it: C004 and C005 at INFO while
+        Virtual soundcheck is on."""
+        from atoo.audit import virtual_soundcheck_rules
+
+        return virtual_soundcheck_rules(base) if self.virtual_soundcheck else list(base)
+
+    def set_virtual_soundcheck(self, on: bool) -> bool:
+        """Turn Virtual soundcheck on or off in the running loop. The next
+        cycle audits with the C004 and C005 the switch calls for, so turning
+        it off makes a strip still on its alternate a WARNING again at that
+        pass. False (and nothing changed) when no watch is running: the
+        switch is chosen at Start."""
+        if not self.running or self.rules is None:
+            return False
+        self.virtual_soundcheck = bool(on)
+        self.rules[:] = self._effective_rules(self._base_rules or self.rules)
+        self._announce()
+        return True
 
     def start(
         self, loop: asyncio.AbstractEventLoop, provider_factory: ProviderFactory, interval: float,
         label: str, rules: list[AuditRule] | None = None,
         notes: "list[WatchNote] | None" = None,
+        virtual_soundcheck: bool = False,
     ) -> None:
         """Stop whatever's running (FR-6.7: one session at a time), then
         start a new loop. `provider_factory` is called ON THE BACKGROUND
@@ -2820,10 +2911,14 @@ class WatchSession:
 
         `notes` are session notes every frame carries beside the
         reading's own -- the console window a live watch reads with,
-        when `ATOO_CONSOLE_WINDOW` changed it."""
+        when `ATOO_CONSOLE_WINDOW` changed it.
+
+        `virtual_soundcheck` is the switch as the page had it at Start."""
         self._halt()
         self._stop.clear()
-        rules = list(DEFAULT_RULES) if rules is None else list(rules)
+        self._base_rules = list(DEFAULT_RULES) if rules is None else list(rules)
+        self.virtual_soundcheck = bool(virtual_soundcheck)
+        rules = self._effective_rules(self._base_rules)
         self.rules = rules
         self.label = label
         self.error = None
@@ -2838,9 +2933,8 @@ class WatchSession:
         self._thread.start()
 
     def replace_rules(self, rules: list[AuditRule], watch_path: str) -> bool:
-        """Swap a newly saved watch list into the running loop (the maintainer,
-        2026-10-01: "if I'm watching, the watcher should pick up the new
-        list"). The next cycle audits with it; the session, its console
+        """Swap a newly saved watch list into the running loop (a watcher
+        should pick up the new list). The next cycle audits with it; the session, its console
         and its baseline are kept, so a removed condition's findings clear
         and a new one's arrive as new, as any change would.
 
@@ -2853,7 +2947,8 @@ class WatchSession:
             return False
         if self.watch_path is not None and self.watch_path != watch_path:
             return False
-        self.rules[:] = rules
+        self._base_rules = list(rules)
+        self.rules[:] = self._effective_rules(self._base_rules)
         self.watch_path = watch_path
         return True
 
@@ -2867,6 +2962,9 @@ class WatchSession:
             self._thread.join(timeout=5)
         self._thread = None
         self.running = False
+        # Off again for the next Start: a switch left on must not carry a
+        # forgotten Virtual soundcheck into a live show.
+        self.virtual_soundcheck = False
         # After the join, so the stopped loop cannot write it back. A
         # stopped session's last event is not news to anyone: a page
         # opened (or a socket reconnecting) after Stop must not be handed
@@ -2905,7 +3003,7 @@ class WatchSession:
         presenter = _WatchPresenter(notes)
         try:
             for event in watch(tracking_provider, rules=rules, interval=interval,
-                               sleep=self._stop.wait):
+                               sleep=self._stop.wait, session_notes=self._session_notes):
                 self._broadcast(presenter.payload(
                     event, coverage_caveat(latest[0]) if latest else None,
                     latest[0] if latest else None))
@@ -2922,6 +3020,12 @@ class WatchSession:
             if closer is not None:
                 closer()
             self.running = False
+            self.virtual_soundcheck = False
+
+    def _session_notes(self) -> list[WatchNote]:
+        """The notes about the watch itself that the switches call for,
+        read every cycle."""
+        return [virtual_soundcheck_note()] if self.virtual_soundcheck else []
 
     def _broadcast(self, payload: dict) -> None:
         self._last_payload = payload
@@ -3077,16 +3181,15 @@ class BuildRun:
     written and verify found errors in it, which the dock then shows;
     `failed` is every exit that wrote no plan.
 
-    **And the log alone was not enough** (the maintainer, 2026-09-25: "Show me
-    progress while build is running"). A model call is minutes of
+    **And the log alone was not enough**: a build needs progress shown while
+    it runs. A model call is minutes of
     silence; the log said "sending" and then nothing until the call
     ended. So `status()` also carries `progress` -- which model call the
     build is in (generator, critic, watchlist), its stage, how long it has
     run and the tokens so far -- fed by `progress.ModelCallProgress`
     through a listener registered for the build's own thread.
 
-    **And it can be stopped** (the maintainer, 2026-09-26: "It would be nice to be
-    able to stop it if things are going haywire"). `stop()` fires the run's
+    **And it can be stopped**, in case things go haywire. `stop()` fires the run's
     `progress.StopSignal`, which shuts the model call's connection from the
     stopping thread -- so it ends a call blocked in the silent thinking
     stretch as surely as one that is writing, and the spend stops with it.
@@ -3374,7 +3477,7 @@ class BuildRun:
             where="04 Plan", source="build",
             fix="read the build log on step 04. A build needs a model: "
                 "ATOO_AI_PROVIDER chooses one (Claude by default, which needs ANTHROPIC_API_KEY) "
-                "-- see docs/user/troubleshooting.md",
+                "-- see https://docs.atoo.app/troubleshooting/troubleshooting/",
         ).to_dict()
 
 
@@ -3402,21 +3505,21 @@ class ApplyRun(BuildRun):
     It is `atoo apply` -- the command, with every gate that command
     has: the pre-flight `verify_plan` refusal, the console-model
     cross-check, the empty-expansion-bay stop, the journal
-    in the bundle (#81 point 4). A second apply path in this file would be
+    in the bundle. A second apply path in this file would be
     a second opinion about when it is safe to write to a desk.
     """
 
     def __init__(self) -> None:
         super().__init__()
         self.result: dict | None = None
-        # This runner is also Amend's and Undo's. ONE runner
-        # for every command that can write, so two writes to a desk can
-        # never be in flight from this server at once -- an amend cannot
-        # start while an apply is still landing, and an undo cannot pop a
-        # stack an amend is about to push onto.
+        # This runner is also Patch's and Undo's. ONE runner for every
+        # command that can write, so two writes to a desk can never be in
+        # flight from this server at once -- a patch cannot start while an
+        # apply is still landing, and an undo cannot pop a stack a patch is
+        # about to push onto.
         self.kind = "apply"
-        # An amend's stages 1-3 (`amend.review_payload`), read back from
-        # the command's own `--review-json`. None for any other kind.
+        # A patch's review (`amend.review_payload`), read back from the
+        # command's own `--review-json`. None for any other kind.
         self.review: dict | None = None
         # A preview (no --confirm) or a write. A preview that fails says
         # "Preview failed", never "the apply did not run".
@@ -3468,7 +3571,7 @@ class ApplyRun(BuildRun):
         return super().start(argv, finish)
 
     _PREVIEW_LABEL = {"apply": "Preview", "patch": "Patch preview",
-                      "amend": "Patch preview", "undo": "Undo preview"}
+                      "undo": "Undo preview"}
 
     def _failure_finding(self) -> dict:
         if self.preview:
@@ -3639,7 +3742,7 @@ def create_app(
     `initial_conventions` (same mockup, phase 2): the **house conventions
     file** -- Build step 01. It is the one of the three build inputs that
     is not a bundle slot, because house style is reused across every show
-    and so lives outside the bundle (#81 point 5). `cli.ui_cmd` resolves
+    and so lives outside the bundle. `cli.ui_cmd` resolves
     it from `~/.atoo.config`'s `[conventions]` default, the same
     fallback `build` uses when no `--conventions` is given, and passes
     the path here; `atoo ui` has no `--conventions` flag of its own,
@@ -3648,7 +3751,7 @@ def create_app(
     draws it: step 01 reads **Not set**, with a finding saying a build
     cannot run without one.
 
-    `initial_presets` (the maintainer, 2026-09-28): `atoo ui --presets DIR`,
+    `initial_presets`: `atoo ui --presets DIR`,
     the preset library step 02's Preset chooser lists and a build started
     from the page is given. None falls back to `~/.atoo.config`'s
     `[presets] default` -- `_preset_library_state`, the same order
@@ -3701,14 +3804,14 @@ def create_app(
     # the only thing here that can write to a console.
     apply_run = ApplyRun()
     app.state.apply_run = apply_run
-    # Amend: what the last clean amend preview reviewed --
-    # `_amend_key` -- and so the only amendment a write may be armed for.
-    app.state.amend_reviewed = None
+    # What the last clean patch preview reviewed (`_patch_key`) -- and so
+    # the only change a write may be armed for.
+    app.state.patch_reviewed = None
     # Patch: the change set the last clean patch preview
     # compiled -- what a confirmed write hands the command, so the write is
     # the change the page showed and not a second model call's.
     app.state.patch_change_set = None
-    # The bundle bar's console is editable (the maintainer, 2026-09-24), and it is
+    # The bundle bar's console is editable, and it is
     # the ONE console every desk-facing endpoint uses. `console_lock` makes
     # "which desk" and "is a write running" one question: each write
     # endpoint reads the console and starts its run while holding it, and
@@ -3726,10 +3829,13 @@ def create_app(
     # The page learns it at first paint (the embedded startup blob) and
     # watches `GET /api/status` for it; a different value means the server
     # behind the page was restarted -- possibly on a different bundle, which
-    # is how the maintainer's A19 tab came to show A19's journal stack against A20's
+    # is how an A19 tab came to show A19's journal stack against A20's
     # server (2026-09-24). The page then stops offering writes until it is
     # reloaded (shell.js, "the stale-page banner").
     app.state.instance_id = secrets.token_hex(8)
+    # Which copy of Atoo this server is, read once when it starts: the
+    # start-up message and the page's footer say the same line.
+    app.state.install = install_info.describe().payload()
     # Demo is the demo show and the Demo console together, and
     # nothing else. `before_demo` is what choosing Demo replaced -- the
     # bundle and the console -- so leaving Demo can put back whichever of
@@ -3772,9 +3878,9 @@ def create_app(
         # still pointing at the previous bundle's input.csv while the
         # bundle bar names a new folder is the worst of both.
         #
-        # The conventions override goes too (the maintainer, 2026-09-24). It used
+        # The conventions override goes too. It used
         # to survive, on the grounds that the house file lives outside the
-        # bundle (#81 point 5) and is the same for every show -- but since
+        # bundle and is the same for every show -- but since
         # an earlier change a bundle's plan records the house file it was built
         # from, and a path typed for the LAST show would override that
         # record for this one. The new show opens on the file its
@@ -3935,7 +4041,7 @@ def create_app(
 
         **Absent is refused, not waved through** -- the opposite of
         `_stale_page`'s posture for `expected_console`, on purpose. The tab
-        this guard exists for (the maintainer, 2026-09-24) was a page loaded
+        this guard exists for was a page loaded
         before the server behind it restarted; a page served before this
         field existed is that tab by construction, and it sends none. A
         script that writes through this API knows the bundle it started
@@ -4013,7 +4119,7 @@ def create_app(
         # three modes -- Build, Apply, Watch -- that switch client-side
         # under shared chrome. It moved here from `/app`,
         # when Watch moved in and the old standalone Watch page at `/`
-        # was retired; `/setup` -- the plan viewer -- went in #191, when
+        # was retired; `/setup` -- the plan viewer -- went, when
         # step 04 took its renderer.
         #
         # Everything the first paint needs rides in as one embedded blob
@@ -4030,11 +4136,16 @@ def create_app(
                 # Which server process drew this page -- compared against
                 # `GET /api/status`'s `instance` for as long as it is open.
                 "instance": app.state.instance_id,
+                "install": app.state.install,
                 "bundle": _bundle_payload(app.state.bundle) if app.state.bundle else None,
                 "build": _build_payload(
                     app.state.bundle, app.state.conventions_path, app.state.build_overrides,
                 ),
                 "console": app.state.console_defaults,
+                # The watch-conditions file the server holds, or null: with
+                # no show open, Watch asks for one only when this says there
+                # is one (or the page has loaded one itself).
+                "watch_conditions_path": app.state.watch_conditions_path,
                 # Where the file browser starts while no
                 # bundle is open -- `[workspace] default`, or null.
                 "workspace": app.state.workspace,
@@ -4200,7 +4311,7 @@ def create_app(
     @app.get("/api/build/validate-patch")
     def api_build_validate_patch(value: str = "", model: Optional[str] = None):
         # Step 02's Patch cell, checked before it goes into the row
-        # (the maintainer's UI testing, 2026-09-28). Read-only: it reads nothing
+        # . Read-only: it reads nothing
         # from disk and writes nothing. The verdict is
         # `input_list.check_patch` -- the input list's own parser and
         # `console_facts`' bound, not a second grammar in the browser.
@@ -4218,7 +4329,7 @@ def create_app(
 
     @app.get("/api/build/presets")
     def api_build_presets():
-        # Step 02's Preset chooser (the maintainer, 2026-09-28): the names in the
+        # Step 02's Preset chooser: the names in the
         # preset library a build would use -- `ui --presets`, else the
         # `[presets] default` in ~/.atoo.config. Read-only. Always
         # 200: no library configured, or one that cannot be read, is a
@@ -4232,7 +4343,7 @@ def create_app(
         # exception, same as `POST /api/plan/load`.
         #
         # Two failures are told apart on purpose, and the split is the
-        # one CLAUDE.md draws:
+        # one the judgement-vs-patching rule draws:
         #
         # * **A path that is not there, or cannot be read, is a 400.** The
         #   operator typed something wrong, and quietly replacing a
@@ -4285,9 +4396,9 @@ def create_app(
         )
 
     # ---- Creating a blank conventions / instructions file (2026-09-25) --
-    # The maintainer: "there is no way to introduce either one outside of creating
+    # Without these there is no way to introduce either one except by creating
     # a file outside the UI and manually adding it to either the user
-    # preferences or an environment variable or the show bundle."
+    # preferences or an environment variable or the show bundle.
     #
     # These write FILES -- a new, empty Markdown file, and on request one line
     # of ~/.atoo.config -- and never a console; they are nowhere near
@@ -4350,7 +4461,7 @@ def create_app(
     @app.post("/api/build/conventions/new")
     def api_build_conventions_new(req: NewConventionsRequest, request: Request):
         # Step 01's "New file". Creates an EMPTY house conventions file
-        # (the maintainer, 2026-09-28: the template is a suggestion only -- it is
+        # (the template is a suggestion only -- it is
         # `conventions_example`, shown beside the editor, and written only
         # if the engineer inserts it and saves), and points step 01 at it for this session, exactly as Change file
         # would. `make_default` also names it in ~/.atoo.config --
@@ -4432,7 +4543,7 @@ def create_app(
         # Step 03's New file (and its panel's "New instructions.md"): an
         # EMPTY one in the open bundle, never over one that is there. The
         # template is a suggestion only (`instructions_example`, beside the
-        # editor; the maintainer, 2026-09-28). The
+        # editor). The
         # bundle's own file is the only one `atoo build` reads, so a
         # step 03 pointed elsewhere by Change file is pointed back at it.
         #
@@ -4474,9 +4585,9 @@ def create_app(
         }
 
     # ---- The file browser, and copying a file into the bundle ----------
-    # an earlier change (the maintainer, 2026-09-25): "we need a real modal file browser
+    # a real modal file browser
     # for selecting existing files, or creating a new show directory or a
-    # new file." A page cannot see the disk, so the modal
+    # new file. A page cannot see the disk, so the modal
     # (web/static/filebrowser.js) asks for one folder at a time here. The
     # listing and the folder it may create are `atoo/fsbrowse.py`.
     #
@@ -4549,9 +4660,9 @@ def create_app(
 
     def _setup_only(request: Request) -> "JSONResponse | None":
         """Every write the Setup side makes -- to the console (apply, patch,
-        amend, undo) or to the show's files (build, the editors) -- answers
+        undo) or to the show's files (build, the editors) -- answers
         this laptop's own browser only. `--host` puts the page
-        on the venue LAN so a phone can Watch; the maintainer, 2026-09-26: a second
+        on the venue LAN so a phone can Watch; a second
         machine there watches, it does not change the desk. Arming is a
         request field, so without this any machine that could reach the
         page could write. Watch's own controls (the console address, ping,
@@ -4653,10 +4764,10 @@ def create_app(
         #   `replace` -- the modal's "Replace the bundle's". The one it
         #   replaces is kept as `backups/<name>.bak` -- in a folder, since
         #   only plan files and the hand-authored inputs sit at a bundle's
-        #   top level (the maintainer, 2026-10-02).
+        #   top level.
         #
         # The house conventions file is refused: it stays outside the
-        # bundle on purpose (#81 point 5).
+        # bundle on purpose.
         refusal = _local_only(request) or _refuse_demo("Change file")
         if refusal is not None:
             return refusal
@@ -4741,7 +4852,7 @@ def create_app(
             if copied:
                 # Provenance, where a person will see it: the dock. It
                 # lives as long as the page does -- the bundle has no
-                # manifest to record it in (#81 point 4).
+                # manifest to record it in.
                 result["finding"] = Diagnostic(
                     severity=Severity.INFO, code="bundle.copied-in",
                     message=message, where=target_display, source="ui",
@@ -4841,8 +4952,8 @@ def create_app(
     # path from the request -- and only the bytes that changed
     # (`source_edit`). Three refusals come first, all 409s that write
     # nothing: the page is stale (FR-6.11), the page read a different
-    # file, or the file changed on disk since the page read it (the maintainer
-    # edits these in Obsidian too). They write files only; nothing here
+    # file, or the file changed on disk since the page read it (these files are
+    # also edited in other editors). They write files only; nothing here
     # goes near a console.
 
     save_lock = threading.Lock()
@@ -5072,8 +5183,8 @@ def create_app(
 
     @app.post("/api/build/run")
     def api_build_run(req: BuildRunRequest, request: Request):
-        # The demo show's plan is built in the repository
-        # (tools/build_demo_show.py), never here.
+        # The demo show's plan is built in the development
+        # repository (its Demo-show builder), never here.
         refusal = _setup_only(request) or _refuse_demo("Build")
         if refusal is not None:
             return refusal
@@ -5162,7 +5273,7 @@ def create_app(
             # show's plan.json on disk and nobody else's business.
             # Whatever the outcome, the page shows what is on disk now: the
             # build moved the old plan.json aside as it started, so a
-            # failed or stopped build leaves none (the maintainer, 2026-10-02),
+            # failed or stopped build leaves none,
             # and a refusal before that left the old one where it was.
             if not show.plan.is_file():
                 return []
@@ -5276,7 +5387,7 @@ def create_app(
                 # Step 04's BLOCKED/OK badge, from the same run. It read
                 # `meta.verify_at_generation` -- the build-time verdict --
                 # and so said "BLOCKED, 1 error" beside a dock with no
-                # error in it (the maintainer's screenshot, 2026-10-09).
+                # error in it.
                 verdict = report_module.verify_at_generation_status(verify_result=result)
             except Exception:  # noqa: BLE001 -- the recorded findings are the fallback
                 fresh, verdict = None, None
@@ -5290,13 +5401,12 @@ def create_app(
         payload["previous_generated_at"] = _previous_generated_at(plan, plan_path)
         if verdict is not None:
             payload["verify_now"] = verdict
-        # The maintainer, 2026-10-09: a build note about OH L+R's sockets stayed
-        # after he had moved channels on the input list -- true of the
+        # A build note about OH L+R's sockets stayed
+        # after channels were moved on the input list -- true of the
         # plan as built, no longer of the show. The build's and the
         # critic's notes are not asked again (a model call), so when the
         # plan is older than its inputs each is marked `stale`: about the
-        # plan as built. Verify's are fresh and are not marked. Issue
-        # #495: the dock's verdict says so ONCE ("the build's and the
+        # plan as built. Verify's are fresh and are not marked. The dock's verdict says so ONCE ("the build's and the
         # critic's notes are as built"); the 25-word sentence that was
         # appended to every one of them is gone.
         if fresh is not None:
@@ -5537,9 +5647,9 @@ def create_app(
                 return JSONResponse({"error": str(exc)}, status_code=400)
 
         if confirmed:
-            # A full build rewrites the desk, so any amend preview taken
+            # A full build rewrites the desk, so any patch preview taken
             # before it no longer describes it.
-            app.state.amend_reviewed = None
+            app.state.patch_reviewed = None
         # The page has to read back the records it is about to draw: a
         # real apply's is the new entry in the bundle's journals/, a
         # preview's a scratch file this server deletes once read
@@ -5624,12 +5734,6 @@ def create_app(
         # same shape `GET /api/build/status` answers with plus `result`.
         return apply_run.status()
 
-    # ---- Amend, inside Apply (mockup version H phase 5) ------
-    # `atoo amend --show DIR` behind the same buttons, the same one
-    # arming checkbox and the same runner as Apply -- see `AmendRunRequest`.
-    # The review (stages 1-3) is the command's own `--review-json`; this
-    # file renders it and decides nothing about it.
-
     def _console_argv() -> "list[str] | JSONResponse":
         defaults = app.state.console_defaults or {}
         address = (defaults.get("address") or "").strip()
@@ -5642,234 +5746,26 @@ def create_app(
             argv += ["--timeout", str(defaults["timeout"])]
         return argv
 
-    def _amend_key(show, amended: Path, allow: list[str],
-                   console: str = "") -> "tuple | None":
-        """What a preview reviewed, so a write can be refused when it is
-        not the same thing. The two plan files by path, mtime AND content
-        hash -- a rebuild or an edited plan.json after the preview is a
-        different amendment -- and the strips opened by hand.
-
-        The hash is the, from when a confirmed amend REPLACED
-        plan.json. Only a build writes it, but an undo of an
-        amend recorded in between still puts a plan.json back, and a rebuild
-        under a review is a different starting point for a desk this bundle
-        has not written to -- so the hash stays. mtime alone is only as fine as
-        the filesystem keeps it (a second, on HFS+), and a review armed for
-        the plan before an amend must never arm a write against the plan
-        after it.
-
-        And the console, as `address:port` (the maintainer, 2026-09-24: the bar's
-        address is editable, so one plan can go to a primary and a backup).
-        A review is a read of ONE desk's strips; armed for desk A, it must
-        never arm a write to desk B, whose strips nobody has read.
-
-        And the journal stack's entry ids: `amend --show` compares against
-        the plan the desk's own newest write left on it (per-desk journals),
-        so an apply, amend or undo recorded after the review -- from this
-        page or a terminal -- can change the applied plan with plan.json
-        untouched."""
-        import hashlib
-
-        from atoo import journal_stack
-
-        try:
-            stack = tuple(e.id for e in journal_stack.entries(show.directory))
-            return (str(show.directory), str(amended), amended.stat().st_mtime_ns,
-                    hashlib.sha256(amended.read_bytes()).hexdigest(),
-                    show.plan.stat().st_mtime_ns,
-                    hashlib.sha256(show.plan.read_bytes()).hexdigest(),
-                    tuple(sorted(allow)), console, stack)
-        except (OSError, journal_stack.JournalStackError):
-            return None
-
     def _review_id(key: "tuple | None") -> "str | None":
-        """A short name for one `_amend_key`: what a writable preview's
-        review carries as `review_id`, and what a confirmed amend's
+        """A short name for one `_patch_key`: what a writable preview's
+        review carries as `review_id`, and what a confirmed write's
         `expected_review_id` must equal."""
         if key is None:
             return None
         return hashlib.sha256(repr(key).encode()).hexdigest()[:16]
 
-    @app.post("/api/amend/run")
-    def api_amend_run(req: AmendRunRequest, request: Request):
-        # A console write, so `_setup_only`'s -- which also
-        # covers `amended_plan`, a path the request names.
-        refusal = _setup_only(request)
-        if refusal is not None:
-            return refusal
-        with app.state.console_lock:
-            return _amend_run_locked(req)
-
-    def _amend_run_locked(req: AmendRunRequest):
-        """Preview, or -- armed and after a clean preview of exactly this
-        amendment -- write. Every refusal here is said before the desk is
-        contacted; everything after is `atoo amend`'s own to report,
-        including its blocked and collision refusals, which are the
-        command's and are not repeated here."""
-        import shutil
-        import tempfile
-
-        if req.confirm and _on_demo():
-            return _demo_write_refusal()     # first, armed or not
-        if apply_run.running:
-            return JSONResponse({"error": f"a {apply_run.kind} is already running -- "
-                                          "one write at a time from this page"},
-                                status_code=409)
-        if req.confirm and not req.arm:
-            # FR-X.2, and the same checkbox Apply's guard reads.
-            return JSONResponse(
-                {"error": 'not armed -- tick "Arm" (step 3, beside the write button) first. That checkbox '
-                          "is `--confirm`, and nothing is written without it."},
-                status_code=400,
-            )
-        show = app.state.bundle
-        if _on_demo():
-            # The Demo previews a typed change, not a rebuild --
-            # a rebuild lives in the show's folder, and the Demo show's is
-            # read-only, so it has none.
-            return JSONResponse(
-                {"error": "the Demo show has no rebuilt plan, and cannot be given one (it is "
-                          "read-only). In the Demo, Patch previews a typed change: choose "
-                          "Type a change.", "demo": True},
-                status_code=400,
-            )
-        if show is None:
-            return JSONResponse(
-                {"error": "no show bundle open -- amend works from the bundle's applied "
-                          "plan.json"},
-                status_code=400,
-            )
-        if not show.plan.is_file():
-            return JSONResponse(
-                {"error": f"{show.directory.name or show.directory}/{bundle.PLAN} does not "
-                          "exist -- there is no applied plan to amend. A show that is not "
-                          "on the desk yet is a full build."},
-                status_code=400,
-            )
-        amended = Path(req.amended_plan or "rebuilt.plan.json").expanduser()
-        if not amended.is_absolute():
-            amended = show.directory / amended
-        if not amended.is_file():
-            return JSONResponse(
-                {"error": f"no rebuild at {amended} -- build the show again with tonight's "
-                          f"change into it (`atoo build --show {show.directory} --out "
-                          f"{show.directory / 'rebuilt.plan.json'}`), or name the file"},
-                status_code=400,
-            )
-        if amended.resolve() == show.plan.resolve():
-            return JSONResponse(
-                {"error": f"{amended.name} is the APPLIED plan -- amend needs the rebuild "
-                          "beside it, not the plan that is already on the desk"},
-                status_code=400,
-            )
-        allow = [a.strip() for a in req.allow_strips if a.strip()]
-        for label in allow:
-            if not _STRIP_LABEL_RE.match(label):
-                return JSONResponse(
-                    {"error": f"--allow-strip {label!r}: expected a strip label like "
-                              "'ch:20' or 'aux:3'"},
-                    status_code=400,
-                )
-        console_argv = _console_argv()
-        if isinstance(console_argv, JSONResponse):
-            return console_argv
-
-        confirmed = bool(req.confirm and req.arm)
-        stale = (_stale_page(req.expected_console, confirmed)
-                 or _stale_bundle(req.expected_bundle, show, confirmed)
-                 or _build_in_flight(confirmed))
-        if stale is not None:
-            return stale
-        key = _amend_key(show, amended, allow, _console_label(app.state.console_defaults))
-        if confirmed and (key is None or key != app.state.amend_reviewed):
-            # Stage 3 is not optional. The write is the amendment the
-            # screen has shown -- same rebuild, same applied plan, same
-            # strips opened by hand -- or it is nothing. The command
-            # re-reads the desk and recomputes the delta on the write
-            # anyway; this makes sure a person read one first.
-            return JSONResponse(
-                {"error": "preview this amendment first -- the write is only armed for "
-                          "the exact amendment the last preview reviewed (same rebuild, "
-                          "same applied plan, same --allow-strip, same console), and that "
-                          "preview has to have found something to write and nothing "
-                          "refused"},
-                status_code=409,
-            )
-        if confirmed and (req.expected_review_id or "").strip() != _review_id(key):
-            # The server arms ONE review, for the whole process. It is this
-            # amendment -- but the review drawn on the page that pressed the
-            # button may be an older one: another tab previewed a rebuild made
-            # since, and this page never redrew.
-            return _refuse_stale(
-                "the review on this page is not the one the write is armed for -- "
-                + ("this request does not name one (`expected_review_id`)"
-                   if not (req.expected_review_id or "").strip()
-                   else "a later preview (from another tab, or after a rebuild) replaced it")
-                + ". Nothing was written -- preview the amendment again, read it, and arm "
-                "the write again.", "review")
-
-        scratch = tempfile.mkdtemp(prefix="atoo-amend-")
-        review_path = Path(scratch) / "review.json"
-        run_journal = _RunJournal(show, "amend", confirmed, scratch)
-
-        argv = ["amend", "--show", str(show.directory), f"--amended-plan={amended}",
-                *console_argv, *run_journal.argv,
-                "--review-json", str(review_path)]
-        argv += [f"--allow-strip={label}" for label in allow]
-        if confirmed:
-            argv.append("--confirm")
-            # One preview arms one write. The desk has changed under it
-            # the moment this runs, and a second write is a second review.
-            app.state.amend_reviewed = None
-
-        address = console_argv[1]
-
-        def finish(code: int) -> list[dict]:
-            try:
-                try:
-                    review = json.loads(review_path.read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    review = None
-                journal_path, journal = run_journal.read()
-            finally:
-                shutil.rmtree(scratch, ignore_errors=True)
-            if review is not None:
-                review["withheld_groups"] = _withheld_groups(review.get("withheld") or [])
-            if (not confirmed and code == 0 and review is not None
-                    and not review.get("blocked") and not review.get("collisions")
-                    and review.get("to_write")):
-                app.state.amend_reviewed = key
-                # What this page sends back as `expected_review_id`.
-                review["review_id"] = _review_id(key)
-            # Complete before it is published, never touched after: a status poll may be serializing it already.
-            apply_run.publish(review=review)
-            payload = None
-            if journal is not None:
-                payload = _apply_payload(
-                    journal, journal_path if confirmed else None,
-                    _apply_abort_reason(apply_run.status()["log"]))
-            apply_run.publish(result=payload)
-            return _amend_findings(review, payload, address)
-
-        if not apply_run.start(argv, finish, kind="amend", preview=not confirmed,
-                               on=_console_label(app.state.console_defaults)):
-            shutil.rmtree(scratch, ignore_errors=True)
-            return JSONResponse({"error": f"a {apply_run.kind} is already running -- "
-                                          "one write at a time from this page"},
-                                status_code=409)
-        return apply_run.status()
-
     # ---- Patch: a typed change ------------------------------
     # `atoo patch --show DIR` behind the same buttons, the same one
     # arming checkbox and the same runner -- see `PatchRunRequest`. The
-    # review is the command's own `--review-json`, exactly as for an amend;
-    # the one thing this adds is keeping the change set a preview compiled,
+    # review is the command's own `--review-json`; the one thing this adds is keeping the change set a preview compiled,
     # so the write is that change set and not a second model call's.
 
     def _patch_key(show, text: str, change_set: "dict | None", allow: list[str],
                    console: str = "") -> "tuple | None":
-        """What a patch preview reviewed: `_amend_key`'s plan, stack, strips
-        and console, plus the change text and the compiled change set."""
+        """What a patch preview reviewed: the plan on the desk, the journal
+        stack, the strips opened by hand and the console, plus the change
+        text and the compiled change set. A write is armed only for a key
+        equal to the last clean preview's."""
         import hashlib
 
         from atoo import journal_stack
@@ -5963,7 +5859,7 @@ def create_app(
         change_set = app.state.patch_change_set if confirmed else None
         key = _patch_key(show, text, change_set, allow, console_label)
         if confirmed and (change_set is None or key is None
-                          or key != app.state.amend_reviewed):
+                          or key != app.state.patch_reviewed):
             return JSONResponse(
                 {"error": "preview this change first -- the write is only armed for the "
                           "exact change the last preview reviewed (same text, same plan on "
@@ -6004,7 +5900,7 @@ def create_app(
             set_path.write_text(json.dumps(change_set, indent=2), encoding="utf-8")
             argv += ["--change-set", str(set_path), "--confirm"]
             # One preview arms one write.
-            app.state.amend_reviewed = None
+            app.state.patch_reviewed = None
             app.state.patch_change_set = None
 
         address = console_argv[1]
@@ -6029,7 +5925,7 @@ def create_app(
                     and compiled is not None and not review.get("blocked")
                     and not review.get("collisions") and review.get("to_write")):
                 reviewed = _patch_key(show, text, compiled, allow, console_label)
-                app.state.amend_reviewed = reviewed
+                app.state.patch_reviewed = reviewed
                 app.state.patch_change_set = compiled
                 review["review_id"] = _review_id(reviewed)
             # Complete before it is published, never touched after: a status poll may be serializing it already.
@@ -6040,8 +5936,8 @@ def create_app(
                     journal, journal_path if confirmed else None,
                     _apply_abort_reason(apply_run.status()["log"]))
             apply_run.publish(result=payload)
-            return _amend_findings(review, payload, DEMO_CONSOLE_LABEL if demo else address,
-                                   kind="patch")
+            return _patch_findings(review, payload,
+                                   DEMO_CONSOLE_LABEL if demo else address)
 
         if not apply_run.start(argv, finish, kind="patch", preview=not confirmed, on=on):
             shutil.rmtree(scratch, ignore_errors=True)
@@ -6208,13 +6104,34 @@ def create_app(
                     "something was written or undone since, from another tab or a terminal. "
                     "Nothing was written -- reload the journal stack, read it, and arm the "
                     "undo again.", "undo")
-        argv = ["undo", "--show", str(show.directory), *console_argv]
+        import shutil
+        import tempfile
+
+        scratch = tempfile.mkdtemp(prefix="atoo-undo-")
+        result_path = Path(scratch) / "undo.json"
+        argv = ["undo", "--show", str(show.directory), *console_argv,
+                "--result-json", str(result_path)]
         if confirmed:
             argv.append("--confirm")
-            app.state.amend_reviewed = None
-        if not apply_run.start(argv, lambda code: [], kind="undo",
+            app.state.patch_reviewed = None
+
+        def finish(code: int) -> list[dict]:
+            try:
+                try:
+                    data = json.loads(result_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    data = None
+            finally:
+                shutil.rmtree(scratch, ignore_errors=True)
+            payload = _undo_payload(data, show.directory) if data is not None else None
+            # Complete before it is published, never touched after.
+            apply_run.publish(result={"undo": payload} if payload is not None else None)
+            return _undo_findings(payload)
+
+        if not apply_run.start(argv, finish, kind="undo",
                                on=_console_label(app.state.console_defaults),
                                preview=not confirmed):
+            shutil.rmtree(scratch, ignore_errors=True)
             return JSONResponse({"error": f"a {apply_run.kind} is already running -- "
                                           "one write at a time from this page"},
                                 status_code=409)
@@ -6229,7 +6146,7 @@ def create_app(
         # has to ask for a console cold.
         #
         # `atoo.console.ping` is the same three steps `cli._open_console`
-        # performs (identity, the issue-#82 socket-error check, the model
+        # performs (identity, the issue-an earlier change socket-error check, the model
         # the desk states for itself), as a value rather than printed
         # lines; see its own comment for why the CLI cannot simply call it
         # yet.
@@ -6263,7 +6180,7 @@ def create_app(
         port = req.port if req.port is not None else defaults.get("port") or 2223
         timeout = req.timeout if req.timeout is not None else defaults.get("timeout") or 1.0
 
-        # `address_source` travels with the answer for #137's reason: the
+        # `address_source` travels with the answer: the
         # page must be able to say an address nobody typed came from
         # somewhere. A typed override has no provenance to show, so it
         # reports None rather than inheriting the seed's.
@@ -6278,7 +6195,7 @@ def create_app(
                                           "identity": list(result.identity)}
         return {**result.to_dict(), "address_source": source}
 
-    # ---- The bundle bar's console (the maintainer, 2026-09-24) -------------------
+    # ---- The bundle bar's console -------------------
 
     @app.get("/api/console")
     def api_console():
@@ -6291,11 +6208,11 @@ def create_app(
 
     @app.post("/api/console")
     def api_console_set(req: ConsoleSetRequest):
-        """Change the one console -- Ping, Apply, Amend, Undo and Watch all
+        """Change the one console -- Ping, Apply, Patch, Undo and Watch all
         use it -- without restarting `atoo ui`.
 
         **Refused (409) while any write is running.** One runner,
-        `apply_run`, carries apply, amend and undo, and a write must never
+        `apply_run`, carries apply, patch and undo, and a write must never
         change desks part way through: the command has the address in its
         argv already, but the page would name the new desk beside a run
         still landing on the old one, and the journal it records would sit
@@ -6316,7 +6233,7 @@ def create_app(
         force are kept beside it, so choosing an address again starts from
         them.
 
-        **Demo is the demo show** (the maintainer 2026-10-01): `demo`
+        **Demo is the demo show** (2026-10-01): `demo`
         also opens the packaged, read-only demo show (`DEMO_SHOW_DIR`), as
         one action, and an address chosen while it is open leaves it --
         the show that was open before Demo comes back (or none, if there
@@ -6494,7 +6411,7 @@ def create_app(
         # everything the operator just removed in this very editor. The
         # table round-trips the per-row `source` key on its own (watch.js
         # copies whole condition objects), but a top-level key is invisible
-        # to it, which is exactly the blind spot CLAUDE.md names.
+        # to it, which is exactly the blind spot a Python test cannot see.
         try:
             previous = json.loads(Path(req.path).read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -6580,7 +6497,8 @@ def create_app(
     def _with_plan_rules(rules: list[AuditRule]) -> list[AuditRule]:
         """`rules` bound to the open bundle's plan (`audit.with_plan_rules`):
         L002 quiet on a fader the plan puts at the floor,
-        then CV015, CV016 and CV017. `rules` as they are without a bundle or a plan."""
+        then CV015, CV016 and CV017, and the sends and routes against the plan (CV006,
+        CV007, CV018). `rules` as they are without a bundle or a plan."""
         from atoo.audit import with_plan_rules
 
         show = app.state.bundle
@@ -6621,8 +6539,8 @@ def create_app(
             rules = DEFAULT_RULES + build_watch_rules(conditions)
             start_names = start_name_addresses(conditions)
         # The open show's plan: an FX bus's effect (CV015),
-        # a channel cut off from every planned route (CV016, #608), a
-        # mute the plan does not have (CV017, #609), and L002 quiet
+        # a channel cut off from every planned route (CV016), a
+        # mute the plan does not have (CV017), and L002 quiet
         # on a fader the plan itself puts at the floor.
         rules = _with_plan_rules(rules if rules is not None else DEFAULT_RULES)
 
@@ -6641,13 +6559,13 @@ def create_app(
                 status_code=400)
         if req.source == "console" and not req.console and bar_is_demo:
             session.start(loop, demo_provider_factory, req.interval, DEMO_CONSOLE_LABEL,
-                          rules=rules)
+                          rules=rules, virtual_soundcheck=req.virtual_soundcheck)
             session.watch_path = req.watch_conditions_path or None
             return session.status()
         if req.source == "console":
             # The bundle bar's console, like every other desk-facing
-            # endpoint here -- the page sends none (the maintainer, 2026-09-24:
-            # one console field, in the bar). A `console` in the request
+            # endpoint here -- the page sends none
+            # (one console field, in the bar). A `console` in the request
             # is a scripted client's override and brings its own port and
             # timeout with it.
             if not req.console:
@@ -6701,7 +6619,8 @@ def create_app(
 
             window = window_note()
             session.start(loop, factory, req.interval, f"{req.console}:{req.port}", rules=rules,
-                          notes=[window] if window is not None else None)
+                          notes=[window] if window is not None else None,
+                          virtual_soundcheck=req.virtual_soundcheck)
             session.watch_path = req.watch_conditions_path or None
             return session.status()
         return JSONResponse({"error": f"unknown source {req.source!r}"}, status_code=400)
@@ -6709,6 +6628,17 @@ def create_app(
     @app.post("/api/watch/stop")
     def api_stop():
         session.stop()
+        return session.status()
+
+    @app.post("/api/watch/virtual-soundcheck")
+    def api_virtual_soundcheck(req: VirtualSoundcheckRequest):
+        # The Virtual soundcheck switch, changed while a watch runs. Before
+        # Start it rides the Start request instead, so a press with no
+        # watch running changes nothing and says so.
+        if not session.set_virtual_soundcheck(req.on):
+            return JSONResponse(
+                {"error": "no watch is running -- Virtual soundcheck is chosen when you start "
+                          "watching"}, status_code=409)
         return session.status()
 
     @app.websocket("/ws/watch")

@@ -1,4 +1,4 @@
-"""An earlier change, the last slice of #81: a build into a show bundle also drafts
+"""An earlier change, the last slice: a build into a show bundle also drafts
 that bundle's `watch.json`.
 
 Two halves, tested separately because they fail for different reasons:
@@ -118,7 +118,7 @@ def test_overlap_detection_matches_channel_names_case_insensitively():
     """Channel names resolve case-insensitively at evaluation time
     (_resolve_channel_base), so "kick" and "Kick" are one target."""
     existing = {"watch_conditions": [cond("mine", "kick")]}
-    _, report = merge_drafted_conditions(existing, [cond("theirs", "KICK")])
+    _, report = merge_drafted_conditions(existing, [cond("theirs", "KICK", value=False)])
     assert report.overlaps == (("theirs", "mine"),)
 
 
@@ -327,7 +327,7 @@ def test_an_unreadable_watchlist_is_refused_rather_than_overwritten(
 @pytest.mark.parametrize("drafted", [None, [], [cond("Kick")]])
 def test_drafting_never_changes_the_exit_code_of_a_good_build(
         drafted, stub_build, bundle_dir, monkeypatch):
-    """#91's first review criterion. The plan is the deliverable; the
+    """The first review criterion. The plan is the deliverable; the
     watchlist is a convenience and must never cost a build."""
     stub_build("touringband")
     _stub_watchlist(monkeypatch, drafted)
@@ -355,7 +355,7 @@ def test_a_build_with_no_bundle_drafts_nothing(stub_build, tmp_path, monkeypatch
 
 
 def test_saving_from_the_ui_preserves_the_drafted_bookkeeping(tmp_path):
-    """`CLAUDE.md`'s browser blind spot, in its exact shape. The editor
+    """The browser blind spot, in its exact shape. The editor
     table renders one row per condition and posts those rows back, so a
     TOP-LEVEL key is invisible to it. Dropping `drafted` on save would
     silently undo every deletion: the operator removes a drafted condition

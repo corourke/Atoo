@@ -145,7 +145,7 @@ def test_accepts_lowercase_booleans():
 
 @pytest.mark.parametrize("token", ["LCL", "SC", "USB", "CRD", "MOD", "AES", "PLAY", "AUX", "USR"])
 def test_every_socket_group_parses_by_its_own_token(token):
-    # Found via #93: the alias table held only FRIENDLY names, so CRD,
+    # Found: the alias table held only FRIENDLY names, so CRD,
     # MOD, AUX and USR -- the tokens the hardware, console_facts and the
     # engineer all use -- were silently refused by the socket column.
     # "CRD 64" has to mean CRD socket 64.
@@ -181,7 +181,7 @@ def test_format_socket_round_trips_through_parse_socket_spec():
 def test_sd_card_does_not_parse_as_the_expansion_card():
     # The bug this pins, found reviewing an earlier change: `"sdcard": "CRD"` meant
     # an input list reading "SD card 3" was patched to socket 3 of the
-    # EXPANSION card. The maintainer, 2026-09-20: "CRD is the expansion
+    # EXPANSION card. "CRD is the expansion
     # card, not the SD card. The SD card is used by WING LIVE." An earlier change
     # corrected `console_facts` and the reference doc and left this table
     # alone, so the wrong patch survived the fix to its own root cause.
@@ -200,7 +200,7 @@ def test_the_expansion_card_still_parses_both_ways():
 
 
 def test_dante_does_not_parse_as_either_bay():
-    # #99, settled 2026-09-21. Dante is sold BOTH ways: as the W-DANTE
+    # An earlier change, settled 2026-09-21. Dante is sold BOTH ways: as the W-DANTE
     # extension card, which is `CRD`, and as an internal Dante module,
     # which is `MOD` (PDF p.256; `/cards.$type` has WDANTE, and
     # `/$syscfg.opt_mod` has DANTE). So "Dante 3" names a signal on one
@@ -221,7 +221,7 @@ def test_every_alias_targets_a_group_the_console_actually_has():
     # The structural half of the same lesson. Two alias tables describe
     # the socket vocabulary -- `console_facts.GROUP_ALIASES` (a label
     # rendered INTO the generate prompt) and this module's
-    # `_GROUP_ALIASES` (a word read FROM what the user wrote) -- and #99
+    # `_GROUP_ALIASES` (a word read FROM what the user wrote) -- and an earlier change
     # is what it looks like when one is corrected and the other is not.
     # This can't check that a friendly name names the right hardware (no
     # table in this repo knows that), but it can check that every alias

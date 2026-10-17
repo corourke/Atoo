@@ -3472,10 +3472,10 @@
     "console_model": "wing-compact",
     "conventions_stack": [
       {
-        "path": "/home/user/show/examples/conventions.md",
+        "path": "/home/user/show/conventions.md",
         "role": "conventions",
         "source": "/home/user/.atoo.config",
-        "absolute_path": "/home/user/show/examples/conventions.md",
+        "absolute_path": "/home/user/show/conventions.md",
         "bundle_relative_path": "../../../../dev/atoo/examples/conventions.md",
         "sha256": "25ab20d063a7daa341d515ee3ce33f116d30d7c00a5cc2e01c6cd83d5e41c179"
       },
@@ -3483,14 +3483,14 @@
         "path": "examples/festival/instructions.md",
         "role": "instructions",
         "source": "show bundle examples/festival",
-        "absolute_path": "/home/user/show/examples/festival/instructions.md",
+        "absolute_path": "/home/user/show/festival/instructions.md",
         "bundle_relative_path": "instructions.md",
         "sha256": "8e4aee84a5c7f357045cebabf49488c565169895c29d847e4171d7fe0142bf7d"
       }
     ],
     "input_list": {
       "path": "examples/festival/input.csv",
-      "absolute_path": "/home/user/show/examples/festival/input.csv",
+      "absolute_path": "/home/user/show/festival/input.csv",
       "bundle_relative_path": "input.csv",
       "sha256": "601b50dbbd9f4628dad34e103f11a9c7a2028eb634b0508eab0af59b6269eb83"
     },

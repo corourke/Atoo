@@ -1,7 +1,7 @@
 """The Patch screen: a typed change, inside Apply -- server and
 assets.
 
-The maintainer, 2026-09-26: *"Also the UI needs to support this workflow."* The
+*"Also the UI needs to support this workflow."* The
 Amend screen became the Patch screen: type a change, Preview change (one
 model call, with its progress), read the review, tick the one arming
 checkbox, Write the change, see it in the journal stack by its short name,
@@ -14,7 +14,7 @@ towards the guards:
 * **the write is the change set the preview compiled**, never a second
   model call's -- a model asked twice may answer differently;
 * a stale page cannot write (FR-6.11);
-* patch, amend, apply and undo share ONE runner.
+* patch, apply and undo share ONE runner.
 
 `atoo patch` runs for real, in the server's worker thread, against
 `test_webui_amend._Desk` (the frozen applied-show scenario: strips 1-19
@@ -35,49 +35,11 @@ from conftest import require_fastapi_testclient  # noqa: E402
 fastapi_testclient = require_fastapi_testclient()
 
 from atoo import cli, patch, webui  # noqa: E402
-from atoo.ai_provider import FakeProvider  # noqa: E402
 from atoo.webui import create_app  # noqa: E402
 from webui_page import armed  # noqa: E402
 from test_amend import horn  # noqa: E402
-from test_webui_amend import _Desk, _app, _bundle, _wait, _writes, desk  # noqa: E402,F401
-
-TEXT = "trumpet, trombone and tenor sax on A 21-23 for tonight, Horns DCA"
-
-
-def horns() -> dict:
-    change_set = patch.empty_change_set("Horns for tonight")
-    change_set["add"]["channels"] = [horn(20, "Trumpet", 21), horn(21, "Trombone", 22),
-                                     horn(22, "T.Sax", 23)]
-    return change_set
-
-
-@pytest.fixture
-def model(monkeypatch):
-    # Streamed, so the runner's `progress` has something to carry.
-    fake = FakeProvider(response=json.dumps(horns()), stream_chunks=2, thinking_chars=40)
-    monkeypatch.setattr(cli, "provider_from_env", lambda: fake)
-    return fake
-
-
-@pytest.fixture
-def client(tmp_path, desk, model):
-    directory = _bundle(tmp_path)
-    with fastapi_testclient.TestClient(_app(directory)) as c:
-        c.bundle_directory = directory
-        yield c
-
-
-def _preview(c, text=TEXT, **body):
-    r = c.post("/api/patch/run", json={"confirm": False, "arm": False, "change": text, **body})
-    assert r.status_code == 200, r.json()
-    status = _wait(c)
-    assert status["kind"] == "patch"
-    return status
-
-
-def _write(c, text=TEXT, **body):
-    return c.post("/api/patch/run", json=armed(c, "/api/patch/run", change=text, **body))
-
+from test_webui_amend import (TEXT, _Desk, _app, _bundle, _preview, _wait, _write,  # noqa: E402,F401
+                              _writes, client, desk, horns, model)
 
 # ======================================================================
 # Preview change
@@ -248,7 +210,7 @@ def test_a_write_recorded_on_the_stack_after_the_preview_voids_it(client, desk):
     assert r.status_code == 409
 
 
-def test_patch_and_amend_and_apply_share_one_runner(client, model, monkeypatch):
+def test_patch_and_apply_and_undo_share_one_runner(client, model, monkeypatch):
     import threading
 
     gate = threading.Event()
@@ -261,7 +223,7 @@ def test_patch_and_amend_and_apply_share_one_runner(client, model, monkeypatch):
     monkeypatch.setattr(model, "complete", slow)
     r = client.post("/api/patch/run", json={"change": TEXT})
     assert r.status_code == 200
-    for url, body in (("/api/amend/run", {}), ("/api/apply/run", {}),
+    for url, body in (("/api/apply/run", {}),
                       ("/api/undo/run", {}), ("/api/patch/run", {"change": TEXT})):
         r2 = client.post(url, json=body)
         assert r2.status_code == 409, (url, r2.json())
@@ -296,17 +258,8 @@ def test_the_apply_preflight_warns_it_would_replace_the_change(client, desk):
     assert preflight["errors"] == 0
 
 
-def test_the_rebuilt_plan_route_is_still_amend(client, desk):
-    """The page's "From a rebuilt plan" is `/api/amend/run`, unchanged."""
-    r = client.post("/api/amend/run", json={"confirm": False, "arm": False})
-    assert r.status_code == 200
-    status = _wait(client)
-    assert status["kind"] == "amend" and status["review"]["mode"] == "amend"
-    assert status["review"]["change"] is None
-
-
 # ======================================================================
-# The assets -- the Python suite cannot see the browser (CLAUDE.md)
+# The assets -- the Python suite cannot see the browser
 # ======================================================================
 
 
@@ -323,13 +276,9 @@ def test_the_page_says_patch_and_change(assets):
     # The old title went; the four steps say it.
     assert "Patch a show that is already on the desk" not in html
     assert "What will be written" in html
-    for element_id in ("patch-change-text", "patch-source-change", "patch-source-rebuilt",
-                       "patch-progress", "patch-change-head", "patch-timing"):
+    for element_id in ("patch-change-text", "patch-progress", "patch-change-head",
+                       "patch-timing"):
         assert f'id="{element_id}"' in html, element_id
-    assert 'data-patch-only="change"' in html and 'data-patch-only="rebuilt"' in html
-    # The rebuilt-plan route keeps its field; empty means rebuilt.plan.json.
-    rebuilt = html[html.index('data-patch-only="rebuilt"'):]
-    assert 'id="amend-rebuilt"' in rebuilt[:rebuilt.index("</div>")]
 
 
 def test_the_change_box_is_not_an_arming_control(assets):
@@ -471,7 +420,7 @@ def test_a_status_poll_never_races_the_preview_finishing(client, monkeypatch):
 def test_a_preview_takes_presets_from_the_library_the_ui_was_given(tmp_path, desk, model):
     """`ui --presets DIR` reaches a patch as it reaches a build: a horn
     whose change names the Trumpet preset carries that preset's values
-    into the review (the maintainer's desk test 13, 2026-10-13)."""
+    into the review."""
     from pathlib import Path
 
     from test_webui_amend import CONSOLE
@@ -488,3 +437,28 @@ def test_a_preview_takes_presets_from_the_library_the_ui_was_given(tmp_path, des
     assert status["exit_code"] == 0, status["log"]
     assert any("the preset 'Trumpet' (Trumpet.chn) puts" in i
                for i in status["review"]["infos"]), status["review"]["infos"]
+
+
+# ======================================================================
+# A change states the change, never when or why it is wanted
+# ======================================================================
+
+
+def test_nothing_a_change_says_or_is_told_to_say_assumes_an_occasion(assets):
+    """The change compiler's prompt names a change by what it does, and
+    tells the model not to state or imply when or why it is wanted; the
+    Patch screen's copy and the commands' help carry no occasion either. The
+    browser half reads the served assets, which the Python suite otherwise
+    cannot see."""
+    from pathlib import Path
+
+    prompt = (Path(webui.__file__).parent / "prompts" / "change_compile.md").read_text()
+    assert "tonight" not in prompt.lower()
+    assert "Do not state or imply when or why the change is wanted" in " ".join(prompt.split())
+    for name in ("shell.html", "apply.js", "amend.js", "setup.js", "shell.js"):
+        text = assets.get(f"/static/{name}").text
+        assert "tonight" not in text.lower(), name
+    assert "tonight" not in assets.get("/").text.lower()
+    _parser, commands = cli.build_parser()
+    for command in ("patch", "amend"):
+        assert "tonight" not in commands[command].format_help().lower(), command

@@ -1,12 +1,12 @@
 """Which conventions file a plan was built from, recorded so it can be
 found again.
 
-The maintainer, 2026-09-23: *"A generated plan file should include a relative
+A generated plan file includes a relative
 (to the show bundle directory) file name reference to the conventions
-file that was incorporated in the build such that it can be loaded by
-the UI when a show bundle is loaded."*
+file that was incorporated in the build, such that it can be loaded by
+the UI when a show bundle is loaded.
 
-`atoo build` has recorded `meta.conventions_stack` since #90, but
+`atoo build` has recorded `meta.conventions_stack`, but
 each layer's `path` was whatever string was typed -- cwd-relative or
 absolute -- so it resolved from nowhere in particular, and nothing read
 it back. This module adds three keys to every layer, beside the three
@@ -29,7 +29,7 @@ The same record is what `webui._build_payload` puts on its stack
 entries, so the page and a built plan stay key for key.
 
 Old plans carry none of the three. `recorded_conventions` returns None
-for them, and the UI opens them exactly as it did before #236 -- the
+for them, and the UI opens them exactly as it did before -- the
 bare `path` of an old plan is not trusted, because it was relative to
 a working directory nobody recorded.
 """
@@ -68,8 +68,8 @@ def layer_record(path: "str | Path", bundle_dir: "str | Path | None") -> dict:
 def recorded_conventions(plan: object) -> dict | None:
     """The plan's recorded house-conventions layer, or None.
 
-    None for anything that is not a plan with a #236 record: no `meta`,
-    no `conventions_stack`, or a stack entry that predates #236 (no
+    None for anything that is not a plan with a recorded layer: no `meta`,
+    no `conventions_stack`, or a stack entry that predates the record (no
     `absolute_path` and no `bundle_relative_path`).
     """
     if not isinstance(plan, dict):
