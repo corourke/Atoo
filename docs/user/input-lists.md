@@ -387,7 +387,10 @@ wherever it is used. The two useful moments:
   stated socket matches what the plan patched, and every stated preset
   is the one the plan names. Without `--input`, `verify`
   says out loud that it checked none of that
-  (`reconcile.not-checked`) rather than passing quietly.
+  (`reconcile.not-checked`) rather than passing quietly. `atoo patch`
+  and `atoo amend` with `--show` read the show's `input.csv` for the
+  same reason; a typed change is held to it more loosely than a rebuild
+  (see [Patch](patch.md)).
 - **`atoo ui`**, Build step 02, shows the list as an editable
   table. Save rewrites only the rows you changed and will not write over
   an edit made in another program since the page read the file. Name,

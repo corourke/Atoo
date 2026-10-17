@@ -121,9 +121,8 @@ A patch writes only what changed, and moves nothing else.
 
 3. Press **Preview**, and read what it will write: three new channels
    on free strips and a new **Horns** bus, with nothing already on the
-   desk moving. The pre-flight shows one warning,
-   `reconcile.not-checked`: a patch is not checked against the input
-   list. It does not block the write.
+   desk moving. The pre-flight reads the copy's `input.csv`: it shows no
+   findings, and an INFO line says what the list was checked against.
 4. Tick **Arm**, and press **Write changes to console**.
 
 [Patch a show that is already on the desk](patch-a-show.md) explains

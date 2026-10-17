@@ -105,10 +105,22 @@ Change: Add Trumpet, Sax and Trombone on LCL 21-23
   INFO bus 'Horns' (index 8) was judged free from the applied plan alone -- the occupancy read covers strips, not busses
 
 379 address(es) will be written; 1625 belonging to objects this amend does not own will NOT be.
+  INFO input.csv: 16 of its 16 row(s) are used by the changed plan and were checked as a full build checks them (stated sockets and presets, phantom power against the microphone); 4 channel(s) of the changed plan are not on it (Music, Trumpet, Sax, Trombone) -- added by this change, an earlier one or the conventions -- and are taken as they stand, not called invented. A row the plan does not use is not called dropped: a change does not rebuild the show
 
-Pre-flight verify of the changed plan against the WING Compact the plan is for (reviewed offline: no desk was asked): no errors, 1 warning(s) (reconcile.not-checked) -- warnings do not block.
+Pre-flight verify of the changed plan against the WING Compact the plan is for (reviewed offline: no desk was asked): no findings.
   ...
 ```
+
+The pre-flight reads the show's `input.csv`, so the check that every
+input became a channel, that phantom power is safe for the microphones
+and that the list's stated sockets and presets match runs on the changed
+plan, and the INFO line says what it was checked against. A change is
+not a rebuild, so it is held to the list differently from a full build:
+the channels it adds (and any an earlier change added) are not on the list
+and are not called invented, a row the plan has no channel for is not
+called dropped, and a socket the change states for a channel stands over
+the one the list states. A show with no `input.csv` still gets the
+`reconcile.not-checked` warning.
 
 The run ends by saying how long the review took, and that no console was
 contacted.
@@ -242,11 +254,20 @@ the model:
   rebuild.
 - **A running strip's 48V and mic model can be set; which input it is
   cannot.** *"48V on the snare"* and *"the vocal mic is an SM58"* are edits
-  of the strip's `source.phantom` and `source.model` (and `source.type`,
-  and `source.pair_phantom` for the second half of a stereo pair). The
-  source's input, the second row of a pair and whether it is stereo say
+  of the strip's `source.phantom` and `source.model` (and `source.type`).
+  The source's input, the second row of a pair and whether it is stereo say
   which source the strip is, so a change that sets them is refused: drop
   the channel and add the new source instead.
+- **A stereo channel's 48V switches on both sockets or neither.** The desk
+  does not take one side of a stereo channel on its own, so *"48V on the
+  keys"* sets `source.phantom` and the review marks both sockets under
+  `SWITCHES 48V LIVE`. When the plan states a different value for the
+  second socket (a pair built with a condenser and a dynamic), the
+  second follows and an INFO line says so. A change that would switch only
+  the second socket (`source.pair_phantom` alone), or leave the two
+  different, is refused, and the refusal names `source.phantom`; nothing is
+  written. A pair the change does not touch the 48V of stays as it was
+  built.
 - **Switching 48V on a running strip is live**, so it is said first and
   on its own, beside a repatch (from Atoo's test desk and a stubbed
   model):
