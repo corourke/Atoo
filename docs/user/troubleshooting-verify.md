@@ -196,9 +196,9 @@ everything else the plan states and without the preset's values, which is
 a working channel rather than a missing one.
 
 **The name it is looking for is inside the `.chn` file, not the
-filename.** The starter's `Kick.chn` answers to `Kick In`,
-because that is the label the preset carries. A plan naming the filename
-will not match.
+filename.** A file renamed on disk keeps the name it was saved with:
+the starter's preset is `Kick In` because that is the label it carries.
+A plan naming only the filename will not match.
 
 The warning above names the closest names in the library, which half answers the
 question — but you should not have to provoke a warning to ask it.

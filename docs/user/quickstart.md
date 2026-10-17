@@ -21,8 +21,8 @@ the install. [`atoo init
 --demo`](change-the-demo.md#1-make-a-copy-of-the-demo-show) writes the
 smaller Demo show to `~/Documents/Atoo/demo-show/`. Run the steps
 from `~/Documents/Atoo` with `demo-show` wherever this page says
-`touringband`, and step 2 as `atoo build --show demo-show
---console-model wing-compact`. The outputs below are the touring band's,
+`touringband`, and step 2 as `atoo build --show demo-show` (the copy's
+own plan names its model, so there is no `--console-model` to pass). The outputs below are the touring band's,
 not the Demo's.
 
 **Only step 2 calls a model, and only steps 4 to 6 want a desk.** The
@@ -108,7 +108,11 @@ atoo build --console-model wing-compact \
 **`--console-model` is required and has no default.** The three WING
 models do not have the same sockets — a Compact has 24 local inputs and
 no aux jacks, a full-size WING has 8 and does. You pass it once: `build`
-records it in the plan, and `verify` and `apply` read it back out.
+records it in the plan, and `verify` and `apply` read it back out. So does
+a rebuild: `atoo build --show DIR` on a show that has been built before
+takes the model from that show's `plan.json`, says so at `INFO`, and
+accepts `--console-model` to build for a different WING. A show with no
+plan yet is refused, and the refusal names the flag.
 
 A build calls a model and takes minutes. It streams its progress, so
 silence means a stalled connection, and everything it says is also kept

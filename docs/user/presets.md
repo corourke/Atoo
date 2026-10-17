@@ -61,7 +61,7 @@ them by source, and the Demo show is built with them. This page uses it.
 
 | File | Preset name | For |
 |---|---|---|
-| `Kick.chn` | **Kick In** | kick, inside or boundary mic |
+| `Kick In.chn` | **Kick In** | kick, inside or boundary mic |
 | `Snare.chn` | Snare | snare |
 | `HiHat.chn` | HiHat | hi-hat |
 | `H Tom.chn`, `M Tom.chn`, `Fl Tom.chn` | H Tom, M Tom, Fl Tom | high, mid and floor toms |
@@ -92,7 +92,8 @@ inserts it.
 This catches everybody once. The name Atoo matches on is the
 preset's own label, saved when it was exported. The filename is only a
 fallback for a file that has none. In the starter set every file is
-named for its preset except one: `Kick.chn` holds the preset **Kick In**,
+named for its preset, but that is a habit and not the rule: rename
+`Kick In.chn` to `Kick.chn` and it still holds the preset **Kick In**,
 so a plan asks for `Kick In`, and asking for "Kick" would not find it.
 
 **The preset's name and the channel's name are separate, too.** A channel
@@ -121,7 +122,7 @@ Fl Tom       83  Fl Tom.chn
 H Tom        83  H Tom.chn
 HiHat        83  HiHat.chn
 Keys         83  Keys.chn
-Kick In      83  Kick.chn
+Kick In      83  Kick In.chn
 M Tom        83  M Tom.chn
 OH           83  OH.chn
 Perc         83  Perc.chn
@@ -222,7 +223,7 @@ atoo verify --plan tests/fixtures/preset-test.plan.json --presets starter/preset
 ```
 0 error(s), 7 warning(s), 8 note(s)
 
-  [warning] channels[Kick]: names the preset 'kick-in', which the library has (Kick.chn), but the plan carries none of its values -- it was built before presets were expanded into the plan, or without a library -- so nothing from it will be written  (preset.not-expanded)
+  [warning] channels[Kick]: names the preset 'kick-in', which the library has (Kick In.chn), but the plan carries none of its values -- it was built before presets were expanded into the plan, or without a library -- so nothing from it will be written  (preset.not-expanded)
   [warning] channels[Snare]: names the preset 'Snare Top', which is not in the library at starter/presets (20 presets) -- that strip will be built without it. Closest in the library: Snare, M Tom, H Tom, Fl Tom  (preset.unknown)
   [warning] channels[HH]: names the preset 'Kick (In)', which is not in the library at starter/presets (20 presets) -- that strip will be built without it. Closest in the library: Kick In  (preset.unknown)
   [warning] channels[Keys]: names the preset 'KEYS', which the library has (Keys.chn), but the plan carries none of its values -- it was built before presets were expanded into the plan, or without a library -- so nothing from it will be written  (preset.not-expanded)

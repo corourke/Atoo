@@ -275,6 +275,9 @@ beside whatever `--out` happened to name:
 atoo build --console-model wing-compact --show my-show --conventions conventions.md
 ```
 
+The flag is for the first build. Once the show has a `plan.json`, `atoo
+build --show my-show` takes the model from it and says so.
+
 After that the directory is one draggable thing holding the whole show.
 The build also leaves its own log in `builds/` — one file per build,
 kept even when the build fails or is stopped, the newest 5 at a time; see

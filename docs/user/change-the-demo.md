@@ -139,11 +139,16 @@ instead, see [Undoing a write](undo.md).
 The same, with the copy's path and your desk's model and address:
 
 ```bash
-atoo build --show ~/Documents/Atoo/demo-show --console-model wing-compact
+atoo build --show ~/Documents/Atoo/demo-show
 atoo apply --show ~/Documents/Atoo/demo-show --console 192.0.2.16
 atoo apply --show ~/Documents/Atoo/demo-show --console 192.0.2.16 --confirm
 atoo patch --show ~/Documents/Atoo/demo-show --console 192.0.2.16 "trumpet, sax and trombone on LCL 21-23, Band DCA"
 ```
+
+`build` takes the console model from the copy's own `plan.json`, and says
+so (`INFO console model: wing-compact, from plan.json ...`); add
+`--console-model wing-full` or `wing-rack` to build for a different
+WING.
 
 In a text editor, step 3 is clearing the `-` from the Guest Vox row's
 `order` cell in `input.csv` ([Writing an input

@@ -602,7 +602,7 @@ stable across rewordings; quote it in a bug report.
 
 | Option | What it does |
 |---|---|
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. With --show, a show that has been built before takes the model from its own plan.json and says so; this flag overrides that. |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--input` | Input list CSV path -- one band/event/venue's physical inputs. Omit together with --conventions to auto-detect the pair in the current directory instead. |
 | `--conventions` | Your conventions file (Markdown) -- standing house style, reusable across every show, like the conventions.md `atoo init` copies in. Plain English; the model reads it directly. Defaults to ~/.atoo.config's [conventions] default. A show bundle's instructions.md layers over this, it does not replace it. |
@@ -894,8 +894,8 @@ printed as the desk spelled it: that is the string to report.
 **What a preset is called is not what its file is called.** The name lives
 in the `info_text` field inside the `.chn`, because that is the label the
 engineer gave it on the desk — so `ls` does not tell you, and a
-conventions file naming the starter's `Kick` (its file is `Kick.chn`)
-finds no preset at all. It answers to `Kick In`.
+conventions file that names a preset by its filename rather than its
+saved name finds no preset at all.
 
 This is the command that tells you. See
 [Ask the library what it is called](presets.md#ask-the-library-what-it-is-called)
@@ -912,8 +912,8 @@ anything wrong with it.
 A preset's name lives in the `info_text` field INSIDE the .chn file -- it is the
 name the engineer gave it on the desk, and it is what a plan and a conventions
 file match on. It need not be the filename, nor the channel's name: the
-starter's `Kick.chn` answers to `Kick In`, and the Kick channel that uses it
-stays called Kick. So `ls` cannot answer "what is my library called", and
+starter's `Kick In.chn` holds `Kick In`, and the Kick channel that uses it
+stays called Kick; rename the file and the preset keeps its name. So `ls` cannot answer "what is my library called", and
 this can -- it opens every file to do it. Bus presets (.bus) are listed after
 the channel presets, with the effect each one inserts: a bus names one by the
 same `info_text` name.
