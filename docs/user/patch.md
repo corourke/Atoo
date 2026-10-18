@@ -116,7 +116,7 @@ input became a channel, that phantom power is safe for the microphones
 and that the list's stated sockets and presets match runs on the changed
 plan, and the INFO line says what it was checked against. A change is
 not a rebuild, so it is held to the list differently from a full build:
-the channels it adds (and any an earlier change added) are not on the list
+the channels it adds (and any that an earlier change added) are not on the list
 and are not called invented, a row the plan has no channel for is not
 called dropped, and a socket the change states for a channel stands over
 the one the list states. A show with no `input.csv` still gets the
