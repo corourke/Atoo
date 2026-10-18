@@ -404,6 +404,10 @@ any EQ value turns that strip's EQ on, the way stating a high-pass does. A band 
 strip does not have -- a channel has four numbered bands, a bus six -- is reported
 and skipped rather than written to an address the console does not answer.
 
+A full apply also disconnects every output socket on the desk's own panel that no bus,
+Main or Matrix in the plan is patched to, rather than leave it on what the desk shipped
+with or an earlier show put there; one INFO line names the sockets and undo restores them.
+
 --clean-output-sockets (opt-in -- off unless passed) additionally
 disconnects any physical output socket in the given group(s) that no bus or output in
 the plan routes anywhere to, instead of leaving whatever was already patched there.
@@ -424,7 +428,7 @@ the plan routes anywhere to, instead of leaving whatever was already patched the
 | `--journal` | Where to record every write with its prior value, enough to reverse this apply. Defaults, when --confirm is given, to a new timestamped entry in the bundle's journals/ directory, or to <plan>.apply-journal.json without --show. With --show, a confirmed run is added to the bundle's journals/ stack whatever this says, so `atoo undo --show DIR` can walk the show back one step at a time. |
 | `--raw-log` | Append every raw OSC request/reply (address, typetag, args, hex bytes) to this file. Useful when a reported mismatch needs the literal reply bytes to diagnose, not just the extracted value the journal records. |
 | `--no-init` | Do not reset the desk to its initialized state before writing the plan -- for a desk already initialized by hand. By default a full apply reads the desk and writes back, from the model's initialized capture, every setting that differs and that the plan does not set itself. |
-| `--clean-output-sockets` | Opt-in only -- OFF unless you pass this. Disconnect (`.grp = OFF`) any physical output socket in the given group(s) that no bus or output in the plan routes anywhere to, instead of leaving whatever was already patched there (e.g. from an earlier apply, a different show, or manual patching). Same 'no confirmed default' syntax as `atoo audit`'s --output-sockets: 'LCL=24,A=48'. A socket ALREADY undeclared and already disconnected costs one read and nothing else. Shown in the dry-run preview like every other write -- `--confirm` is what actually arms it, same as the rest of apply. |
+| `--clean-output-sockets` | Opt-in only -- OFF unless you pass this. Disconnect (`.grp = OFF`) any physical output socket in the given group(s) that no bus or output in the plan routes anywhere to, instead of leaving whatever was already patched there (e.g. from an earlier apply, a different show, or manual patching). A full apply already does this for the desk's own panel outputs; this is for the groups beyond them, such as a stage box's. Same 'no confirmed default' syntax as `atoo audit`'s --output-sockets: 'LCL=24,A=48'. A socket ALREADY undeclared and already disconnected costs one read and nothing else. Shown in the dry-run preview like every other write -- `--confirm` is what actually arms it, same as the rest of apply. |
 | `--no-progress` | Do not print what the run is doing while it reads and writes the console. Each long phase -- reading the desk (for the reset, or for the preview), writing (each setting is read back as it is written), reading back again what disagreed -- normally prints its name, how far it has got and the address in flight on stderr as it goes, and a line with its count and time when it ends. Without it a slow run looks like a hung one, so pass this only when something downstream is parsing stderr. |
 
 ## `atoo audit`

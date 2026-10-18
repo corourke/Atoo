@@ -189,7 +189,7 @@ writes. See [The journal](journals.md).
 | `--confirm` | actually write. Without it, nothing is written. |
 | `--journal PATH` | put the journal somewhere other than the default |
 | `--raw-log PATH` | append every raw OSC request and reply, with hex bytes. What you want when a mismatch needs diagnosing rather than describing — and worth passing on any apply you may have questions about later. |
-| `--clean-output-sockets LCL=24,A=48` | opt-in, off by default: disconnect physical output sockets in those groups that the plan routes nothing to. Without it, whatever was patched there by an earlier show stays. |
+| `--clean-output-sockets LCL=24,A=48` | opt-in, off by default: disconnect physical output sockets in those groups that the plan routes nothing to. A full apply already does this for the desk's own panel outputs (see [what apply changes](what-apply-changes.md#output-sockets-the-plan-does-not-patch-disconnected)); the flag is for the groups beyond it, such as a stage box's outputs, where whatever an earlier show patched stays unless you pass it. |
 | `--presets DIR` | Atoo's own `.chn` library. `apply` does not need it to write a preset -- `build` already put the preset's values into the plan -- and uses it only to say whether a preset changed since, or to name one the plan names and does not carry. A plan naming a preset it cannot find is a warning, never a block. |
 | `--skip-verify` | write a plan verification refused. See below. |
 | `--console-model` | check the plan for this model instead of the one recorded in it |

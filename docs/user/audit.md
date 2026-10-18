@@ -282,8 +282,10 @@ against a plan buys you over a diff against nothing.
 ```
 
 That one catches leftovers: a socket patched by last week's show that
-this plan never routes to. `atoo apply --clean-output-sockets` is
-what actually disconnects one; the audit only reports it.
+this plan never routes to. A full `atoo apply` disconnects the desk's own
+output sockets the plan does not patch, and `atoo apply
+--clean-output-sockets` reaches the groups beyond them (a stage box's
+outputs); the audit only reports it.
 
 `--plan` covers mute, fader level, DCA and mute-group membership, patch,
 bus sends, direct-to-Main routes, the trim, balance, invert and head-amp

@@ -64,6 +64,27 @@ line says which strips:
 INFO ch 24-40, aux 3-7: not in this plan, unpatched from their sources so none listens to a socket the plan uses
 ```
 
+## Output sockets the plan does not patch: disconnected
+
+A WING ships with its local outputs already patched (on a Compact, outputs
+3-8 carry busses and the Mains), and an earlier show leaves its own patches
+behind. A full apply **disconnects every output socket on the desk's own
+panel that no bus, Main or Matrix of the plan is patched to**: the
+socket's group goes to `OFF`, and nothing else about it is touched. A
+socket the plan does patch keeps what the plan wrote, and one that already
+reads `OFF` is left as it is. One INFO line says which sockets:
+
+```
+INFO output LCL 3-8: no bus or output in this plan is patched there, so each is disconnected rather than left on what the desk came with or an earlier show put there
+```
+
+Without it, the audit would call those patches leftovers, and a stereo bus
+the plan only feeds into a Main would show as patched on its left side
+only. Only the desk's own panel is covered. An AES50 stage box or a card
+has outputs only when something is fitted, and those are the plan's to
+patch; [`--clean-output-sockets`](applying.md#flags-worth-knowing) reaches
+them. [Undo](undo.md) puts each socket back as it was.
+
 ## Direct Main routes: every Main is written, OFF included
 
 A WING ships every channel and aux routed straight to **Main 1**, and
