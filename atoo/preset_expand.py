@@ -21,7 +21,7 @@ One new, optional key on a channel's `processing`:
 
     "preset_values": {
       "preset":  "Kick In",              # the preset's own name (info_text)
-      "file":    "Kick.chn",             # which file it came from
+      "file":    "Kick In.chn",          # which file it came from
       "library": "/home/me/presets",     # the library it was resolved in
       "sha256":  "…",                    # of that file's bytes, as expanded
       "leaves":  {"eq/1g": -5.5, "dyn/thr": -20.0, …},

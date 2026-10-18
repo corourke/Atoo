@@ -99,6 +99,9 @@ this change is the only new source of inputs.
                                      "stated": true}}
      "48V on the sax"               {"source.phantom": true}
      "the vocal mic is an SM58"     {"source.model": "SM58"}
+     "48V on the keys" (a stereo   {"source.phantom": true} -- it switches both
+      channel)                      sockets; never set `source.pair_phantom`
+                                    on its own, the desk does not take one side
    A list is replaced whole, so copy it from the desk plan and change only
    what was asked. NEVER set `fader` unless the change says "fader" (or
    "mute" for `fader.muted`) -- a send level is not the fader. Never set

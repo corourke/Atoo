@@ -467,7 +467,11 @@ def test_the_6pm_change_applies_cleanly_to_the_demo_rig(tmp_path, capsys):
         assert f"channel '{name}': the preset '{preset}' ({preset}.chn) puts" in text
     assert "ADDED            bus 'Horns'" in text
     assert "Horns: 'Mix Bus'" in text
-    assert "no errors" in text and "UNPLACEABLE" not in text
+    # The pre-flight reads the Demo's input list, so it has nothing to
+    # warn about either.
+    assert "of the changed plan against the WING Compact" in text
+    assert "no findings." in text and "UNPLACEABLE" not in text
+    assert "reconcile.not-checked" not in text
     assert "carries none of its values" not in text
     # The Horns bus's compressor is among the writes, and nothing loads an effect.
     written = [w["description"] for w in json.loads(review.read_text())["to_write"]]

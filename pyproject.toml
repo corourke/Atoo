@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoo"
-version = "0.2.0"
+version = "0.2.1"
 description = "Compile console conventions into a plan, apply it, prove it landed."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -82,6 +82,10 @@ atoo = ["prompts/*.md", "domain/*.md", "web/static/*", "web/demo_states/*.json",
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Test files import each other as `tests.<name>`; `tests/` has no
+# `__init__.py`, so the repository root has to be on the path for a bare
+# `pytest` (as CI runs it), not only for `python -m pytest`.
+pythonpath = ["."]
 #
 # `live_model` marks the prompt-fidelity tests (in
 # tests/test_prompt_fidelity.py), which call a REAL model and so cost real

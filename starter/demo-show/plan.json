@@ -30,7 +30,7 @@
         "invert": null,
         "preset_values": {
           "preset": "Kick In",
-          "file": "Kick.chn",
+          "file": "Kick In.chn",
           "library": "starter/presets",
           "sha256": "dde0abe953f4656db0666b8c587f6e9d0092f0e4685867530826aae0fad65858",
           "leaves": {

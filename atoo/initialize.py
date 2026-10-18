@@ -767,7 +767,7 @@ def preflight_note(plan: dict, model: str | None) -> tuple[str, str]:
     if capture is None:
         return ("apply.init-no-capture", no_capture_warning(model))
     targets, _warnings = apply_module._build_write_targets(plan, True)
-    run = {t.address for t in targets + apply_module.full_apply_targets(plan)}
+    run = {t.address for t in targets + apply_module.full_apply_targets(plan, model)}
     skipped: Counter = Counter()
     candidates = []
     for leaf in capture.leaves:

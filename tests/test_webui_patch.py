@@ -93,6 +93,23 @@ def test_a_refused_change_can_never_arm_a_write(client, desk, model):
     assert r.status_code == 409 and _writes(desk) == []
 
 
+def test_one_side_of_a_stereo_pair_cannot_arm_a_write(client, desk, model):
+    """The desk switches a stereo channel's two sockets' 48V together, so
+    the page gets the refusal, in the dock, and nothing to arm."""
+    change_set = patch.empty_change_set("Right side 48V")
+    change_set["modify"] = [{"object": "channel", "name": "Keys", "change": "as typed",
+                             "fields": {"source.pair_phantom": True}}]
+    model.response = json.dumps(patch.validate_change_set(change_set))
+    status = _preview(client)
+    assert status["exit_code"] == 2 and status["review"]["blocked"]
+    assert "review_id" not in status["review"]
+    assert [f["code"] for f in status["findings"]] == ["patch.blocked"]
+    assert "switch 48V together" in status["findings"][0]["message"]
+    r = _write(client)
+    _wait(client)
+    assert r.status_code == 409 and _writes(desk) == []
+
+
 def test_empty_text_and_no_bundle_are_refused_before_anything_runs(tmp_path, desk, model):
     directory = _bundle(tmp_path)
     with fastapi_testclient.TestClient(_app(directory)) as c:

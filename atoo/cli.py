@@ -126,7 +126,7 @@ SHOW_HELP = (
 )
 
 
-def _add_console_model_argument(ap: argparse.ArgumentParser) -> None:
+def _add_console_model_argument(ap: argparse.ArgumentParser, *, extra: str = "") -> None:
     """The socket counts that decide whether a plan is patchable
     differ between the three WING models (the Full has 8 local inputs and
     local aux jacks; the Rack and Compact have 24 local inputs and no aux
@@ -140,7 +140,27 @@ def _add_console_model_argument(ap: argparse.ArgumentParser) -> None:
         help="Which WING this plan is for. Required unless the plan already "
              "states it in meta.console_model (a plan built by Atoo does). "
              "Socket counts differ between models, so an unstated model is an "
-             "error rather than an assumption.")
+             "error rather than an assumption." + extra)
+
+
+def _console_model_of_show(show: "bundle.Bundle") -> tuple[str, str] | None:
+    """The console model a show's own plan states, and which file said so.
+
+    The current `plan.json` first; the plan a rebuild moved aside
+    (`plan.previous.json`) next, because a build that failed or was stopped
+    leaves only that one and the retry should not have to be told again.
+    None when neither exists or neither states a model.
+    """
+    for name in (bundle.PLAN, bundle.PLAN_PREVIOUS):
+        path = show.directory / name
+        try:
+            plan = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        stated = resolve_console_model(plan) if isinstance(plan, dict) else None
+        if stated:
+            return stated, name
+    return None
 
 
 def _add_show_argument(ap: argparse.ArgumentParser) -> None:
@@ -636,12 +656,26 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # silent default is how a Full's 8 local inputs become a plan patching
     # LCL 24.
     console_model = getattr(args, "console_model", None)
+    if not console_model and show is not None:
+        # A show that has been built before already says which WING it is
+        # for. Asking again is a question with a known answer; starting
+        # from it, and saying so, is the judgement an engineer would make
+        # (the flag still wins, and so does a change of desk).
+        found = _console_model_of_show(show)
+        if found is not None:
+            console_model, stated_in = found
+            print(f"INFO console model: {console_model}, from {stated_in} "
+                  f"(meta.console_model, the desk this show was last built for) -- "
+                  f"pass --console-model to build for a different WING",
+                  file=sys.stderr, flush=True)
     ctx["console_model"] = console_model
     try:
         facts.panel_for(console_model)
     except facts.UnknownConsoleModel as exc:
         print(str(exc), file=sys.stderr)
-        print("pass --console-model, e.g. --console-model wing-compact", file=sys.stderr)
+        print("pass --console-model, e.g. --console-model wing-compact"
+              + (f" ({bundle.PLAN} in this show states none to take it from)"
+                 if show is not None else ""), file=sys.stderr)
         return 1
 
     # A rebuild clears the current plan and current findings, because none of
@@ -2035,9 +2069,9 @@ def presets_cmd(args: argparse.Namespace) -> int:
     A preset's name is the `info_text` label INSIDE the `.chn` file, not
     its filename, and that is the right call: it is the name the engineer
     gave it on the desk. But it means `ls` does not tell you what your own
-    library is called -- nothing about `Kick.chn` says it answers to
-    `Kick In`, and a conventions file naming a filename that differs from
-    the saved name silently gets no preset at all.
+    library is called -- nothing about a file's name says what it answers
+    to, and a conventions file naming a filename that differs from the
+    saved name silently gets no preset at all.
 
     Bus presets (`.bus`) are listed after the channel presets,
     with the effect each inserts and the engine it was saved from.
@@ -2273,8 +2307,9 @@ def audit_cmd(args: argparse.Namespace) -> int:
                 return 1
             with console:
                 read_kwargs = _console_read_kwargs(args, plan)
-                # What the plan states about filters and EQ, for CV008: only
-                # `audit` compares them, so only it reads them.
+                # The processing leaves the plan states (trim, balance, invert,
+                # head-amp gain, filters, EQ), for CV008: only `audit`
+                # compares them, so only it reads them.
                 read_kwargs["extra"] = plan_processing_read_addresses(plan)
                 progress = _read_progress(args, read_kwargs)
                 if not read_kwargs.get("bulk"):
@@ -4211,7 +4246,18 @@ def patch_cmd(args: argparse.Namespace) -> int:
         # so a preview shows the refusal and the Patch screen never arms a
         # write it would refuse. Nothing to write is nothing to check.
         preflight = None
+        list_notes: list[str] = []
         if targets.to_write:
+            # The show's own input list, when it has one: the verify then
+            # checks what a full build checks against it, and says it did.
+            rows = None
+            if show is not None and show.has(bundle.INPUT_LIST):
+                try:
+                    rows = load_input_list(str(show.path(bundle.INPUT_LIST)))
+                except (OSError, InputListError) as exc:
+                    reason = exc.strerror if isinstance(exc, OSError) else exc
+                    list_notes.append(f"{bundle.INPUT_LIST}: couldn't be read ({reason}) -- "
+                                      "the pre-flight ran without it")
             preflight = amend_engine.preflight(
                 amendment,
                 identity_args=(getattr(args, "console_identity", None)
@@ -4219,7 +4265,12 @@ def patch_cmd(args: argparse.Namespace) -> int:
                 address=args.console if console is not None else None,
                 skip_verify=args.skip_verify,
                 presets=preset_library,
-                what="change" if mode == "patch" else "amend")
+                what="change" if mode == "patch" else "amend",
+                rows=rows, rows_name=bundle.INPUT_LIST,
+                layers=_plan_layers(amendment.effective_plan, show, args.plan))
+            list_notes = preflight.infos + list_notes
+            for info in list_notes:
+                print(f"  INFO {info}")
             _print_amend_preflight(preflight, "the changed plan" if mode == "patch"
                                    else "the amended plan")
 
@@ -4237,7 +4288,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
         # the reason it is blocked is exactly what a reader needs to see.
         review = amend_engine.review_payload(occupancy, amendment, targets)
         review["infos"] = (source_infos + compile_infos + library_choice.infos
-                           + review["infos"])
+                           + review["infos"] + list_notes)
         if empty_warning:
             review["warnings"] = [empty_warning] + review["warnings"]
         # Drawn first in the review, as a WARNING, not among the notes.
@@ -4828,7 +4879,9 @@ def _add_apply_arguments(ap: argparse.ArgumentParser) -> None:
         help="Opt-in only -- OFF unless you pass this. Disconnect (`.grp = OFF`) any "
              "physical output socket in the given group(s) that no bus or output in the plan "
              "routes anywhere to, instead of leaving whatever was already patched there (e.g. "
-             "from an earlier apply, a different show, or manual patching). "
+             "from an earlier apply, a different show, or manual patching). A full apply "
+             "already does this for the desk's own panel outputs; this is for the groups "
+             "beyond them, such as a stage box's. "
              "Same 'no confirmed default' syntax as `atoo audit`'s --output-sockets: "
              "'LCL=24,A=48'. A socket ALREADY undeclared and already disconnected costs one "
              "read and nothing else. Shown in the dry-run preview like every other write -- "
@@ -5058,9 +5111,9 @@ def _add_audit_arguments(ap: argparse.ArgumentParser) -> None:
              "--console/--state -- it works on top of whichever live state source was already "
              "selected -- and it changes the report two ways. It ADDS conventions-diff "
              "findings, comparing live state against what the plan says it should be (mute, fader "
-             "level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and a "
-             "narrow trim/balance/invert/head-amp-gain slice of processing; the filters, "
-             "the parametric EQ and the compressor are not compared yet). And "
+             "level, DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and "
+             "the trim, balance, invert, head-amp gain, high-pass, hi-cut, tilt and EQ it states; "
+             "the compressor is not compared). And "
              "it WITHHOLDS structural findings the plan is not about: one about a strip or bus the "
              "plan never mentions, unless the rule is one that matters on any desk (48V on an "
              "unpatched socket, a mix that reaches no loudspeaker, a routed strip sitting silent), "
@@ -5227,8 +5280,8 @@ PRESETS_DESCRIPTION = (
     "A preset's name lives in the `info_text` field INSIDE the .chn file -- it is the\n"
     "name the engineer gave it on the desk, and it is what a plan and a conventions\n"
     "file match on. It need not be the filename, nor the channel's name: the\n"
-    "starter's `Kick.chn` answers to `Kick In`, and the Kick channel that uses it\n"
-    "stays called Kick. So `ls` cannot answer \"what is my library called\", and\n"
+    "starter's `Kick In.chn` holds `Kick In`, and the Kick channel that uses it\n"
+    "stays called Kick; rename the file and the preset keeps its name. So `ls` cannot answer \"what is my library called\", and\n"
     "this can -- it opens every file to do it. Bus presets (.bus) are listed after\n"
     "the channel presets, with the effect each one inserts: a bus names one by the\n"
     "same `info_text` name.\n"
@@ -5955,7 +6008,9 @@ UI_DESCRIPTION = (
 
 
 def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
-    _add_console_model_argument(ap)
+    _add_console_model_argument(
+        ap, extra=" With --show, a show that has been built before takes the model "
+                  "from its own plan.json and says so; this flag overrides that.")
     _add_show_argument(ap)
     ap.add_argument(
         "--input", default=None,
@@ -6173,6 +6228,10 @@ APPLY_DESCRIPTION = (
     "any EQ value turns that strip's EQ on, the way stating a high-pass does. A band a\n"
     "strip does not have -- a channel has four numbered bands, a bus six -- is reported\n"
     "and skipped rather than written to an address the console does not answer.\n"
+    "\n"
+    "A full apply also disconnects every output socket on the desk's own panel that no bus,\n"
+    "Main or Matrix in the plan is patched to, rather than leave it on what the desk shipped\n"
+    "with or an earlier show put there; one INFO line names the sockets and undo restores them.\n"
     "\n"
     "--clean-output-sockets (opt-in -- off unless passed) additionally\n"
     "disconnects any physical output socket in the given group(s) that no bus or output in\n"

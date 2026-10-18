@@ -2278,6 +2278,16 @@ def _clean_write_targets(plan: dict, clean_output_sockets: dict[str, int]) -> li
 # `full_apply` together with a `target_filter` or `extra_targets` -- the
 # two things that mark a scoped run.
 #
+# The same full apply disconnects (`/io/out/{group}/{n}/grp` OFF, nothing
+# else) every output socket on the desk's own panel that no bus, Main or
+# Matrix of the plan is patched to (`undeclared_outputs`). The desk ships
+# with local outputs patched, the reset to initialized puts that back, and the
+# plan is the complete statement of where the desk's outputs go: leaving
+# them sends a Main or a bus to jacks the plan never mentions, and the audit
+# would call them leftovers. Only the panel; a stage box's or a card's
+# outputs exist when something is fitted, so they are the plan's to patch
+# (`--clean-output-sockets` reaches them). Announced once, at INFO.
+#
 # The same full apply sets Setup -> Audio's talkback assign
 # (`/cfg/talk/assign`, `list [OFF, CH40, AUX8]`) to the strip the plan
 # builds as the talk mic, when that strip is ch 40 or aux 8 -- the only two
@@ -2333,18 +2343,50 @@ def _strip_words(entry: dict) -> str:
 
 
 _UNBUILT_DESCRIPTION = "not in this plan, unpatched (OFF)"
+_UNDECLARED_OUTPUT_DESCRIPTION = "no bus or output in this plan is patched here, disconnected (OFF)"
 _TALK_ASSIGN_DESCRIPTION = "talkback assign"
 _NO_TALKBACK = "no talkback strip on ch 40 or aux 8 in this plan"
 
 
-def full_apply_targets(plan: dict) -> list[WriteTarget]:
+def _full_apply_model(plan: dict, model: str | None) -> str | None:
+    """The console model a full apply works to: the desk's when the caller
+    knows it, else the one the plan records. None when neither is a model
+    this tool knows the panel of."""
+    from atoo.verify_plan import resolve_console_model
+
+    resolved = resolve_console_model(plan, model)
+    return resolved if resolved in facts.CONSOLE_MODELS else None
+
+
+def undeclared_outputs(plan: dict, model: str | None) -> dict[str, list[int]]:
+    """`{"LCL": [3, 4, ..., 8]}`: the output sockets on the model's own panel
+    (`console_facts.CONSOLE_MODELS`) that no bus, Main or Matrix of the plan
+    is patched to. Only the panel: a stage box or a card has outputs only
+    when something is fitted, and those are the plan's to patch. Empty when
+    the model is unknown."""
+    model = _full_apply_model(plan, model)
+    if model is None:
+        return {}
+    declared = _declared_output_patches(plan)
+    found = {group: [n for n in range(1, count + 1) if (group, n) not in declared]
+             for group, count in facts.CONSOLE_MODELS[model]["outputs"].items() if count}
+    return {group: numbers for group, numbers in found.items() if numbers}
+
+
+def full_apply_targets(plan: dict, model: str | None = None) -> list[WriteTarget]:
     """The writes a full apply makes beyond the plan's own strips: OFF on
-    every unbuilt strip's input, and talkback's assign. See the section
-    comment above."""
+    every unbuilt strip's input, OFF on every panel output socket the plan
+    does not patch, and talkback's assign. See the section comment above.
+    `model` is the desk's console model (the plan's own is used without it)."""
     targets = [
         WriteTarget(f"/{bank}/{n}/in/conn/grp", "s", f"{bank} {n}: {_UNBUILT_DESCRIPTION}",
                     _const("OFF"), STAGE_PATCH)
         for bank, numbers in unbuilt_strips(plan).items() for n in numbers
+    ]
+    targets += [
+        WriteTarget(f"/io/out/{group}/{n}/grp", "s", f"{group} {n}: {_UNDECLARED_OUTPUT_DESCRIPTION}",
+                    _const("OFF"), STAGE_ROUTING)
+        for group, numbers in undeclared_outputs(plan, model).items() for n in numbers
     ]
     talk = talkback_assign(plan)
     if talk is not None:
@@ -2360,12 +2402,19 @@ def full_apply_targets(plan: dict) -> list[WriteTarget]:
     return targets
 
 
-def full_apply_notes(plan: dict) -> list[tuple[str, str]]:
+def outputs_label(outputs: dict[str, list[int]]) -> str:
+    """`{"LCL": [3..8]}` -> "LCL 3-8"."""
+    from atoo.finding_groups import _ranges
+
+    return ", ".join(f"{group} {_ranges(numbers)}" for group, numbers in outputs.items() if numbers)
+
+
+def full_apply_notes(plan: dict, model: str | None = None) -> list[tuple[str, str]]:
     """What a full apply of `plan` will do beyond its own strips, said from
     the plan alone (no desk) -- Apply's pre-flight. `_full_apply_run_notes`
     says the same from a run's records, knowing which strips already read
     OFF. One `(code, "INFO ...")` per subject: `apply.unbuilt-strips`,
-    `apply.talkback-assign`."""
+    `apply.undeclared-outputs`, `apply.talkback-assign`."""
     notes = []
     label = strips_label(unbuilt_strips(plan))
     if label:
@@ -2373,6 +2422,12 @@ def full_apply_notes(plan: dict) -> list[tuple[str, str]]:
                       f"INFO {label}: not in this plan, unpatched from their sources so none "
                       "listens to a socket the plan uses (a strip already unpatched is left as "
                       "it is)"))
+    outputs = outputs_label(undeclared_outputs(plan, model))
+    if outputs:
+        notes.append(("apply.undeclared-outputs",
+                      f"INFO output {outputs}: no bus or output in this plan is patched there, so "
+                      "each is disconnected rather than left on what the desk came with or an "
+                      "earlier show put there (a socket already off is left as it is)"))
     talk = talkback_assign(plan)
     if talk is not None:
         value, entry = talk
@@ -2386,15 +2441,35 @@ def full_apply_notes(plan: dict) -> list[tuple[str, str]]:
 
 
 def _full_apply_run_notes(records: list[WriteRecord]) -> list[str]:
-    """`full_apply_notes` from a run's records: which unbuilt strips this
-    run unpatched (or, in a preview, would), and how many already read OFF."""
+    """`full_apply_notes` from a run's records: which unbuilt strips and
+    unpatched output sockets this run unpatched or disconnected (or, in a
+    preview, would), and how many already read OFF."""
     notes = []
+
+    def changes(r: WriteRecord) -> bool:
+        return (r.status in ("match", "mismatch")
+                or (r.status == "dry_run" and r.would_change))
+
+    outputs = [r for r in records if r.description.endswith(_UNDECLARED_OUTPUT_DESCRIPTION)]
+    if outputs:
+        moved_outputs: dict[str, list[int]] = {}
+        for r in outputs:
+            if changes(r):
+                group, n = r.address.split("/")[3:5]
+                moved_outputs.setdefault(group, []).append(int(n))
+        already = sum(1 for r in outputs if r.status == "skipped_no_change"
+                      or (r.status == "dry_run" and not r.would_change))
+        label = outputs_label(moved_outputs)
+        tail = f"; {already} more already read disconnected" if already else ""
+        if label:
+            notes.append(f"INFO output {label}: no bus or output in this plan is patched there, so "
+                         f"each is disconnected rather than left on what the desk came with or an "
+                         f"earlier show put there{tail}")
+        else:
+            notes.append(f"INFO {already} output socket(s) the plan does not patch already read "
+                         "disconnected -- nothing to disconnect")
     unbuilt = [r for r in records if r.description.endswith(_UNBUILT_DESCRIPTION)]
     if unbuilt:
-        def changes(r: WriteRecord) -> bool:
-            return (r.status in ("match", "mismatch")
-                    or (r.status == "dry_run" and r.would_change))
-
         moved: dict[str, list[int]] = {"ch": [], "aux": []}
         for r in unbuilt:
             if changes(r):
@@ -3702,9 +3777,12 @@ def apply_plan(
     if full_apply:
         # Re-sorted by stage (stable, so the plan's own order within a
         # stage is kept): the unpatches belong with the other patches.
-        targets = sorted(targets + full_apply_targets(plan), key=lambda t: t.stage)
+        targets = sorted(targets + full_apply_targets(plan, init_model), key=lambda t: t.stage)
     if clean_output_sockets:
-        targets = targets + _clean_write_targets(plan, clean_output_sockets)
+        # A socket a full apply already disconnects is not written twice.
+        already = {t.address for t in targets}
+        targets = targets + [t for t in _clean_write_targets(plan, clean_output_sockets)
+                             if t.address not in already]
     if extra_targets:
         # Appended AFTER the stage sort and BEFORE the filter. After the
         # sort because these carry their own order and it is a safety

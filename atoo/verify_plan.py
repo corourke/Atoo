@@ -32,7 +32,7 @@ from __future__ import annotations
 import difflib
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from atoo import console_facts as facts
 from atoo import diagnostics
@@ -44,7 +44,7 @@ from atoo.diagnostics import Diagnostic, Severity
 # parsing, not plan derivation. It used to be borrowed from the compiler;
 # since that path was retired it lives with the input list itself, which
 # is whose column format it is.
-from atoo.input_list import InputRow, parse_socket_spec as _parse_socket_spec
+from atoo.input_list import InputRow, InputRows, parse_socket_spec as _parse_socket_spec
 from atoo import plan_compat
 from atoo.plan_schema import PLAN_SCHEMA
 from atoo.schema_check import validate as validate_schema
@@ -1680,6 +1680,64 @@ def _unassigned_because(entry: dict, row: InputRow, layers) -> str:
         return (f", because {said} say {quote!r} (not checked: no conventions or instructions "
                 "were given)")
     return f", quoting {quote!r} -- which is not in the conventions, the instructions or its notes"
+
+
+def rows_for_a_change(plan: dict, rows: list[InputRow], *, changed=()
+                      ) -> "tuple[InputRows, list[str], list[str]]":
+    """The input list as a typed change can be held to it; the names of the
+    plan's channels the list does not have; and the names of channels whose
+    socket the change states against a different one on the list.
+
+    A full build is held to the whole list: every row became a channel and
+    no channel came from nowhere. A change is not a rebuild. The channel it
+    adds is not on the list, nor is one an earlier change added, and a row
+    the plan has no channel for is simply a row the show has not used yet --
+    calling either "invented" or "dropped" would refuse a change for being
+    one. So the list is cut down to the rows the plan's channels name, and
+    each channel the list lacks gets a stand-in row of its own, which leaves
+    everything else the list says to check: a stated socket the plan
+    disagrees with, a stated preset, two channels from one row, phantom power
+    against the microphone. A channel built from a row the list has since
+    skipped still reads as that, not as a stand-in.
+
+    `changed` names the channels the change adds or repatches. The socket
+    the change states for one stands over the socket the list states for the
+    same row (the list is what the change is correcting at short notice), so
+    that row is checked without its `patch` rather than refused for
+    disagreeing; the third result names those.
+    """
+    by_norm = {_norm(row.name): row for row in rows}
+    skipped = {_norm(row.name) for row in getattr(rows, "skipped", None) or ()}
+    kept: dict[str, InputRow] = {}
+    stand_ins: list[str] = []
+    set_aside: list[str] = []
+    changed = set(changed)
+    for ch in plan.get("channels") or []:
+        if not isinstance(ch, dict):
+            continue
+        source = ch.get("source") or {}
+        for raw in (source.get("input") or ch.get("name"), source.get("pair_input")):
+            if not raw:
+                continue
+            key = _norm(raw)
+            if key in by_norm:
+                row = by_norm[key]
+                if ch.get("name") in changed and row.patch:
+                    stated = _parse_socket_spec(row.patch)
+                    here = ch.get("patch") or {}
+                    if stated is None or stated[0] != here.get("group") \
+                            or stated[1] not in (here.get("sockets") or []):
+                        set_aside.append(str(ch.get("name")))
+                    row = replace(row, patch="")
+                kept.setdefault(key, row)
+            elif key not in skipped and key not in kept:
+                kept[key] = InputRow(name=str(raw), category=str(ch.get("category") or ""),
+                                     type=str(source.get("type") or ""),
+                                     phantom=bool(source.get("phantom")))
+                stand_ins.append(str(ch.get("name") or raw))
+    cut = InputRows(kept.values())
+    cut.skipped = list(getattr(rows, "skipped", None) or [])
+    return cut, stand_ins, set_aside
 
 
 def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,

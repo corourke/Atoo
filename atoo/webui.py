@@ -5505,20 +5505,19 @@ def create_app(
         # said before anyone arms it, at INFO. The same lines the run's
         # own journal carries (`apply.full_apply_notes`).
         from atoo import apply as apply_module
+        from atoo import initialize as init_module
+        from atoo.verify_plan import resolve_console_model
 
-        for code, note in apply_module.full_apply_notes(plan):
+        # The model a Ping heard at the bar's address, else the plan's own
+        # (the run itself uses the desk's answer).
+        model = (_bar_desk() or {}).get("model") or resolve_console_model(plan)
+        for code, note in apply_module.full_apply_notes(plan, model):
             findings.append(Diagnostic(
                 severity=Severity.INFO, code=code,
                 message=note.removeprefix("INFO "), where="Apply", source="apply",
             ).to_dict())
-        # The reset to initialized that comes first -- for the
-        # model a Ping heard at the bar's address, else the plan's own (the
-        # run itself uses the desk's answer). The desk is not read here, so
-        # the count is an upper bound.
-        from atoo import initialize as init_module
-        from atoo.verify_plan import resolve_console_model
-
-        model = (_bar_desk() or {}).get("model") or resolve_console_model(plan)
+        # The reset to initialized that comes first. The desk is
+        # not read here, so the count is an upper bound.
         code, note = init_module.preflight_note(plan, model)
         warn = note.startswith("WARNING ")
         findings.append(Diagnostic(

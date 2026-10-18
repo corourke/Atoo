@@ -2,6 +2,30 @@
 
 What changed in each release, newest first.
 
+## 0.2.1 -- 2026-10-18
+
+A small release on 0.2.0, from a first desk test of the installed 0.2.0 and
+the first run of the public tests.
+
+- **The public test suite runs.** `pytest` finds the tests when run as a
+  bare command, as the public workflow runs it. 0.2.0's first run failed to
+  collect them.
+- **Audit.** `audit --plan` reads the trim, balance, invert and head-amp
+  gain values the plan states, so a show that was just applied no longer
+  gets warnings that those values were "unread".
+- **Build.** `atoo build --show` takes the console model from the show's
+  plan when `--console-model` is not given, and says so. The starter kick
+  preset's file is now `Kick In.chn`, as the guide calls it.
+- **Apply.** A full apply disconnects the desk's own output sockets that no
+  bus, Main or Matrix of the plan is patched to (local outputs 3-8 on a
+  Compact, which ship patched to busses and Mains), says which at INFO, and
+  Undo puts them back. Before, they stayed as the desk shipped unless
+  `--clean-output-sockets` was passed, and the audit called them leftovers.
+- **Patch.** The pre-flight reads the show's input list, so
+  `reconcile.not-checked` appears only when the show has none. A change that
+  switches 48V on a stereo channel switches both sockets, and a change that
+  would switch one side alone is refused: the desk does not take it.
+
 ## 0.2.0 -- 2026-10-16
 
 Still early. Full applies are proven on one WING Compact; a full-size

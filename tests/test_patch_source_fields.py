@@ -138,13 +138,70 @@ def test_48v_on_a_group_with_no_phantom_address_is_not_called_live():
     assert any("no confirmed phantom-power address" in w for w in targets.warnings)
 
 
-def test_a_stereo_pair_takes_one_phantom_value_on_both_sockets_or_its_own_on_the_second():
+def test_48v_on_a_stereo_channel_switches_both_sockets_and_the_review_marks_both():
     plan = _stereo_plan()
-    _a, _m, both = _review(plan, "Snare", {"source.phantom": True})
-    assert sorted(t.address for t in both.to_write) == ["/io/in/A/40/vph", "/io/in/A/41/vph"]
-    _a, merge, second = _review(plan, "Snare", {"source.pair_phantom": True})
-    assert [t.address for t in second.to_write] == ["/io/in/A/41/vph"]
+    amendment, merge, targets = _review(plan, "Snare", {"source.phantom": True})
+    assert _refusals(amendment) == []
+    assert sorted((t.address, t.compute_value(None)) for t in targets.to_write) == \
+        [("/io/in/A/40/vph", 1), ("/io/in/A/41/vph", 1)]
+    assert [e.path for e in merge.edits] == ["source.phantom"]
+    assert merge.edits[0].switches_phantom and merge.edits[0].line().startswith("SWITCHES 48V LIVE")
+
+
+def test_48v_set_on_a_pair_the_plan_states_two_values_for_is_carried_to_both_sockets():
+    """A pair built with a condenser on the first socket and a dynamic on
+    the second states two values. Setting `source.phantom` is the pair's
+    48V, so the second socket follows, and the review says it did."""
+    plan = _stereo_plan()
+    _channel(plan, "Snare")["source"].update(phantom=True, pair_phantom=False)
+    amendment, merge, targets = _review(plan, "Snare", {"source.phantom": False})
+    assert _refusals(amendment) == []
+    assert [e.path for e in merge.edits] == ["source.phantom"]
+    assert [(t.address, t.compute_value(None)) for t in targets.to_write] == \
+        [("/io/in/A/40/vph", 0)]
+    amendment, merge, targets = _review(plan, "Snare", {"source.phantom": True})
+    assert [e.path for e in merge.edits] == ["source.pair_phantom"]
     assert merge.edits[0].switches_phantom
+    assert [(t.address, t.compute_value(None)) for t in targets.to_write] == \
+        [("/io/in/A/41/vph", 1)]
+    [info] = [i for i in amendment.infos if "switches both sockets together" in i]
+    assert "source.pair_phantom is set to true to match source.phantom" in info
+    assert _channel(merge.plan, "Snare")["source"]["pair_phantom"] is True
+
+
+@pytest.mark.parametrize("fields", [
+    {"source.pair_phantom": True},
+    {"source": {"stereo": True, "pair_phantom": True, "input": "Snare", "type": "Mic",
+                "model": "", "phantom": False}},
+    {"source.phantom": True, "source.pair_phantom": False},
+], ids=["the second side alone", "the whole source, second side alone", "the two sides different"])
+def test_one_side_of_a_stereo_channel_is_not_switched_on_its_own(fields):
+    """The desk switches a stereo channel's 48V on both sockets together,
+    so a change that would switch only one is a setting that cannot be made
+    -- refused, naming the field that does it, nothing written."""
+    plan = _stereo_plan()
+    amendment, merge, targets = _review(plan, "Snare", fields)
+    [refused] = _refusals(amendment)
+    assert "switch 48V together" in refused.reason and "set source.phantom" in refused.reason
+    assert amendment.blocked and targets.to_write == []
+    assert merge.plan["channels"] == plan["channels"]
+
+
+def test_both_sides_set_to_the_same_value_are_accepted():
+    plan = _stereo_plan()
+    amendment, merge, targets = _review(
+        plan, "Snare", {"source.phantom": True, "source.pair_phantom": True})
+    assert _refusals(amendment) == []
+    assert sorted(t.address for t in targets.to_write) == ["/io/in/A/40/vph", "/io/in/A/41/vph"]
+
+
+def test_a_stereo_pair_built_with_two_values_is_left_alone_by_a_change_that_is_not_about_48v():
+    plan = _stereo_plan()
+    _channel(plan, "Snare")["source"].update(phantom=True, pair_phantom=False)
+    amendment, merge, targets = _review(plan, "Snare", {"source.model": "SM57"})
+    assert _refusals(amendment) == []
+    assert _channel(merge.plan, "Snare")["source"]["pair_phantom"] is False
+    assert targets.to_write == []
 
 
 def test_a_change_that_restates_the_whole_source_sets_what_changed_in_it():
@@ -291,6 +348,30 @@ def test_patch_switches_48v_on_a_running_strip_says_so_and_undo_puts_it_back(
     assert cli.main(["undo", "--show", str(show), "--console", "198.51.100.9",
                      "--confirm"]) == 0, capsys.readouterr()
     assert desk.state["/io/in/A/2/vph"][0] == 0
+
+
+def test_patch_switches_48v_on_both_sockets_of_a_stereo_pair_and_the_review_marks_both(
+        tmp_path, desk, model, capsys):
+    """Keys is the applied show's stereo pair, on A 15-16."""
+    model.response = json.dumps(_change_set(_modify("Keys", {"source.phantom": True})))
+    show = _bundle(tmp_path)
+    assert desk.state["/io/in/A/15/vph"][0] == 0 and desk.state["/io/in/A/16/vph"][0] == 0
+    assert _patch(show, "48V on the keys", confirm=True) == 0, capsys.readouterr()
+    out = capsys.readouterr().out
+    assert "SWITCHES 48V LIVE -- channel 'Keys' on ch:9: source.phantom false -> true" in out
+    assert desk.state["/io/in/A/15/vph"][0] == 1 and desk.state["/io/in/A/16/vph"][0] == 1
+    assert _leaves_written(desk) == {"/io/in/A/15/vph", "/io/in/A/16/vph"}
+
+
+def test_patch_refuses_one_side_of_a_stereo_pair_and_the_desk_is_untouched(
+        tmp_path, desk, model, capsys):
+    model.response = json.dumps(_change_set(_modify("Keys", {"source.pair_phantom": True})))
+    show = _bundle(tmp_path)
+    assert _patch(show, "48V on the right side of the keys", confirm=True) == 2
+    out = capsys.readouterr().out
+    assert "switch 48V together" in out and "set source.phantom" in out
+    assert _leaves_written(desk) == set()
+    assert desk.state["/io/in/A/16/vph"][0] == 0
 
 
 def test_patch_with_only_a_mic_model_writes_nothing_and_says_it_is_not_kept(

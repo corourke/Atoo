@@ -560,6 +560,54 @@ def _restated(what: str) -> str:
             "naming each field it sets -- so nothing it did not name can move")
 
 
+#: Why a change cannot switch one side of a stereo channel's 48V alone.
+PAIR_PHANTOM_TOGETHER = (
+    "a stereo channel's two sockets switch 48V together -- the desk does not take one "
+    "side on its own; set source.phantom, which switches both")
+
+
+def _stereo_sockets(channel: dict) -> bool:
+    """A stereo channel patched to its two sockets."""
+    source = channel.get("source") or {}
+    return bool(source.get("stereo")) and len((channel.get("patch") or {}).get("sockets") or []) == 2
+
+
+def _pair_phantom_problems(original: dict, edited: dict, paths: list[str], infos: list,
+                           name: str) -> list[str]:
+    """A stereo channel's 48V is switched on both sockets or not at all.
+
+    `source.phantom` is the pair's. When a change sets it and the plan states
+    a different value for the second socket (`source.pair_phantom`), that is
+    set to match, as an edit of its own, and said at INFO, so both sockets
+    are written and the review marks both. Switching the second socket
+    alone, or leaving the two different, is not something the desk allows:
+    it is refused, naming the field to set. A mono channel, or a stereo one
+    the change does not touch the 48V of, is not looked at, so a pair built
+    with one condenser and one dynamic stays as built."""
+    if not _stereo_sockets(edited):
+        return []
+    before, after = original.get("source") or {}, edited["source"]
+    second_moved = before.get("pair_phantom") != after.get("pair_phantom")
+    first_moved = bool(before.get("phantom")) != bool(after.get("phantom"))
+    named_first = "source.phantom" in paths
+    if second_moved and not (first_moved or named_first):
+        return [PAIR_PHANTOM_TOGETHER]
+    if second_moved:
+        sides = [on for _socket, on in inferred.socket_phantom(edited)]
+        if sides[0] != sides[1]:
+            return [PAIR_PHANTOM_TOGETHER]
+        return []
+    if (first_moved or named_first) and isinstance(before.get("pair_phantom"), bool) \
+            and before["pair_phantom"] != bool(after.get("phantom")):
+        after["pair_phantom"] = bool(after.get("phantom"))
+        paths.append("source.pair_phantom")
+        infos.append(
+            f"channel {name!r}: 48V on a stereo channel switches both sockets together, so "
+            f"source.pair_phantom is set to {str(after['pair_phantom']).lower()} to match "
+            "source.phantom")
+    return []
+
+
 def _drop_not_built(word: str, name: str) -> str:
     return (f"the change drops {word} {name!r} -- not written: only a channel's strip can be "
             f"returned to free; nothing returns a {word} to free yet")
@@ -786,6 +834,8 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                     f"{ribbon!r} is a passive ribbon microphone and the change leaves it with "
                     "phantom power on -- 48V destroys a ribbon element and switching it off "
                     "again does not undo the damage; set source.phantom false in the same change")
+        if not problems and key == "channels":
+            problems.extend(_pair_phantom_problems(original, edited, paths, infos, name))
         record = _preset_record(key, original)
         if record is not None and key == "channels" and isinstance(edited.get("processing"), dict):
             # A whole `processing` object the change restates is the

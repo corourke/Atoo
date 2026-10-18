@@ -63,7 +63,7 @@ class InstallInfo:
     python_version: str = ""
 
     def summary(self) -> str:
-        """The one line: ``atoo 0.2.0 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
+        """The one line: ``atoo 0.2.1 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
         head = f"atoo {self.version}"
         if self.kind == "installed":
             return f"{head} (installed copy at {_shown(self.package_dir)})"

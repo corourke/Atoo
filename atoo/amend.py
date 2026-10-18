@@ -2693,6 +2693,9 @@ class Preflight:
     refusal: str | None = None
     #: `amend.socket-missing-on-desk` or `amend.verify-failed`.
     refusal_code: str | None = None
+    #: What the pre-flight chose on its own and says at INFO: how the input
+    #: list was held to the plan.
+    infos: list[str] = field(default_factory=list)
 
     @property
     def refuses(self) -> bool:
@@ -2725,6 +2728,7 @@ class Preflight:
             "missing": [m["line"] for m in self.missing],
             "refusal": self.refusal,
             "refusal_code": self.refusal_code,
+            "infos": list(self.infos),
         }
 
 
@@ -2734,7 +2738,8 @@ def _named(missing: list[dict]) -> str:
 
 
 def preflight(amendment: Amendment, *, identity_args=None, address: str | None = None,
-              skip_verify: bool = False, presets=None, what: str = "amend") -> Preflight:
+              skip_verify: bool = False, presets=None, what: str = "amend",
+              rows=None, rows_name: str = "the input list", layers=None) -> Preflight:
     """`apply`'s two pre-flight checks, asked of an amend.
 
     `what` is "amend" or "change" (a typed change, `atoo patch`): only the words of a refusal differ -- "This change would patch
@@ -2762,6 +2767,18 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
        never measured proceeds with its WARNING, sockets checked against
        the plan's model.
 
+    `rows` is the show's input list, when it has one: the verify then runs
+    the checks that need it, and `reconcile.not-checked` appears only when
+    there really is none. An amend is a rebuild and is held to the whole
+    list, as a full build is. A change (`what="change"`) is not a rebuild,
+    so it is held to the list as `verify_plan.rows_for_a_change` cuts it:
+    the channels the change adds, or an earlier change added, are checked
+    against the change that made them rather than called invented, and rows
+    the plan does not use are not called dropped. That choice is said at
+    INFO in `Preflight.infos`, with `rows_name` for the file. `layers` are
+    the texts a channel built from them is checked against, as `apply` finds
+    them.
+
     `identity_args` is the desk's `/?` reply, or None offline (`amend
     --state`), when there is no desk to ask and the plan's model stands
     in -- said, in `where`.
@@ -2786,9 +2803,30 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
     result = Preflight(checked_against=checked, desk_model=desk_model, plan_model=plan_model,
                        where=where, skip_verify=skip_verify)
 
+    checked_rows = rows
+    if rows is not None and what == "change":
+        from atoo.verify_plan import rows_for_a_change
+
+        checked_rows, stand_ins, set_aside = rows_for_a_change(
+            amendment.effective_plan, rows,
+            changed={c.get("name") for c, _ in _written_channels(amendment)})
+        unlisted = (f"; {len(stand_ins)} channel(s) of the changed plan are not on it "
+                    f"({', '.join(stand_ins[:5])}{', ...' if len(stand_ins) > 5 else ''}) -- "
+                    "added by this change, an earlier one or the conventions -- and are taken "
+                    "as they stand, not called invented" if stand_ins else "")
+        result.infos.append(
+            f"{rows_name}: {len(checked_rows) - len(stand_ins)} of its {len(rows)} row(s) are "
+            f"used by the changed plan and were checked as a full build checks them (stated "
+            f"sockets and presets, phantom power against the microphone){unlisted}. A row the "
+            "plan does not use is not called dropped: a change does not rebuild the show"
+            + (f". For {', '.join(set_aside)} the change states a socket other than the one "
+               f"{rows_name} does, and the change's stands" if set_aside else ""))
+    elif rows is not None:
+        result.infos.append(f"{rows_name}: {len(rows)} row(s), checked against the amended "
+                            "plan as a full build checks them")
     if not skip_verify:
-        result.verify = verify_plan(amendment.effective_plan, None, presets=presets,
-                                    console_model=desk_model)
+        result.verify = verify_plan(amendment.effective_plan, checked_rows, presets=presets,
+                                    console_model=desk_model, layers=layers)
 
     if identity_args is not None:
         # The check, handed only what this amend writes -- so across

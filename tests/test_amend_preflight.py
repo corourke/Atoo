@@ -315,6 +315,25 @@ def test_a_verify_warning_does_not_block(tmp_path, desks, capsys):
             "warnings do not block.") in captured.out
 
 
+def test_an_amend_in_a_show_with_an_input_list_is_held_to_the_whole_list(tmp_path, desks, capsys):
+    """An amend is a rebuild, so unlike a typed change it is checked against
+    every row of the show's input list, as a full build is -- and the
+    `reconcile.not-checked` warning goes."""
+    show = bundle(tmp_path, amended_plan())
+    lines = ["socket,name,category,type,model,phantom,notes"]
+    for ch in amended_plan()["channels"]:
+        source = ch["source"]
+        lines.append(f",{source['input']},drums,{source['type']},{source['model']},"
+                     f"{'TRUE' if source['phantom'] else 'FALSE'},")
+    (show / "input.csv").write_text("\n".join(lines) + "\n")
+    applied_to(show, COMPACT_IP, capsys)
+    code = amend(show, COMPACT_IP)
+    captured = capsys.readouterr()
+    assert code == 0, captured
+    assert "reconcile.not-checked" not in captured.out
+    assert "INFO input.csv: 22 row(s), checked against the amended plan" in captured.out
+
+
 # --------------------------------------------------------------------------
 # Same model, clean: nothing new said
 # --------------------------------------------------------------------------

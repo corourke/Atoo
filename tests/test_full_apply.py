@@ -61,6 +61,8 @@ def factory_desk(plan: dict, **overrides) -> FakeConsole:
     for t in full_apply_targets(plan):
         if t.address == facts.TALK_ASSIGN:
             state[t.address] = (facts.TALK_OFF, "s")
+        elif t.address.startswith("/io/out/"):
+            state[t.address] = ("MAIN", "s")
         else:
             state[t.address] = ("LCL" if t.address.startswith("/ch/") else "AUX", "s")
     for address, value in overrides.items():
@@ -79,9 +81,13 @@ def test_sixpiece_unbuilt_strips_are_ch_24_to_40_and_aux_3_to_7():
 
 def test_sixpiece_full_apply_targets_unpatch_them_and_assign_talkback_to_aux8():
     targets = full_apply_targets(sixpiece())
-    off = {t.address: t.compute_value(None) for t in targets if t.address != facts.TALK_ASSIGN}
+    off = {t.address: t.compute_value(None) for t in targets
+           if t.address != facts.TALK_ASSIGN and not t.address.startswith("/io/out/")}
     assert off == {**{f"/ch/{n}/in/conn/grp": "OFF" for n in range(24, 41)},
                    **{f"/aux/{n}/in/conn/grp": "OFF" for n in range(3, 8)}}
+    # and the panel outputs the plan patches nothing to (tests/test_full_apply_outputs.py)
+    assert {t.address for t in targets if t.address.startswith("/io/out/")} == {
+        "/io/out/LCL/5/grp", "/io/out/LCL/6/grp"}
     [talk] = [t for t in targets if t.address == facts.TALK_ASSIGN]
     assert talk.address == "/cfg/talk/assign"
     assert talk.value_type == "s" and talk.compute_value("OFF") == "AUX8"
@@ -89,10 +95,11 @@ def test_sixpiece_full_apply_targets_unpatch_them_and_assign_talkback_to_aux8():
 
 
 def test_sixpiece_full_apply_writes_only_the_source_of_an_unbuilt_strip():
-    """Only `in/conn/grp`: no name, fader, mute or anything else."""
+    """Only `in/conn/grp`: no name, fader, mute or anything else. (And, for an
+    output socket the plan does not patch, only its `grp`.)"""
     for t in full_apply_targets(sixpiece()):
         if t.address != facts.TALK_ASSIGN:
-            assert t.address.endswith("/in/conn/grp")
+            assert t.address.endswith(("/in/conn/grp", "/io/out/LCL/5/grp", "/io/out/LCL/6/grp"))
 
 
 def test_sixpiece_preflight_notes_say_both_at_info():
@@ -101,6 +108,10 @@ def test_sixpiece_preflight_notes_say_both_at_info():
         ("apply.unbuilt-strips",
          "INFO ch 24-40, aux 3-7: not in this plan, unpatched from their sources so none "
          "listens to a socket the plan uses (a strip already unpatched is left as it is)"),
+        ("apply.undeclared-outputs",
+         "INFO output LCL 5-6: no bus or output in this plan is patched there, so each is "
+         "disconnected rather than left on what the desk came with or an earlier show put "
+         "there (a socket already off is left as it is)"),
         ("apply.talkback-assign",
          "INFO talkback assign (Setup -> Audio) set to AUX8: aux 8 'TALKBACK' is the plan's "
          "talkback strip"),

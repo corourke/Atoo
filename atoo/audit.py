@@ -127,8 +127,8 @@ EQ the plan states) -- plus a bus's and a DCA's own fader and mute,
 which nothing compared at all until `plan_schema.DCA_SCHEMA`
 gave a DCA somewhere to state one. The filters and the EQ are `log`
 controls, compared with `apply`'s own readback tolerance (2%) rather than the
-fader's half a decibel, and read only when `audit --plan` states them
-(`plan_processing_read_addresses`). Deliberately still NOT diffed: the
+fader's half a decibel, and, like trim, balance, invert and head-amp gain,
+read only when `audit --plan` states them (`plan_processing_read_addresses`). Deliberately still NOT diffed: the
 compressor (no schema), a bus's, Main's or Matrix's EQ, and a channel's
 PreSend EQ.
 """
@@ -3594,7 +3594,7 @@ def planned_processing_leaves(entry: dict) -> list:
     missing filter node the same on both sides.
 
     Trim, balance, invert and head-amp gain are not here: they have their
-    own tolerances above."""
+    own tolerances above, and `planned_input_leaves` names their leaves."""
     bank = entry.get("bank", "ch")
     if bank not in ("ch", "aux") or not isinstance(entry.get("channel"), int):
         return []
@@ -3603,18 +3603,53 @@ def planned_processing_leaves(entry: dict) -> list:
     return [t for t in targets if t.address.startswith((f"{base}/flt/", f"{base}/eq/"))]
 
 
+def planned_input_leaves(entry: dict) -> list[tuple[str, str]]:
+    """The trim, balance, invert and head-amp gain leaves a plan channel
+    states, each with the type it is read as -- the other half of what
+    CV008 compares (`planned_processing_leaves` has the filters and EQ).
+
+    Trim, balance and invert are the strip's own (`{base}/in/set/*`, the
+    leaves `apply` writes for those fields). Head-amp gain is the physical
+    source's (`/io/in/{group}/{socket}/g`), so it is asked at the first
+    socket of the patch the plan states, for a group that has a head amp:
+    the socket the strip is on when the desk is as the plan has it. A strip
+    patched somewhere else is CV005's, and its gain is not compared."""
+    bank = entry.get("bank", "ch")
+    if bank not in ("ch", "aux") or not isinstance(entry.get("channel"), int):
+        return []
+    base = f"/{bank}/{entry['channel']}"
+    processing = entry.get("processing") or {}
+    leaves: list[tuple[str, str]] = []
+    for plan_field, suffix, value_type in (("trim_db", "in/set/trim", "f"),
+                                           ("balance_db", "in/set/bal", "f"),
+                                           ("invert", "in/set/inv", "i")):
+        if processing.get(plan_field) is not None:
+            leaves.append((f"{base}/{suffix}", value_type))
+    patch = entry.get("patch") or {}
+    sockets = patch.get("sockets") or []
+    if (processing.get("gain_db") is not None and patch.get("group") in _VPH_CAPABLE_GROUPS
+            and sockets and isinstance(sockets[0], int)):
+        leaves.append((f"/io/in/{patch['group']}/{sockets[0]}/g", "f"))
+    return leaves
+
+
 def plan_processing_read_addresses(plan: dict | None) -> list[tuple[str, str]]:
-    """Every filter and EQ leaf the plan states, with the type each is read
+    """Every processing leaf the plan states, with the type each is read
     as -- what `audit --plan` adds to a read (`console_read_plan(extra=...)`)
-    so `diff_against_plan` has something to compare. They sit in the strip's
-    own node (`/ch/{n}`, `/aux/{n}`), which a node dump already fetches, so
-    this is no extra request; and only the leaves a plan states are asked
-    for, so an audit with no plan, or Watch, reads nothing more."""
+    so `diff_against_plan` has something to compare: the filters and EQ
+    (`planned_processing_leaves`) and trim, balance, invert and head-amp
+    gain (`planned_input_leaves`). They sit in the node a dump already
+    fetches (the strip's own `/ch/{n}` or `/aux/{n}`, and the socket's
+    `/io/in/{group}/{socket}` that carries its 48V), so under the node-dump
+    read this is no extra request; and only the leaves a plan states are
+    asked for, so an audit with no plan, or Watch, reads nothing more."""
     found: dict[str, str] = {}
     for entry in (plan or {}).get("channels") or []:
         if isinstance(entry, dict):
             for target in planned_processing_leaves(entry):
                 found.setdefault(target.address, target.value_type)
+            for address, value_type in planned_input_leaves(entry):
+                found.setdefault(address, value_type)
     return list(found.items())
 
 
@@ -5161,16 +5196,19 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
         # Processing: trim, balance, invert and head-amp gain, each with
         # its own tolerance below. The high-pass, hi-cut, tilt and EQ are
         # compared after this block, by `_processing_leaf_findings`.
+        # A leaf that was not read is not compared, as everywhere in this
+        # diff: `audit --plan` reads the ones the plan states
+        # (`plan_processing_read_addresses`), so a missing one is a desk that
+        # did not answer, not a contradiction.
         processing = entry.get("processing") or {}
 
         trim_db = processing.get("trim_db")
         if trim_db is not None:
             live_trim = state.number(f"{base}/in/set/trim")
-            if live_trim is None or abs(float(trim_db) - live_trim) > FADER_TOLERANCE_DB:
-                live_text = "unread" if live_trim is None else f"{live_trim:g}dB"
+            if live_trim is not None and abs(float(trim_db) - live_trim) > FADER_TOLERANCE_DB:
                 findings.append(Diagnostic.audit(
                     "CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
-                    f"{label}: plan says trim is {trim_db:g}dB, live console reads {live_text} "
+                    f"{label}: plan says trim is {trim_db:g}dB, live console reads {live_trim:g}dB "
                     f"(tolerance {FADER_TOLERANCE_DB:g}dB)." + _cite(provenance, "processing"),
                     (f"{base}/in/set/trim",),
                 ))
@@ -5178,19 +5216,18 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
         balance_db = processing.get("balance_db")
         if balance_db is not None:
             live_bal = state.number(f"{base}/in/set/bal")
-            if live_bal is None or abs(float(balance_db) - live_bal) > FADER_TOLERANCE_DB:
-                live_text = "unread" if live_bal is None else f"{live_bal:g}dB"
+            if live_bal is not None and abs(float(balance_db) - live_bal) > FADER_TOLERANCE_DB:
                 findings.append(Diagnostic.audit(
                     "CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
                     f"{label}: plan says balance is {balance_db:g}dB, live console reads "
-                    f"{live_text} (tolerance {FADER_TOLERANCE_DB:g}dB)." + _cite(provenance, "processing"),
+                    f"{live_bal:g}dB (tolerance {FADER_TOLERANCE_DB:g}dB)." + _cite(provenance, "processing"),
                     (f"{base}/in/set/bal",),
                 ))
 
         invert = processing.get("invert")
         if invert is not None:
             live_invert = state.flag(f"{base}/in/set/inv")
-            if bool(invert) != bool(live_invert):
+            if live_invert is not None and bool(invert) != bool(live_invert):
                 findings.append(Diagnostic.audit(
                     "CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
                     f"{label}: plan says invert={invert!r}, live console reads "
@@ -5211,12 +5248,11 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
             if patch_info is not None and patch_info[0] in _VPH_CAPABLE_GROUPS:
                 group, socket = patch_info
                 live_gain = state.number(f"/io/in/{group}/{socket}/g")
-                if live_gain is None or abs(float(gain_db) - live_gain) > HEAD_AMP_GAIN_TOLERANCE_DB:
-                    live_text = "unread" if live_gain is None else f"{live_gain:g}dB"
+                if live_gain is not None and abs(float(gain_db) - live_gain) > HEAD_AMP_GAIN_TOLERANCE_DB:
                     findings.append(Diagnostic.audit(
                         "CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
                         f"{label}: plan says head-amp gain on {group} {socket} is {gain_db:g}dB, "
-                        f"live console reads {live_text} (tolerance {HEAD_AMP_GAIN_TOLERANCE_DB:g}dB)."
+                        f"live console reads {live_gain:g}dB (tolerance {HEAD_AMP_GAIN_TOLERANCE_DB:g}dB)."
                         + _cite(provenance, "processing"),
                         (f"/io/in/{group}/{socket}/g",),
                     ))

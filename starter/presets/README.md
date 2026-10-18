@@ -6,15 +6,14 @@ starter conventions name them.
 
 | Preset | For |
 |---|---|
-| Kick In (`Kick.chn`), Snare, HiHat, H Tom, M Tom, Fl Tom, OH, Perc | drums and percussion |
+| Kick In, Snare, HiHat, H Tom, M Tom, Fl Tom, OH, Perc | drums and percussion |
 | Bass, E Gtr, Ac Gtr, Keys, Piano | the band |
 | Trumpet, T Bone, A Sax, T Sax, B Sax | horns |
 | Vocal, Speech | singers and talkers |
 
 A preset is matched by the name saved inside the file when it was
-exported, not by its filename, and every file here is named for its
-preset except `Kick.chn`, which is **Kick In**. `atoo presets`
-lists what each one is called. The preset's name need not match the
+exported, not by its filename; every file here is named for its preset.
+`atoo presets` lists what each one is called. The preset's name need not match the
 channel's either: the Kick channel uses "Kick In" and is still called
 Kick.
 
