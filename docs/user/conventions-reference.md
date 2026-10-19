@@ -357,7 +357,7 @@ your conventions and the domain knowledge as they are, without it.
 
 Commit it beside your conventions: it is the reading every show was
 built from. Its header records the three checksums it is fresh against
-and which Atoo made it (`atoo: 0.2.3 (8779a67)`, the version
+and which Atoo made it (`atoo: 0.2.4 (8779a67)`, the version
 and git commit). The checksums ignore line endings and Unicode spelling,
 so the same files read fresh on any machine. If a machine finds the file
 stale when you expected it fresh, the message names the Atoo that

@@ -84,7 +84,7 @@ atoo --version
 ```
 
 ```text
-atoo 0.2.3 (running from ~/Atoo/atoo; branch my-branch, a1b2c3d, clean)
+atoo 0.2.4 (running from ~/Atoo/atoo; branch my-branch, a1b2c3d, clean)
 Python 3.13.16 at ~/Atoo/.venv/bin/python3
 ```
 
@@ -98,7 +98,7 @@ your clone's folder and the branch you checked out.
 The installed copy's first line is different, and names no branch:
 
 ```text
-atoo 0.2.3 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.4 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
 That is a private copy of a release, which never follows `git checkout`.

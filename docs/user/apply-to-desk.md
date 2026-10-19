@@ -67,7 +67,9 @@ too; **show in Findings** picks them out there.
 **Options** holds two things you rarely need: **Skip the pre-flight
 verify**, and **Disconnect output sockets the plan doesn't use**. Ticking
 the second opens a box for the socket groups to clean and how many
-sockets each has, such as `LCL=8,A=48`; its **?** says why you would.
+sockets each has, such as `LCL=8,A=48`; its **?** says why you would. Write
+`GROUP=COUNT` pairs separated by commas: anything else is flagged under the
+box, and Preview stays locked until it is fixed.
 
 ![Apply, Full build: the four steps before a preview](img/apply-screen.png)
 
