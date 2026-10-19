@@ -262,8 +262,8 @@ the model:
   does not take one side of a stereo channel on its own, so *"48V on the
   keys"* sets `source.phantom` and the review marks both sockets under
   `SWITCHES 48V LIVE`. When the plan states a different value for the
-  second socket (a pair built with a condenser and a dynamic), the
-  second follows and an INFO line says so. A change that would switch only
+  second socket (a plan from an older build; a build now gives the pair
+  one value), the second follows and an INFO line says so. A change that would switch only
   the second socket (`source.pair_phantom` alone), or leave the two
   different, is refused, and the refusal names `source.phantom`; nothing is
   written. A pair the change does not touch the 48V of stays as it was

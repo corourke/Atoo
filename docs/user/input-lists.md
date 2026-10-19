@@ -38,7 +38,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
 | `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary: Atoo never hardcodes what a type implies, it is there for your conventions to match against. |
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
-| `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. Each half of a stereo pair ("OH L"/"OH R") gets its own row's value, so a pair of one condenser and one dynamic gets 48V on the condenser only. A stereo source on a single row gets its value on both sockets, with a note saying so. |
+| `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
 
@@ -63,6 +63,59 @@ stereo channel"* is a rule that can only match what you wrote in `name`.
 
 The two rows need not state a socket. When they do not, the build pairs
 them on the next free odd-even pair.
+
+### A stereo pair has one 48V value
+
+The desk switches a stereo channel's two sockets together: write 48V to
+one and the other reads back already on. So a stereo channel cannot be
+built with a condenser on one socket and a dynamic on the other. When the
+two rows disagree, the build gives the pair **one value, on if either row
+says `TRUE`**, and tells you which row asked, with a note:
+
+> channels[OH]: 48V is on for both sockets of the stereo channel: 'OH L'
+> asks for it and 'OH R' does not, and the desk switches a pair's two
+> sockets together, so the pair takes the value either row wants (split
+> the pair into two mono channels if you want 'OH R' without 48V)
+> (`reply.pair-phantom`)
+
+A condenser left without 48V is silent, and a dynamic given it is
+unharmed, so "on" is the choice that costs least. If you do want one of
+them without 48V, keep them as two mono channels. Rows that agree say
+nothing.
+
+**A passive ribbon on either side of a powered pair is refused**, because
+48V destroys the element and switching it off afterwards does not undo
+that. The refusal names the ribbon's row. This one is from the demo show
+with `Keys L` made a condenser and `Keys R` a Royer R-121 (a copy of its
+input list and plan, in `/tmp`):
+
+```bash
+sed 's/Keys L,keys,DI,,FALSE/Keys L,keys,DI,,TRUE/; s/Keys R,keys,DI,,FALSE/Keys R,keys,DI,Royer R-121,FALSE/' docs/user/demo/touringband/input.csv > /tmp/ribbon.csv
+python3 -c "
+import json
+plan = json.load(open('docs/user/demo/touringband/plan.json'))
+for ch in plan['channels']:
+    if ch['name'] == 'Keys L':
+        ch['source'].update(phantom=True, pair_phantom=True)
+json.dump(plan, open('/tmp/plan-ribbon.json', 'w'), indent=2)"
+atoo verify --plan /tmp/plan-ribbon.json --input /tmp/ribbon.csv
+```
+
+```
+1 error(s), 0 warning(s), 15 note(s)
+
+  [error] channels[Keys L]: 'Royer R-121' (Keys R, the pair's second socket) is a passive ribbon microphone and the plan sends it phantom power -- a stereo channel's two sockets switch 48V together, so the pair takes it if either row wants it -- 48V destroys a ribbon element and undoing the setting does not undo the damage. Split the pair into two mono channels, or set the other row to a source that takes no 48V (phantom FALSE)  (safety.phantom-on-passive-ribbon)
+
+  [info] plan: 'Magenta' is the desk's Pink (11): ...
+```
+
+(The first lines; the rest are the demo's usual notes, and the last line is
+`BLOCKED: do not apply.`)
+
+A plan built before this rule can state two different values for a pair.
+`atoo verify` reports it as a warning (`phantom.pair-differs`) and
+`atoo apply` writes the one value, on if either is; rebuild to have the
+plan say so itself.
 
 **A channel that is yours rather than the band's** (a talkback mic, an
 ambient pair) does not need a row: ask for it in words, with its socket.
