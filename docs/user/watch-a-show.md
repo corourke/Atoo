@@ -238,6 +238,16 @@ Give each row an **ID** and a **Description**: the description is what
 the table shows when it fires, so write the reason, *"Playback carries
 the backing tracks."*
 
+**The small *i* beside each ID says what the row does, in plain
+English.** Hover it, press it, or tab to it and press Enter; Escape closes
+it. A row that is `fader_db >= -40` on `CH 1` reads *"Alerts as an error
+when CH 1 has its fader below -40 dB."* and then says how the alert will
+name the strip: by its number and its console name, such as `CH 1
+"Kick"`. The sentence is written from the row's own cells, not from your
+description, so it is a check that the row says what you meant. It
+follows the row as you edit it; a row with a refused cell has no sentence
+until the cell is fixed. The *i* is there on the read-only Demo show too.
+
 1. Press **+ Add condition**, fill in the row, and press **Save**.
    **Save** appears once there is something to save, beside an
    **Unsaved changes** tag.

@@ -65,6 +65,16 @@ produces nothing at all.** That silence is the feature, and it is why
 these are worth writing for the handful of things that would ruin a show
 rather than for everything you can think of.
 
+**In Watch, each condition has a small *i* beside its ID** that says the
+condition in plain English, for example *"Alerts as a warning when any DCA
+from 1 to 5 is muted."* A condition states what should be true, and the
+sentence says when the alert fires, so it reads the other way round.
+It is made from the condition's cells (never from its description), covers
+every field, operator, range, name and bus, and says how the alert names
+the strip. A condition the file format would refuse has no sentence.
+[Watch a show](watch-a-show.md#3-say-what-matters-tonight-watch-conditions)
+shows where it is.
+
 ## The field vocabulary
 
 | field | value | operators |
