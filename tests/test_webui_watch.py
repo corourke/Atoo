@@ -382,8 +382,10 @@ def test_the_check_endpoint_answers_per_row_with_the_loaders_reasons(client):
             dict(HAND, channel="DCA Vocals", field="patch", operator="==", value="LCL 1")]
     r = client.post("/api/watch-conditions/check", json={"watch_conditions": rows})
     assert r.status_code == 200
-    answer = r.json()["rows"]
-    assert answer[0] == {"canonical": "DCA 1-4", "position": True, "scoped": False}
+    answer = [{k: v for k, v in row.items() if k != "explanation"} for row in r.json()["rows"]]
+    assert r.json()["rows"][0]["explanation"].startswith("Alerts as ")
+    first = answer[0]
+    assert first == {"canonical": "DCA 1-4", "position": True, "scoped": False}
     assert "begins like a position" in answer[1]["channel"]
     assert "has no input patch" in answer[2]["field"]
     assert answer[3] == {"canonical": "Kick", "position": False, "scoped": False}

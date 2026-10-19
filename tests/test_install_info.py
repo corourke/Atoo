@@ -311,7 +311,7 @@ def test_inside_a_virtualenv_a_checkout_keeps_the_one_line_pip_hint(monkeypatch,
 def test_outside_a_virtualenv_an_installed_copy_is_pointed_at_uv(monkeypatch, tmp_path):
     hint = _hint(monkeypatch, tmp_path, venv=False, kind="installed")
     assert "externally-managed-environment" in hint
-    assert 'uv tool install --force "atoo[ui] @ git+' in hint
+    assert 'uv tool install --force --python 3.12 "atoo[ui]"' in hint
     assert "pipx" not in hint
     assert " -e " not in hint
     assert not [line for line in hint.splitlines() if line.startswith("  ") and "pip " in line]
@@ -321,20 +321,20 @@ def test_outside_a_virtualenv_an_installed_copy_is_pointed_at_uv(monkeypatch, tm
 def test_a_pipx_copy_is_reinstalled_with_the_extra(monkeypatch, tmp_path):
     hint = _hint(monkeypatch, tmp_path, venv=True, kind="installed", pipx=True)
     assert "installed by pipx without it" in hint
-    assert 'pipx install --force "atoo[ui] @ git+' in hint
+    assert 'pipx install --force "atoo[ui]"' in hint
     assert "pip install" not in hint
 
 
 def test_a_virtualenv_that_is_not_pipx_installs_the_extra_into_itself(monkeypatch, tmp_path):
     hint = _hint(monkeypatch, tmp_path, venv=True, kind="installed")
-    assert 'python3 -m pip install "atoo[ui] @ git+' in hint
+    assert 'python3 -m pip install "atoo[ui]"' in hint
     assert " -e " not in hint
 
 
 def test_a_uv_tool_copy_is_reinstalled_with_the_extra_by_uv(monkeypatch, tmp_path):
     hint = _hint(monkeypatch, tmp_path, venv=True, kind="installed", uv_tool=True)
     assert "installed by uv without it" in hint
-    assert 'uv tool install --force "atoo[ui] @ git+https://github.com/corourke/Atoo.git"' in hint
+    assert 'uv tool install --force --python 3.12 "atoo[ui]"' in hint
     assert "pipx" not in hint and "pip install" not in hint   # a tool environment has no pip
     assert "https://docs.atoo.app/getting-started/install/" in hint
 
@@ -343,7 +343,7 @@ def test_an_editable_uv_tool_install_is_reinstalled_from_its_checkout(monkeypatc
     hint = _hint(monkeypatch, tmp_path, venv=True, kind="checkout", uv_tool=True)
     steps = [line.strip() for line in hint.splitlines() if line.startswith("  ")]
     assert steps == [f"cd '{tmp_path / 'my clone'}'",
-                     'uv tool install --force --editable ".[ui]"']
+                     'uv tool install --force --python 3.12 --editable ".[ui]"']
     assert "pip install" not in hint and "pipx" not in hint
 
 
@@ -375,12 +375,22 @@ def test_every_environment_gets_its_own_command(monkeypatch, tmp_path_factory):
     dict(venv=True, kind="installed"),
     dict(venv=False, kind="installed"),
 ])
-def test_once_atoo_is_on_pypi_the_commands_name_the_plain_package(
-        monkeypatch, tmp_path, situation):
-    """`INSTALL_SOURCE` is the one line that changes."""
-    monkeypatch.setattr(install_info, "INSTALL_SOURCE", "")
+def test_the_commands_name_the_plain_package_from_pypi(monkeypatch, tmp_path, situation):
+    """`INSTALL_SOURCE` is empty while Atoo installs from PyPI."""
     hint = _hint(monkeypatch, tmp_path, **situation)
     assert '"atoo[ui]"' in hint and "git+" not in hint and "@" not in hint
+
+
+@pytest.mark.parametrize("situation", [
+    dict(venv=True, kind="installed", uv_tool=True),
+    dict(venv=True, kind="installed", pipx=True),
+    dict(venv=False, kind="installed"),
+])
+def test_a_set_install_source_is_named_in_every_command(monkeypatch, tmp_path, situation):
+    """`INSTALL_SOURCE` is the one line that changes where commands install from."""
+    monkeypatch.setattr(install_info, "INSTALL_SOURCE", "git+https://example.invalid/x.git")
+    hint = _hint(monkeypatch, tmp_path, **situation)
+    assert '"atoo[ui] @ git+https://example.invalid/x.git"' in hint
 
 
 def test_a_uv_tool_environment_is_told_from_the_receipt(monkeypatch, tmp_path):
@@ -409,8 +419,7 @@ def _advice(monkeypatch, tmp_path, **kw) -> str:
 
 def test_a_uv_tool_copy_is_told_to_reinstall_with_uv(monkeypatch, tmp_path):
     advice = _advice(monkeypatch, tmp_path, venv=True, kind="installed", uv_tool=True)
-    assert advice == ('`uv tool install --force --reinstall '
-                      '"atoo[ui] @ git+https://github.com/corourke/Atoo.git"`')
+    assert advice == '`uv tool install --force --reinstall --python 3.12 "atoo[ui]"`'
 
 
 def test_a_pipx_copy_is_told_to_reinstall_with_pipx(monkeypatch, tmp_path):
@@ -420,7 +429,7 @@ def test_a_pipx_copy_is_told_to_reinstall_with_pipx(monkeypatch, tmp_path):
 
 def test_an_unrecognised_install_hears_uv_first_and_pipx_after(monkeypatch, tmp_path):
     advice = _advice(monkeypatch, tmp_path, venv=False, kind="installed")
-    assert advice.startswith('`uv tool install --force --reinstall "atoo[ui] @ git+')
+    assert advice.startswith('`uv tool install --force --reinstall --python 3.12 "atoo[ui]"')
     assert advice.endswith("with pipx, `pipx reinstall atoo`")
 
 
@@ -463,3 +472,29 @@ def test_ui_prints_the_hint_and_exits_one_when_the_packages_are_missing(
     captured = capsys.readouterr()
     assert captured.err.strip() == "THE HINT"
     assert captured.out == ""
+
+
+# ---- every uv install command names the Python -----------------------------
+
+_REPO = Path(__file__).resolve().parent.parent
+
+
+def test_every_uv_install_command_names_the_python():
+    """Without `--python` uv may choose the 3.9 on a stock Mac and stop. The
+    install pages, the README, the site and the package's own hints all
+    spell the command out, so a new one that forgets the flag fails here.
+    The site's front page is not in the public tree, so a file that is not
+    there is skipped."""
+    files = [*sorted((_REPO / "docs" / "user").glob("*.md")), _REPO / "README.md",
+             _REPO / "website" / "index.html", _REPO / "atoo" / "install_info.py"]
+    files = [path for path in files if path.is_file()]
+    assert _REPO / "atoo" / "install_info.py" in files
+    prose = ("`uv tool install` says", "from `uv tool install`", "`uv tool install`\n",
+             "`uv tool install` made", "`uv tool install` command", "every `uv tool install`")
+    bad = []
+    for path in files:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "uv tool install" in line and "--python" not in line and "UV_PYTHON" not in line \
+                    and not any(p.strip("\n") in line for p in prose):
+                bad.append(f"{path.relative_to(_REPO)}:{number}: {line.strip()[:100]}")
+    assert not bad, "\n".join(bad)

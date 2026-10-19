@@ -66,7 +66,13 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Then, in a new terminal window:
 
 ```bash
-uv tool install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
+uv tool install --python 3.12 "atoo[ui]"
+uv tool update-shell; exec zsh   # in bash, open a new terminal window instead
+```
+
+Then:
+
+```bash
 atoo ui
 ```
 

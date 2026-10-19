@@ -850,6 +850,113 @@ def row_problems(cond: object) -> dict:
     return out
 
 
+# --------------------------------------------------------------------------
+# A condition in plain English.
+# --------------------------------------------------------------------------
+
+# A condition states the relationship that SHOULD hold, and the alert fires
+# when it does not, so each operator is read as its opposite: `fader_db >=
+# -40` alerts when the fader is below -40 dB.
+_ALERT_ORDERING = {">": "at or below", "<": "at or above", ">=": "below", "<=": "above"}
+_SEVERITY_WORDS = {"error": "an error", "warning": "a warning", "info": "information"}
+_MODE_WORDS = {"pre": "pre-fader", "post": "post-fader", "group": "in group mode"}
+
+
+def _strip_phrase(target: Target) -> str:
+    """Which strip or strips a target names, as a noun phrase."""
+    if target.bank is None:
+        return f"the channel or aux named {target.canonical}"
+    word = CANONICAL_KIND_WORD[target.bank]
+    if target.name is not None:
+        return f"the {word} named {target.name}"
+    if target.all_of_kind:
+        return f"any {word}"
+    if target.first != target.last:
+        return f"any {word} from {target.first} to {target.last}"
+    return f"{word} {target.first}"
+
+
+def _naming_sentence(target: Target) -> str:
+    """How the alert will name the strip it is about."""
+    if target.bank in ("main", "mtx"):
+        word = CANONICAL_KIND_WORD[target.bank]
+        return (f"The alert names the strip by its number, such as {word} 1; "
+                f"a {word}'s console name is not read.")
+    word = CANONICAL_KIND_WORD[target.bank] if target.bank else "CH"
+    return ("The alert names the strip by its number and its console name, "
+            f'such as {word} 1 "Kick".')
+
+
+def _wanted_boolean(cond: dict) -> bool:
+    """The state a boolean condition wants: `== true` and `!= false` both want on."""
+    return bool(cond["value"]) if cond["operator"] == "==" else not cond["value"]
+
+
+def _number_alert(cond: dict, thing: str) -> str:
+    """`thing` below -40 dB: the alert side of a level condition."""
+    op, level = cond["operator"], cond["value"]
+    shown = f"{level:g} dB"
+    if op == "==":
+        return f"{thing} not at {shown}"
+    if op == "!=":
+        return f"{thing} at {shown}"
+    return f"{thing} {_ALERT_ORDERING[op]} {shown}"
+
+
+def explain_condition(cond: object) -> str | None:
+    """A condition in plain English, built from its fields alone -- never
+    from its `description`, which is the engineer's own text and may say
+    anything. `Alerts as an error when CH 1 has its fader below -40 dB.
+    The alert names the strip by its number and its console name, such
+    as CH 1 "Kick".`
+
+    None for a condition the loader would refuse (`row_problems`, an
+    unknown operator or severity, an operator the field does not take): a
+    condition that cannot work has no sentence, rather than one that
+    describes something it will not do."""
+    problems = row_problems(cond)
+    if any(key in problems for key in ("channel", "field", "value", "bus", "row")):
+        return None
+    field, op, value = cond["field"], cond["operator"], cond["value"]
+    if op not in _OPERATORS or cond.get("severity") not in _SEVERITY_WORDS:
+        return None
+    if (field in _BOOLEAN_FIELDS or field in _EQUALITY_ONLY_FIELDS) \
+            and op not in _BOOL_COMPATIBLE_OPERATORS:
+        return None
+    target = parse_target(cond["channel"])
+    who = _strip_phrase(target)
+    extra = ""
+
+    if field == "muted":
+        alert = "is muted" if not _wanted_boolean(cond) else "is not muted"
+    elif field == "fader_db":
+        alert = _number_alert(cond, "has its fader")
+    elif field in _GROUP_FIELDS:
+        kind = "DCA" if field == "dca" else "mute group"
+        alert = (f"is not in {kind} {value}" if op == "==" else f"is in {kind} {value}")
+    elif field == "patch":
+        socket = format_socket(*parse_patch_value(value))
+        alert = (f"is not patched to {socket}" if op == "==" else f"is patched to {socket}")
+    elif field == _PHANTOM_FIELD:
+        alert = "has 48V off" if _wanted_boolean(cond) else "has 48V on"
+        extra = " Only a strip patched to a socket that carries 48V is checked."
+    else:
+        bus = parse_target(cond["bus"])
+        noun = "route" if bus.bank == "main" else "send"
+        where = f"the bus named {bus.canonical}" if bus.is_name else _strip_phrase(bus)
+        send = f"its {noun} to {where}"
+        if field == "send_on":
+            alert = f"has {send} switched {'off' if _wanted_boolean(cond) else 'on'}"
+        elif field == "send_db":
+            alert = _number_alert(cond, f"has {send}")
+        else:
+            mode = _MODE_WORDS[value]
+            alert = (f"has {send} set to something other than {mode}" if op == "=="
+                     else f"has {send} set {mode}")
+    severity = _SEVERITY_WORDS[cond["severity"]]
+    return f"Alerts as {severity} when {who} {alert}. {_naming_sentence(target)}{extra}"
+
+
 def _validate_condition(cond: object, source: str, index: int) -> dict:
     where = f"watch_conditions[{index}]"
     if not isinstance(cond, dict):

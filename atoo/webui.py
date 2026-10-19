@@ -4654,8 +4654,15 @@ def create_app(
         """`GET /api/watch-conditions`'s answer, which every endpoint that
         changes Watch's file answers with too: the file in use, its
         conditions, and the bundle's own watch.json (`_watch_bundle_file`)."""
+        from atoo.watch_conditions import explain_condition
+
+        conditions = app.state.watch_conditions
         return {"path": app.state.watch_conditions_path,
-                "watch_conditions": app.state.watch_conditions,
+                "watch_conditions": conditions,
+                # One plain-English sentence per condition, in order (null
+                # for none): the page only draws them.
+                "explanations": ([explain_condition(c) for c in conditions]
+                                 if conditions is not None else None),
                 "bundle_file": _watch_bundle_file()}
 
     def _setup_only(request: Request) -> "JSONResponse | None":
@@ -6354,9 +6361,16 @@ def create_app(
         # spelling, `CH 10`) when the channel parses. The rules are
         # `watch_conditions`' own, so the table and the loader cannot
         # drift apart the way WC_FIELDS once did.
-        from atoo.watch_conditions import row_problems
+        from atoo.watch_conditions import explain_condition, row_problems
 
-        return {"rows": [row_problems(row) for row in req.watch_conditions]}
+        rows = []
+        for row in req.watch_conditions:
+            checked = row_problems(row)
+            sentence = explain_condition(row)
+            if sentence is not None:
+                checked["explanation"] = sentence
+            rows.append(checked)
+        return {"rows": rows}
 
     @app.post("/api/watch-conditions/save")
     def api_watch_conditions_save(req: WatchConditionsSaveRequest, request: Request):

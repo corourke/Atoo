@@ -1318,6 +1318,12 @@ details.fold > summary.dock-head:focus-visible { outline: 2px solid var(--accent
   font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   background: var(--bg-row-alt); padding: 0 3px; border-radius: 2px;
 }
+/* Watch's "i" beside a condition's ID: the same help button, its text the
+   rule in plain English. */
+#wc-table .wc-id-cell { white-space: nowrap; }
+#wc-table .wc-id-cell input { vertical-align: middle; }
+#wc-table .wc-explain { margin-left: 6px; }
+#wc-table .wc-explain-btn { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
 .run-build-actions { display: inline-flex; align-items: center; gap: 8px; }
 
 /* Step 04's live build readout (GET /api/build/status's `progress`). The

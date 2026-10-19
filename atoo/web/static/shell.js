@@ -4065,7 +4065,7 @@
     pop.hidden = false;
     placeHelp(button, pop);
     button.setAttribute("aria-expanded", "true");
-    openHelp = { button: button, pop: pop };
+    openHelp = { button: button, pop: pop, hover: false };
   }
 
   document.addEventListener("click", (ev) => {
@@ -4073,12 +4073,25 @@
     if (button) {
       // A "?" inside a Build tile is not a click on the tile.
       ev.stopPropagation();
-      if (openHelp && openHelp.button === button) closeHelp(false);
+      if (openHelp && openHelp.button === button && openHelp.hover) openHelp.hover = false;
+      else if (openHelp && openHelp.button === button) closeHelp(false);
       else openHelpFor(button);
       return;
     }
     if (openHelp && !openHelp.pop.contains(ev.target)) closeHelp(false);
   }, true);
+  // A "?" marked `data-hover-open` also opens on hover (a pointer resting
+  // on it), and closes when the pointer leaves unless it was clicked open.
+  document.addEventListener("mouseover", (ev) => {
+    const button = ev.target && ev.target.closest ? ev.target.closest(".help-btn[data-hover-open]") : null;
+    if (!button || (openHelp && openHelp.button === button)) return;
+    openHelpFor(button);
+    openHelp.hover = true;
+  });
+  document.addEventListener("mouseout", (ev) => {
+    const button = ev.target && ev.target.closest ? ev.target.closest(".help-btn[data-hover-open]") : null;
+    if (button && openHelp && openHelp.button === button && openHelp.hover) closeHelp(false);
+  });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && openHelp) {
       ev.preventDefault();

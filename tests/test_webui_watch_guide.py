@@ -312,7 +312,8 @@ def test_a_writable_show_saves_and_the_demo_is_text_with_save_locked(served_show
             page.wait_for_function("document.body.classList.contains('is-demo-show')")
             page.wait_for_selector("#wc-body tr")
             assert page.locator("#wc-body tr").count() > 1
-            assert page.locator("#wc-body input, #wc-body select, #wc-body button").count() == 0
+            assert page.locator("#wc-body input, #wc-body select, "
+                                "#wc-body button:not(.wc-explain-btn)").count() == 0
             assert page.locator("#wc-body .sev").count() == page.locator("#wc-body tr").count()
             for control in ("#wc-change-btn", "#wc-new-btn", "#wc-add-btn"):
                 assert not page.evaluate(VISIBLE, control), control

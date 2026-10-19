@@ -139,6 +139,10 @@
   // (rebuilt with the table), the last check's answer per row, and a
   // counter so a slow answer to an older edit never paints over a newer.
   let wcRowRefs = [];
+  // The server's plain-English sentence per condition, as loaded (null for
+  // one that has none). A row being edited takes its sentence from the
+  // inline check instead (`wcRowChecks[i].explanation`).
+  let wcExplanations = [];
   let wcRowChecks = [];
   let wcCheckSeq = 0;
   let wcCheckTimer = null;
@@ -231,6 +235,41 @@
     return td;
   }
 
+  // The "i" beside a condition's ID: a `.help-pop` (shell.js opens it on
+  // hover, click or keyboard) holding the rule in plain English. The
+  // sentence is the server's, built from the condition's fields alone;
+  // this only draws it. `wcExplainText` is what the row shows now.
+  const WC_NO_EXPLANATION = "This rule is not explained until every cell in the row is valid.";
+
+  function wcExplainText(index) {
+    const check = wcRowChecks[index];
+    if (check && check.explanation) return check.explanation;
+    if (check || (wcDirty && !wcReadOnly())) return WC_NO_EXPLANATION;
+    return wcExplanations[index] || WC_NO_EXPLANATION;
+  }
+
+  function wcMakeExplain(index) {
+    const pop = document.createElement("span");
+    pop.className = "help-pop wc-explain";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "help-btn wc-explain-btn";
+    button.setAttribute("data-hover-open", "");
+    button.setAttribute("aria-label", "Explain this condition in plain English");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", "wc-explain-" + index);
+    button.textContent = "i";
+    const text = document.createElement("span");
+    text.className = "help-popover wc-explain-text";
+    text.id = "wc-explain-" + index;
+    text.setAttribute("role", "note");
+    text.hidden = true;
+    text.textContent = wcExplainText(index);
+    pop.appendChild(button);
+    pop.appendChild(text);
+    return { pop: pop, text: text };
+  }
+
   function wcBuildRow(cond, index) {
     const tr = document.createElement("tr");
     const readOnly = wcReadOnly();
@@ -284,7 +323,8 @@
     // A read-only show: the same columns, as text (no remove column).
     if (readOnly) {
       wcRowRefs[index] = {};
-      wcTextCell(tr, cond.id, "wc-text wc-text-id");
+      const roIdCell = wcTextCell(tr, cond.id, "wc-text wc-text-id");
+      roIdCell.appendChild(wcMakeExplain(index).pop);
       wcTextCell(tr, cond.description, "wc-text wc-text-desc");
       wcTextCell(tr, cond.channel, "wc-text");
       wcTextCell(tr, cond.bus ? cond.field + " \u2192 " + cond.bus : cond.field,
@@ -302,10 +342,15 @@
       return tr;
     }
 
+    let refs_explain = null;
     const idCell = document.createElement("td");
     const idInput = wcMakeInput("text", cond.id, "wc-id");
     idInput.addEventListener("input", () => { cond.id = idInput.value; edited(); });
+    idCell.className = "wc-id-cell";
     idCell.appendChild(idInput);
+    const explain = wcMakeExplain(index);
+    refs_explain = explain;
+    idCell.appendChild(explain.pop);
     tr.appendChild(idCell);
 
     const descCell = document.createElement("td");
@@ -314,7 +359,7 @@
     descCell.appendChild(descInput);
     tr.appendChild(descCell);
 
-    const refs = {};
+    const refs = { explain: refs_explain };
     wcRowRefs[index] = refs;
 
     const channelCell = document.createElement("td");
@@ -499,6 +544,7 @@
   function wcPaintChecks() {
     wcRowRefs.forEach((refs, index) => {
       const check = wcRowChecks[index] || {};
+      if (refs && refs.explain) refs.explain.text.textContent = wcExplainText(index);
       for (const cell of ["channel", "field", "bus", "value"]) {
         if (!refs || !refs[cell]) continue;
         const [control, err] = refs[cell];
@@ -629,6 +675,7 @@
       ? data.watch_conditions.map((c) => Object.assign({}, c))
       : [];
     wcRowChecks = [];
+    wcExplanations = (data && Array.isArray(data.explanations)) ? data.explanations : [];
     wcSetDirty(false);
     wcLoadedPath = data && data.path ? data.path : null;
     wcLoadedSnapshot = JSON.stringify(wcConditions);

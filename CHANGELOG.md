@@ -2,6 +2,28 @@
 
 What changed in each release, newest first.
 
+## 0.2.3 -- 2026-10-19
+
+The first release on PyPI, with two fixes to the install from the first
+test on a stock Mac, and a plain-English explanation of each Watch condition.
+
+- **On PyPI.** The install is now
+  `uv tool install --python 3.12 "atoo[ui]"`, with no GitHub address and no
+  `git`; the commands `atoo` prints say the same.
+- **The install names its Python.** `uv tool install` could choose the
+  Python 3.9 that Apple's Command Line Tools put on a Mac and stop, because
+  Atoo needs 3.11 or newer. Every install command now says
+  `--python 3.12`, so uv uses a 3.12 it has or downloads one. That covers
+  [Installing Atoo](docs/user/install.md), the README and the commands
+  `atoo` itself prints.
+- **`atoo` is on your `PATH` after the install.** On a new Mac account the
+  command was not found until `uv tool update-shell; exec zsh`. The install
+  page now has that step straight after the install.
+- **Watch explains each condition.** A small `i` beside a condition's ID
+  opens a plain-English sentence for the rule ("Alerts as an error when CH 1
+  has its fader below -40 dB."), written from the condition's own fields,
+  and it follows the row as you edit it.
+
 ## 0.2.2 -- 2026-10-19
 
 The install is shorter, and the first release meant for PyPI.

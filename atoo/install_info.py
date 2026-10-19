@@ -37,9 +37,15 @@ from atoo import config
 
 #: Where an installed copy comes from, as the install page spells it. The
 #: one place that says so: every install command in this package is built
-#: from it by `install_requirement`. Once Atoo is on PyPI, set this to ""
-#: and each command names the plain package.
-INSTALL_SOURCE = "git+https://github.com/corourke/Atoo.git"
+#: from it by `install_requirement`. Empty while Atoo installs from PyPI, so
+#: each command names the plain package; set it to an address such as
+#: "git+https://github.com/corourke/Atoo.git" to name that source instead.
+INSTALL_SOURCE = ""
+
+#: The Python every `uv tool install` command names. Without it uv may pick
+#: the 3.9 Apple's Command Line Tools put on a Mac and stop, because Atoo
+#: needs 3.11 or newer; with it uv uses a 3.12 it has or downloads one.
+UV_PYTHON = "3.12"
 
 #: How long ``git`` gets to answer. A version line is not worth a hang.
 GIT_TIMEOUT_S = 5.0
@@ -67,7 +73,7 @@ class InstallInfo:
     python_version: str = ""
 
     def summary(self) -> str:
-        """The one line: ``atoo 0.2.2 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
+        """The one line: ``atoo 0.2.3 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
         head = f"atoo {self.version}"
         if self.kind == "installed":
             return f"{head} (installed copy at {_shown(self.package_dir)})"
@@ -216,10 +222,10 @@ def ui_extra_hint(info: InstallInfo | None = None) -> str:
             return (f"{lead} -- this copy was installed by uv without it. From the checkout, "
                     "install it again with:\n"
                     f"  cd {shlex.quote(str(info.root))}\n"
-                    "  uv tool install --force --editable \".[ui]\"\n"
+                    f"  uv tool install --force --python {UV_PYTHON} --editable \".[ui]\"\n"
                     f"({_CHECKOUT_DOC})")
         return (f"{lead} -- this copy was installed by uv without it. Install it again with:\n"
-                f"  uv tool install --force \"{requirement}\"\n"
+                f"  uv tool install --force --python {UV_PYTHON} \"{requirement}\"\n"
                 f"({_INSTALL_DOC})")
     if in_virtualenv():
         if in_pipx_environment():
@@ -244,7 +250,7 @@ def ui_extra_hint(info: InstallInfo | None = None) -> str:
                 f"  python3 -m pip install -e \".[ui]\"\n"
                 f"then run `atoo ui` from that terminal ({_CHECKOUT_DOC}).")
     return (f"{lead}. {outside}, so install Atoo with uv instead:\n"
-            f"  uv tool install --force \"{requirement}\"\n"
+            f"  uv tool install --force --python {UV_PYTHON} \"{requirement}\"\n"
             f"({_INSTALL_DOC})")
 
 
@@ -253,13 +259,16 @@ def reinstall_advice(info: InstallInfo | None = None) -> str:
     words of whatever installed this copy: a uv tool, pipx, or (when
     neither is detected) either, with uv first."""
     info = info or describe()
-    uv_reinstall = f"uv tool install --force --reinstall \"{install_requirement('ui')}\""
+    uv_reinstall = (f"uv tool install --force --reinstall --python {UV_PYTHON} "
+                    f"\"{install_requirement('ui')}\"")
     if in_uv_tool_environment():
         advice = f"`{uv_reinstall}`"
         if info.root is not None:
-            advice += ", or from the checkout `uv tool install --force --editable .`"
+            advice += (", or from the checkout "
+                       f"`uv tool install --force --python {UV_PYTHON} --editable .`")
         return advice
     if in_pipx_environment():
         return "`pipx reinstall atoo`, or from a checkout `pipx install --force --editable .`"
-    return (f"`{uv_reinstall}`, or from a checkout `uv tool install --force --editable .`; "
+    return (f"`{uv_reinstall}`, or from a checkout "
+            f"`uv tool install --force --python {UV_PYTHON} --editable .`; "
             "with pipx, `pipx reinstall atoo`")
