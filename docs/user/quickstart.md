@@ -16,7 +16,7 @@ cd ~/quickstart
 
 Run everything below from that folder.
 
-**Installed with pipx, and no checkout?** `docs/user/demo/` is not in
+**Installed with uv or pipx, and no checkout?** `docs/user/demo/` is not in
 the install. [`atoo init
 --demo`](change-the-demo.md#1-make-a-copy-of-the-demo-show) writes the
 smaller Demo show to `~/Documents/Atoo/demo-show/`. Run the steps

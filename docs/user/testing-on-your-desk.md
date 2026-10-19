@@ -20,9 +20,9 @@ examples use `192.0.2.16` for the desk: type your own.
 
 **Testing a branch from a clone?** Before anything else, run
 `atoo --version`: its first line must name your clone's folder and the
-branch you checked out, not an `installed copy` (the pipx install, which
-never follows a branch). [Which atoo am I
-running?](install-from-checkout.md#3-which-atoo-am-i-running)
+branch you checked out, not an `installed copy` (the install from [Installing
+Atoo](install.md), which never follows a branch). [Which atoo am I
+running?](install-from-checkout.md#4-which-atoo-am-i-running)
 
 ## 1. Before you start (10 minutes)
 

@@ -14,8 +14,7 @@ In this order, the first time:
 | Page | For |
 |---|---|
 | [Why Atoo?](why.md) | whether it is worth your time, against what you already do |
-| [Installing Atoo](install.md) | on a Mac, step by step: Homebrew, pipx, Python, Atoo, then `atoo init` and `atoo ui` |
-| [Installing without Homebrew](install-without-homebrew.md) | Python and pipx another way, on a Mac, Linux or Windows |
+| [Installing Atoo](install.md) | on a Mac or Linux with uv, step by step, then `atoo init` and `atoo ui`; Homebrew and pipx, and Windows, too |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
 | [Testing on your desk](testing-on-your-desk.md) | your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and its undo |
 | [Configuring Atoo](configuration.md) | your house conventions, presets and desk, set once |

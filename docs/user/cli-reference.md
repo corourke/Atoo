@@ -24,7 +24,7 @@ running, and exits `0`: the version, the folder the code runs from and,
 for a git checkout, its branch, short commit and whether tracked files
 have uncommitted changes, then the Python it runs on. It is not an option
 of any command, so it is not in the tables below.
-[Which atoo am I running?](install-from-checkout.md#3-which-atoo-am-i-running)
+[Which atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)
 reads it.
 
 ## Exit codes
@@ -639,7 +639,7 @@ _Not written yet._
 The first command to run: a working folder with house conventions and a
 preset library in it (no show -- you make that with the UI's New show...), and
 `~/.atoo.config` pointed at it. It never overwrites anything. See
-[Installing Atoo](install.md#6-first-run-atoo-init-then-atoo-ui) for a real
+[Installing Atoo](install.md#4-first-run-atoo-init-then-atoo-ui) for a real
 run.
 <!-- preamble:end -->
 

@@ -22,7 +22,7 @@ paths and console as flags. Every flag beats both, so `--conventions`,
 
 `~/.atoo.config` is a small TOML file in your home directory.
 **`atoo init` writes its `[conventions]`, `[presets]` and `[workspace]`
-sections for you** ([First run](install.md#6-first-run-atoo-init-then-atoo-ui)).
+sections for you** ([First run](install.md#4-first-run-atoo-init-then-atoo-ui)).
 Here it is with every section filled in:
 
 ```toml

@@ -1,97 +1,58 @@
 # Installing Atoo
 
-Seven steps on a Mac, in order. Each one starts with how to tell it is
-already done, so skip any you have. No Homebrew, or a Linux or Windows
-laptop: [Installing without Homebrew](install-without-homebrew.md) gets
-you to step 5.
+On a Mac or Linux, two commands and one new terminal window. Each step
+starts with how to tell it is already done, so skip any you have.
+Windows: [below](#windows).
 
-## 1. Homebrew
+## 1. uv
 
-Homebrew installs command-line programs on a Mac. Atoo strongly
-recommends it: the steps below assume it.
+uv installs a Python program the way an app is installed: one command,
+its own private folder, and one command to remove it. It also fetches
+the Python that Atoo needs (3.11 or newer), so you never install one
+yourself, and leaves the Python your laptop came with alone.
 
 ```bash
-brew --version
+uv --version
 ```
 
-A version number means you have it: go to step 2. `command not found`
+A version number means you have it: go to step 3. `command not found`
 means you do not:
 
-1. Install it with the one command on [brew.sh](https://brew.sh). It
-   asks for your Mac password, and installs Apple's Command Line Tools
-   (which include `git`) if you do not have them.
-2. Put it on your `PATH`, so the terminal can find it. On an Apple
-   Silicon Mac (M1 and later):
-
-   ```bash
-   echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc && exec zsh
-   ```
-
-   On an Intel Mac it is in `/usr/local/bin`, which is already on your
-   `PATH`.
-3. Check: `brew --version` now prints a version.
-
-## 2. pipx
-
-pipx installs a Python program the way an app is installed: one
-command, its own private folder, and one command to remove it.
-
 ```bash
-pipx --version
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-If that says `command not found`:
+With Homebrew, `brew install uv` does the same.
+
+## 2. Open a new terminal window
+
+The installer puts uv in `~/.local/bin` and adds that folder to your
+`PATH` in your shell's startup file. A terminal window that was already
+open does not read the change, so open a new one, and check:
 
 ```bash
-brew install pipx
+uv --version
 ```
 
-## 3. Python 3.11 or newer
+Still `command not found`: run `~/.local/bin/uv tool update-shell`, then
+open another new window.
 
-Atoo needs Python 3.11 or newer, and runs on the Python pipx itself
-uses. `python3` on a stock Mac is 3.9, which is too old, but Homebrew's
-pipx brings its own current Python. Check which one pipx uses:
+## 3. Install Atoo
 
-```bash
-"$(pipx environment --value PIPX_DEFAULT_PYTHON)" --version
-```
-
-`Python 3.11` or later: go to step 4. Older, or an error:
+Until Atoo is on PyPI, uv fetches it from GitHub, which needs `git`.
+`git --version` prints a version if you have it; on a Mac that has
+never had it, the same command offers to install Apple's Command Line
+Tools: say yes, and run the install when they are in.
 
 ```bash
-brew install python@3.12
-python3.12 --version
-```
-
-and in step 5, add `--python python3.12` after `pipx install`.
-
-Leave the 3.9 at `/usr/bin/python3` alone: it belongs to Apple's
-Command Line Tools, and parts of the system use it. The two live side by
-side under their own names.
-
-## 4. Put pipx's programs on your `PATH`
-
-pipx puts the programs it installs in `~/.local/bin`. Make sure your
-terminal looks there:
-
-```bash
-pipx ensurepath && exec zsh
-```
-
-`exec zsh` starts a fresh shell in the same window, which is what picks
-up the change. A terminal already open in another window does not see
-it until you open a new one.
-
-## 5. Install Atoo
-
-```bash
-pipx install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
+uv tool install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 ```
 
 This installs Atoo and its browser UI into a private folder of their
-own, and changes nothing else on the laptop. It gives you two commands
-that are the same command: `atoo`, and `a2`, its short spelling
-(`a2 ui` is `atoo ui`). Check:
+own, with a Python of their own if the laptop has none new enough, and
+changes nothing else on the laptop. It ends with `Installed 2
+executables: a2, atoo`: two commands that are the same command,
+`atoo`, and `a2`, its short spelling (`a2 ui` is `atoo ui`). Check:
 
 ```bash
 atoo --version
@@ -100,10 +61,13 @@ atoo --version
 Its first line names the copy you just installed:
 
 ```text
-atoo 0.2.1 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.1 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
 ```
 
-## 6. First run: `atoo init`, then `atoo ui`
+`atoo: command not found`: run `uv tool update-shell`, then open a new
+terminal window.
+
+## 4. First run: `atoo init`, then `atoo ui`
 
 `atoo init` gives you a folder of your own to work in, so nothing you
 do touches the files Atoo ships. It makes `~/Documents/Atoo` (or
@@ -153,7 +117,7 @@ atoo ui
 ```
 
 ```text
-atoo 0.2.1 (installed copy at ~/.local/pipx/venvs/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.1 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
@@ -170,26 +134,23 @@ Next: [Try the Demo show](demo.md).
 
 ## When it does not work
 
-**`atoo: command not found` after a successful install.** The terminal
-has not seen step 4: run `exec zsh`, or open a new terminal.
-`pipx list` says where the command went.
+**`uv: command not found`, or `atoo: command not found`, after a
+successful install.** The terminal has not seen the `PATH` change: open
+a new window. If it is still not found, `uv tool update-shell` (or
+`~/.local/bin/uv tool update-shell`) adds `~/.local/bin` to your `PATH`;
+then open a new window again.
 
-**pipx refuses Atoo for its Python version.** pipx is using a Python
-older than 3.11: do step 3, and install with `--python python3.12`.
+**`Git executable not found` from `uv tool install`.** Step 3 needs
+`git`: run `git --version`, and on a Mac accept the offer to install
+Apple's Command Line Tools.
 
 **`the web UI needs the 'ui' extra` from `atoo ui`.** It was installed
-without `[ui]`. Install it again with the extra:
-
-```bash
-pipx install --force "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
-```
-
-**`python3.12: command not found` right after `brew install`.**
-Homebrew is not on your `PATH`: step 1, part 2.
+without `[ui]`. Run step 3's command again with `--force` after
+`install`.
 
 **The starter set is missing.** If an install has lost it, `init`
-writes nothing, exits 1, and says where it looked. Reinstall:
-`pipx reinstall atoo`.
+writes nothing, exits 1, and says where it looked. Install it again:
+step 3's command with `--force` after `install`.
 
 [Troubleshooting](troubleshooting.md) covers the desk, builds and the
 browser.
@@ -197,11 +158,59 @@ browser.
 ## Updating and removing
 
 ```bash
-pipx reinstall atoo     # fetches the latest and installs it again
-pipx uninstall atoo     # removes the program
+uv tool upgrade atoo     # fetches the latest and installs it again
+uv tool uninstall atoo   # removes the program
 ```
 
 Neither touches your shows, `~/Documents/Atoo` or `~/.atoo.config`.
+
+## If you already use Homebrew and pipx
+
+pipx does the same job as uv, on a Python you provide. If you already
+keep your command-line programs with it:
+
+1. `pipx --version`; if it is not found, `brew install pipx`.
+2. Check the Python pipx uses: `"$(pipx environment --value
+   PIPX_DEFAULT_PYTHON)" --version`. Atoo needs 3.11 or newer. If it is
+   older, `brew install python@3.12`, and add `--python python3.12`
+   after `pipx install` below. Leave the 3.9 at `/usr/bin/python3`
+   alone: it belongs to Apple's Command Line Tools.
+3. `pipx ensurepath`, then open a new terminal window.
+4. Step 3's command, with `pipx install` in place of `uv tool install`.
+
+Its `atoo --version` names a copy under `~/.local/pipx/venvs/atoo`. To
+update or remove it: `pipx reinstall atoo`, `pipx uninstall atoo`. Keep
+one of the two installs, not both: each puts its `atoo` in
+`~/.local/bin`, and `atoo --version` says which one you have ([Which
+atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)).
+
+## Windows
+
+**Not supported yet: nobody has run Atoo on Windows.** Reading the
+code says it should work. If you try it:
+
+1. Install Python from
+   [python.org/downloads](https://www.python.org/downloads/), ticking
+   *Add python.exe to PATH*.
+2. Install [Git for Windows](https://git-scm.com/download/win).
+3. In a new Command Prompt:
+
+   ```
+   py -m pip install --user pipx
+   py -m pipx ensurepath
+   ```
+
+4. Open a new Command Prompt, and run step 3's command with
+   `pipx install` in place of `uv tool install`.
+
+The configuration file is `C:\Users\<you>\.atoo.config`, and `init`
+makes `C:\Users\<you>\Documents\Atoo`, even when your Documents folder
+is kept in OneDrive; `atoo init --dir` puts it where you want it.
+Atoo reads and writes every file as UTF-8, so save your input list,
+conventions and instructions as UTF-8: Excel's *CSV UTF-8* and
+Notepad's default both do.
+
+Please [tell us](limitations.md#telling-us) how it went, good or bad.
 
 To run Atoo from a clone of its repository instead, see [Installing from
 a checkout](install-from-checkout.md).

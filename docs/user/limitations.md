@@ -91,7 +91,7 @@ a real one:
 ## Your laptop
 
 Tested on macOS and Linux with Python 3.11 or newer. Windows has not
-been tried: [Installing](install-without-homebrew.md#windows) says what to expect.
+been tried: [Installing Atoo](install.md#windows) says what to expect.
 
 ## Telling us
 
