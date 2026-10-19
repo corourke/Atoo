@@ -45,14 +45,31 @@ never had it, the same command offers to install Apple's Command Line
 Tools: say yes, and run the install when they are in.
 
 ```bash
-uv tool install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
+uv tool install --python 3.12 "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 ```
 
+`--python 3.12` is not optional on a Mac: without it uv may pick the
+Python 3.9 that Apple's Command Line Tools put on the laptop, and stop
+with an error that Atoo needs Python 3.11 or newer. With it, uv uses a
+3.12 it already has or downloads one of its own.
+
 This installs Atoo and its browser UI into a private folder of their
-own, with a Python of their own if the laptop has none new enough, and
-changes nothing else on the laptop. It ends with `Installed 2
-executables: a2, atoo`: two commands that are the same command,
-`atoo`, and `a2`, its short spelling (`a2 ui` is `atoo ui`). Check:
+own, with a Python of their own, and changes nothing else on the
+laptop. It ends with `Installed 2 executables: a2, atoo`: two commands
+that are the same command, `atoo`, and `a2`, its short spelling
+(`a2 ui` is `atoo ui`).
+
+Make sure `atoo` is on your `PATH`, whatever the installer did on this
+laptop (on a new Mac account it often is not yet):
+
+```bash
+uv tool update-shell; exec zsh
+```
+
+`update-shell` adds `~/.local/bin` to your shell's startup file, or says
+it is already there. `exec zsh` restarts the shell in this window so it
+reads the change; zsh is the default on a Mac. In bash or any other
+shell, open a new terminal window instead. Check:
 
 ```bash
 atoo --version
@@ -61,11 +78,11 @@ atoo --version
 Its first line names the copy you just installed:
 
 ```text
-atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
-`atoo: command not found`: run `uv tool update-shell`, then open a new
-terminal window.
+`atoo: command not found`: the command above, then `atoo --version`
+again.
 
 ## 4. First run: `atoo init`, then `atoo ui`
 
@@ -117,7 +134,7 @@ atoo ui
 ```
 
 ```text
-atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
@@ -135,10 +152,14 @@ Next: [Try the Demo show](demo.md).
 ## When it does not work
 
 **`uv: command not found`, or `atoo: command not found`, after a
-successful install.** The terminal has not seen the `PATH` change: open
-a new window. If it is still not found, `uv tool update-shell` (or
-`~/.local/bin/uv tool update-shell`) adds `~/.local/bin` to your `PATH`;
-then open a new window again.
+successful install.** The terminal has not seen the `PATH` change: run
+`uv tool update-shell; exec zsh` (or `~/.local/bin/uv tool update-shell`
+if `uv` itself is not found), or open a new window. In bash, open a new
+window rather than `exec zsh`.
+
+**`uv tool install` says Atoo needs Python 3.11 or newer.** uv picked
+the Python 3.9 that came with the laptop. Run step 3's command with
+`--python 3.12` after `install`, as written above.
 
 **`Git executable not found` from `uv tool install`.** Step 3 needs
 `git`: run `git --version`, and on a Mac accept the offer to install
@@ -176,7 +197,8 @@ keep your command-line programs with it:
    after `pipx install` below. Leave the 3.9 at `/usr/bin/python3`
    alone: it belongs to Apple's Command Line Tools.
 3. `pipx ensurepath`, then open a new terminal window.
-4. Step 3's command, with `pipx install` in place of `uv tool install`.
+4. Step 3's command, with `pipx install` in place of
+   `uv tool install --python 3.12`.
 
 Its `atoo --version` names a copy under `~/.local/pipx/venvs/atoo`. To
 update or remove it: `pipx reinstall atoo`, `pipx uninstall atoo`. Keep
@@ -201,7 +223,7 @@ code says it should work. If you try it:
    ```
 
 4. Open a new Command Prompt, and run step 3's command with
-   `pipx install` in place of `uv tool install`.
+   `pipx install` in place of `uv tool install --python 3.12`.
 
 The configuration file is `C:\Users\<you>\.atoo.config`, and `init`
 makes `C:\Users\<you>\Documents\Atoo`, even when your Documents folder

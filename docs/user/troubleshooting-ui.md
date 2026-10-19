@@ -6,7 +6,7 @@ A healthy start prints where to point a browser and then sits there:
 
 ```text
 $ atoo ui --plan touringband/plan.json
-atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
@@ -44,7 +44,7 @@ dependency, so the engine installs without FastAPI and uvicorn. Exits
   ".[ui]"`.
 - **An installed copy**: install it again with the extra, [step 3 of
   Installing Atoo](install.md#3-install-atoo) with `--force` after
-  `install` (`uv tool install --force`, or `pipx install --force` for a
+  `install` (`uv tool install --force --python 3.12`, or `pipx install --force` for a
   pipx install). That is the fix whatever the message suggests: a copy
   installed with uv has no `pip` of its own.
 

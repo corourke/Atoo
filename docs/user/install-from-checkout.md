@@ -98,7 +98,7 @@ your clone's folder and the branch you checked out.
 The installed copy's first line is different, and names no branch:
 
 ```text
-atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
 That is a private copy of a release, which never follows `git checkout`.
