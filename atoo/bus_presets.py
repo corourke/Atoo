@@ -1,4 +1,4 @@
-"""Bus presets, resolved into the plan -- an earlier change.
+"""Bus presets, resolved into the plan.
 
 The decision, 2026-10-12: effects on FX busses come from **bus
 presets saved on the desk**. A plan's bus names one (`busses[X].preset`),

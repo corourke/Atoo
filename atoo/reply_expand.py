@@ -921,18 +921,21 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
                                      f"the reply placed it at {bank} {number}")
         written = _written_fields(channel, color)
 
+        phantom = row.phantom
+        if pair_row is not None:
+            phantom = _pair_phantom(row, pair_row, where, findings)
         full = {
             "channel": number,
             "bank": bank,
             "name": name,
             "color": color,
             "source": {"input": row.name, "type": row.type or None, "model": row.model or None,
-                       "stereo": stereo, "phantom": row.phantom,
+                       "stereo": stereo, "phantom": phantom,
                        # The pair's second row, by name: the one thing
                        # that says a row with no stated socket is built.
-                       # ... and its own phantom: 48V is per socket, and
-                       # the second socket answers to its own row.
-                       **({"pair_input": pair_row.name, "pair_phantom": pair_row.phantom}
+                       # ... and the value written for its socket, which
+                       # is the pair's: the desk switches both together.
+                       **({"pair_input": pair_row.name, "pair_phantom": phantom}
                           if pair_row is not None else {})},
             "patch": patch,
             "processing": dict(channel.get("processing") or {}),
@@ -1928,6 +1931,26 @@ def apply_stated_presets(plan: dict, rows, *, findings: list | None = None,
             provenance["preset"] = cite
         set_count += 1
     return set_count
+
+
+def _pair_phantom(row, pair_row, where: str, findings: list | None) -> bool:
+    """The one 48V value for a stereo channel built from two input-list
+    rows: on if either row wants it. The desk switches a pair's two sockets
+    together, so two values cannot be put on it; a condenser left without
+    48V is silent, where a dynamic given it is unharmed, so "on" is the
+    choice that displeases at worst. Said at INFO, naming the row that
+    asked, when the rows disagree; rows that agree say nothing."""
+    if row.phantom == pair_row.phantom:
+        return row.phantom
+    asked, other = (row, pair_row) if row.phantom else (pair_row, row)
+    if findings is not None:
+        findings.append(_info(
+            "reply.pair-phantom", where,
+            f"48V is on for both sockets of the stereo channel: {asked.name!r} asks for it "
+            f"and {other.name!r} does not, and the desk switches a pair's two sockets "
+            "together, so the pair takes the value either row wants (split the pair into "
+            f"two mono channels if you want {other.name!r} without 48V)"))
+    return True
 
 
 def _info(code: str, where: str, message: str) -> Diagnostic:

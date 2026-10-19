@@ -202,7 +202,7 @@ def anthropic_schema(schema: dict) -> dict | None:
     engineer's own names, expressed as `additionalProperties: <subschema>`,
     and the subset allows `additionalProperties` to be `false` and nothing
     else. There is no rewriting around it: `false` would forbid every bus.
-    An earlier change tracks reshaping those maps into arrays, which would make the
+    Reshaping those maps into arrays would make the
     whole format expressible.
     """
     if not _expressible(schema):

@@ -1,9 +1,8 @@
 # Audio domain knowledge
 
 Things that are true across engineers, bands and venues — as distinct from
-**console facts** (`docs/reference/wing-console-model.md`, fixed by the
-hardware) and from **one engineer's conventions** (their own file, which is
-policy, not knowledge).
+**console facts** (fixed by the hardware) and from **one engineer's
+conventions** (their own file, which is policy, not knowledge).
 
 This file is **prose on purpose**. It is sent verbatim to the model that
 lays out a plan — and to the critic that reviews it — and prose is the
@@ -17,13 +16,8 @@ Add to it freely. There is no schema to satisfy and nothing to keep in
 sync. Write what you would tell a competent assistant who knows consoles
 but not your habits.
 
-**This file is the only home.** There is no structured companion any
-more. A JSON file of term lookups (`audio_vocabulary.json`) used to sit
-beside it, because the deterministic compiler needed machine-readable
-tables to resolve a category name with no model available (FR-X.7).
-An earlier change retired that compiler, FR-X.7 with it, and the JSON along with
-both -- nothing read it any longer. An earlier change had already settled the
-direction: prose is the home, no schema.
+**This file is the only home.** There is no structured companion file of
+term lookups.
 
 So if a term needs explaining -- what "band" covers, what a "wedge" is,
 which of fader/trim/gain someone means -- explain it here, in a

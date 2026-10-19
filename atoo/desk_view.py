@@ -1,4 +1,4 @@
-"""The desk drawn as scribble strips, for Apply's Preview -- an earlier change.
+"""The desk drawn as scribble strips, for Apply's Preview.
 
 Apply's second step draws the desk the way the WING draws it: one
 scribble strip per channel, aux, bus, main, matrix, DCA and mute group,

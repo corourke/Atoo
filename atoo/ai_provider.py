@@ -1356,7 +1356,7 @@ class OllamaProvider:
         if done_reason == "length":
             # The context window (num_ctx bounds prompt + reply together) or
             # num_predict ran out mid-generation, not the model choosing to
-            # stop. Silence here is what produced an earlier change: a plan cut off
+            # stop. Silence here once produced a confusing failure: a plan cut off
             # right before its last few keys gets end-of-document repaired
             # into something that *parses*, then fails schema validation
             # with "missing required field 'outputs'" and no hint that the

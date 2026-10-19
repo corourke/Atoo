@@ -7,7 +7,7 @@ and is not the whole story. It cannot see a LATER journal: if an apply
 wrote ch 1-19 and an amend then added ch 21-23, every address in the
 apply journal still holds what the apply put there, every one of them
 passes the guard below, and reversing that journal takes the show off the
-desk under the amend. An earlier change fixed that a level up, where it belongs
+desk under the amend. That is fixed a level up, where it belongs
 -- the bundle keeps one time-ordered stack of every journalled write, and
 `atoo undo` pops the top of it and refuses a journal that is no
 longer the top. Nothing in this module changed; what changed is which
@@ -509,7 +509,7 @@ def load_journal(path: str) -> dict:
 def journal_records(journal: dict) -> list[WriteRecord]:
     """The journal's `writes` as `WriteRecord`s.
 
-    `value_type` defaults to `"s"` for a journal written before an earlier change added the field: a string compares exactly, which is the
+    `value_type` defaults to `"s"` for a journal written before the field existed: a string compares exactly, which is the
     conservative direction -- a float address in such a journal is more
     likely to be refused than wrongly reversed."""
     records = []

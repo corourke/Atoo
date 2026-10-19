@@ -593,7 +593,7 @@ def _pair_phantom_problems(original: dict, edited: dict, paths: list[str], infos
     if second_moved and not (first_moved or named_first):
         return [PAIR_PHANTOM_TOGETHER]
     if second_moved:
-        sides = [on for _socket, on in inferred.socket_phantom(edited)]
+        sides = [on for _socket, on in inferred.stated_socket_phantom(edited)]
         if sides[0] != sides[1]:
             return [PAIR_PHANTOM_TOGETHER]
         return []
@@ -976,7 +976,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
        mute is edited only when it names one.
     """
     model = resolve_console_model(base, console_model)
-    # A base plan built before an earlier change names its outputs' patches
+    # A base plan built before the rename to `patch` names its outputs' patches
     # `socket`; the merged plan is written with the current names.
     merged = copy.deepcopy(plan_compat.normalise_plan(base))
     for key in ("channels",):

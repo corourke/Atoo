@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoo"
-version = "0.2.1"
+version = "0.2.2"
 description = "Compile console conventions into a plan, apply it, prove it landed."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,6 +29,12 @@ classifiers = [
 # the provider -- the schema is ENFORCED by the model's decoder, not
 # validated locally. A venue laptop installs this and nothing else.
 dependencies = []
+
+# Shown in the sidebar of the PyPI page.
+[project.urls]
+Homepage = "https://github.com/corourke/Atoo"
+Issues = "https://github.com/corourke/Atoo/issues"
+Changelog = "https://github.com/corourke/Atoo/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # Everything the test suite imports, and nothing the tool needs. jsonschema

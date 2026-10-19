@@ -46,7 +46,7 @@ CANONICAL_COLUMNS = (
 ORDER_COLUMN = "order"
 SKIP_MARK = "-"
 
-# The patch column's name before an earlier change (2026-09-28). A **socket** is
+# The patch column's name before the rename of `socket` to `patch` (2026-09-28). A **socket** is
 # the physical input on the desk; a **patch** is the connection from a
 # channel to it -- and the column says where each source is patched, so
 # it is `patch` now. A list headed `socket` still loads exactly the same,
@@ -346,14 +346,14 @@ _GROUP_ALIASES = {
     "play": "PLAY",
 }
 
-# An earlier change, 2026-09-20: `"sdcard": "CRD"` was removed from the table
+# On 2026-09-20, `"sdcard": "CRD"` was removed from the table
 # above, and it is worth saying why out loud because the entry looked
 # harmless for as long as it existed. **CRD is the expansion
 # card, not the SD card; the SD card is used by WING LIVE** -- so an
 # input list whose patch column said "SD card 3" was silently patched to
 # socket 3 of the *expansion card*, a different piece of hardware, and
-# nothing anywhere reported it. That is the precise failure an earlier change was filed
-# about: a confident wrong friendly name producing a plausible patch
+# nothing anywhere reported it. That is the precise failure to avoid:
+# a confident wrong friendly name producing a plausible patch
 # nobody catches.
 #
 # With the alias gone, "SD card 3" no longer parses, and an unparsable
@@ -365,9 +365,9 @@ _GROUP_ALIASES = {
 # LIVE, whose patching this project cannot yet represent.
 #
 # `"module": "MOD"` stayed while `console_facts` dropped MOD's friendly
-# label -- a deliberate asymmetry, flagged on an earlier change for the engineer to overrule
-# if they disagreed. The question is moot now rather than answered: an earlier change
-# settled MOD on 2026-09-21 as the AoIP module bay (Dante or WSG, 64 in
+# label -- a deliberate asymmetry, flagged for the engineer to overrule
+# if they disagreed. The question is moot now rather than answered: MOD was
+# settled on 2026-09-21 as the AoIP module bay (Dante or WSG, 64 in
 # and 64 out, `/$syscfg/opt_mod`) from the protocol PDF and our own walk,
 # so both tables point the same way and "Module 3" means what the console
 # means by it.
@@ -384,7 +384,7 @@ _GROUP_ALIASES = {
 # "Dante 3" gets `patch.unparsable-stated-socket` and a question, which
 # is the correct outcome and is covered by a test so it stays that way.
 
-# An earlier change, found the hard way: every entry above was a FRIENDLY name,
+# Found the hard way: every entry above was a FRIENDLY name,
 # so four groups the console itself names -- CRD, MOD, AUX, USR -- were
 # refused by their own token. "CRD 64" is exactly how the hardware, this
 # project's own `console_facts.INPUT_SOCKETS`, and the engineer all write

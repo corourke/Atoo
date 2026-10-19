@@ -251,8 +251,12 @@ def test_the_footer_shows_in_the_real_page_in_the_dark_theme(tmp_path, monkeypat
 
 # ---- the 'ui' extra's hint: one per situation -------------------------------
 
-def _hint(monkeypatch, tmp_path, *, venv: bool, kind: str, pipx: bool = False) -> str:
-    """The hint in a given situation. ``kind`` is "checkout" or "installed"."""
+def _hint(monkeypatch, tmp_path, *, venv: bool, kind: str, pipx: bool = False,
+          uv_tool: bool = False, uv_venv: bool = False) -> str:
+    """The hint in a given situation. ``kind`` is "checkout" or "installed".
+    ``uv_tool`` is the environment `uv tool install` makes (it holds a
+    `uv-receipt.toml`); ``uv_venv`` one `uv venv` made (its `pyvenv.cfg`
+    names uv, and that is all)."""
     if kind == "checkout":
         root = tmp_path / "my clone"
         package = root / "atoo"
@@ -262,7 +266,18 @@ def _hint(monkeypatch, tmp_path, *, venv: bool, kind: str, pipx: bool = False) -
         package = tmp_path / "lib" / "python3.12" / "site-packages" / "atoo"
         package.mkdir(parents=True)
     base = tmp_path / "base-python"
-    if venv:
+    if uv_tool:
+        venv = True
+        prefix = tmp_path / "uv-env" / "atoo"
+        prefix.mkdir(parents=True)
+        (prefix / "pyvenv.cfg").write_text("home = /usr/bin\nuv = 0.11.32\n")
+        (prefix / "uv-receipt.toml").write_text('[tool]\nrequirements = [{ name = "atoo" }]\n')
+    elif uv_venv:
+        venv = True
+        prefix = tmp_path / "venv"
+        prefix.mkdir(parents=True)
+        (prefix / "pyvenv.cfg").write_text("home = /usr/bin\nuv = 0.11.32\n")
+    elif venv:
         prefix = (tmp_path / "pipx" / "venvs" / "atoo") if pipx else (tmp_path / "venv")
     else:
         prefix = base
@@ -293,10 +308,11 @@ def test_inside_a_virtualenv_a_checkout_keeps_the_one_line_pip_hint(monkeypatch,
                     '  python3 -m pip install -e ".[ui]"')
 
 
-def test_outside_a_virtualenv_an_installed_copy_is_pointed_at_pipx(monkeypatch, tmp_path):
+def test_outside_a_virtualenv_an_installed_copy_is_pointed_at_uv(monkeypatch, tmp_path):
     hint = _hint(monkeypatch, tmp_path, venv=False, kind="installed")
     assert "externally-managed-environment" in hint
-    assert 'pipx install --force "atoo[ui] @ git+' in hint
+    assert 'uv tool install --force "atoo[ui] @ git+' in hint
+    assert "pipx" not in hint
     assert " -e " not in hint
     assert not [line for line in hint.splitlines() if line.startswith("  ") and "pip " in line]
     assert "https://docs.atoo.app/getting-started/install/" in hint
@@ -313,6 +329,116 @@ def test_a_virtualenv_that_is_not_pipx_installs_the_extra_into_itself(monkeypatc
     hint = _hint(monkeypatch, tmp_path, venv=True, kind="installed")
     assert 'python3 -m pip install "atoo[ui] @ git+' in hint
     assert " -e " not in hint
+
+
+def test_a_uv_tool_copy_is_reinstalled_with_the_extra_by_uv(monkeypatch, tmp_path):
+    hint = _hint(monkeypatch, tmp_path, venv=True, kind="installed", uv_tool=True)
+    assert "installed by uv without it" in hint
+    assert 'uv tool install --force "atoo[ui] @ git+https://github.com/corourke/Atoo.git"' in hint
+    assert "pipx" not in hint and "pip install" not in hint   # a tool environment has no pip
+    assert "https://docs.atoo.app/getting-started/install/" in hint
+
+
+def test_an_editable_uv_tool_install_is_reinstalled_from_its_checkout(monkeypatch, tmp_path):
+    hint = _hint(monkeypatch, tmp_path, venv=True, kind="checkout", uv_tool=True)
+    steps = [line.strip() for line in hint.splitlines() if line.startswith("  ")]
+    assert steps == [f"cd '{tmp_path / 'my clone'}'",
+                     'uv tool install --force --editable ".[ui]"']
+    assert "pip install" not in hint and "pipx" not in hint
+
+
+def test_a_checkouts_uv_venv_is_not_a_tool_environment_and_keeps_the_pip_hint(
+        monkeypatch, tmp_path):
+    """`uv venv` writes `uv = ...` into pyvenv.cfg just as `uv tool install`
+    does; only the tool environment has a receipt, and only it lacks pip."""
+    hint = _hint(monkeypatch, tmp_path, venv=True, kind="checkout", uv_venv=True)
+    assert hint == ("the web UI needs the 'ui' extra -- install it with:\n"
+                    '  python3 -m pip install -e ".[ui]"')
+
+
+def test_every_environment_gets_its_own_command(monkeypatch, tmp_path_factory):
+    """One line per environment: uv tool, pipx, a checkout's virtualenv and
+    the system Python, each told the command that works there."""
+    def line(**kw):
+        hint = _hint(monkeypatch, tmp_path_factory.mktemp("env"), **kw)
+        return [l.strip() for l in hint.splitlines() if l.startswith("  ")][-1]
+
+    assert line(venv=True, kind="installed", uv_tool=True).startswith("uv tool install --force ")
+    assert line(venv=True, kind="installed", pipx=True).startswith("pipx install --force ")
+    assert line(venv=True, kind="checkout") == 'python3 -m pip install -e ".[ui]"'
+    assert line(venv=False, kind="installed").startswith("uv tool install --force ")
+
+
+@pytest.mark.parametrize("situation", [
+    dict(venv=True, kind="installed", uv_tool=True),
+    dict(venv=True, kind="installed", pipx=True),
+    dict(venv=True, kind="installed"),
+    dict(venv=False, kind="installed"),
+])
+def test_once_atoo_is_on_pypi_the_commands_name_the_plain_package(
+        monkeypatch, tmp_path, situation):
+    """`INSTALL_SOURCE` is the one line that changes."""
+    monkeypatch.setattr(install_info, "INSTALL_SOURCE", "")
+    hint = _hint(monkeypatch, tmp_path, **situation)
+    assert '"atoo[ui]"' in hint and "git+" not in hint and "@" not in hint
+
+
+def test_a_uv_tool_environment_is_told_from_the_receipt(monkeypatch, tmp_path):
+    monkeypatch.setattr(install_info.sys, "prefix", str(tmp_path))
+    assert not install_info.in_uv_tool_environment()
+    (tmp_path / "uv-receipt.toml").write_text("")
+    assert install_info.in_uv_tool_environment()
+    assert not install_info.in_pipx_environment()
+
+
+def test_uv_tool_copy_says_installed_copy_at_its_path(tmp_path):
+    package = (tmp_path / "uv-env" / "atoo" / "lib" / "python3.12" / "site-packages" / "atoo")
+    package.mkdir(parents=True)
+    info = install_info.describe(package)
+    assert info.kind == "installed"
+    assert info.summary() == f"atoo {info.version} (installed copy at {package})"
+
+
+# ---- the advice to reinstall, in the words of whatever installed this copy ---
+
+def _advice(monkeypatch, tmp_path, **kw) -> str:
+    _hint(monkeypatch, tmp_path, **kw)      # sets the environment
+    return install_info.reinstall_advice(install_info.describe(tmp_path / "lib" / "python3.12"
+                                                              / "site-packages" / "atoo"))
+
+
+def test_a_uv_tool_copy_is_told_to_reinstall_with_uv(monkeypatch, tmp_path):
+    advice = _advice(monkeypatch, tmp_path, venv=True, kind="installed", uv_tool=True)
+    assert advice == ('`uv tool install --force --reinstall '
+                      '"atoo[ui] @ git+https://github.com/corourke/Atoo.git"`')
+
+
+def test_a_pipx_copy_is_told_to_reinstall_with_pipx(monkeypatch, tmp_path):
+    advice = _advice(monkeypatch, tmp_path, venv=True, kind="installed", pipx=True)
+    assert advice == "`pipx reinstall atoo`, or from a checkout `pipx install --force --editable .`"
+
+
+def test_an_unrecognised_install_hears_uv_first_and_pipx_after(monkeypatch, tmp_path):
+    advice = _advice(monkeypatch, tmp_path, venv=False, kind="installed")
+    assert advice.startswith('`uv tool install --force --reinstall "atoo[ui] @ git+')
+    assert advice.endswith("with pipx, `pipx reinstall atoo`")
+
+
+def test_init_with_no_starter_set_names_the_installer_that_made_this_copy(
+        monkeypatch, tmp_path, capsys):
+    from atoo import firstrun
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    empty = tmp_path / "leftover"
+    empty.mkdir()
+    monkeypatch.setattr(firstrun, "STARTER_DIR", empty)
+    prefix = tmp_path / "uv-env" / "atoo"
+    prefix.mkdir(parents=True)
+    (prefix / "uv-receipt.toml").write_text("")
+    monkeypatch.setattr(install_info.sys, "prefix", str(prefix))
+    assert main(["init"]) == 1
+    err = capsys.readouterr().err
+    assert "Reinstall Atoo (`uv tool install --force --reinstall" in err
+    assert "pipx" not in err
 
 
 def test_windows_activates_the_virtualenv_its_own_way(monkeypatch, tmp_path):

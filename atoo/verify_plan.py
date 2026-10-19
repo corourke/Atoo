@@ -1690,7 +1690,7 @@ def rows_for_a_change(plan: dict, rows: list[InputRow], *, changed=()
 
     A full build is held to the whole list: every row became a channel and
     no channel came from nowhere. A change is not a rebuild. The channel it
-    adds is not on the list, nor is one an earlier change added, and a row
+    adds is not on the list, nor is one a previous change added, and a row
     the plan has no channel for is simply a row the show has not used yet --
     calling either "invented" or "dropped" would refuse a change for being
     one. So the list is cut down to the rows the plan's channels name, and
@@ -1954,6 +1954,24 @@ def _check_stated_presets(plan: dict, rows: list[InputRow], r: VerifyResult) -> 
 # domain safety -- the one class of finding that is about the physical world
 # --------------------------------------------------------------------------
 
+def _check_pair_phantom(plan: dict, r: VerifyResult) -> None:
+    """A stereo channel states one 48V value for its pair. The desk switches
+    the two sockets together, so a plan stating two different values
+    (an older build, a hand edit) is read as on for both and reported here;
+    it needs no input list to see."""
+    for ch in plan["channels"]:
+        if not inferred.pair_phantom_differs(ch):
+            continue
+        stated = inferred.stated_socket_phantom(ch)
+        side = lambda on: "on" if on else "off"  # noqa: E731
+        r.add(SEVERITY_WARNING, "phantom.pair-differs", f"channels[{ch.get('name')}]",
+              f"the plan states 48V {side(stated[0][1])} for socket {stated[0][0]} and "
+              f"{side(stated[1][1])} for socket {stated[1][0]}, but the desk switches a stereo "
+              "channel's two sockets together -- apply writes 48V on both (on if either is). "
+              "Rebuild (a build states one value for the pair), or split the pair into two "
+              "mono channels")
+
+
 def _check_safety(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:
     by_norm = {_norm(row.name): row for row in rows}
     for ch in plan["channels"]:
@@ -1968,21 +1986,31 @@ def _check_safety(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:
         phantom = source.get("phantom")
         if phantom is None and row is not None:
             phantom = row.phantom
-        if phantom and model and any(rb in model for rb in PASSIVE_RIBBON_MODELS):
-            r.add(SEVERITY_ERROR, "safety.phantom-on-passive-ribbon", f"channels[{ch.get('name')}]",
-                  f"{stated_model!r} is a passive ribbon microphone and the plan sends it phantom "
-                  "power -- 48V destroys a ribbon element and undoing the setting does not undo the damage")
-        # A stereo pair's second socket is its own source:
-        # its row's model, and the 48V `apply` writes there.
+        where = f"channels[{ch.get('name')}]"
+        # A stereo channel's two sockets switch 48V together on the desk,
+        # so the pair has one value (`inferred.socket_phantom`: on if either
+        # row wants it) and a passive ribbon on EITHER side meets it.
         pair_row = by_norm.get(_norm(source.get("pair_input") or ""))
-        pair_model = _norm(pair_row.model if pair_row else "")
-        on_second = [on for _socket, on in inferred.socket_phantom(ch)[1:2]]
-        if (pair_row is not None and on_second and on_second[0] and pair_model
-                and any(rb in pair_model for rb in PASSIVE_RIBBON_MODELS)):
-            r.add(SEVERITY_ERROR, "safety.phantom-on-passive-ribbon", f"channels[{ch.get('name')}]",
-                  f"{pair_row.model!r} ({pair_row.name}, the pair's second socket) is a passive "
-                  "ribbon microphone and the plan sends it phantom power -- 48V destroys a ribbon "
-                  "element and undoing the setting does not undo the damage")
+        paired = len(inferred.socket_phantom(ch)) >= 2
+        if paired:
+            phantom = bool(phantom) or any(on for _socket, on in inferred.socket_phantom(ch))
+        sides = [(stated_model, model, source.get("input") or ch.get("name"), "")]
+        if pair_row is not None and paired:
+            sides.append((pair_row.model, _norm(pair_row.model), pair_row.name,
+                          ", the pair's second socket"))
+        if not phantom:
+            continue
+        for shown, normal, row_name, role in sides:
+            if not (normal and any(rb in normal for rb in PASSIVE_RIBBON_MODELS)):
+                continue
+            together = (" -- a stereo channel's two sockets switch 48V together, so the "
+                        "pair takes it if either row wants it" if paired else "")
+            mend = (". Split the pair into two mono channels, or set the other row to a "
+                    "source that takes no 48V (phantom FALSE)" if paired else "")
+            r.add(SEVERITY_ERROR, "safety.phantom-on-passive-ribbon", where,
+                  f"{shown!r} ({row_name}{role}) is a passive ribbon microphone and the plan "
+                  f"sends it phantom power{together} -- 48V destroys a ribbon element and "
+                  f"undoing the setting does not undo the damage{mend}")
 
 
 # --------------------------------------------------------------------------
@@ -2469,6 +2497,7 @@ def verify_plan(plan: dict, rows: list[InputRow] | None = None, *,
     _check_channels_reach_main(plan, r)
     _check_talkback(plan, r)
     _check_inferred(plan, r)
+    _check_pair_phantom(plan, r)
     _check_presets(plan, presets, r)
     _check_bus_presets(plan, presets, r)
     if rows is None:

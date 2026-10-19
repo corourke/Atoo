@@ -308,7 +308,7 @@ def output_socket_limit(group: str, console_model: str | None) -> int:
 # reading**, and the choice is between two ways of being wrong:
 #
 #   * exclude nothing, and every strip on an untouched desk of that model
-#     reads as in use again -- the 97-findings noise an earlier change removed;
+#     reads as in use again -- the 97-findings noise that was removed;
 #   * exclude everything we imagine a factory might patch, and a REAL
 #     patch that happens to match our imagination disappears out of the
 #     report. A finding that never prints is the failure this project
@@ -407,7 +407,7 @@ def factory_source_icon(group: str) -> int:
 # all -- see `apply._channel_write_targets` -- so those leaves simply
 # never come up for one).
 #
-# An earlier change, and the reason this table exists rather than a list of
+# This table exists rather than a list of
 # "what a release clears": it is keyed by the leaf path under the strip
 # base (`/ch/18` + `flt/lcf`), so `apply.release_write_targets` can take
 # the addresses the plan's own BUILD produced and look up the reading to
@@ -559,7 +559,7 @@ def factory_strip_processing(leaf: str, bank: str = "ch") -> object:
 
     The caller must not substitute a default for the miss: an invented
     value written to a strip this tool has just advertised as free is the
-    exact defect an earlier change is about, one layer down.
+    exact defect the release's success test rules out, one layer down.
     """
     if bank == "aux":
         if leaf in _AUX_ABSENT:
@@ -719,7 +719,7 @@ GROUP_ALIASES = {
     "USR": "user signal",
 }
 
-# CRD/MOD, an earlier change. **CRD is the expansion card,
+# CRD/MOD. **CRD is the expansion card,
 # not the SD card; the SD card is used by WING LIVE** -- so this table and
 # the console-model notes were both wrong, and wrong in *different* ways
 # (those notes had CRD as the SD card and MOD as the expansion card; this file
@@ -771,7 +771,7 @@ GROUP_ALIASES = {
 #
 # The SD card is not an input group at all: it is the storage behind WING
 # LIVE, the multichannel recorder/player, whose patching is its own
-# unbuilt concern -- see the alternate-input an earlier change spawned.
+# unbuilt concern.
 INPUT_SOCKETS = {
     "A": 48, "B": 48, "C": 48,     # AES50 A/B/C
     "LCL": 24,                      # local XLR
@@ -981,7 +981,7 @@ NAME_MAX_CHARS = 16
 
 # The console's own send modes. The plan schema currently models only two
 # of these three; "GRP" has no plan representation today (noted rather than
-# silently accepted -- see an earlier change on schema loss).
+# silently accepted, because schema loss must not go unnoticed).
 SEND_MODES = ("PRE", "POST", "GRP")
 PLAN_SEND_MODES = ("pre", "post")
 
@@ -1049,7 +1049,7 @@ def stereo_pair_problem(sockets: list) -> str | None:
 # USER SIGNALS and USER PATCHES: the `USR` group's 56 slots
 # --------------------------------------------------------------------------
 #
-# The escape hatch STEREO_PAIR_RULE points at, and the answer to an earlier change.
+# The escape hatch STEREO_PAIR_RULE points at.
 # `WING_Remote-Protocols-3.1-03.pdf` pp.225-227 describes two kinds of
 # virtual source that "remove some of this restriction":
 #

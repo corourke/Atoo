@@ -162,7 +162,7 @@ def _format_row(values: list[str]) -> str:
 
 def _as_file_columns(values, own_patch: str) -> dict:
     """The page's ``values`` with the patch, sent as `patch` (or `socket`,
-    from a page older than an earlier change), under ``own_patch`` -- the name
+    from a page older than the rename), under ``own_patch`` -- the name
     the file's own header gives that column."""
     out = {}
     for key, value in (values or {}).items():

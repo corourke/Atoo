@@ -1,6 +1,6 @@
-"""The Demo show's simulated WING, on a localhost UDP socket -- an earlier change.
+"""The Demo show's simulated WING, on a localhost UDP socket.
 
-The Demo show has no desk behind it, and until an earlier change that meant Apply
+The Demo show has no desk behind it, and before this module that meant Apply
 could not preview anything in it: a preview is a read of a desk. Watch
 already ran on a simulated rig (`webui.demo_provider_factory`, over
 `web/demo_states/before.json`), so the Demo could be watched but not

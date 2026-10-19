@@ -527,6 +527,11 @@ CODE_SUMMARIES: dict[str, tuple[str, str, str]] = {
     "reply.sends-expanded": ("note", "notes", "bus sends written from the busses' sender lists"),
     "reply.colours-applied": ("note", "notes", "colours written from the conventions"),
     "reply.name-cut": ("name", "names", "a name cut to fit the desk"),
+    "reply.pair-phantom": ("channel", "channels",
+                           "a stereo pair's two input-list rows disagreed about 48V; the pair "
+                           "takes it if either wants it"),
+    "inferred.pair-phantom": ("channel", "channels",
+                              "one 48V value for a stereo pair, read as both sockets'"),
     "reply.from-instructions": ("strip", "strips",
                                 "built from the instructions, not the input list"),
     # A WARNING or (asked for verbatim) an INFO; the dock

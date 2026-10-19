@@ -1,4 +1,4 @@
-"""One time-ordered journal stack per bundle -- an earlier change.
+"""One time-ordered journal stack per bundle.
 
 Journals used to be keyed by **kind and location** rather than by
 **time**: `apply --show DIR --confirm` overwrote `DIR/apply-journal.json`,
@@ -187,7 +187,7 @@ Apply and amend are permissive: apply writes to any desk, and amend finds
 the connected desk's own applied plan by serial (below), falling back to
 `plan.json`, with an INFO, for a desk that has no entry yet.
 
-**An entry recorded before an earlier change carries no desk**, and counts as being on
+**An entry recorded before journals named their desk carries no desk**, and counts as being on
 whichever desk is connected (`on_desk`): the single-desk assumption was
 true when it was written, there is nothing recorded to be strict against,
 and refusing it would strand the one undo those runs have. Undo's own

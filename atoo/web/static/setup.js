@@ -146,7 +146,7 @@
 
   // Every patch of an output or a bus's dedicated output -- plan_compat.
   // output_patches: `patches` (the fan-out) when not empty, else the one
-  // `patch`. A plan built before an earlier change calls them `sockets` and
+  // `patch`. A plan built before the rename calls them `sockets` and
   // `socket`, and those plans are on disk, so both are read.
   function outputPatches(entry) {
     if (!entry) return [];
@@ -950,7 +950,7 @@
     });
   }
 
-  // ---- Build status -- surfaces plan["meta"] as an earlier change left it, minus
+  // ---- Build status -- surfaces plan["meta"], minus
   // its findings. After a plan is rebuilt
   // there is typically a very long list of warnings and info findings down
   // the page under the build status, and that is what the sidebar is for:
@@ -1086,11 +1086,11 @@
       : "The plan (no path recorded)";
     if (meta.generated_at) html += `, built ${esc(fmtWhen(meta.generated_at))}`;
     // Which WING this plan's socket numbers were checked
-    // against. A plan built before an earlier change has no such field; say so rather
+    // against. A plan built before then has no such field; say so rather
     // than leave it out.
     html += meta.console_model
       ? ` for a <b>${esc(consoleNames[meta.console_model] || meta.console_model)}</b>.`
-      : '. <span class="meta">Console model not stated -- built before #13.</span>';
+      : '. <span class="meta">Console model not stated -- built by an older version.</span>';
     const changes = changesOf(plan);
     if (changes) {
       const prev = where && where.previous_generated_at;

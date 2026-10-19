@@ -14,7 +14,7 @@ bus's `destination` of type `dedicated_output` carries the same pair.
 once -- and is authoritative when it is not empty; `patch` is
 the first, or only, one.
 
-Plans written before an earlier change call these `socket` and `sockets`. Those plans
+Plans written before the rename call these `socket` and `sockets`. Those plans
 are on disk -- in every show bundle built before 2026-09-28 -- and still
 have to verify, apply, render and open on the page, so EVERY reader goes
 through this module rather than reading the keys itself. That is the

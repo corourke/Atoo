@@ -147,7 +147,7 @@ def prune_dir(directory: Path) -> list[Path]:
 def build_entry(*, meta: dict, build_log: dict, status: str, reason: str | None) -> dict:
     """The payload `write` saves: this build's provenance (lifted
     straight out of `plan["meta"]` as `cli._build` assembles it, so the
-    two never drift apart), the per-role notes/usage an earlier change kept, and
+    two never drift apart), the per-role notes/usage, and
     the outcome. `status` is one of `DONE`/`FAILED`/`STOPPED`."""
     return {
         "generated_at": meta.get("generated_at"),
@@ -204,8 +204,8 @@ def resolve(plan: dict, base_dir: Path) -> dict | None:
     `meta.build_log` a plan built before this shipped still has, or the
     file `meta.build_log_file` points to (read relative to `base_dir` --
     the bundle directory, or the directory holding `plan.json` with no
-    bundle). Returns the `{role: {notes, usage}}` shape an earlier change
-    established either way, or `None` when the plan has neither."""
+    bundle). Returns the `{role: {notes, usage}}` shape
+    either way, or `None` when the plan has neither."""
     meta = plan.get("meta") if isinstance(plan, dict) else None
     if not isinstance(meta, dict):
         return None

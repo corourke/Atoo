@@ -55,20 +55,25 @@ where the existing ways are better.
 
 ## Try it in two minutes, with no desk
 
-You need Python 3.11 or newer ([installing](docs/user/install.md) covers
-older ones), `git`, and a web browser. Nothing else: no desk and no API
-key to look around.
+You need a web browser, and on a Mac or Linux two commands. Nothing
+else: no desk and no API key to look around. Install uv, which brings
+the Python that Atoo needs:
 
 ```bash
-git clone https://github.com/corourke/Atoo.git
-cd Atoo
-python3 -m venv .venv && source .venv/bin/activate
-python3 -m pip install '.[ui]'
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then, in a new terminal window:
+
+```bash
+uv tool install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
 atoo ui
 ```
 
-To keep Atoo installed on a laptop instead of running it from a clone,
-[install it with pipx](docs/user/install.md). A real build also needs
+[Installing Atoo](docs/user/install.md) has each step, with how to tell
+it is already done, and Homebrew with pipx if you use them. To run it
+from a clone instead, see [Installing from a
+checkout](docs/user/install-from-checkout.md). A real build also needs
 your own AI API key ([Setting up an AI provider](docs/user/ai-provider.md)).
 
 `a2` is the same command as `atoo`, shorter to type (`a2 ui`).
@@ -82,9 +87,13 @@ the simulated desk drawn as the plan would leave it; on **Watch**, press
 **Start watching** to see faults come and go. Nothing is written
 anywhere.
 
-Then patch the horn section in, still with no desk and no key:
+Then patch the horn section in, still with no desk and no key. The
+change and the simulated desk are files in the repository, so run it in
+a clone:
 
 ```bash
+git clone https://github.com/corourke/Atoo.git
+cd Atoo
 atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.change-set.json --state atoo/web/demo_states/before.json
 ```
 

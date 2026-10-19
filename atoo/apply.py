@@ -35,7 +35,7 @@ every call site is inside the loop over the plan's own channels/busses/
 outputs, so a strip the plan doesn't mention never has its fader or mute
 touched (a full apply unpatches it, and writes nothing else to it).
 
-**One documented exception, an earlier change: `mute` for a strip this run is
+**One documented exception: `mute` for a strip this run is
 RETURNING TO FREE.** A channel the rebuild dropped has its strip muted,
 put back on its factory input patch (or OFF where that is unmeasured,
 absent or claimed), blanked and its processing put
@@ -513,7 +513,7 @@ class ApplyResult:
         had undeclared routing and got disconnected". Surfaced separately
         in `summary()` because silently folding a console-altering action
         nobody's plan asked for into the ordinary write count would be
-        exactly the kind of quiet behavior an earlier change itself was about.
+        exactly the kind of quiet console change this option exists to surface.
 
         Deliberately NOT just `self.changed` filtered by prefix -- in
         `dry_run` mode every record's status is "dry_run" regardless of
@@ -958,8 +958,8 @@ def _channel_processing_targets(channel: dict, bank: str, base: str,
     targets: list[WriteTarget] = []
 
     # Filters that live under `{base}/flt/*` -- confirmed absent on an aux
-    # strip entirely (Festival_STANDALONE.snap). An earlier change adds
-    # hi-cut and tilt alongside the existing high-pass; all three share the
+    # strip entirely (Festival_STANDALONE.snap). Hi-cut and tilt
+    # sit alongside the existing high-pass; all three share the
     # exact same aux guard, so a plan asking for more than one of them on
     # one aux strip gets ONE combined warning naming every filter that was
     # blocked, rather than a near-duplicate line per field. This is the
@@ -1343,7 +1343,7 @@ def _channel_write_targets(
             f"{', '.join(sorted(_VPH_CAPABLE_GROUPS))}) -- not written"
         )
 
-    # Head-amp gain, an earlier change: same "lives on the physical SOURCE,
+    # Head-amp gain: same "lives on the physical SOURCE,
     # not the strip" shape as phantom above, and depends on the patch write
     # for the same reason (STAGE_PHANTOM), so it's built right alongside
     # phantom rather than down with the rest of `processing` below. Reuses
@@ -1593,7 +1593,7 @@ def _bus_write_targets(
                 # several physical sockets at once -- `patches` (plural)
                 # is authoritative when non-empty; `patch` (singular)
                 # covers a plan that only ever set one. Plans from before
-                # an earlier change say `sockets`/`socket`: plan_compat reads both.
+                # the rename to `patch`/`patches` say `sockets`/`socket`: plan_compat reads both.
                 for socket in plan_compat.output_patches(destination):
                     group = socket["group"]
                     for position, sock in enumerate(socket["sockets"]):
@@ -1842,8 +1842,8 @@ def _declared_output_patches(plan: dict) -> dict[tuple[str, int], tuple[str, int
         # which an archived smallband plan from a small local model really
         # has for a *dca* entry, so the shape is not hypothetical) sails
         # through `or` and then raises AttributeError on `.get` -- which
-        # this function's own docstring promises it does not do. An earlier change
-        # found it: an amend reads an arbitrary already-applied plan off
+        # this function's own docstring promises it does not do. It was found
+        # through the amend path: an amend reads an arbitrary already-applied plan off
         # disk, including one a model produced on a bad night.
         if not isinstance(bus, dict):
             continue
@@ -2214,7 +2214,7 @@ def check_desk_model(plan: dict, plan_model: str | None, identity_args,
 
 
 def _clean_write_targets(plan: dict, clean_output_sockets: dict[str, int]) -> list[WriteTarget]:
-    """An earlier change (opt-in, deliberately not the default): for every
+    """Opt-in clean-up of undeclared output sockets (deliberately not the default): for every
     physical output socket in `clean_output_sockets` (`{group: count}`, the same
     "no confirmed default" shape `audit.py`'s `read_console_state` takes
     -- there is no safe guess at how many sockets a given rig actually
@@ -3322,9 +3322,8 @@ def _values_equal(value_type: str, a: object, b: object, address: str | None = N
     if value_type == "s" and a != b and isinstance(a, str) and isinstance(b, str):
         # A list choice whose tokens are numbers -- a compressor's ratio
         # ("5.0"), a filter's slope ("24") -- is one choice however it is
-        # spelled: "5" and "5.0" name the same entry. An earlier change,
-        # where a preset carries `dyn.ratio` as a bare number and the desk
-        # lists it as "5.0". Only when BOTH sides read as numbers, so a
+        # spelled: "5" and "5.0" name the same entry. A preset carries
+        # `dyn.ratio` as a bare number and the desk lists it as "5.0". Only when BOTH sides read as numbers, so a
         # name or an enum word is still compared exactly.
         try:
             return math.isfinite(float(a)) and float(a) == float(b)
@@ -3493,7 +3492,7 @@ def _recheck_disagreements(console, pending: list[_PendingCheck], *,
     rest of the run has gone by. Returns a warning to record, or None.
 
     This is what replaced the immediate re-read plus a 0.1s sleep that
-    an earlier change and its follow-up used. The sleep was a guess at how long the
+    earlier versions used. The sleep was a guess at how long the
     console needs; this waits as long as the remainder of the run takes,
     costs no sleep at all, and -- for the case the hardware actually
     shows -- costs no round trip either, because the console has already

@@ -6,8 +6,10 @@ actually consume, and measure what scoping the read to those would buy.
 reproduced in the requirements; the short version is that the
 structural catalogue (`audit.DEFAULT_RULES`, which `watch` always runs)
 reads **3,891 of the 6,195** addresses (3,392 of 5,712 when this was
-measured; an earlier change added 96 to both, an earlier change another 304 to both,
-its comms half one more, an earlier change 24 socket widths, an earlier change three AES50 link states and two monitor sources, and each local
+measured; the alternate patch added 96 to both, the insert
+points and FX slots another 304 to both, the comms half one
+more, the socket widths 24, three AES50 link states and two
+monitor sources, and each local
 socket's own mute 24 more, a DCA's mute 16, and the width of each bus, Main and
 Matrix 28), and
 that is ~26s per-leaf against
@@ -100,7 +102,7 @@ with the two loops skipping an address `only is not None and address not
 in only`, and `group_plan_by_node` fed the filtered plan so a node nobody
 wants is not dumped. `ScopedReadPlan.addresses` is exactly what that
 parameter takes. It is not done here because `audit.py` was being
-restructured for an earlier change at the same time, and because the measurement
+restructured at the same time, and because the measurement
 below says the speed-up does not pay for the risk.
 
 Run `python3 -m atoo.watch_scope` for the report.
@@ -124,7 +126,7 @@ from atoo.audit import AuditRule, DEFAULT_RULES
 # `retries + 1` attempts at the 1.0s socket timeout
 # (`console.WingConsole._request`, `WingConsole.__init__`), i.e. exactly
 # 3.0s. 320 x 3.0 = 960.0s, which is the capture's own "about 960s of the
-# time above" to the second, and an earlier change then removed those addresses
+# time above" to the second, and those addresses were then removed
 # from the plan. So the rate is (total - 960) / (requests that were
 # answered), and that is what these two constants are.
 # --------------------------------------------------------------------------
@@ -154,7 +156,7 @@ NODE_DUMP_SECONDS_PER_REQUEST = (
     (A11_NODE_DUMP_SECONDS - A11_TIMEOUT_SECONDS)
     / (A11_NODE_DUMP_REQUESTS - A11_UNANSWERED_ADDRESSES))
 
-#: On an earlier change: a watch pass should land inside
+#: A watch pass should land inside
 #: this to feel like a monitor rather than a batch job.
 RESPONSIVENESS_BUDGET_SECONDS = (3.0, 4.0)
 
@@ -632,7 +634,7 @@ def _verdict(seconds: float) -> str:
 def scope_report(
     scopes: Sequence[tuple[str, ScopedReadPlan]] | None = None,
 ) -> str:
-    """The measurement an earlier change asked for, as text: how big each scope
+    """The requested measurement, as text: how big each scope
     is and what it would cost down each of the two read paths, at the
     rates A11 measured on hardware.
 

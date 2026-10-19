@@ -164,8 +164,8 @@ three ways, and any one of them failing stops the run:
 
 ## Removal: tracked state may be cleared, untracked state may not
 
-An earlier change asked what happens to a strip that is taken out of the plan
-but is still patched and live, and left it open. The answer, chosen on
+What happens to a strip that is taken out of the plan but is still
+patched and live was left open. The answer, chosen on
 2026-09-23 between "report it", "mute it" and "return it to free", is
 to return it to free, whether this is for a rebuild of the plan or an
 amend: channels are not an unlimited resource and the tool should do
@@ -182,7 +182,7 @@ reading throughout (`console_facts.FACTORY_STRIP_*` and
 next person allocating a strip finds this one genuinely free rather than
 nearly free.
 
-**Two things the first hardware run corrected, an earlier change.** A15 on
+**Two things the first hardware run corrected.** A15 on
 2026-09-23 cleared a strip that came back still muted and still carrying
 the plan's 120Hz high-pass -- neither of which is what an untouched strip
 reads, and both of which the release's own success test ruled out.
@@ -558,7 +558,7 @@ def strip_occupancy(state: ConsoleState, applied_plan: dict | None = None, *,
       name as "not named" and an unread patch as "not patched", which is
       indistinguishable from a genuinely empty strip.
     - **THEIRS** -- read in full, not ours, and `audit.is_in_use` says
-      something is on it -- which since an earlier change includes the **source
+      something is on it -- which includes the **source
       socket** this strip displays carrying somebody's name. A strip named
       `CH01` is not named and a Compact's channel 3 patched to `LCL 3` is
       not patched; channel 20 of the A13 capture is blank at `/ch/20/name`
@@ -1296,7 +1296,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     returned to free, and return the lot for review.
 
     `occupancy` is `strip_occupancy`'s output -- the desk's own answer.
-    `allow_strips` is the per-strip override an earlier change asks for
+    `allow_strips` is the per-strip override
     (`{"ch:20"}`): an occupied or unread strip the engineer can see and
     knows better about. It is per strip and never global, because "write
     anyway" as one switch is the failure this flow exists to prevent.
@@ -2360,8 +2360,8 @@ def witness_requests(witness, *, bulk: bool = True) -> int:
     `read_witness` will actually do it.
 
     Pure -- it contacts nothing, the same contract `occupancy_read_plan`
-    has. The CLI has no use for it; the test suite and the an earlier change
-    measurement do, because "is this inside the 3-4s budget" is a
+    has. The CLI has no use for it; the test suite and the measurement of a witness pass
+    do, because "is this inside the 3-4s budget" is a
     question about request counts and the two measured rates in
     `watch_scope.py`, and neither should have to be re-derived by hand.
     """
@@ -2575,7 +2575,7 @@ def apply_amendment(amendment: Amendment, console, *, dry_run: bool = True,
 # The pre-flight
 # --------------------------------------------------------------------------
 #
-# `apply` verifies a plan before it writes, and since an earlier change checks every
+# `apply` verifies a plan before it writes, and also checks every
 # socket it patches against the model the desk says it is. `amend` did
 # neither: it used the desk's model only to pick a freed strip's factory
 # patch, and would have written a new strip onto LCL 20 of a full-size WING
@@ -2772,7 +2772,7 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
     there really is none. An amend is a rebuild and is held to the whole
     list, as a full build is. A change (`what="change"`) is not a rebuild,
     so it is held to the list as `verify_plan.rows_for_a_change` cuts it:
-    the channels the change adds, or an earlier change added, are checked
+    the channels the change adds, or a previous change added, are checked
     against the change that made them rather than called invented, and rows
     the plan does not use are not called dropped. That choice is said at
     INFO in `Preflight.infos`, with `rows_name` for the file. `layers` are

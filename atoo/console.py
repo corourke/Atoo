@@ -1233,7 +1233,7 @@ class WingConsole:
 # can serialise and no side effects at all.
 #
 # So the three steps live here, once, as a function: `identity()`, the
-# SOCKET_ERROR check an earlier change added, and `console_facts.model_from_identity`
+# SOCKET_ERROR check, and `console_facts.model_from_identity`
 # -- the same three `_open_console` performs, in the same order, with the
 # same meanings. This is what `webui.py`'s `POST /api/ping` calls (the UI's
 # Ping button, mockup version H's bundle bar). When `cli.py` is next free

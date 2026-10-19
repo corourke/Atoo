@@ -115,19 +115,23 @@ ALLOCATED, and marked the same way (`plan_schema.ALLOCATED_FIELDS`):
 
 READ AS ONE VALUE FOR TWO SOCKETS, and announced:
 
-  * a stereo channel's phantom on its SECOND socket. Phantom lives on each
-    socket, so apply writes `/io/in/{grp}/{n}/vph` on both; the plan
-    records the second row's value as `source.pair_phantom` when the pair
-    was built from two input-list rows. Where it carries one value for
-    the pair -- a single stereo row, a channel from the instructions -- 
-    `socket_phantom` reads `phantom` as both sockets': one source, one
-    instruction. A wrong reading displeases (48V on a line input is
-    harmless on a WING); writing the first socket only left the second
-    condenser of every stereo pair silent, which breaks. Reported as
-    `inferred.pair-phantom`, one INFO naming every channel where the
-    reading puts 48V ON -- off is what the reset before a full apply
-    leaves on the second socket anyway, so nothing was chosen there.
-    (A passive ribbon on either socket is still refused by verify.)
+  * a stereo channel's 48V. Phantom lives on each socket, so apply writes
+    `/io/in/{grp}/{n}/vph` on both -- but the desk switches a stereo
+    pair's two sockets together, so a pair has ONE value, never two.
+    Build states it twice alike (`source.phantom` and `source.pair_phantom`
+    equal): 48V is on if EITHER input-list row wants it, and the build
+    says so at INFO naming the row that asked (`reply.pair-phantom`). A
+    wrong choice displeases (48V on a dynamic is harmless; a condenser
+    left off is silent, which is what breaks), and a passive ribbon on
+    either socket is refused by verify, because that destroys it.
+    Where the plan carries one value for the pair -- a single stereo row,
+    a channel from the instructions -- `socket_phantom` reads `phantom` as
+    both sockets', reported as `inferred.pair-phantom`, one INFO naming
+    every channel where the reading puts 48V ON (off is what the reset
+    before a full apply leaves on the second socket anyway, so nothing
+    was chosen there). A plan on disk that states two different values is
+    read the same way (on if either is) and reported by verify
+    (`phantom.pair-differs`), not rewritten.
 
 A marker naming any other field has no value to announce. `build` drops
 it, with a repair note that keeps its basis (`drop_unmarkable`), rather
@@ -505,14 +509,14 @@ _FIX = ("if that is not what you want, say so in your conventions or this show's
         "instructions and rebuild")
 
 
-def socket_phantom(channel: dict) -> list[tuple[int, bool]]:
-    """`(socket, phantom wanted)` for each socket of `channel`'s patch, in
-    patch order. The first socket takes `source.phantom`; a
-    stereo pair's second takes `source.pair_phantom`, the pair row's own,
-    and `source.phantom` where the plan states one value for the pair
-    (`pair_phantom_is_inferred`, announced by `inferred_diagnostics`).
-    Empty for an unpatched channel. `apply` writes from this and `verify`
-    checks from it, so the two cannot disagree."""
+def stated_socket_phantom(channel: dict) -> list[tuple[int, bool]]:
+    """`(socket, phantom the plan states)` for each socket of `channel`'s
+    patch, in patch order, exactly as the plan carries it: the first socket
+    takes `source.phantom`, a stereo pair's second takes
+    `source.pair_phantom`, and `source.phantom` where the plan states one
+    value for the pair (`pair_phantom_is_inferred`). Empty for an
+    unpatched channel. A plan Build writes states the same value on both
+    sockets; verify reports one that does not (`pair_phantom_differs`)."""
     source = channel.get("source") or {}
     sockets = [s for s in ((channel.get("patch") or {}).get("sockets") or [])
                if isinstance(s, int)]
@@ -520,6 +524,30 @@ def socket_phantom(channel: dict) -> list[tuple[int, bool]]:
     pair = source.get("pair_phantom")
     second = pair if isinstance(pair, bool) else first
     return [(socket, first if i == 0 else second) for i, socket in enumerate(sockets)]
+
+
+def socket_phantom(channel: dict) -> list[tuple[int, bool]]:
+    """`(socket, phantom wanted)` for each socket of `channel`'s patch, in
+    patch order: the value `apply` writes and `verify` and the audit check.
+
+    A stereo channel's two sockets switch 48V together on the desk -- the
+    second one reads back on the moment the first is written -- so a pair
+    has ONE value: on if either socket's stated value is on
+    (`stated_socket_phantom`). A plan Build writes already states it
+    twice alike; one that does not (an older build, a hand edit) is read
+    the same way and reported by verify. Empty for an unpatched channel."""
+    stated = stated_socket_phantom(channel)
+    if len(stated) < 2:
+        return stated
+    pair_on = any(on for _socket, on in stated)
+    return [(socket, pair_on) for socket, _on in stated]
+
+
+def pair_phantom_differs(channel: dict) -> bool:
+    """True when a stereo channel's plan states 48V on one socket and off
+    on the other -- a state the desk cannot hold."""
+    stated = stated_socket_phantom(channel)
+    return len(stated) >= 2 and len({on for _socket, on in stated}) > 1
 
 
 def pair_phantom_is_inferred(channel: dict) -> bool:
@@ -640,8 +668,8 @@ def inferred_diagnostics(plan: dict) -> list[Diagnostic]:
             message=(f"48V on both sockets of {len(one_phantom)} stereo channel(s) ({shown}) -- "
                      "the plan states one phantom value for each pair, so the second socket "
                      "takes the first's"),
-            fix=("if the two sockets of a pair need different phantom, list them as two "
-                 "input-list rows, each with its own phantom, and rebuild")))
+            fix=("the desk switches a stereo pair's two sockets together; if one of them "
+                 "must be without 48V, split the pair into two mono channels")))
 
     for (bus, mode, basis, decided_by), channels in sends.items():
         shown = ", ".join(channels[:6]) + (f" and {len(channels) - 6} more" if len(channels) > 6 else "")

@@ -359,7 +359,7 @@ class ConnectRequest(BaseModel):
     # under `from __future__ import annotations`), so they spell optional
     # fields `Optional[X]` rather than `X | None`, in every model below.
     # "console": the bundle bar's (or `console`, a scripted override).
-    # An earlier change removed "demo": Demo is chosen in the bar, with the show.
+    # There is no "demo" field: Demo is chosen in the bar, with the show.
     source: str = "console"
     console: Optional[str] = None
     port: int = 2223
@@ -478,7 +478,7 @@ class SectionsSaveRequest(BaseModel):
 
 
 class InputListSaveRequest(BaseModel):
-    """Save on Build step 02 -- an earlier change. `rows` is the table, in order:
+    """Save on Build step 02. `rows` is the table, in order:
     `{line, values}` with `line` the record's position in the file
     (`_build_source_payload`'s `records`) or null for a new row, and
     `values` the canonical columns the operator changed (all of them for
@@ -804,10 +804,10 @@ class _WatchPresenter:
         It rides on the event rather than being fetched separately because
         the Watch page has exactly one channel, and a caveat that arrives out
         of band arrives after the finding it qualifies. **A field the page
-        must read**: since an earlier change R002/R005 stand down on a read with no
+        must read**: R002/R005 stand down on a read with no
         output patch in it, and a page that shows the shorter list with no
         note cannot be told apart from a page showing a clean desk -- the
-        exact FR-4.2 failure this issue is about, in the one place
+        exact FR-4.2 failure this field guards against, in the one place
         `atoo/web/static/` the Python suite cannot see."""
         shown = present_findings(event.all_findings)
 
@@ -1488,7 +1488,7 @@ def _apply_findings(payload: dict, address: str) -> list[dict]:
         ).to_dict())
     # The journal's own warnings and notes (already grouped, FR-X.15c),
     # which Apply's result panel listed under "Warnings and notes" until
-    # an earlier change made the dock the one place findings are read.
+    # the dock became the one place findings are read.
     for line in payload.get("warnings") or []:
         text = str(line)
         note = text.startswith("INFO ")
@@ -2392,7 +2392,7 @@ def _build_payload(
     Same list, same order, same words -- so what the page shows and what
     a built plan records cannot disagree. Each entry also carries
     `conventions_ref.layer_record`'s `absolute_path`,
-    `bundle_relative_path` and `sha256`, as a plan built since an earlier change does.
+    `bundle_relative_path` and `sha256`, as a current plan does.
 
     **Which conventions file step 01 shows.** A path typed into
     the tile's Change file box wins; then the file the bundle's
@@ -2401,7 +2401,7 @@ def _build_payload(
     a bundle built against `house-A.md` opens showing `house-A.md`, not
     whatever the config names today -- and a Run from the page rebuilds
     against it. Every fallback and disagreement is a finding on the tile
-    (`_recorded_conventions_findings`); a plan from before an earlier change records
+    (`_recorded_conventions_findings`); an older plan, from before the conventions file was recorded in it, records
     no resolvable path and opens exactly as it always did.
     """
     # The demo show reads its own packaged house conventions,
@@ -2769,7 +2769,7 @@ def console_provider_factory(
 
     kwargs = dict(_DEFAULT_READ_KWARGS)
     kwargs.update(read_kwargs or {})
-    # An earlier change, and the same derivation `cli._console_read_kwargs` does:
+    # The same derivation `cli._console_read_kwargs` does:
     # without it the Watch page audits the same desk differently from the
     # terminal, because a request that states no socket counts would read
     # no physical sockets at all and four rules would go quiet in the
@@ -2825,7 +2825,7 @@ class WatchSession:
     `status` to every subscriber. A stopped session's last event,
     replayed to a page opened afterwards, read as a session still
     running: Start disabled and the pill on Watching while `/api/status`
-    said `running: false` (found checking an earlier change in Chromium).
+    said `running: false` (found while checking in Chromium).
     """
 
     def __init__(self) -> None:
@@ -3880,8 +3880,8 @@ def create_app(
         #
         # The conventions override goes too. It used
         # to survive, on the grounds that the house file lives outside the
-        # bundle and is the same for every show -- but since
-        # an earlier change a bundle's plan records the house file it was built
+        # bundle and is the same for every show -- but a
+        # bundle's plan now records the house file it was built
         # from, and a path typed for the LAST show would override that
         # record for this one. The new show opens on the file its
         # plan.json names, else the config's.
@@ -4103,7 +4103,7 @@ def create_app(
 
     @app.get("/app", include_in_schema=False)
     def shell_moved():
-        # The shell lived here until an earlier change moved it to `/`. A
+        # The shell lived here until it moved to `/`. A
         # redirect rather than a 404 because bookmarks, shell history and
         # docs already read point at `/app` -- including `/app#apply`,
         # which lands on `/#apply`: a browser keeps the fragment across a
@@ -5489,7 +5489,7 @@ def create_app(
             if stale is not None:
                 findings.append(stale.to_dict())
                 warnings += 1
-        # An earlier change, decision 7: the changes and amends standing on the
+        # The changes and amends standing on the
         # bar's desk are not in plan.json, so a full apply replaces them --
         # said here, as a WARNING, before anyone arms it. The same finding
         # `atoo apply` prints (`journal_stack.replaced_changes_diagnostic`).
@@ -6145,7 +6145,7 @@ def create_app(
         # has to ask for a console cold.
         #
         # `atoo.console.ping` is the same three steps `cli._open_console`
-        # performs (identity, the issue-an earlier change socket-error check, the model
+        # performs (identity, the socket-error check, the model
         # the desk states for itself), as a value rather than printed
         # lines; see its own comment for why the CLI cannot simply call it
         # yet.

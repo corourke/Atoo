@@ -55,8 +55,8 @@ A journal file named on the command line -- `atoo undo PATH` -- is
 read like any journal, wherever it is, and one that carries a
 `stack_entry` block resolves to the entry it copies (`journal_stack.find`).
 
-A sixth slot, `expectations.toml`, existed until an earlier change retired the
-feature behind it. A bundle directory that still holds one is **not an
+A sixth slot, `expectations.toml`, existed until the feature behind it was
+retired. A bundle directory that still holds one is **not an
 error**: it is simply not a slot any more, so nothing reads it and
 nothing reports it. An old show bundle keeps working, and the leftover
 file can be deleted whenever its owner gets to it.
@@ -110,7 +110,7 @@ BACKUPS = "backups"
 
 # Everything a bundle can hold, in the order a show moves through them:
 # what you write, then what Atoo produces.
-# `apply-journal.json` was the fifth until an earlier change retired it in favour
+# `apply-journal.json` was the fifth until it was retired in favour
 # of `journals/`, which is a directory and so never a slot.
 SLOTS = (INPUT_LIST, INSTRUCTIONS, PLAN, WATCH_CONDITIONS)
 
@@ -156,7 +156,7 @@ class Bundle:
     def path(self, slot: str) -> Path:
         """The path for one fixed name, whether or not anything is there."""
         if slot not in SLOTS:
-            # `expectations.toml` was a slot until an earlier change retired it, and a
+            # `expectations.toml` was a slot until it was retired, and a
             # caller still asking for one is a stale caller, not a user
             # error -- hence ValueError here and silence in `present()`.
             raise ValueError(f"{slot!r} is not a bundle slot; known: {list(SLOTS)}")

@@ -1206,7 +1206,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         # and most of the machinery here existed to reconcile the two.
         adapted_notes = [_note_diagnostic(w) for w in warnings]
         # Counted by severity rather than as one number: an error buried
-        # in "24 warning(s)" is the mistake an earlier change fixed once already.
+        # in "24 warning(s)" is a mistake that was fixed once already.
         _emit_diagnostics(
             adapted_notes,
             heading=f"\n{diagnostics.summary_line(adapted_notes)}:",
@@ -1243,6 +1243,13 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                 heading=f"\nPresets -- {len(preset_details)} build detail(s) (what each named "
                         "preset put into the plan):",
             )
+
+    pair_phantom_notes = [f for f in build_findings if f.code == "reply.pair-phantom"]
+    if pair_phantom_notes:
+        _emit_diagnostics(
+            pair_phantom_notes,
+            heading=f"\nStereo channels -- {len(pair_phantom_notes)} note(s) (the desk switches a "
+                    "pair's 48V together, so each pair takes one value):")
 
     fixup_findings = [f for f in build_findings if f.code.startswith("build.fixup")]
     if fixup_findings:
@@ -1789,7 +1796,7 @@ def _resolve_console_settings(args: argparse.Namespace) -> None:
        `hasattr(args, "console")` is the guard, so the resolver simply
        does not run there. (`ui` still seeds its *page's* console field
        from the same defaults -- it calls `resolve_console_defaults`
-       directly, which touches no args at all. An earlier change.)
+       directly, which touches no args at all.)
 
     An explicitly-chosen offline source (`audit --state`, `watch
     --state-sequence`) suppresses address resolution entirely: those runs
@@ -2359,17 +2366,17 @@ def audit_cmd(args: argparse.Namespace) -> int:
 # bytes) and there are sixteen times fewer of them. Used only to tell
 # the user what they are waiting for; nothing branches on them. They
 # replace a single 163-requests-a-second figure from A1's raw log
-# (2026-09-21), which predated an earlier change and was ~3.3x optimistic for a
+# (2026-09-21), which predated the 320-address fix and was ~3.3x optimistic for a
 # whole-desk per-leaf read.
 #
 # How many addresses a pass asks for is not a constant beside them. It
-# was 5,288, then 5,928, then 6,032, then 5,712 once an earlier change
-# dropped 320 addresses the desk does not have, 5,808 once an earlier change
-# read each strip's alternate patch, 6,112 once an earlier change read every
-# insert point and FX slot, 6,113 once the comms half read
+# was 5,288, then 5,928, then 6,032, then 5,712 once 320 addresses
+# the desk does not have were dropped, 5,808 once each strip's
+# alternate patch was read, 6,112 once every insert
+# point and FX slot was read, 6,113 once the comms half read
 # `/cfg/talk/assign`, 6,114 once `/io/altsw` was read, 6,138 once
-# each phantom-capable socket's width was read, 6,143 once an earlier change
-# read three AES50 link states and two monitor sources, 6,167 once
+# each phantom-capable socket's width was read, 6,143 once three AES50 link
+# states and two monitor sources were read, 6,167 once
 # each local socket's own mute was read, and it is 6,195 since the width of each bus,
 # Main and Matrix was read -- a
 # hand-maintained number that went stale every time the read changed, and
@@ -2887,7 +2894,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
                     for f in fresh:
                         print(f"  {f}", file=sys.stderr)
 
-            # An earlier change, and the second check that can only be made once
+            # The second check, which can only be made once
             # a desk is on the line. `CRD` and `MOD` are BAYS, not sockets:
             # the firmware answers /io/in/{CRD,MOD}/1..64 whether or not
             # there is a card or a module in the slot, and -- measured on
@@ -2915,7 +2922,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
             # bay, which is most plans: a leaf an older firmware does not
             # implement costs a full timeout-and-retry, and no plan should
             # pay that for a question it never asked.
-            # An earlier change, decision 7: plan.json is written only by a build,
+            # plan.json is written only by a build,
             # so the changes and amends standing on this desk are NOT in it,
             # and a full apply writes over them. Announced, never refused.
             if show is not None:
@@ -2972,7 +2979,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
         print(f"  - {w}", file=sys.stderr)
 
     if journal_path and not result.dry_run:
-        # An earlier change, and BEFORE the abort check on purpose: a run that
+        # This goes BEFORE the abort check on purpose: a run that
         # died partway is journalled for what it got through, and
         # `undo.py`'s docstring is explicit that such a journal "is the
         # most important one to be able to reverse -- it is the one
@@ -3173,7 +3180,7 @@ def _undo_plan_swap(stack_bundle, source_entry, block, *, only: bool):
     is the mirror image, so undoing THIS undo (the redo) re-installs the
     amended plan under the same rule.
 
-    **Only an entry recorded before an earlier change carries a block.** Since
+    **Only an entry recorded before plan.json became build-only carries a block.** Since
     then plan.json is written only by a build, so a patch or amend entry
     has nothing to put back, and its undo leaves plan.json alone -- the
     desk's own journal is what records what is on it. The restore stays for
@@ -3406,7 +3413,7 @@ def undo_cmd(args: argparse.Namespace) -> int:
     There is no second arming control (OPTIONS-H): `--confirm` is the
     one, exactly as on `apply`.
 
-    An earlier change gave it the other half: with `--show DIR` and no journal
+    It has a second form: with `--show DIR` and no journal
     named, it pops the **top of that bundle's stack** -- the newest write
     still standing on the desk, whatever kind it was. An explicit path
     still works exactly as it did, and is now checked against the stack:
@@ -3677,7 +3684,8 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
 
     # The bundle's plan.json follows the stack. Asked of the
     # entry, not the run, so an apply (which never replaces plan.json)
-    # and an amend recorded before an earlier change both answer "nothing to do".
+    # and an amend recorded before plan.json became build-only both answer
+    # "nothing to do".
     saved_plan = (journal_stack.saved_plan(source_entry)
                   if stack_bundle is not None and source_entry is not None else None)
     if result.aborted:
@@ -5520,7 +5528,7 @@ def ui_cmd(args: argparse.Namespace) -> int:
     if watch_conditions_path and _load_watch_conditions_file(watch_conditions_path) is None:
         return 1
 
-    # An earlier change, the deferred half: the Watch page's console
+    # The Watch page's console
     # field seeds from ATOO_CONSOLE / ~/.atoo.config [console],
     # so the browser stops being the one way to reach a desk that still
     # makes you retype its address.

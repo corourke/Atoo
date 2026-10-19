@@ -56,7 +56,7 @@
   //
   //   * It does not recompute `would_change`. That is `_values_equal`,
   //     type-aware and tolerant for floats; a `!==` here would overstate
-  //     a preview by exactly the addresses an earlier change is about. The
+  //     a preview by exactly the addresses that would not really change. The
   //     server sends the answer per record, and the counts.
   //   * It does not word the summary. `apply.ApplyResult.summary()` is
   //     sent down as a string and printed, so this page and the terminal

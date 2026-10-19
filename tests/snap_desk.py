@@ -140,7 +140,7 @@ class SnapDesk:
         return False
 
 
-_SOCKET_LEAF = re.compile(r"^/io/in/(\w+)/(\d+)/(g|mode)$")
+_SOCKET_LEAF = re.compile(r"^/io/in/(\w+)/(\d+)/(g|mode|vph)$")
 
 
 class PairedSnapDesk(SnapDesk):
@@ -148,7 +148,9 @@ class PairedSnapDesk(SnapDesk):
     sockets of an odd/even pair read mode ST, a gain written to either lands
     on both, and the pair taking ST mode puts the first socket's gain on the
     second. Every stereo pair in the captures on file reads the same gain on
-    both sockets, which is what this reproduces."""
+    both sockets, which is what this reproduces. 48V (`vph`) is switched
+    together the same way: a real Compact read the second socket back
+    already on the moment the first was written."""
 
     def _store(self, address: str, value: object) -> None:
         super()._store(address, value)
@@ -158,8 +160,12 @@ class PairedSnapDesk(SnapDesk):
         group, number, leaf = match.group(1), int(match.group(2)), match.group(3)
         first = number if number % 2 else number - 1
         a, b = f"/io/in/{group}/{first}/", f"/io/in/{group}/{first + 1}/"
-        if not (self.values.get(a + "mode") == "ST" and self.values.get(b + "mode") == "ST"
-                and a + "g" in self.values and b + "g" in self.values):
+        stereo = self.values.get(a + "mode") == "ST" and self.values.get(b + "mode") == "ST"
+        if leaf == "vph":
+            if stereo and a + "vph" in self.values and b + "vph" in self.values:
+                self.values[a + "vph"] = self.values[b + "vph"] = value
+            return
+        if not (stereo and a + "g" in self.values and b + "g" in self.values):
             return
         if leaf == "g":
             self.values[a + "g"] = self.values[b + "g"] = value

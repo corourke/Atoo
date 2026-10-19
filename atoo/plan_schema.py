@@ -165,8 +165,8 @@ _PRESET_LEAF_VALUE = {"type": ["number", "string"]}
 
 
 def _preset_values_schema() -> dict:
-    """`processing.preset_values`, the design settled on
-    an earlier change (2026-09-21): `build` expands a named preset INTO the plan, so
+    """`processing.preset_values`. The design was settled on
+    2026-09-21: `build` expands a named preset INTO the plan, so
     the plan says exactly what will be written.
 
     Optional and additive, like every processing field: a plan
@@ -201,7 +201,7 @@ def _preset_values_schema() -> dict:
     }
 
 
-# A bus/Main/Matrix's own processing. An earlier change was filed because these
+# A bus/Main/Matrix's own processing. These
 # strips had no `processing` field AT ALL -- a bus's EQ and compressor had
 # nowhere to go but the plan's free-text `notes`. Phase 2a gives them the
 # EQ half. The compressor half stays in `notes` on purpose: its ranges move
@@ -340,7 +340,7 @@ CHANNEL_SCHEMA = {
         "name": {"type": "string", "minLength": 1, "maxLength": facts.NAME_MAX_CHARS},
         # A human/UI-readable fact, same category as `description` and
         # `provenance` below -- still not a console write. The OSC address
-        # for a channel-strip colour IS confirmed now (`ch.{n}.col`, an earlier change -- see `col` below), but this text field ("Red", "Blue", ...)
+        # for a channel-strip colour IS confirmed now (`ch.{n}.col`, see `col` below), but this text field ("Red", "Blue", ...)
         # and that numeric palette index are two different things: WING's
         # `col` is an int [1..18] with no confirmed name-to-index mapping
         # anywhere in this project's hardware notes. Cross-referencing a
@@ -460,11 +460,11 @@ CHANNEL_SCHEMA = {
                 "preset": {"type": ["string", "null"]},
                 # Filters (hi-cut, tilt), trim, balance,
                 # invert, head-amp gain -- representable and writable
-                # (apply.py). An earlier change (2026-09-17) closed the
-                # remaining gap by teaching the deterministic
+                # (apply.py). The remaining gap was closed on 2026-09-17
+                #  by teaching the deterministic
                 # `--strategy compile` parser to produce all six from a
-                # conventions file's "## Processing" section; an earlier change then
-                # retired that parser and its module entirely, so today the
+                # conventions file's "## Processing" section; that parser and its
+                # module were then retired entirely, so today the
                 # only thing that produces these from conventions text is
                 # the model, working from schema_section()'s prose below --
                 # which is why that prose is the load-bearing half of this
@@ -911,8 +911,8 @@ USER_SOURCE_SCHEMA = {
 
 
 # A channel as a PLAN may carry it: CHANNEL_SCHEMA plus the one field only
-# `build` writes, never a model -- `processing.preset_values` (an earlier change
-# slice B). Two schemas rather than one because the difference matters to
+# `build` writes, never a model -- `processing.preset_values`.
+# Two schemas rather than one because the difference matters to
 # a decoder as well as to a reader: `preset_values.leaves` is an open map
 # keyed by address, which Anthropic's structured-output subset cannot
 # express (`schema_check.anthropic_schema`), so putting it in the channel
@@ -924,7 +924,7 @@ PLAN_CHANNEL_SCHEMA["properties"]["processing"]["properties"]["preset_values"] =
 
 
 def _bus_preset_values_schema() -> dict:
-    """`busses[X].preset_values` -- an earlier change: a bus preset expanded into
+    """`busses[X].preset_values`: a bus preset expanded into
     the plan (`atoo/bus_presets.py`). The channel's shape, plus the
     effect(s) the preset inserts and the engine each was given."""
     schema = _preset_values_schema()
@@ -1022,11 +1022,11 @@ PLAN_SCHEMA = {
         # whether verify_plan() looked clean at that moment. (It also named
         # the strategy until 2026-09-28, C5; an older plan's `strategy`
         # key still loads, since `meta` is open.)
-        # An earlier change added the raw findings behind that verdict --
+        # The raw findings behind that verdict are kept --
         # `critic_findings` and `verify_findings` -- each `None` when that
         # pass never ran, distinct from `[]`/an empty errors+warnings dict
         # meaning it ran and found nothing. `meta` is an open object, so a
-        # plan built before an earlier change retired expectations still loads with its
+        # plan built before expectations were retired still loads with its
         # now-meaningless `expectations_findings` key intact.
         # Optional (never required, and never on the compiler's or a
         # generator's own required list) because it is this project's

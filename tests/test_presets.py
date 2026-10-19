@@ -85,8 +85,7 @@ def test_processing_sections_are_present_in_every_fixture(included_prefix):
 
 def test_input_delay_fields_are_included_but_gain_stage_fields_are_not():
     # WING's own Library Scopes appendix puts input DELAY in its own
-    # CONTENTS icon, separate from IN (trim/balance/phase) -- see
-    # docs/reference/wing-channel-preset.md.
+    # CONTENTS icon, separate from IN (trim/balance/phase).
     preset = load_preset(FIXTURES / "Kick.chn")
     assert preset.parameters["in.set.dly"] == pytest.approx(0.5)
     assert preset.parameters["in.set.dlymode"] == "FT"

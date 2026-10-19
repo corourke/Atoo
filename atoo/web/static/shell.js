@@ -957,10 +957,11 @@
   // "ch 23 'Crowd'" prefix, else the `where` in plainer words: the name
   // inside `channels[...]`, a file's own name, "Plan" or "Apply".
   //
-  // CLAIM: a producer's own short `title` -- the critic's `claim`, an audit rule's name -- else the message up to its first
+  // CLAIM: a producer's own short `title` -- the critic's `claim`, an audit
+  // rule's name -- else the message up to its first
   // colon, semicolon or " -- ", with the strip prefix taken off, and
   // the "'s" after it ("pre-insert: V-REV goes into FX5"). A
-  // critic finding from before an earlier change has no claim and is cut at its
+  // critic finding that predates the claim has none and is cut at its
   // first sentence as well, and at twelve words.
 
   const BANK_WORDS = { ch: "CH", channel: "CH", aux: "AUX", bus: "BUS", mtx: "MTX",
@@ -1886,8 +1887,8 @@
     }
     // Where that file came from: "recorded in touringband/plan.json"
     // when the bundle's plan names the file it was built from, else the
-    // config default or a typed path. `display_origin` is absent from a
-    // server older than an earlier change, so the span stays empty rather than
+    // config default or a typed path. `display_origin` is absent from an
+    // older server, so the span stays empty rather than
     // printing "undefined".
     const origin = el("conv-house-origin");
     if (origin) {
@@ -2600,7 +2601,7 @@
   };
   const INPUT_TYPES = ["Mic", "DI", "Instrument", "Line", "Wireless"];
   // input_list.CANONICAL_COLUMNS, in the order the table draws them.
-  // `patch` was `socket` before an earlier change (a file may still be headed
+  // `patch` was `socket` before the rename (a file may still be headed
   // that way; the server names the column `patch` in `values` either way,
   // and a Save writes it back under the file's own header).
   const INPUT_COLUMNS = ["order", "patch", "name", "category", "type", "model", "phantom", "preset", "notes"];
@@ -3374,7 +3375,7 @@
     tr.appendChild(moveCell(tr));
     inputDisplayColumns().forEach((column) => {
       const v = values || {};
-      // A payload from before an earlier change names the patch `socket`.
+      // A payload from before the rename names the patch `socket`.
       const value = column === "patch" && v.patch == null ? v.socket : v[column];
       tr.appendChild(inputCell(column, value || "", !!isNew));
     });

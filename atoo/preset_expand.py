@@ -1,7 +1,7 @@
 """Preset expansion: a named channel preset, resolved INTO the plan at build
-time -- an earlier change.
+time.
 
-The design was settled on an earlier change on 2026-09-21:
+The design was settled on 2026-09-21:
 
 - **`build` expands a named preset into the plan**, as resolved values
   carrying their provenance (which preset, which file). `apply` writes
@@ -291,7 +291,7 @@ def ordered(addresses) -> list[str]:
     return sorted(addresses, key=write_order)
 
 
-# Which values a selector GOVERNS -- an earlier change. A governed value is one
+# Which values a selector GOVERNS. A governed value is one
 # whose meaning the desk re-reads when the selector changes, so a baseline
 # read under the old selector says nothing about what the value will read
 # under the new one. Found at desk run A22 (2026-09-28): `in/set/dly` read
@@ -413,7 +413,7 @@ def leaf_refusal(address: str, bank: str) -> str | None:
     return None
 
 
-# A list choice the strip's bank does not offer -- an earlier change. A `.chn`
+# A list choice the strip's bank does not offer. A `.chn`
 # is a CHANNEL's file, and some of a channel's list choices are not on an
 # aux strip's list at all: every preset in the starter library carries
 # `dynsc.tap: "IN"`, a channel's sidechain tap, and an aux's tap is one of

@@ -2,6 +2,33 @@
 
 What changed in each release, newest first.
 
+## 0.2.2 -- 2026-10-19
+
+The install is shorter, and the first release meant for PyPI.
+
+- **Install with uv.** On a Mac or Linux the install is two commands and
+  one new terminal window: the uv installer, then
+  `uv tool install "atoo[ui] @ git+https://github.com/corourke/Atoo.git"`.
+  uv fetches the Python Atoo needs, so there is no Homebrew, pipx or Python
+  step. Homebrew with pipx still works and has a short section of its own.
+  [Installing Atoo](docs/user/install.md) walks it. The checkout page now
+  has you check the Python version first, which a stock Mac's 3.9 fails.
+  `atoo --version` and the "needs the ui extra" hint know about a uv
+  install, and say the uv command to fix it.
+- **Build and Apply.** A stereo channel's two sockets switch 48V together
+  on the desk, so a pair built from two input-list rows now gets one
+  value: on if either row wants it, said at INFO with the row that asked.
+  A passive ribbon microphone on either side of a powered pair is an
+  error; an older plan with two different values is read as on-if-either
+  and reported.
+- **Watch and the screens.** The Hide button on a Watch row stays in one
+  place and is a real touch target on a phone. Text sizes are on the
+  guide's scale (11 to 16 pixels), so a few small labels are a pixel
+  larger.
+- **Source.** The comments and one model-prompt preamble in the public
+  code read as explanations; they no longer carry the project's issue
+  numbers or the name of a private document.
+
 ## 0.2.1 -- 2026-10-18
 
 A small release on 0.2.0, from a first desk test of the installed 0.2.0 and

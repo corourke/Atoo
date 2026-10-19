@@ -1,4 +1,4 @@
-"""Put the desk into its initialized state before a full apply -- an earlier change.
+"""Put the desk into its initialized state before a full apply.
 
 The console has to be initialized before
 a full apply so that it is in a known state, and Atoo does that itself,
@@ -116,7 +116,7 @@ LEAF_TYPES_FILE = "leaf_types.json"
 CAPTURES: dict[str, tuple[str, str]] = {
     "wing-compact": (
         "wing-compact.snap",
-        "the maintainer's WING Compact, initialized and exported 2026-09-23 "
+        "a WING Compact, initialized and exported 2026-09-23 "
         "(frozen copy: tests/fixtures/console-runs/Initialized-Compact.snap; "
         "desk run A8's capture is identical, leaf for leaf)"),
     "wing-full": (

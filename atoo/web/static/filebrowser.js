@@ -804,7 +804,7 @@
   // Step 04's tile Change file (its path box is hidden now) gets a button
   // that fills the box and presses the box's own Load, so the load itself
   // is the mode's code, unchanged. Watch's watch-conditions file had one
-  // too until an earlier change made it a bundle file: watch.js now opens this
+  // too until it became a bundle file: watch.js now opens this
   // dialog itself and copies the choice in, as Build's steps 02/03 do.
   function browseInto(buttonId, inputId, loadId, spec) {
     const button = el(buttonId);

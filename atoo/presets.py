@@ -261,7 +261,7 @@ def load_preset(path: str | Path) -> ChannelPreset:
             warnings.append(
                 f"{leaf_path}={value!r} is not on the processing allow-list "
                 "and not recognized as a deliberately excluded field -- "
-                "see docs/reference/wing-channel-preset.md"
+                "left out of the preset (the allow-list is at https://docs.atoo.app/build/presets/)"
             )
         # "excluded" fields (patch/level/routing/membership/identity) are
         # dropped on purpose, per D2 -- no warning, that's the design.
@@ -290,7 +290,7 @@ def load_preset(path: str | Path) -> ChannelPreset:
     )
 
 
-# -- Bus presets (`.bus`) -- an earlier change -------------------------------------
+# -- Bus presets (`.bus`) -------------------------------------
 #
 # A `.bus` is the same `chpreset.11` envelope as a `.chn` (the extension is
 # what tells them apart), whose `ch_data` is a BUS strip: `in.set`

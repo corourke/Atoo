@@ -149,24 +149,21 @@ def test_48v_on_a_stereo_channel_switches_both_sockets_and_the_review_marks_both
 
 
 def test_48v_set_on_a_pair_the_plan_states_two_values_for_is_carried_to_both_sockets():
-    """A pair built with a condenser on the first socket and a dynamic on
-    the second states two values. Setting `source.phantom` is the pair's
-    48V, so the second socket follows, and the review says it did."""
+    """A plan from an older build can state two values for a pair. The desk
+    holds one for both sockets, so the plan is read as on (on if either is)
+    and setting `source.phantom` is the pair's 48V: the second follows, and
+    the review says it did."""
     plan = _stereo_plan()
-    _channel(plan, "Snare")["source"].update(phantom=True, pair_phantom=False)
+    _channel(plan, "Snare")["source"].update(phantom=False, pair_phantom=True)
     amendment, merge, targets = _review(plan, "Snare", {"source.phantom": False})
     assert _refusals(amendment) == []
-    assert [e.path for e in merge.edits] == ["source.phantom"]
-    assert [(t.address, t.compute_value(None)) for t in targets.to_write] == \
-        [("/io/in/A/40/vph", 0)]
-    amendment, merge, targets = _review(plan, "Snare", {"source.phantom": True})
     assert [e.path for e in merge.edits] == ["source.pair_phantom"]
     assert merge.edits[0].switches_phantom
-    assert [(t.address, t.compute_value(None)) for t in targets.to_write] == \
-        [("/io/in/A/41/vph", 1)]
+    assert sorted((t.address, t.compute_value(None)) for t in targets.to_write) == \
+        [("/io/in/A/40/vph", 0), ("/io/in/A/41/vph", 0)]
     [info] = [i for i in amendment.infos if "switches both sockets together" in i]
-    assert "source.pair_phantom is set to true to match source.phantom" in info
-    assert _channel(merge.plan, "Snare")["source"]["pair_phantom"] is True
+    assert "source.pair_phantom is set to false to match source.phantom" in info
+    assert _channel(merge.plan, "Snare")["source"]["pair_phantom"] is False
 
 
 @pytest.mark.parametrize("fields", [

@@ -549,7 +549,7 @@ def _tag_model_notes(plan: dict) -> None:
     write this shape directly, with "source" always the literal "model" --
     but a model decoding unconstrained (--no-constrain, or a provider with
     no portable way to constrain it) is not guaranteed to comply, the same
-    tolerance an earlier change already needed for `notes` being a bare string
+    tolerance `notes` already needed for being a bare string
     instead of an array at all. An entry already in the tagged shape is
     left alone; this only upgrades a plain string.
 

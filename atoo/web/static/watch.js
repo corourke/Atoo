@@ -1255,7 +1255,7 @@
 
   // Start, by the UI style rules: a button that would do nothing is locked,
   // with the reason beside it. With no console in the bar (and no Demo)
-  // there is nothing to watch -- before an earlier change it was a live brass
+  // there is nothing to watch -- it used to be a live brass
   // button on the empty page. While a watch runs Stop is the action, and
   // the Watching state says why Start is not.
   let startPending = false;
@@ -1409,7 +1409,7 @@
     const parts = splitFinding(f);
     const solid = f.severity === "error" || f.severity === "warning" ? " solid" : "";
     return (
-      '<td class="col-sev"><span class="sev big' + solid + " sev-" + f.severity + '">' + sevLabel + "</span></td>" +
+      '<td class="col-sev"><div class="sev-cell"><span class="sev big' + solid + " sev-" + f.severity + '">' + sevLabel + "</span></div></td>" +
       '<td class="col-where"><span class="row-where">' + escapeHtml(parts.where || "\u2014") + "</span></td>" +
       '<td class="col-title">' + findingHtml(f) + "</td>" +
       '<td class="col-rule"><span class="readout">' + escapeHtml(f.rule_id) + '</span><span class="row-cat">' +
@@ -1587,7 +1587,7 @@
         tr.dataset.key = key;
         tr.className = "sev-row-" + f.severity;
         tr.innerHTML = rowHtml(f);
-        tr.querySelector(".col-sev").appendChild(makeHideButton(f, false));
+        tr.querySelector(".sev-cell").appendChild(makeHideButton(f, false));
         if (f._isNew) {
           f._isNew = false;
           tr.classList.add("row-new");
@@ -1981,7 +1981,7 @@
         // with a status frame on connect and on every Start and Stop.
         // While the last word was "not running", an event is a stale
         // replay -- it held Start disabled on Watching until Stop was
-        // pressed (found checking an earlier change in Chromium).
+        // pressed (found while checking in Chromium).
         if (serverRunning === false) return;
         setRunningUI(true);
         setConnPill("watching", watchingLabel);
@@ -2061,7 +2061,7 @@
     // first (baseline) event can reach the socket before this fetch
     // resolves, and clearing afterwards wiped it -- the table then showed
     // only what changed later, never what was already wrong at Start
-    // (found checking an earlier change in Chromium).
+    // (found while checking in Chromium).
     // When you start watching, existing findings
     // need to be deleted -- every trace of the last session goes: rows,
     // counts and the last-updated time.

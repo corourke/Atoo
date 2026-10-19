@@ -93,7 +93,7 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from atoo import config
+from atoo import config, install_info
 
 #: Files that make a folder the starter set rather than a folder that
 #: merely has its name: what `init` needs, and the Demo show's plan.
@@ -121,7 +121,7 @@ def starter_dir() -> Path:
     """The starter set: the first of `starter_candidates()` that holds it.
 
     A folder merely being there is not enough: a checkout
-    from before an earlier change had a ``atoo/starter/`` of its own, and on
+    from before the starter set moved out of the package had a ``atoo/starter/`` of its own, and on
     a Mac a ``.DS_Store`` or an untracked preset keeps that folder alive
     after ``git pull`` removes its files. An editable install from that
     checkout used to take the leftover folder -- ``init`` copied only the
@@ -290,8 +290,7 @@ def run_init(directory: Path | None = None, *, force: bool = False,
         looked = " or ".join(str(p) for p in starter_candidates())
         result.errors.append(
             f"this Atoo install has no starter set (looked in {looked}) -- nothing was "
-            "written. Reinstall Atoo (`pipx reinstall atoo`, or from a checkout "
-            "`pipx install --force --editable .`).")
+            f"written. Reinstall Atoo ({install_info.reinstall_advice()}).")
         return result
     if directory.exists() and not directory.is_dir():
         result.errors.append(f"{config.config_value_for(directory)} is a file, not a folder "

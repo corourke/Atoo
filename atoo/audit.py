@@ -16,8 +16,7 @@ or be built by hand / loaded from a JSON fixture, which is how a novice
 operator can try this against a worked example with no console attached
 at all (`starter/audit-demo/audit_demo_state.json`, which `atoo init` copies; `docs/user/audit.md`).
 
-**A live read is the slowest thing this project does**, and an earlier change is
-what that cost: 6,032 serial OSC round trips for a WING Compact reading
+**A live read is the slowest thing this project does**: 6,032 serial OSC round trips for a WING Compact reading
 its own panel, printing nothing at all until it finished. Two things
 came out of it, and `console_read_plan` is the hinge of both -- it builds
 the whole address list *before* anything is fetched. A read that knows
@@ -33,20 +32,20 @@ back. A live watch reads less again on most passes: names, which a dump
 never carries, are read at Start and on a refresh and handed back in
 between (`read_console_state(names=...)`).
 
-**And an earlier change found that most of the wall time was not work at all.**
+**And most of the wall time was not work at all.**
 A11 on hardware: 998.6s for a full per-leaf read, of which **960s** was
 three-second timeouts on 320 addresses the console does not have --
 `mode` and `pon` on a bus's and a Main's send, which only a *strip's*
 send carries (`console_facts.SEND_LEAVES`, `send_fields_for` below). The
 plan no longer asks for them, so a read was 5,712 addresses, every one of
-which the desk answers -- 5,808 once an earlier change added each strip's
-alternate-patch group and switch (C004), and 6,112
-added every insert point and what each FX slot holds (E001-003), and
-6,113 since its comms half added `/cfg/talk/assign` (T001), 6,114
-since the global alternate switch `/io/altsw` (C005), and
-6,138 since an earlier change read each phantom-capable socket's width
-(`/io/in/{grp}/{n}/mode`, C001), 6,143
-read three AES50 link states and two monitor sources, 6,167 since each
+which the desk answers -- 5,808 once each strip's alternate-patch group
+and switch were read (C004), 6,112 once every insert point and
+what each FX slot holds were read (E001-003), 6,113 once the
+talkback assignment `/cfg/talk/assign` was read (T001), 6,114 once the
+global alternate switch `/io/altsw` was read (C005), 6,138 once
+each phantom-capable socket's width was read (`/io/in/{grp}/{n}/mode`,
+C001), 6,143 once three AES50 link states and two monitor
+sources were read, 6,167 since each
 local socket's own mute (`/io/in/{grp}/{n}/mute`, C007), and 6,195 since the width of
 each bus, Main and Matrix (`busmono`, R011 and CV020). What is left is the real
 work, and A11 measured that too: **~39s per-leaf, ~4s by node dump** on 2026-09-22, and
@@ -503,7 +502,7 @@ def output_sockets(state: ConsoleState) -> list[tuple[str, int]]:
 def output_patch_was_read(state: ConsoleState) -> bool:
     """Did this reading ask the desk about its output patch at all?
 
-    An earlier change, and the distinction is the whole point: *"we looked and
+    The distinction is the whole point: *"we looked and
     there is no route"* is a finding; *"we never looked"* is a gap in the
     read. R002 and R005 both answer "does this object reach a
     physical output", and both answer it from `/io/out/*` -- so on a state
@@ -546,9 +545,9 @@ def output_source_object(state: ConsoleState, group: str, socket: int) -> tuple[
     output socket, or None if nothing does.
 
     `ConsoleState.output_source` returns the raw pair the desk stores, and
-    the number in it is a SLOT, not an object index: an earlier change, confirmed
-    on a real console and again by the factory snapshot, gives every
-    internal object a fixed two-slot pair, `2*index - 1` for its L/mono
+    the number in it is a SLOT, not an object index: confirmed
+    on a real console and again by the factory snapshot, every
+    internal object has a fixed two-slot pair, `2*index - 1` for its L/mono
     feed and `2*index` for its R. `apply._output_slot` is where that math
     is written down for the write path; this is its inverse, for the read
     path.
@@ -1096,7 +1095,7 @@ def effective_name(state: ConsoleState, base: str) -> str | None:
     - A socket carrying the desk's own label (`'USB 1/2'`) is not a name
       and never wins.
 
-    **The rule is unchanged; what changed in an earlier change is that
+    **The rule is unchanged; what changed is that
     the audit now takes a reading.** `read_console_state` reads `clink`
     for every patched strip in its second pass
     (`custom_link_addresses`), so an audit lands in the second or third
@@ -1656,7 +1655,7 @@ def _rule_matrix_unpatched(state: ConsoleState) -> list[Finding]:
     show, which is worth knowing at soundcheck and stops nothing.
     """
     findings = []
-    # An earlier change, as in R002 and R005: "reaches no physical output"
+    # As in R002 and R005: "reaches no physical output"
     # is a claim about the output patch, and a read that never asked for
     # it has no standing to make it.
     if not output_patch_was_read(state) or unread_output_groups_in_use(state):
@@ -1704,7 +1703,7 @@ def _rule_main_unfed(state: ConsoleState) -> list[Finding]:
 
 def _rule_main_unpatched(state: ConsoleState) -> list[Finding]:
     findings = []
-    # An earlier change, exactly as in R002 above: "it reaches no physical
+    # Exactly as in R002 above: "it reaches no physical
     # output" is a claim about the output patch, and a read that never
     # asked for the output patch has no standing to make it.
     if not output_patch_was_read(state) or unread_output_groups_in_use(state):
@@ -2110,7 +2109,7 @@ def _rule_shared_input(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_patched_from_empty_bay(state: ConsoleState) -> list[Finding]:
-    """An earlier change, the deferred half. *"A channel is patched from,
+    """The audit's half of the empty-bay check. *"A channel is patched from,
     or an output routed to, an expansion bay the desk reports empty."*
 
     `apply` refuses to create this (`apply.unfitted_bays_the_plan_needs`);
@@ -3100,7 +3099,7 @@ DEFAULT_RULES: list[AuditRule] = [
     AuditRule("T002", Severity.INFO, "communications", "Talkback Strip Left Out Of Mix Checks",
               "The strip talkback is assigned to is in use; CH001, L002, R008, C006 and C007 skip it.",
               _rule_talkback_strip_exempt, scope=RuleScope.HAZARD),
-    # The finding that prompted an earlier change: 29 of the A5 run's 30 INFO
+    # The finding that prompted this: 29 of the A5 run's 30 INFO
     # findings were this rule on strips the show never mentions.
     AuditRule("CH001", Severity.INFO, "channels", "Channel Not In Any DCA",
               "An in-use channel/aux belongs to no DCA group.", _rule_channel_no_dca,
@@ -3356,9 +3355,9 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
     for idx in _plan_group_indices(state, plan.get("dcas") or {}, dca_indices(state), "/dca/{}"):
         objects.add(f"/dca/{idx}")
 
-    # An earlier change, and it is only honest because steps 1 and 2 are
-    # done: `_diff_group_faders` now compares these, so a structural rule
-    # may go quiet about them. Until it did, standing L002 down on a
+    # Standing a structural rule down on a stated fader is only honest
+    # because `_diff_group_faders` now compares these, so a
+    # structural rule may go quiet about them. Until it did, standing L002 down on a
     # stated bus fader (or CH002 on a stated DCA fader) would have
     # meant nobody checked that fader at all.
     for plan_key, base_fmt in (("busses", "/bus/{}"), ("dcas", "/dca/{}")):
@@ -3528,7 +3527,7 @@ def apply_plan_scope(
 
 
 # --------------------------------------------------------------------------
-# Conventions diff (FR-4.1, an earlier change first slice + the extension):
+# Conventions diff (FR-4.1, first slice and extension):
 # compare live state against what the compiled PLAN says a channel should
 # be -- distinct from the structural rules above, which never look at a
 # plan at all. Eight plan-channel fields covered here, each of which
@@ -5096,7 +5095,7 @@ def _diff_main_routes(
 
 
 def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
-    """FR-4.1 (an earlier change first slice + the extension): walk
+    """FR-4.1 (first slice and extension): walk
     `plan.get("channels", [])` and compare each plan channel's stated
     mute/fader/DCA/mute-group/patch/bus-send/main-route/processing fields
     against `state`, the same live substrate the structural rules above
@@ -5717,7 +5716,7 @@ def summarise_sockets(sockets: list[tuple[str, int]]) -> str:
     for group, number in sockets:
         counts[group] = max(counts.get(group, 0), number)
     # Spelled as `format_socket` spells a socket ("AES50-A 1-48", never
-    # "A 1-48"), since an earlier change put AES50 groups in this line.
+    # "A 1-48"), since AES50 groups are in this line.
     def spelled(group: str) -> str:
         return format_socket(group, 1).rsplit(" ", 1)[0]
 
@@ -5787,8 +5786,8 @@ def unanswerable_rule_ids(state: ConsoleState) -> tuple[str, ...]:
 
     The single place the "what did this read not cover" question is
     answered, so `render_coverage`'s paragraph, `coverage_caveat`'s one
-    line and the rules' own guards cannot drift apart (an earlier change was
-    exactly that drift: the paragraph knew, the rules did not)."""
+    line and the rules' own guards cannot drift apart (they once did
+    drift: the paragraph knew, the rules did not)."""
     dark: list[str] = []
     if not output_patch_was_read(state):
         dark.extend(OUTPUT_SIDE_RULE_IDS)
@@ -5841,19 +5840,20 @@ def coverage_caveat(state: ConsoleState) -> str | None:
 # for, built BEFORE any of it is fetched. That ordering is the whole
 # point: a read that knows its own total can say `read 1200/6143 (19%)`
 # while it works, and a read that cannot is indistinguishable from a
-# hung one -- which is how an earlier change started, and how a correct `watch`
+# hung one -- which is why the slow read got reported, and how a correct `watch`
 # run got killed on 2026-09-22.
 #
 # It also replaced a guess. `cli.ESTIMATED_LIVE_READ_ADDRESSES` was a
 # hand-maintained 5,928 that went stale every time this plan grew; the
 # real number for a Compact reading its own panel is 6,195, and it is
-# now counted rather than remembered. (It was 6,032 --
-# 320 of those were addresses the desk does not have and has never
-# answered, so the number of VALUES a read came back with did not change
-# -- and 5,712 until an earlier change added the alternate patch, 5,808 until
-# an earlier change added the insert points and FX slots, 6,112 until its comms
-# half added `/cfg/talk/assign`, 6,113 until an earlier change added `/io/altsw`,
-# 6,114 until an earlier change added the socket widths, and 6,138 until an earlier change added three AES50 link states and two monitor sources.)
+# now counted rather than remembered. (It was 6,032 until 320 addresses the desk does not have were
+# dropped -- those 320 were never answered, so the number
+# of VALUES a read came back with did not change -- and 5,712 until the
+# alternate patch was added, 5,808 until the insert points
+# and FX slots were, 6,112 until the comms half added
+# `/cfg/talk/assign`, 6,113 until `/io/altsw` was added,
+# 6,114 until the socket widths were, and 6,138 until three
+# AES50 link states and two monitor sources were.)
 
 # (address suffix, value_type) -- types confirmed against
 # the Compact parameter map ("fader"/"log" types
@@ -5873,7 +5873,7 @@ SEND_FIELDS = (("on", "i"), ("lvl", "f"), ("mode", "s"), ("pon", "i"))
 
 def insert_fields(bank: str, base: str) -> list[tuple[str, str]]:
     """Each insert point this bank has (`console_facts.INSERT_POINTS`):
-    its switch and the FX slot it names, an earlier change. Four leaves on a
+    its switch and the FX slot it names. Four leaves on a
     channel, bus, Main or Matrix; two on an aux, which has no post-insert.
     Both ride inside the object's own node dump (the PDF's `/ch/1` dump
     carries `.preins.on=0,ins=NONE`), so the default node-dump read pays
@@ -5898,8 +5898,8 @@ def send_fields_for(bank: str) -> tuple[tuple[str, str], ...]:
     addresses do not exist on the console, so nothing is being declined
     and no rule loses an input -- no rule ever read a bus's or a Main's
     send `mode`/`pon`, because the desk never returned one to read. That
-    distinction matters (an earlier change was the opposite case, an audit
-    quietly reading LESS than its rules needed), so it is stated here and
+    distinction matters (the opposite case is an audit quietly reading
+    LESS than its rules needed), so it is stated here and
     in the console model notes rather than left to be
     re-derived from a diff.
     """
@@ -5944,7 +5944,7 @@ def console_read_plan(
     and a progress bar counting this plan grows its own total when the
     second pass starts rather than printing 101%.
 
-    **`clink` is not in `STRIP_FIELDS` either, and since an earlier change it is
+    **`clink` is not in `STRIP_FIELDS` either; it is
     in the second pass instead.** In `STRIP_FIELDS` it would be one
     address per strip whether or not that strip is patched; in the second
     pass it is one per *patched* strip, which is the only kind whose flag
@@ -6077,7 +6077,7 @@ def console_read_plan(
         for n in range(1, count + 1):
             plan.append((f"/io/out/{group}/{n}/grp", "s"))
             plan.append((f"/io/out/{group}/{n}/in", "i"))
-    # An earlier change, read only when output sockets are, by the same
+    # These are read only when output sockets are, by the same
     # contract as the USER PATCHES above: each is an answer to "does this
     # object reach an output", which nothing asks without an output patch.
     # Which AES50 ports have a device on them -- the second pass reads the
@@ -6351,7 +6351,8 @@ def read_console_state(
     values each way, 0 on one side only, 0 differing**, 4.8s against
     118.8s. So the CLI (`cli._console_read_kwargs`) and the
     Watch page (`webui._DEFAULT_READ_KWARGS`) pass `bulk=True`, with
-    `--per-leaf` as the way back. The 304 insert/FX-slot addresses an earlier change added after that run are the next run's to compare.
+    `--per-leaf` as the way back. The 304 insert/FX-slot addresses added after that run
+    are the next run's to compare.
 
     **This function's own default stays `bulk=False`, on purpose.**
     Desk script A11 (`a11-read-speed.sh`) -- the comparison itself --
@@ -6437,7 +6438,7 @@ def read_console_state(
             return
         value, error = reply.value(value_type)
         if error is None:
-            # An earlier change, and the same correction `apply._extract_reply_value`
+            # The same correction `apply._extract_reply_value`
             # makes: WING's GET reply for a patch connector is one less than
             # the value its SET takes. `in/conn/in` is in STRIP_FIELDS above,
             # so every consumer of a ConsoleState saw that off-by-one --

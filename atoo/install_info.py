@@ -7,8 +7,9 @@ checkout, and not the copy a package manager installed earlier, which
 never follows a ``git checkout``. And someone whose ``atoo ui`` stops for
 want of the ``ui`` extra needs the install command that works where they
 are: the plain ``pip install`` is refused outright by a Python the
-operating system manages, and an installed copy has no checkout to
-install from.
+operating system manages, an installed copy has no checkout to install
+from, and the private environment a tool installer (uv, pipx) makes has no
+``pip`` to use.
 
 ``describe()`` reads the answer from the package's own location, once:
 
@@ -34,7 +35,10 @@ from pathlib import Path
 
 from atoo import config
 
-#: Where an installed copy comes from, as the install page spells it.
+#: Where an installed copy comes from, as the install page spells it. The
+#: one place that says so: every install command in this package is built
+#: from it by `install_requirement`. Once Atoo is on PyPI, set this to ""
+#: and each command names the plain package.
 INSTALL_SOURCE = "git+https://github.com/corourke/Atoo.git"
 
 #: How long ``git`` gets to answer. A version line is not worth a hang.
@@ -63,7 +67,7 @@ class InstallInfo:
     python_version: str = ""
 
     def summary(self) -> str:
-        """The one line: ``atoo 0.2.1 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
+        """The one line: ``atoo 0.2.2 (running from /x/atoo; branch b, a1b2c3d, clean)``."""
         head = f"atoo {self.version}"
         if self.kind == "installed":
             return f"{head} (installed copy at {_shown(self.package_dir)})"
@@ -174,25 +178,58 @@ def in_pipx_environment() -> bool:
     return "venvs" in parts and any(p == "pipx" for p in parts)
 
 
+def in_uv_tool_environment() -> bool:
+    """Whether this interpreter is the private environment `uv tool install`
+    made (``.../uv/tools/atoo``, or wherever ``UV_TOOL_DIR`` points).
+
+    The mark is the ``uv-receipt.toml`` uv writes at the root of every tool
+    environment, which records what was installed. The environment's
+    ``pyvenv.cfg`` names uv too, but so does that of any ``uv venv`` -- a
+    checkout's virtualenv made with uv is not a tool environment, and
+    ``pip`` works in it."""
+    return (Path(sys.prefix) / "uv-receipt.toml").is_file()
+
+
+def install_requirement(extra: str = "") -> str:
+    """The requirement an install command names: ``atoo[ui] @ git+https://...``
+    while Atoo installs from its repository, ``atoo[ui]`` once `INSTALL_SOURCE`
+    is empty."""
+    name = f"atoo[{extra}]" if extra else "atoo"
+    return f"{name} @ {INSTALL_SOURCE}" if INSTALL_SOURCE else name
+
+
 def ui_extra_hint(info: InstallInfo | None = None) -> str:
     """What to say when ``atoo ui`` cannot import the browser UI's packages.
 
     The command that fixes it depends on where Atoo is running: inside a
-    virtualenv ``pip install`` works; outside one it is usually refused
-    (``externally-managed-environment``), and the way out is a virtualenv
-    for a checkout, or a pipx reinstall for an installed copy.
+    uv or pipx tool environment the tool installer is the way (there is no
+    ``pip`` there); inside any other virtualenv ``pip install`` works;
+    outside one it is usually refused (``externally-managed-environment``),
+    and the way out is a virtualenv for a checkout, or a uv install for an
+    installed copy.
     """
     info = info or describe()
     lead = "the web UI needs the 'ui' extra"
+    requirement = install_requirement("ui")
+    if in_uv_tool_environment():
+        if info.root is not None:
+            return (f"{lead} -- this copy was installed by uv without it. From the checkout, "
+                    "install it again with:\n"
+                    f"  cd {shlex.quote(str(info.root))}\n"
+                    "  uv tool install --force --editable \".[ui]\"\n"
+                    f"({_CHECKOUT_DOC})")
+        return (f"{lead} -- this copy was installed by uv without it. Install it again with:\n"
+                f"  uv tool install --force \"{requirement}\"\n"
+                f"({_INSTALL_DOC})")
     if in_virtualenv():
         if in_pipx_environment():
             return (f"{lead} -- this copy was installed by pipx without it. Install it again with:\n"
-                    f"  pipx install --force \"atoo[ui] @ {INSTALL_SOURCE}\"\n"
+                    f"  pipx install --force \"{requirement}\"\n"
                     f"({_INSTALL_DOC})")
         if info.root is not None:
             return f"{lead} -- install it with:\n  python3 -m pip install -e \".[ui]\""
         return (f"{lead} -- install it into this virtual environment with:\n"
-                f"  python3 -m pip install \"atoo[ui] @ {INSTALL_SOURCE}\"")
+                f"  python3 -m pip install \"{requirement}\"")
 
     outside = ("This Python is not inside a virtual environment, where `pip install` is "
                "often refused (`error: externally-managed-environment`)")
@@ -206,6 +243,23 @@ def ui_extra_hint(info: InstallInfo | None = None) -> str:
                 f"  {activate}\n"
                 f"  python3 -m pip install -e \".[ui]\"\n"
                 f"then run `atoo ui` from that terminal ({_CHECKOUT_DOC}).")
-    return (f"{lead}. {outside}, so install Atoo with pipx instead:\n"
-            f"  pipx install --force \"atoo[ui] @ {INSTALL_SOURCE}\"\n"
+    return (f"{lead}. {outside}, so install Atoo with uv instead:\n"
+            f"  uv tool install --force \"{requirement}\"\n"
             f"({_INSTALL_DOC})")
+
+
+def reinstall_advice(info: InstallInfo | None = None) -> str:
+    """How to put Atoo back when its own files are not all there, in the
+    words of whatever installed this copy: a uv tool, pipx, or (when
+    neither is detected) either, with uv first."""
+    info = info or describe()
+    uv_reinstall = f"uv tool install --force --reinstall \"{install_requirement('ui')}\""
+    if in_uv_tool_environment():
+        advice = f"`{uv_reinstall}`"
+        if info.root is not None:
+            advice += ", or from the checkout `uv tool install --force --editable .`"
+        return advice
+    if in_pipx_environment():
+        return "`pipx reinstall atoo`, or from a checkout `pipx install --force --editable .`"
+    return (f"`{uv_reinstall}`, or from a checkout `uv tool install --force --editable .`; "
+            "with pipx, `pipx reinstall atoo`")

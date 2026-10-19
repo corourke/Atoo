@@ -770,11 +770,11 @@ def test_setup_page_shows_which_console_the_plan_was_built_for(client):
         "setup.js must render meta.console_model -- without it the page "
         "silently omits which console the plan is for"
     )
-    # A plan built before an earlier change has no such key, and `esc(undefined)` renders
-    # as an empty string -- the exact silently-blank failure an earlier change hit.
-    assert "built before #13" in js, (
+    # An older plan has no such key, and `esc(undefined)` renders as an
+    # empty string -- the exact silently-blank failure an earlier change hit.
+    assert "Console model not stated -- built by an older version." in js, (
         "setup.js must say the field is absent rather than rendering blank "
-        "for a plan built before #13"
+        "for a plan that predates it"
     )
 
 

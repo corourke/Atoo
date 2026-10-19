@@ -41,7 +41,7 @@ PLAN = {
         _channel(1, "Kick", phantom=True),                           # a condenser, A 1
         _channel(2, "Snare", phantom=False),                         # a dynamic, A 2
         _channel(3, "OH", phantom=True, sockets=[5, 6], stereo=True,
-                 pair_input="OH R", pair_phantom=False),             # a pair, one leg powered
+                 pair_input="OH R", pair_phantom=True),              # a pair, both powered
         _channel(4, "Keys", phantom=False, sockets=[8, 9], stereo=True),  # one value for the pair
         _channel(5, "Click", phantom=True, group="USB", sockets=[1]),     # no head amp
         _channel(6, "Room", phantom=True, group="LCL", sockets=[1]),
@@ -69,9 +69,10 @@ def _desk(**changes) -> ConsoleState:
 
 
 def _wanted(entry):
-    first = entry["source"]["phantom"]
-    pair = entry["source"].get("pair_phantom")
-    return [first, pair if isinstance(pair, bool) else first][: len(entry["patch"]["sockets"])]
+    """What the plan's entry puts on each socket: one value for a pair."""
+    sides = [entry["source"]["phantom"], entry["source"].get("pair_phantom")]
+    pair = any(bool(on) for on in sides)
+    return [pair if len(entry["patch"]["sockets"]) > 1 else sides[0]] * len(entry["patch"]["sockets"])
 
 
 def _cv019(state, plan=PLAN):
@@ -105,11 +106,26 @@ def test_48v_on_at_a_source_the_plan_says_must_not_have_it_is_a_warning():
         "damage a source that does not want it.")
 
 
-def test_each_socket_of_a_stereo_pair_has_its_own_value():
-    """OH: the plan powers the first leg and not the second."""
-    both = _cv019(_desk(**{"/io/in/A/5/vph": 0, "/io/in/A/6/vph": 1}))
+def test_both_sockets_of_a_stereo_pair_are_judged_against_the_pairs_one_value():
+    """OH: the desk switches the pair together, so the plan wants 48V on
+    both sockets, and a socket that reads off is a finding of its own."""
+    both = _cv019(_desk(**{"/io/in/A/5/vph": 0, "/io/in/A/6/vph": 0}))
     assert [f.addresses for f in both] == [("/io/in/A/5/vph",), ("/io/in/A/6/vph",)]
-    assert "no 48V at AES50-A 6" in both[1].message
+    assert "has 48V on at AES50-A 6" in both[1].message
+    [one] = _cv019(_desk(**{"/io/in/A/6/vph": 0}))
+    assert one.addresses == ("/io/in/A/6/vph",)
+
+
+def test_a_plan_stating_two_different_values_is_judged_on_the_one_the_desk_can_hold():
+    """An older build: 48V on the first socket, off on the second. The desk
+    cannot hold that, so the plan is read as on for both and CV019 does not
+    ask for the second socket to be off (verify reports the plan itself)."""
+    plan = {**PLAN, "channels": [
+        _channel(3, "OH", phantom=True, sockets=[5, 6], stereo=True,
+                 pair_input="OH R", pair_phantom=False)]}
+    state = ConsoleState({"/ch/3/in/conn/grp": "A", "/ch/3/in/conn/in": 5,
+                          "/io/in/A/5/vph": 1, "/io/in/A/6/vph": 1}, console_model="wing-compact")
+    assert phantom_drift_findings(state, plan) == []
 
 
 def test_a_pair_the_plan_gives_one_value_is_read_as_both_sockets():

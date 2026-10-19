@@ -3,7 +3,7 @@
 Originally this module also rendered a `.report.md` file beside the plan
  -- generation warnings, critic findings and verification,
 saved rather than only printed to a terminal that vanishes when closed.
-Retired once an earlier change folded that same data directly into `plan.json`
+Retired once that same data was folded directly into `plan.json`
 itself (`meta.critic_findings`/`verify_findings`, alongside
 `verify_at_generation` below): a UI or a human reading the plan file no
 longer needs a second file open, so `build` stopped writing one.

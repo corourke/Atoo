@@ -15,7 +15,7 @@ Severity is flat -- ``error`` / ``warning`` / ``info``, and that is
 the whole list. A
 "limitation" is not a fifth severity, it is a warning (decided
 2026-09-19). A fourth,
-``critical``, existed from an earlier change until 2026-09-23 and was dropped for the
+``critical``, existed from the start until 2026-09-23 and was dropped for the
 same kind of reason -- **nothing in this codebase ever emitted one**, so
 it was a rung of the ladder with no members, and `error` already blocked
 everything a `critical` would have: since nothing emitted CRITICAL, it
@@ -24,7 +24,7 @@ What makes a limitation legible is not its severity but the two fields
 below it -- `fix` (what the engineer should change, when they can) and
 `issue` (the tracking issue, when they can't). A diagnostic carrying
 `issue` renders "Not something you can fix in your conventions file",
-which is the distinction an earlier change was filed to get.
+which is the distinction the Diagnostic type was introduced to draw.
 
 `to_dict()` is the wire shape the Setup UI consumes, so the
 UI is a client against the same engine (D9) rather than a second
@@ -72,10 +72,11 @@ _INDENT = " " * _LABEL_WIDTH
 
 
 # The default tracker for "Atoo can't represent this yet" on the
-# deterministic compile path. An earlier change is the right one rather than an older issue that asked for the compiler to
+# deterministic compile path, which is being retired. That is the
+# right one rather than an older issue that asked for the compiler to
 # consume the IR's richer membership and was closed not-planned in favour
 # of `--strategy generate`, so every drop below is a symptom of the path
-# an earlier change tracks retiring, not of a gap anyone intends to fill.
+# being retired, not of a gap anyone intends to fill.
 COMPILE_PATH_ISSUE = 29
 
 
@@ -186,7 +187,7 @@ class Diagnostic:
         """Something the rules IR stated that the compiler's narrower
         shape cannot carry (`ai_conventions.DroppedDetail`).
 
-        This is the category an earlier change was actually filed about: it is
+        This is the category the Diagnostic type was introduced to separate out: it is
         *not* the engineer's mistake, and no amount of editing their
         conventions file will fix it. It is a warning like any other now
         (a limitation is not its own severity), but it

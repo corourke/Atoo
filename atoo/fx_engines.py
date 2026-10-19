@@ -1,5 +1,5 @@
 """FX engines: what each engine can hold, how a plan's effects are given
-engines, and how an effect's parameters are typed -- an earlier change.
+engines, and how an effect's parameters are typed.
 
 Setting up
 buses with effects has to be possible. The effects come from bus presets saved on the desk
