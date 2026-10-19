@@ -23,7 +23,7 @@ of the one page at `/`. The `Plan:` line appears only with `--plan` (or
 there: with a console configured it names the address and where it came
 from (`--console`, `ATOO_CONSOLE` or `~/.atoo.config`), and the
 bundle bar's **Change…** sets another without a restart. The
-`Working folder:` line is the folder [`atoo init`](install.md#4-first-run-atoo-init-then-atoo-ui)
+`Working folder:` line is the folder [`atoo init`](install.md#3-first-run-atoo-init-then-atoo-ui)
 made; before `init` it says there is none, and how to make one.
 
 ### It exits immediately
@@ -42,8 +42,8 @@ dependency, so the engine installs without FastAPI and uvicorn. Exits
   `--break-system-packages`.
 - **A clone, inside its virtualenv**: just `python3 -m pip install -e
   ".[ui]"`.
-- **An installed copy**: install it again with the extra, [step 3 of
-  Installing Atoo](install.md#3-install-atoo) with `--force` after
+- **An installed copy**: install it again with the extra, [step 2 of
+  Installing Atoo](install.md#2-install-atoo) with `--force` after
   `install` (`uv tool install --force --python 3.12`, or `pipx install --force` for a
   pipx install). That is the fix whatever the message suggests: a copy
   installed with uv has no `pip` of its own.

@@ -157,7 +157,7 @@ Install again only if the branch adds a dependency:
 Open a new terminal, or type `deactivate`. `which atoo` is
 `~/.local/bin/atoo` again.
 
-Then carry on from [First run](install.md#4-first-run-atoo-init-then-atoo-ui),
+Then carry on from [First run](install.md#3-first-run-atoo-init-then-atoo-ui),
 if you have not run `atoo init` before.
 
 ## When the install fails

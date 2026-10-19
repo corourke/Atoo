@@ -15,8 +15,8 @@ yourself, and leaves the Python your laptop came with alone.
 uv --version
 ```
 
-A version number means you have it: go to step 3. `command not found`
-means you do not:
+A version number means you have it: go to step 2. `command not found`
+means you do not. Install it:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -24,11 +24,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 With Homebrew, `brew install uv` does the same.
 
-## 2. Open a new terminal window
-
-The installer puts uv in `~/.local/bin` and adds that folder to your
-`PATH` in your shell's startup file. A terminal window that was already
-open does not read the change, so open a new one, and check:
+Then **open a new terminal window**. The installer puts uv in
+`~/.local/bin` and adds that folder to your `PATH` in your shell's
+startup file, and a window that was already open does not read the
+change. In the new window, check:
 
 ```bash
 uv --version
@@ -37,7 +36,7 @@ uv --version
 Still `command not found`: run `~/.local/bin/uv tool update-shell`, then
 open another new window.
 
-## 3. Install Atoo
+## 2. Install Atoo
 
 Until Atoo is on PyPI, uv fetches it from GitHub, which needs `git`.
 `git --version` prints a version if you have it; on a Mac that has
@@ -84,7 +83,7 @@ atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-p
 `atoo: command not found`: the command above, then `atoo --version`
 again.
 
-## 4. First run: `atoo init`, then `atoo ui`
+## 3. First run: `atoo init`, then `atoo ui`
 
 `atoo init` gives you a folder of your own to work in, so nothing you
 do touches the files Atoo ships. It makes `~/Documents/Atoo` (or
@@ -158,20 +157,20 @@ if `uv` itself is not found), or open a new window. In bash, open a new
 window rather than `exec zsh`.
 
 **`uv tool install` says Atoo needs Python 3.11 or newer.** uv picked
-the Python 3.9 that came with the laptop. Run step 3's command with
+the Python 3.9 that came with the laptop. Run step 2's command with
 `--python 3.12` after `install`, as written above.
 
-**`Git executable not found` from `uv tool install`.** Step 3 needs
+**`Git executable not found` from `uv tool install`.** Step 2 needs
 `git`: run `git --version`, and on a Mac accept the offer to install
 Apple's Command Line Tools.
 
 **`the web UI needs the 'ui' extra` from `atoo ui`.** It was installed
-without `[ui]`. Run step 3's command again with `--force` after
+without `[ui]`. Run step 2's command again with `--force` after
 `install`.
 
 **The starter set is missing.** If an install has lost it, `init`
 writes nothing, exits 1, and says where it looked. Install it again:
-step 3's command with `--force` after `install`.
+step 2's command with `--force` after `install`.
 
 [Troubleshooting](troubleshooting.md) covers the desk, builds and the
 browser.
@@ -197,7 +196,7 @@ keep your command-line programs with it:
    after `pipx install` below. Leave the 3.9 at `/usr/bin/python3`
    alone: it belongs to Apple's Command Line Tools.
 3. `pipx ensurepath`, then open a new terminal window.
-4. Step 3's command, with `pipx install` in place of
+4. Step 2's command, with `pipx install` in place of
    `uv tool install --python 3.12`.
 
 Its `atoo --version` names a copy under `~/.local/pipx/venvs/atoo`. To
@@ -208,8 +207,9 @@ atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)).
 
 ## Windows
 
-**Not supported yet: nobody has run Atoo on Windows.** Reading the
-code says it should work. If you try it:
+Windows installation has not been tested yet, however, it should work
+with Python 3.11 and later. Please report your findings if you are able
+to install and run Atoo on Windows.
 
 1. Install Python from
    [python.org/downloads](https://www.python.org/downloads/), ticking
@@ -222,7 +222,7 @@ code says it should work. If you try it:
    py -m pipx ensurepath
    ```
 
-4. Open a new Command Prompt, and run step 3's command with
+4. Open a new Command Prompt, and run step 2's command with
    `pipx install` in place of `uv tool install --python 3.12`.
 
 The configuration file is `C:\Users\<you>\.atoo.config`, and `init`

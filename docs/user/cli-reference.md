@@ -639,7 +639,7 @@ _Not written yet._
 The first command to run: a working folder with house conventions and a
 preset library in it (no show -- you make that with the UI's New show...), and
 `~/.atoo.config` pointed at it. It never overwrites anything. See
-[Installing Atoo](install.md#4-first-run-atoo-init-then-atoo-ui) for a real
+[Installing Atoo](install.md#3-first-run-atoo-init-then-atoo-ui) for a real
 run.
 <!-- preamble:end -->
 

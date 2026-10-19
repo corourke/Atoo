@@ -7,7 +7,7 @@ before anything goes near the desk.
 
 - `atoo init` makes `~/Documents/Atoo` with a starter house
   conventions file and a preset library, and points Atoo at them
-  ([First run](install.md#4-first-run-atoo-init-then-atoo-ui)).
+  ([First run](install.md#3-first-run-atoo-init-then-atoo-ui)).
 - A build needs a model: a Claude API key, or a local model through
   Ollama ([Setting up an AI provider](ai-provider.md)).
 
