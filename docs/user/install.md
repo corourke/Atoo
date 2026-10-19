@@ -61,7 +61,7 @@ atoo --version
 Its first line names the copy you just installed:
 
 ```text
-atoo 0.2.1 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
 ```
 
 `atoo: command not found`: run `uv tool update-shell`, then open a new
@@ -117,7 +117,7 @@ atoo ui
 ```
 
 ```text
-atoo 0.2.1 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
+atoo 0.2.2 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.14/site-packages/atoo)
 Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
