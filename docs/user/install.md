@@ -38,13 +38,8 @@ open another new window.
 
 ## 2. Install Atoo
 
-Until Atoo is on PyPI, uv fetches it from GitHub, which needs `git`.
-`git --version` prints a version if you have it; on a Mac that has
-never had it, the same command offers to install Apple's Command Line
-Tools: say yes, and run the install when they are in.
-
 ```bash
-uv tool install --python 3.12 "atoo[ui] @ git+https://github.com/corourke/Atoo.git"
+uv tool install --python 3.12 "atoo[ui]"
 ```
 
 `--python 3.12` is not optional on a Mac: without it uv may pick the
@@ -160,10 +155,6 @@ window rather than `exec zsh`.
 the Python 3.9 that came with the laptop. Run step 2's command with
 `--python 3.12` after `install`, as written above.
 
-**`Git executable not found` from `uv tool install`.** Step 2 needs
-`git`: run `git --version`, and on a Mac accept the offer to install
-Apple's Command Line Tools.
-
 **`the web UI needs the 'ui' extra` from `atoo ui`.** It was installed
 without `[ui]`. Run step 2's command again with `--force` after
 `install`.
@@ -196,14 +187,18 @@ keep your command-line programs with it:
    after `pipx install` below. Leave the 3.9 at `/usr/bin/python3`
    alone: it belongs to Apple's Command Line Tools.
 3. `pipx ensurepath`, then open a new terminal window.
-4. Step 2's command, with `pipx install` in place of
-   `uv tool install --python 3.12`.
+4. Install Atoo:
 
-Its `atoo --version` names a copy under `~/.local/pipx/venvs/atoo`. To
-update or remove it: `pipx reinstall atoo`, `pipx uninstall atoo`. Keep
-one of the two installs, not both: each puts its `atoo` in
-`~/.local/bin`, and `atoo --version` says which one you have ([Which
-atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)).
+   ```bash
+   pipx install "atoo[ui]"
+   ```
+
+Its `atoo --version` names a copy in pipx's own folder, ending
+`pipx/venvs/atoo/...`. To update or remove it: `pipx upgrade atoo`,
+`pipx uninstall atoo`. Keep one of the two installs, not both: each
+puts its `atoo` in `~/.local/bin`, and `atoo --version` says which one
+you have ([Which atoo am I
+running?](install-from-checkout.md#4-which-atoo-am-i-running)).
 
 ## Windows
 
@@ -214,16 +209,18 @@ to install and run Atoo on Windows.
 1. Install Python from
    [python.org/downloads](https://www.python.org/downloads/), ticking
    *Add python.exe to PATH*.
-2. Install [Git for Windows](https://git-scm.com/download/win).
-3. In a new Command Prompt:
+2. In a new Command Prompt:
 
    ```
    py -m pip install --user pipx
    py -m pipx ensurepath
    ```
 
-4. Open a new Command Prompt, and run step 2's command with
-   `pipx install` in place of `uv tool install --python 3.12`.
+3. Open a new Command Prompt, and install Atoo:
+
+   ```
+   pipx install "atoo[ui]"
+   ```
 
 The configuration file is `C:\Users\<you>\.atoo.config`, and `init`
 makes `C:\Users\<you>\Documents\Atoo`, even when your Documents folder

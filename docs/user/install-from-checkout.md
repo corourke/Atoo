@@ -131,13 +131,13 @@ To see where the installed copy came from:
 
 ```bash
 ls -l ~/.local/bin/atoo
-cat "$(uv tool dir)"/atoo/lib/python3*/site-packages/atoo-*.dist-info/direct_url.json
+uv tool list --show-paths
 ```
 
 The first shows the launcher pointing into uv's own folder, not your
-clone. The second names the source uv installed from; for an install
-from GitHub it carries the commit as well. (A pipx install's launcher
-points into `~/.local/pipx/venvs/atoo` instead.)
+clone. The second names the version uv installed and the folder it
+lives in. (A pipx install's launcher points into pipx's own
+`pipx/venvs/atoo` folder instead; `pipx list` names its version.)
 
 To run the clone whatever your `PATH` says, name it:
 `./.venv/bin/atoo ui`, from the clone's top folder.
