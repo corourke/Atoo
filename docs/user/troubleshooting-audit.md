@@ -356,6 +356,61 @@ show's plan adds ([Watching from the command line](watch.md)), and it
 clears when the desk is put back. A socket this rule judges is not also
 reported by `C001`.
 
+## A channel reaches the same Main or Matrix by two routes: `R012`, `R013`
+
+When one channel reaches the same Main or Matrix by two routes, the two copies
+add together. Level builds up where nobody expected it, and if one route has
+more processing latency than the other (an insert, a delay) the copies
+comb-filter against each other and the channel sounds hollow. The common ways
+to do it by accident: a channel routed to Main 1 directly **and** through a
+group bus that is routed to Main 1; a channel sent to a Matrix directly **and**
+through a bus or Main that feeds it; a channel sent to two busses that both
+reach one Main. `audit` and Watch say so, naming each route.
+
+```
+$ atoo audit --state split.state.json
+Audit findings: 2 warning.
+
+[WARNING] R012 Signal Splits And Recombines (2)
+  CH 1 "Kick" reaches MAIN 1 twice: directly, and through BUS 1 "Drums". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. If it is parallel processing, state every leg in the plan and this stays quiet; if not, switch one of the routes off.
+  CH 2 "Snare" reaches MAIN 1 twice: through BUS 1 "Drums", and through BUS 2 "Drums Comp". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. BUS 2 "Drums Comp" is muted, so the signal through it is silent now and joins the moment it is unmuted. If it is parallel processing, state every leg in the plan and this stays quiet; if not, switch one of the routes off.
+...
+```
+
+**`R012` is a warning.** The desk works and the show can go on, so `audit`
+exits `0`, but the level is probably not what you meant. One finding per
+channel and per Main or Matrix, with the routes one hop at a time. Only a
+route that is switched on and above the floor counts: a send that is off, or
+pulled all the way down, is not a route. A **muted** bus, Main or channel on a
+route still is one: it is silent now, and the finding says so, because the
+copies add up the moment it is unmuted.
+
+**Two busses into one Main is how parallel compression is built** (a "Drums"
+bus and a "Drums Comp" bus), so the check stands down when the plan asked for
+it. With `--plan` it is quiet for a channel and Main when the plan states
+**every leg** of the split: the channel's sends and Main routes, and the busses'
+own Main destinations. `R013` says it did, so a rule that went quiet is never
+silent about it:
+
+```
+$ atoo audit --state parallel.state.json --plan show.plan.json
+Audit findings: 1 info.
+
+[INFO] R013 Signal Split Asked For
+  CH 2 "Snare" reaches MAIN 1 by more than one route, and the plan states every leg of it, so it is read as asked for (parallel processing) and R012 is quiet about it.
+...
+```
+
+If the plan states some legs but not all (the plan has the two busses and
+the conventions never gave the channel a direct Main route that is also on),
+`R012` still speaks and names the legs the plan does not state. With no plan,
+nothing can have been asked for, so every split is reported, including a
+channel with a send to a reverb bus and another to a group bus when both
+reach Main 1. To make a split
+go away: switch one route off on the desk, or say it is meant in your
+conventions and rebuild. In Watch both rules run on every pass and need
+nothing extra from the desk.
+
 ## A bus is heard on one side only, or is not the width the plan says: `R011`, `CV020`
 
 Every bus, Main and Matrix has two output slots, a left one and a right one.
