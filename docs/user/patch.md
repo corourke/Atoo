@@ -184,6 +184,15 @@ A change can also edit what is running; see
   that adds one channel and says nothing of busses, DCAs or outputs goes
   on, with an INFO: *the change set left out add.busses, ...; each is
   read as empty*. The same holds for a file given to `--change-set`.
+- **A name that runs long is cut, not refused.** A change's short name
+  is a label in the journal, at most 48 characters, and a new channel's
+  name is what the console shows, at most 16. A longer one is cut and
+  said in an INFO, and the rest of the change stands: *the change's name
+  'Add HiHat and F Lead2, move Playback to ch 16 on A 16 as mono' is 61
+  characters, longer than the 48 it is shown at; it is cut to 'Add HiHat
+  and F Lead2, move Playback to ch 16 on'*. A paid answer is never lost
+  to a label. A change that fails to compile prints which Atoo ran
+  (version and where it is installed) under the error.
   An answer Atoo cannot use at all is kept as `change.partial.json` in
   the show bundle, and the error says why.
 - **Something the plan or the desk cannot take refuses the change**
