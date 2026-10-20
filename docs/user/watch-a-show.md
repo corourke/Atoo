@@ -254,7 +254,7 @@ until the cell is fixed. The *i* is there on the read-only Demo show too.
 2. A watch that is running uses it from its next reading. No restart.
 
 **Source** says who wrote each row. A build drafts a starting set, marked
-**Drafted** in yellow, and the block's title counts them (*6 drafted,
+**Drafted** in blue, and the block's title counts them (*6 drafted,
 unreviewed*); edit one, or press its **Drafted** tag, and it becomes
 **Yours**. A drafted row you delete is not added back by the next build.
 
