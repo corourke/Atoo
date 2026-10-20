@@ -467,7 +467,8 @@ DCA/mute-group membership, patch, bus sends, direct-to-Main routes, and the
 trim/balance/invert/head-amp-gain, high-pass/hi-cut/tilt and EQ a channel states should
 be, so a finding can cite the plan's own provenance text instead of just a structural
 fact. A filter or an EQ band is compared within 2%, the desk holding the nearest step of
-the control; the compressor, a bus's EQ and a channel's PreSend EQ are not diffed.
+the control; a bus's, Main's and Matrix's EQ and a channel's PreSend EQ are diffed
+the same way. The compressor is not diffed.
 --plan also flags (CV009) any
 physical output socket --output-sockets read that's patched to something the plan
 never routes there at all -- catches stray/leftover routing an apply run never wrote,

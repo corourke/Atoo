@@ -419,7 +419,9 @@ put back.
 
 With `--plan`, `audit` compares the processing the plan states for a
 channel or aux with what the desk holds: the trim, balance, invert and
-head-amp gain, the high-pass, hi-cut and tilt, and the EQ's bands. A filter
+head-amp gain, the high-pass, hi-cut and tilt, the EQ's bands, and a
+channel's PreSend EQ. It does the same for the EQ and tilt the plan states for
+a bus, a Main or a Matrix. A filter
 the plan asks for is asking for it to be *on*, so a filter that is off is
 reported on its own, before its frequency.
 
@@ -463,13 +465,29 @@ Q, and the shape of the two shelf bands); the EQ's own switch, model and mix
 are another. Stating any band implies the EQ is on, as `apply` writes it; a
 plan that says the EQ is off asks for it bypassed.
 
+**A bus, a Main, a Matrix and a channel's PreSend EQ** are compared the same
+way, band by band, and are named as the plan names them. A channel's PreSend
+EQ is its second EQ: three bells and a switch. A bus's, Main's or Matrix's tilt
+is one finding of its own, and it has no switch of its own to report.
+
+```
+$ atoo audit --state eq.state.json --plan eq.plan.json
+Audit findings: 3 warning.
+
+[WARNING] CV008 Processing Contradicts Plan (3)
+  CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (tolerance 2%).
+  BUS 1 "Drums": EQ band 2: plan says frequency 2500Hz but 1800Hz live (tolerance 2%).
+  MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (tolerance 2%).
+...
+```
+
 It says nothing for a value that was not read (a capture taken before this
 check has none of these values, and a live run with `--plan` reads exactly the
 ones the plan states, at no extra request), for an aux strip's filters (an
-aux has no filter node), or for what a plan does not state. These are
-warnings, so `audit` exits `0`. Watch does not run this one: a filter is set
-up, not something that moves during a show. The compressor, a bus's or
-Main's EQ and a channel's PreSend EQ are not compared.
+aux has no filter node, and no PreSend EQ), or for what a plan does not state.
+These are warnings, so `audit` exits `0`. Watch does not run this one: a filter
+is set up, not something that moves during a show. The compressor is not
+compared.
 
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 

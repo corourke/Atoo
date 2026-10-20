@@ -304,8 +304,8 @@ leaves the send level to `audit`, where CV006 compares it too. It leaves the
 trim, gain, filters and the EQ to `audit` as well: they are set-up values that do not
 drift mid-show, and
 [processing that is not what the plan says](troubleshooting-audit.md#trim-gain-a-high-pass-hi-cut-tilt-or-eq-is-not-what-the-plan-says-cv008)
-is a `--plan` finding. The compressor, a bus's or Main's EQ and a channel's
-PreSend EQ are **not** diffed. `--plan` also works with `--console`, and with
+is a `--plan` finding, for a bus's, Main's and Matrix's EQ and a channel's
+PreSend EQ as well. The compressor is **not** diffed. `--plan` also works with `--console`, and with
 `--show` it comes from the [show bundle](show-bundles.md).
 
 ### What `--plan` stops saying, and why it tells you
