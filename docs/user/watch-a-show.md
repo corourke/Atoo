@@ -40,7 +40,9 @@ Beside the word is the first thing that is wrong, as the strip, a colon
 and the claim (*CH 10 "Lead Vox": is muted*), and on the right the three counts: errors, warnings and info.
 A count lights in its colour only when it is not zero. Before you press
 Start the word is a grey **NOT WATCHING**; until the first reading
-arrives, **STARTING**.
+arrives, **STARTING**. The word and the table's column headings stay at
+the top of the window as you scroll down a long table, and let go when
+you have scrolled past its last row.
 
 A warning row is filled amber, an error row red, each with a thick bar of
 the same colour down its left edge and its severity in a solid tag. The
