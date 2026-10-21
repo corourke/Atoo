@@ -173,9 +173,9 @@ A change can also edit what is running; see
   busses, DCAs, mute groups and outputs, drops channels, and sets the
   fields it names on anything already running — nothing else about a
   running strip moves. **A bus you drop is cleared** (see
-  [Clearing a bus](#clearing-a-bus)). Dropping a DCA, mute group or output
-  is shown as `MODIFIED`, *not written*: nothing returns one of those to
-  free yet.
+  [Clearing a bus](#clearing-a-bus)). Dropping a DCA, a mute group or an
+  output is shown as `MODIFIED` and not written: clear it on the desk, or
+  rebuild without it and apply.
 - **A channel can move.** *"Move Playback to Aux 8"* builds the channel
   on its new strip and returns the old strip to free, leaving the input
   sockets alone. The review lists it twice, `ADDED` on the new strip and
@@ -281,8 +281,7 @@ place.
   Rack): every setting on it reads as an initialized desk has it — name,
   colour, icon, mono/stereo and width, fader and mute, EQ, dynamics,
   inserts, DCA and mute-group tags, and its routes to the Mains and
-  matrices — taken from the initialized capture of your console model. The
-  output socket it fed is unpatched. Its fader goes to −∞ first, so it is
+  matrices. The output socket it fed is unpatched. Its fader goes to −∞ first, so it is
   silent while the rest is cleared.
 - **Every send into it is switched off**, on every channel that had one,
   and the send's level and mode go back to what an initialized desk reads.
@@ -438,8 +437,7 @@ the model:
   does not take one side of a stereo channel on its own, so *"48V on the
   keys"* sets `source.phantom` and the review marks both sockets under
   `SWITCHES 48V LIVE`. When the plan states a different value for the
-  second socket (a plan from an older build; a build now gives the pair
-  one value), the second follows and an INFO line says so. A change that would switch only
+  second socket, the second follows and an INFO line says so. A change that would switch only
   the second socket (`source.pair_phantom` alone), or leave the two
   different, is refused, and the refusal names `source.phantom`; nothing is
   written. A pair the change does not touch the 48V of stays as it was
