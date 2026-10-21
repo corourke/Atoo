@@ -183,6 +183,7 @@ def patch_desk(occupancy: list, faces: dict[str, object], amendment=None) -> dic
     new: set[tuple[str, int]] = set()
     edited: set[tuple[str, int]] = set()
     released: set[tuple[str, int]] = set()
+    moved: set[tuple[str, int]] = set()
     after: dict[tuple[str, int], dict] = {}
     if amendment is not None:
         for base in amendment.scope.grants:
@@ -191,6 +192,16 @@ def patch_desk(occupancy: list, faces: dict[str, object], amendment=None) -> dic
                 where = strip_of(base)
                 if where is not None:
                     new.add(where)
+        # An insert: the channel put in is new, and every strip a running
+        # channel moved onto is rewritten whole -- drawn as moved.
+        for label in amendment.strips:
+            bank, _, number = str(label).partition(":")
+            if number.isdigit():
+                new.add((bank, int(number)))
+        for base in amendment.shift_scope.grants:
+            where = strip_of(base)
+            if where is not None and where not in new:
+                moved.add(where)
         for address in list(amendment.edit_scope.grants):
             where = strip_of(address)
             if where is not None and where not in new:
@@ -228,9 +239,11 @@ def patch_desk(occupancy: list, faces: dict[str, object], amendment=None) -> dic
             out["mark"] = "released"
         elif (kind, n) in new:
             out["mark"] = "new"
+        elif (kind, n) in moved:
+            out["mark"] = "moved"
         elif (kind, n) in edited:
             out["mark"] = "edit"
-        if out.get("mark") in ("new", "edit") and (kind, n) in after:
+        if out.get("mark") in ("new", "edit", "moved") and (kind, n) in after:
             face = after[(kind, n)]
             if face.get("name"):
                 out["name"] = face["name"]
@@ -246,4 +259,5 @@ def patch_desk(occupancy: list, faces: dict[str, object], amendment=None) -> dic
                        "in_use": sum(1 for s in flat if s["state"] == "used"),
                        "free": sum(1 for s in flat if s["state"] == "free"),
                        "unknown": sum(1 for s in flat if s["state"] == "unknown"),
-                       "new": len(new), "edit": len(edited), "released": len(released)}}
+                       "new": len(new), "edit": len(edited), "moved": len(moved),
+                       "released": len(released)}}

@@ -246,9 +246,11 @@ def test_an_aux_strips_eq_is_compared_and_its_filters_are_not():
     assert f.message == 'AUX 3 "Cue": EQ band 1: plan says frequency 300Hz but 150Hz live (tolerance 2%).'
 
 
-def test_the_presend_eq_is_not_compared():
-    entry = _entry(presend_eq={"on": True, "bands": [{"band": "1", "freq_hz": 300.0, "gain_db": 3.0, "q": 1.0}]})
-    assert planned_processing_leaves(entry) == []
+def test_the_presend_eq_is_compared_and_an_auxs_is_not():
+    peq = {"on": True, "bands": [{"band": "1", "freq_hz": 300.0, "gain_db": 3.0, "q": 1.0}]}
+    assert {t.address for t in planned_processing_leaves(_entry(presend_eq=peq))} == {
+        "/ch/1/peq/1f", "/ch/1/peq/1g", "/ch/1/peq/1q", "/ch/1/peq/on"}
+    assert planned_processing_leaves(_entry(3, "Cue", bank="aux", presend_eq=peq)) == []
 
 
 # --------------------------------------------------------------------------

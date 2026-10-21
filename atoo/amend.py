@@ -204,27 +204,13 @@ untouched strip gives, just before the closing unmute -- the one level
 once the strip is back on its factory socket and routed to Main 1, a
 fader left at the plan's level would pass a stray source to the PA.
 
-**The patch goes back to the factory's, not to OFF** (decided
-2026-09-24 off a Compact session). A truly initialized channel 19
-is patched to LCL 19 and has an icon like the other initialized
-channels. The icon is the LCL socket's glyph shown through the patch,
-so the patch was the one real difference, and of three options the choice
-is the factory patch, unless the plan uses that socket, otherwise OFF:
-if the rebuilt plan now uses LCL 19 for something else, it stays OFF
-rather than double-patching the socket, and an INFO says so.
+**The patch goes OFF** (decided 2026-10-20, matching a full apply's
+reset: a strip no plan uses is left unpatched, so "free" means one thing
+whichever way a strip got there). The patch it replaces, decided earlier
+to return to the factory socket, is gone. The occupancy read still takes
+a strip on its factory socket as free, so a desk initialized by hand
+reads free too.
 
-* The socket is the **measured** one (`console_facts.
-  measured_factory_input_patch`) and nothing else. The channel-n-from-
-  LCL-n fallback the occupancy read uses is never written: on a
-  full-size WING's 8 local inputs, "ch 19 back to LCL 19" is a socket
-  that does not exist. An unmeasured model's strip goes OFF.
-* **What claims a socket** (`Amendment.restore_claims`) is everything
-  that will still be patched once the run is done: every channel of the
-  rebuilt plan, including the ones this run adds, and every strip the
-  occupancy read found patched, except the strips this run is releasing.
-  The kept plan alone is not enough -- it cannot see a strip that is in
-  neither plan, or a dropped channel whose clear was refused and which is
-  therefore still on its socket.
 * Every release says which it did, at INFO, and why.
 * A strip back on its factory patch reads **FREE** on the next occupancy
   read, because `audit.is_in_use` discounts the factory patch -- and
@@ -724,6 +710,12 @@ class ChangeKind(str, Enum):
     RENUMBERED = "renumbered"
     #: New, and there was no free slot for it. Refused, by name (FR-2.3).
     UNPLACEABLE = "unplaceable"
+    #: A running channel the change's explicit "insert" moves to the next
+    #: strip down to make room: its whole strip is rewritten on the new
+    #: number (`Amendment.shift_scope`), one verdict per strip so the review
+    #: lists every strip that moves. Written. Only a typed change produces
+    #: it; a rebuild that moved a strip is still RENUMBERED, and refused.
+    SHIFTED = "shifted"
     #: A typed change (`atoo patch`) that asks for something that cannot be
     #: written -- a send to a bus that is neither on the desk nor added by
     #: the change, a drop of a channel nobody has, a field the object does
@@ -1158,12 +1150,6 @@ class Amendment:
     #: whether a released strip's factory patch is KNOWN -- measured -- or
     #: not, and so whether it goes back on it or goes OFF.
     console_model: str | None = None
-    #: Every input socket something other than a released strip needs,
-    #: mapped to what: a channel of the rebuilt plan, or a strip the
-    #: occupancy read found patched to it. A released strip is never put
-    #: back on a factory socket named here -- that would be one socket
-    #: patched to two strips.
-    restore_claims: dict[tuple[str, int], str] = field(default_factory=dict)
     #: The named fields a typed change sets on objects already on the desk, one per leaf, in the order the change gave them.
     edits: list[FieldEdit] = field(default_factory=list)
     #: The exact addresses those edits write, each granted with the field
@@ -1181,6 +1167,19 @@ class Amendment:
     #: Labels of the objects edited ("ch:12", "bus 'MON2'"), in order -- the
     #: journal's `scope.edited`.
     edited: list[str] = field(default_factory=list)
+    #: Strips an explicit insert moves, `(name, old strip, new strip)` in
+    #: strip order -- the journal's `scope.renumbered`.
+    shifted: list[tuple[str, str, str]] = field(default_factory=list)
+    #: The strips the insert rewrites: each one a moved channel lands on and
+    #: each one the inserted channel takes, granted as `/ch/N`. Apart from
+    #: `scope` for the reason `edit_scope` is: these strips' addresses are
+    #: ones the APPLIED plan also writes (another channel stood there).
+    shift_scope: AmendScope = field(default_factory=AmendScope)
+    #: `(strip label, the applied plan's entry for the channel that stood on
+    #: it)` for every rewritten strip that had an occupant -- what has to be
+    #: cleared there where the new occupant states nothing
+    #: (`shift_clear_targets`).
+    shift_occupants: list[tuple[str, dict]] = field(default_factory=list)
 
     @property
     def blocked(self) -> list[Change]:
@@ -1194,7 +1193,7 @@ class Amendment:
         """The target filter this amendment hands `apply_plan`: an address
         is written only if the additions own it or a release does."""
         return (self.scope.allows(target) or self.release_scope.allows(target)
-                or self.edit_scope.allows(target))
+                or self.edit_scope.allows(target) or self.shift_scope.allows(target))
 
     def journal_scope(self) -> dict:
         """What the journal records as this run's scope -- the strips it
@@ -1215,6 +1214,12 @@ class Amendment:
                                 "path": e.path, "old": e.old, "new": e.new}
                                for e in self.edits]
             entry["grants"] = {**entry["grants"], **self.edit_scope.grants}
+        if self.shifted:
+            # Which strips this run renumbered, as "name: ch:3 -> ch:4" --
+            # the grants name the strips it rewrote, this says which
+            # channel went where, so the journal reads as the change did.
+            entry["renumbered"] = [f"{name}: {old} -> {new}" for name, old, new in self.shifted]
+            entry["grants"] = {**entry["grants"], **self.shift_scope.grants}
         return entry
 
     def summary(self) -> str:
@@ -1290,7 +1295,9 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                    console_model: str | None = None,
                    by: str = "the rebuild",
                    edits: list[FieldEdit] | None = None,
-                   moved: set[str] | None = None) -> Amendment:
+                   moved: set[str] | None = None,
+                   renumbered: dict[str, str] | None = None,
+                   inserted: dict[str, str] | None = None) -> Amendment:
     """Work out the delta between an applied plan and a rebuilt one, place
     the new objects on free strips, decide which dropped channels may be
     returned to free, and return the lot for review.
@@ -1320,9 +1327,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
 
     `console_model` is the model the desk stated (`ConsoleState.
     console_model`); absent, the applied plan's `meta.console_model` is
-    used. It decides one thing here: whether a released strip's factory
-    patch has been measured, and so whether the release puts the strip
-    back on it (`apply.release_patch_decision`).
+    used.
 
     `by` is who proposed the new plan, in the words every line of the review
     uses: "the rebuild" for an amend, "the change" for a typed change merged
@@ -1340,8 +1345,20 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     not its old one is a move the change asked for by name, not a renumber
     the rebuild made by accident: its old strip is returned to free like any
     dropped channel, and it is placed on its new strip like any added one.
+
+    `renumbered` and `inserted` are an explicit insert's two halves
+    (`patch.merge_change`): `{old strip label: new strip label}` for each
+    running channel that moves down to make room, and `{source key: strip
+    label}` for each channel inserted into the room made. Both are the
+    change's own words carried out, not a rebuild's accident: each moved
+    channel is rewritten whole on its new strip (SHIFTED, never RENUMBERED),
+    each inserted one is built on the strip the move vacated. A strip they
+    land on that nothing stood on must be free on the desk, or the channel
+    landing there is UNPLACEABLE and the whole change is blocked.
     """
     allow_strips = set(allow_strips or ())
+    renumbered = dict(renumbered or {})
+    inserted = dict(inserted or {})
     edits = list(edits or ())
     edited_slots: dict[str, set[str]] = {}
     for edit in edits:
@@ -1390,6 +1407,18 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     applied_sockets = _patched_sockets(applied_plan)
 
     taken: set[tuple[str, int]] = set()
+    shift_scope = AmendScope()
+    shifted: list[tuple[str, str, str]] = []
+    shift_occupants: list[tuple[str, dict]] = []
+    by_state = {status.label: status for status in occupancy}
+    for label in [*renumbered.values(), *inserted.values()]:
+        bank, _, number = label.partition(":")
+        if number.isdigit():
+            # Spoken for: nothing else the change adds is placed here.
+            taken.add((bank, int(number)))
+            old_occupant = applied_by_slot.get((bank, int(number)))
+            if old_occupant is not None:
+                shift_occupants.append((label, old_occupant))
     # Where earlier amends put channels the rebuild numbered differently
     #  -- see `PLACEMENTS_META`.
     prior_placements = amend_placements(applied_plan)
@@ -1432,7 +1461,27 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                     f"channel {where}: {by} numbers it {_slot_label(slot)}, and an "
                     f"earlier amend placed it on {_slot_label(prior_slot)} -- it stays there")
                 slot = prior_slot
-            if prior_slot != slot:
+            if prior_slot != slot and renumbered.get(_slot_label(prior_slot)) == _slot_label(slot):
+                landing = _slot_label(slot)
+                if slot not in applied_by_slot and slot[1] not in available.get(slot[0], []):
+                    state = by_state.get(landing)
+                    changes.append(Change(
+                        ChangeKind.UNPLACEABLE, "channel", where,
+                        f"the change inserts a channel above it, which moves it to {landing}, "
+                        f"and {landing} is not free on the desk"
+                        + (f" ({state.state.value})" if state is not None else "")
+                        + " -- nothing was moved, and nothing was written over somebody's strip",
+                        slot=_slot_label(prior_slot), proposed=landing))
+                    continue
+                changes.append(Change(
+                    ChangeKind.SHIFTED, "channel", where,
+                    f"moves from {_slot_label(prior_slot)} to {landing} to make room for the "
+                    "insert, and is rewritten whole on its new strip",
+                    slot=landing))
+                shift_scope.grant(f"/{slot[0]}/{slot[1]}",
+                                  f"{where} moved to {landing} by the insert")
+                shifted.append((str(channel.get("name") or key), _slot_label(prior_slot), landing))
+            elif prior_slot != slot:
                 changes.append(Change(
                     ChangeKind.RENUMBERED, "channel", where,
                     f"the applied plan has it on {_slot_label(prior_slot)} and {by} moved "
@@ -1456,7 +1505,12 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         free = [n for n in available.get(bank, []) if (bank, n) not in taken
                 and (bank, n) not in applied_by_slot]
         at_or_after = [n for n in free if n >= slot[1]]
-        if at_or_after:
+        if inserted.get(key) == _slot_label(slot):
+            # The strip the insert made room on: a running channel stood
+            # here and has moved down, so it is not "free" by the desk's
+            # read, and is this channel's by the change's own words.
+            placed = slot[1]
+        elif at_or_after:
             placed = at_or_after[0]
         elif free:
             placed = free[0]
@@ -1481,7 +1535,9 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             placements[label] = _slot_label(slot)
             _note_placement(effective, label, _slot_label(slot), by)
         changes.append(Change(
-            ChangeKind.ADDED, "channel", where, "new channel, placed on a free strip",
+            ChangeKind.ADDED, "channel", where,
+            "new channel, inserted here: the channels after it move down one strip"
+            if key in inserted else "new channel, placed on a free strip",
             slot=label, proposed=_slot_label(slot), asked_by=by))
         if key in moving:
             infos.append(
@@ -1489,7 +1545,11 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                 f"{_slot_label(_channel_slot(applied_by_source[key]))} and adds it again on "
                 f"{label}, so it is moved: the old strip is returned to free and the "
                 "channel is built on the new one")
-        scope.grant(f"/{bank}/{placed}", f"new channel {where} on {label}")
+        # An inserted channel's strip is one the applied plan also writes (the
+        # channel that stood there has moved down), so it is granted with the
+        # moved strips'; its sockets are new, and granted as any new channel's.
+        (shift_scope if key in inserted else scope).grant(
+            f"/{bank}/{placed}", f"new channel {where} on {label}")
 
         patch = effective.get("patch") or {}
         group = patch.get("group")
@@ -1545,7 +1605,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         changes.append(Change(
             ChangeKind.RELEASED, "channel", where,
             f"dropped by {by}, and the desk still reads as the strip this plan built -- "
-            "put back on its factory patch (or OFF, see INFO), left unmuted, and its name, "
+            "unpatched (OFF), left unmuted, and its name, "
             "colour, icon, DCA/mute-group tags, bus sends and this plan's own processing "
             "cleared, on the source socket as well as the strip, so the next person to "
             "allocate a strip finds this one genuinely free",
@@ -1568,41 +1628,12 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             release_scope.grant(f"/io/in/{group}/{socket}",
                                 f"the input socket {label} was patched to")
 
-    # What each released strip's patch goes back to:
-    # its measured factory socket, unless something else needs that socket.
-    # "Something else" is everything that will still be patched once this
-    # run is done -- every channel of the rebuilt plan, including the new
-    # ones placed above, and every strip the desk read showed patched,
-    # except the strips this run is releasing, which are vacating theirs.
-    # The desk half is what catches a strip that is not in either plan
-    # (somebody else's) and a dropped channel whose release was refused
-    # (still patched, still somebody's) -- the kept plan alone sees
-    # neither. Worked out after the loop because a strip being released
-    # later in the list must not count as a claim on its own old socket.
-    restore_claims: dict[tuple[str, int], str] = {}
-    for channel in effective_channels:
-        where = repr(channel.get("name") or _source_key(channel))
-        patch = channel.get("patch") or {}
-        group = patch.get("group")
-        for socket in patch.get("sockets") or []:
-            if isinstance(group, str) and isinstance(socket, int):
-                restore_claims.setdefault(
-                    (group, socket),
-                    f"channel {where} on {_slot_label(_channel_slot(channel))} in the rebuilt "
-                    "plan" if isinstance(channel.get("channel"), int)
-                    else f"channel {where} in the rebuilt plan")
-    releasing = set(released)
-    for status in occupancy:
-        if status.patch is not None and status.label not in releasing:
-            restore_claims.setdefault(
-                status.patch, f"{status.label}, which the desk read shows patched to it")
     for channel, label in zip(releases, released):
         where = repr(channel.get("name") or _source_key(channel))
         patch = channel.get("patch") or {}
         if (isinstance(patch.get("group"), str)
                 and any(isinstance(x, int) for x in patch.get("sockets") or [])):
-            _, why = apply_module.release_patch_decision(
-                channel, console_model=console_model, claimed_sockets=restore_claims)
+            why = apply_module.release_patch_reason(channel)
         else:
             # The build never patched it, so the release does not either.
             why = "its patch is left as it is, because this plan never patched it"
@@ -1636,14 +1667,16 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         edits, edit_extra, edited = _plan_edits(
             effective_plan, edits, occupancy, edit_scope, changes, warnings, infos)
 
+    shifted.sort(key=lambda row: int(row[2].partition(":")[2]))
     return Amendment(
         applied_plan=applied_plan, amended_plan=amended_plan,
         effective_plan=effective_plan, scope=scope, changes=changes,
         strips=strips, warnings=warnings, infos=infos,
         releases=releases, released=released, release_scope=release_scope,
         keep_sockets=keep_sockets, console_model=console_model,
-        restore_claims=restore_claims, edits=edits, edit_scope=edit_scope,
-        edit_extra=edit_extra, edited=edited)
+        edits=edits, edit_scope=edit_scope,
+        edit_extra=edit_extra, edited=edited, shifted=shifted, shift_scope=shift_scope,
+        shift_occupants=shift_occupants)
 
 
 # --------------------------------------------------------------------------
@@ -2147,6 +2180,11 @@ class AmendmentTargets:
     #: `releases` is: a write to a running strip is what a reviewer most
     #: needs to see, and a count that folds it in hides it.
     edits: list = field(default_factory=list)
+    #: The subset of `to_write` that clears what a channel left behind on a
+    #: strip an insert rewrites, where its new occupant states nothing of
+    #: its own (`shift_clear_targets`). Named apart for the reason `releases`
+    #: is.
+    shift_clears: list = field(default_factory=list)
     #: Addresses that are in scope AND are written by the applied plan --
     #: the independent cross-check. Non-empty means the scope is wrong,
     #: and `apply_amendment` refuses rather than writing.
@@ -2168,6 +2206,13 @@ class AmendmentTargets:
                 f"  {len(self.edits)} of them CHANGE A RUNNING OBJECT -- only the fields the "
                 "change names:")
             for target in self.edits:
+                lines.append(f"    {target.address}: {target.description}")
+        if self.shift_clears:
+            lines.append(
+                f"  {len(self.shift_clears)} of them CLEAR what the channel that stood on a "
+                "strip the insert rewrites left behind, where the channel that takes its "
+                "place states nothing of its own:")
+            for target in self.shift_clears:
                 lines.append(f"    {target.address}: {target.description}")
         if self.collisions:
             lines.append(
@@ -2196,13 +2241,17 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
     releases = release_targets(amendment, warnings=warnings)
 
     def owned(target) -> bool:
-        return amendment.scope.allows(target) or amendment.edit_scope.allows(target)
+        return (amendment.scope.allows(target) or amendment.edit_scope.allows(target)
+                or amendment.shift_scope.allows(target))
+
+    shift_clears = shift_clear_targets(amendment, targets, warnings)
 
     # An edit's addresses are the effective plan's own targets at exactly
     # the addresses `_plan_edits` granted, plus the writes that take away
     # what an edit removed (`edit_extra`, which the plan cannot produce).
     edits = [t for t in targets if amendment.edit_scope.allows(t)] + list(amendment.edit_extra)
-    to_write = [t for t in targets if owned(t)] + releases + list(amendment.edit_extra)
+    to_write = ([t for t in targets if owned(t)] + releases + list(amendment.edit_extra)
+                + shift_clears)
     withheld = [t for t in targets if not owned(t)]
 
     applied_targets, applied_warnings = apply_module._build_write_targets(
@@ -2217,7 +2266,7 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
     # applied plan writes -- but only the exact leaves its named fields own.
     collisions = sorted(
         {t.address for t in to_write if not amendment.release_scope.allows(t)
-         and not amendment.edit_scope.allows(t)}
+         and not amendment.edit_scope.allows(t) and not amendment.shift_scope.allows(t)}
         & applied_addresses)
 
     # Only the warnings the NEW objects caused. A build of the effective
@@ -2232,7 +2281,7 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
 
     return AmendmentTargets(to_write=to_write, withheld=withheld,
                             warnings=ours, collisions=collisions, releases=releases,
-                            edits=edits)
+                            edits=edits, shift_clears=shift_clears)
 
 
 def release_targets(amendment: Amendment, *, warnings: list[str] | None = None) -> list:
@@ -2257,8 +2306,51 @@ def release_targets(amendment: Amendment, *, warnings: list[str] | None = None) 
         keep_sockets=amendment.keep_sockets,
         shared_sockets=apply_module._shared_source_sockets(applied),
         console_model=amendment.console_model,
-        claimed_sockets=amendment.restore_claims,
         warnings=warnings)
+
+
+def shift_clear_targets(amendment: Amendment, built: list, warnings: list[str]) -> list:
+    """What an insert must clear on the strips it rewrites.
+
+    A moved channel is written whole on its new strip -- `built`, the build
+    of the effective plan, already carries that. A build writes only what a
+    plan states, though, and the strip it writes onto was the previous
+    occupant's: a send the old occupant had, a DCA tag, a processing value,
+    a fader it set would all stay on a strip that is now somebody else. So
+    for each rewritten strip that had an occupant, the writes that return
+    that occupant's strip to the reading an untouched one gives
+    (`apply.release_write_targets`, the same ones a returned-to-free strip
+    gets) are kept for every address the new occupant's own build does NOT
+    write. Never the sockets: a socket belongs to the source, and the source
+    moved with its channel, so `/io/in/...` is not here at all.
+    """
+    if not amendment.shift_occupants:
+        return []
+    written = {t.address for t in built}
+    applied = amendment.applied_plan
+    clears: list = []
+    said: list[str] = []
+    for label, occupant in amendment.shift_occupants:
+        for target in apply_module.release_write_targets(
+                [occupant],
+                dca_index=_indexed_names(applied, "dcas"),
+                mute_group_index=_indexed_names(applied, "mute_groups"),
+                bus_index=_indexed_names(applied, "busses"),
+                keep_sockets=amendment.keep_sockets,
+                shared_sockets=apply_module._shared_source_sockets(applied),
+                console_model=amendment.console_model,
+                warnings=said):
+            if target.address.startswith(f"/{label.replace(':', '/')}/") \
+                    and target.address not in written:
+                clears.append(replace(target, description=target.description.replace(
+                    "returned to free: ", "left by the channel the insert moved off it: ", 1)))
+    # What the clear could not undo stays on the strip, and is said. The rest
+    # of what a release says (a socket another strip keeps) is about returning
+    # a strip to free, which this is not.
+    warnings.extend("insert: " + w.replace("cannot return", "cannot clear", 1)
+                    .replace(" to free for ", " for ", 1)
+                    for w in dict.fromkeys(said) if w.startswith("cannot return "))
+    return clears
 
 
 def witness_addresses(targets: AmendmentTargets) -> list[tuple[str, str]]:
@@ -2565,7 +2657,7 @@ def apply_amendment(amendment: Amendment, console, *, dry_run: bool = True,
         amendment.effective_plan, console,
         dry_run=dry_run, journal_path=journal_path,
         target_filter=amendment.allows,
-        extra_targets=targets.releases + list(amendment.edit_extra),
+        extra_targets=targets.releases + list(amendment.edit_extra) + targets.shift_clears,
         journal_scope=amendment.journal_scope(),
         desk=desk, model_check=model_check, phases=phases,
     )
@@ -2599,33 +2691,25 @@ def _written_output_sockets(amendment: Amendment) -> list[tuple[str, int]]:
 
 
 def _written_channels(amendment: Amendment) -> list[tuple[dict, str]]:
-    """`(channel entry, what)` for every input patch this amend writes: each
-    new strip's own entry, and for each strip returned to free a stand-in
-    entry patched to the factory socket it goes back on
-    (`apply.release_patch_decision` -- the same call `release_targets` makes
-    for the wire, so the socket checked is the socket written)."""
+    """`(channel entry, what)` for every input socket this amend writes to:
+    each new or repatched strip's own entry. A strip returned to free is
+    written OFF, which names no socket."""
     written: list[tuple[dict, str]] = []
     new = set(amendment.strips)
+    moved_to = {landing: name for name, _old, landing in amendment.shifted}
     for channel in amendment.effective_plan.get("channels") or []:
         if not isinstance(channel, dict) or not isinstance(channel.get("channel"), int):
             continue
         label = _slot_label(_channel_slot(channel))
         if label in new:
             written.append((channel, f"channel {channel.get('name')!r}, new on {label}"))
+        elif label in moved_to:
+            written.append((channel, f"channel {channel.get('name')!r}, moved to {label} "
+                                     "by the insert"))
         elif any(e.key == "channels" and e.slot == label and e.path.split(".")[0] == "patch"
                  for e in amendment.edits):
             written.append((channel, f"channel {channel.get('name')!r} on {label}, "
                                      "repatched by the change"))
-    for channel, label in zip(amendment.releases, amendment.released):
-        socket, _ = apply_module.release_patch_decision(
-            channel, console_model=amendment.console_model,
-            claimed_sockets=amendment.restore_claims)
-        if socket is None:
-            continue
-        restored = {"name": channel.get("name"),
-                    "patch": {"group": socket[0], "sockets": [socket[1]]}}
-        written.append((restored, f"the factory patch {label} is returned to (channel "
-                                  f"{channel.get('name')!r}, dropped by the rebuild)"))
     return written
 
 
@@ -2634,15 +2718,10 @@ def written_sockets_missing(amendment: Amendment, console_model: str) -> list[di
     have, as `{"socket": "LCL 20", "what": "channel 'Trumpet', new on
     ch:21", "line": ...}`.
 
-    Only what is written, which is three things:
+    Only what is written, which is two things:
 
     * a new strip's input patch (and so the socket whose name, colour and
       phantom that strip carries);
-    * the factory patch a strip returned to free goes back on
-      (`apply.release_patch_decision` -- the same call `release_targets`
-      makes for the wire, so the socket checked is the socket written).
-      Those come from measured data for the model the desk stated and should never fail this; they are checked anyway, because
-      "should never" is not a check;
     * every output socket a new bus or output is granted.
 
     The running strips are not here: amend does not write them, and the
@@ -2739,7 +2818,8 @@ def _named(missing: list[dict]) -> str:
 
 def preflight(amendment: Amendment, *, identity_args=None, address: str | None = None,
               skip_verify: bool = False, presets=None, what: str = "amend",
-              rows=None, rows_name: str = "the input list", layers=None) -> Preflight:
+              rows=None, rows_name: str = "the input list", layers=None,
+              aes50_devices: dict | None = None) -> Preflight:
     """`apply`'s two pre-flight checks, asked of an amend.
 
     `what` is "amend" or "change" (a typed change, `atoo patch`): only the words of a refusal differ -- "This change would patch
@@ -2778,6 +2858,12 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
     INFO in `Preflight.infos`, with `rows_name` for the file. `layers` are
     the texts a channel built from them is checked against, as `apply` finds
     them.
+
+    `aes50_devices` is what the desk named on each AES50 port
+    (`apply.read_aes50_devices`): a socket this amend writes past the end of
+    the stage box on its port (A 17 on an S16) does not exist, and is
+    refused in the same words and the same way as a socket the panel lacks.
+    A box Atoo has no size for is said at INFO and left unchecked.
 
     `identity_args` is the desk's `/?` reply, or None offline (`amend
     --state`), when there is no desk to ask and the plan's model stands
@@ -2838,6 +2924,18 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
             skip_verify=skip_verify, output_sockets=_written_output_sockets(amendment))
     if checked in facts.CONSOLE_MODELS:
         result.missing = written_sockets_missing(amendment, checked)
+    on_boxes: list[dict] = []
+    if aes50_devices:
+        written = {"channels": [channel for channel, _ in _written_channels(amendment)]}
+        on_boxes = apply_module.box_sockets_missing(
+            written, aes50_devices, output_sockets=_written_output_sockets(amendment))
+        for row in on_boxes:
+            result.missing.append({"socket": row["socket"], "what": row["what"],
+                                   "line": row["line"], "box": row["box"]})
+        for port, device in apply_module.unknown_boxes(aes50_devices).items():
+            result.infos.append(
+                f"AES50-{port} reports a {device!r}, and Atoo has no size recorded for it, so "
+                f"the sockets written on {port} were not checked against the box")
 
     if result.missing:
         lines = "\n".join(f"  - {m['line']}" for m in result.missing)
@@ -2849,6 +2947,14 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
         source = "the change" if what == "change" else "the rebuild"
         fix = (f"Rebuild for this desk (--console-model {desk_model}), or repatch to "
                "sockets it has." if across else f"Repatch {source} to sockets this desk has.")
+        if on_boxes:
+            # A socket past the end of a stage box does not exist on that box,
+            # and the desk says nothing of it: said by the box, with its size.
+            boxes = list(dict.fromkeys(row["box"] for row in on_boxes))
+            only_boxes = len(on_boxes) == len(result.missing)
+            where = ((", ".join(boxes[:-1]) + f" and {boxes[-1]}") if len(boxes) > 1
+                     else boxes[0]) if only_boxes else f"{where} and its stage boxes"
+            fix = f"Repatch {source} to sockets the box has."
         refusing = "Refusing to write this change" if what == "change" else "Refusing to amend"
         several = len({m["socket"] for m in result.missing}) > 1
         result.refusal = (
@@ -2856,7 +2962,9 @@ def preflight(amendment: Amendment, *, identity_args=None, address: str | None =
             f"{where}:\n{lines}\n{across}"
             f"{refusing}: {_named(result.missing)} {'do' if several else 'does'} not "
             f"exist on {where}. Nothing was written; --skip-verify does not change that. {fix}")
-        result.refusal_code = "amend.socket-missing-on-desk"
+        result.refusal_code = ("amend.socket-missing-on-box" if on_boxes
+                               and len(on_boxes) == len(result.missing)
+                               else "amend.socket-missing-on-desk")
     elif result.verify is not None and result.verify.errors:
         if what == "change":
             result.refusal = (
@@ -2935,6 +3043,10 @@ def review_payload(occupancy: list[StripStatus], amendment: Amendment,
         "amendment_summary": amendment.summary(),
         "strips": list(amendment.strips),
         "released": list(amendment.released),
+        # An explicit insert's renumbering: every strip that moves, where
+        # from and where to, in strip order -- the page lists them all.
+        "shifted": [{"name": name, "from": old, "to": new}
+                    for name, old, new in amendment.shifted],
         # Each named field a change sets on something
         # already running, old -> new, with `moves_audio` for a physical
         # patch change -- the page marks those before anything else.
@@ -2950,6 +3062,8 @@ def review_payload(occupancy: list[StripStatus], amendment: Amendment,
                      for t in targets.to_write],
         "releases": [{"address": t.address, "description": t.description}
                      for t in targets.releases],
+        "shift_clears": [{"address": t.address, "description": t.description}
+                         for t in targets.shift_clears],
         # Addresses only: this is the "what will NOT be written" set, and
         # it is hundreds long -- the page groups it by object.
         "withheld": [t.address for t in targets.withheld],

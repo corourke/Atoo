@@ -861,6 +861,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                     partial_text=second.partial_text, reply=second.reply) from second
     except (AIProviderError, generate.GenerationError, generate.PromptError) as exc:
         print(f"generation failed: {exc}", file=sys.stderr)
+        print(f"  {install_info.describe().summary()}", file=sys.stderr)
         # Whatever the model wrote before it failed is the only evidence
         # of WHY, and it was paid for. Throwing it away leaves "it hit
         # max_tokens" with nothing to read -- was it thinking, or was it
@@ -1427,20 +1428,38 @@ def compare_cmd(args: argparse.Namespace) -> int:
 
 
 def _parse_socket_counts(spec: str | None) -> dict[str, int]:
-    """"LCL=20,A=48" -> {"LCL": 20, "A": 48} -- physical socket counts have
-    no confirmed console-wide default (they vary with hardware and
-    expansion cards, atoo/audit.py's read_console_state docstring),
-    so this is the CLI's only way to state them, never a guess."""
-    if not spec:
-        return {}
-    counts: dict[str, int] = {}
-    for part in spec.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        group, _, count = part.partition("=")
-        counts[group.strip()] = int(count.strip())
-    return counts
+    """"LCL=20,A=48" -> {"LCL": 20, "A": 48}; a value that is not that ends the
+    command with the reason (exit 2), not a traceback."""
+    from atoo.console_facts import parse_socket_counts
+    try:
+        return parse_socket_counts(spec)
+    except ValueError as exc:
+        print(f"atoo: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+
+
+def _gain_texts(args: argparse.Namespace, show, base: dict) -> tuple[str, ...]:
+    """The conventions and the show's instructions, comments stripped: where a
+    gain the engineer stated for a channel ("Playback gain 15 dB") is read, so
+    that a change never overwrites it."""
+    from atoo.conventions_text import strip_comments
+
+    conventions, _name, instructions, _iname, _infos = _change_conventions(args, show, base)
+    return tuple(strip_comments(text) for text in (instructions, conventions) if text)
+
+
+def _aes50_devices(console, state) -> dict | None:
+    """What is on each AES50 port, asked of the desk (`apply.read_aes50_devices`)
+    or, offline, read from the saved capture when it carries them; None when
+    nothing says."""
+    from atoo.apply import read_aes50_devices
+
+    if console is not None:
+        return read_aes50_devices(console)
+    values = getattr(state, "values", None) or {}
+    found = {port: values.get(facts.aes50_device_address(port)) for port in facts.AES50_PORTS}
+    found = {port: (device if isinstance(device, str) else None) for port, device in found.items()}
+    return found if any(isinstance(d, str) for d in found.values()) else None
 
 
 def _load_state_file(path: str):
@@ -2017,7 +2036,7 @@ def _phases(args: argparse.Namespace):
 #: `--no-progress`'s help on the commands that write.
 NO_PROGRESS_WRITE_HELP = (
     "Do not print what the run is doing while it reads and writes the console. Each long "
-    "phase -- reading the desk (for the reset, or for the preview), writing (each setting "
+    "phase -- reading the desk (a preview reads the reset's settings and the plan's in one pass), writing (each setting "
     "is read back as it is written), reading back again what disagreed -- normally "
     "prints its name, how far it has got and the address in flight on stderr as it "
     "goes, and a line with its count and time when it ends. Without it a slow run looks "
@@ -2746,12 +2765,14 @@ def apply_cmd(args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 1
     _fill_from_bundle(args, show, "input", bundle.INPUT_LIST)
+    _parse_socket_counts(args.clean_output_sockets)   # a bad value stops here, before the desk is touched
 
     # Imported here rather than at module scope so `atoo build` and
     # `--help` don't pay for (or depend on) the console layer at all.
     from atoo.apply import (CROSS_MODEL, sockets_missing_on_model)
-    from atoo.apply import (apply_plan, check_desk_model, plan_expansion_bay_use,
-                                 read_fitted_bays, unfitted_bays_the_plan_needs)
+    from atoo.apply import (apply_plan, box_sockets_missing, check_desk_model,
+                                 plan_expansion_bay_use, plan_uses_aes50, read_aes50_devices,
+                                 read_fitted_bays, unfitted_bays_the_plan_needs, unknown_boxes)
     from atoo.console import WingConsole
 
     try:
@@ -2949,6 +2970,27 @@ def apply_cmd(args: argparse.Namespace) -> int:
                       "these to a group this desk has.", file=sys.stderr)
                 return 2
 
+            # A socket past the end of a stage box is patched to nothing: the
+            # desk lists 48 on every AES50 port whatever is on it. Asked of
+            # the desk, here, as the bays are -- only when the plan uses a port.
+            devices = read_aes50_devices(console) if plan_uses_aes50(plan) else None
+            beyond = box_sockets_missing(plan, devices)
+            if beyond:
+                print("", file=sys.stderr)
+                print(f"This plan patches {len(beyond)} socket(s) that do not exist on the "
+                      f"stage box {args.console} reports:", file=sys.stderr)
+                for row in beyond:
+                    print(f"  - {row['line']}", file=sys.stderr)
+                print("\nThe console would accept these patches and read them back unchanged, "
+                      "so nothing after this point would tell you those channels are silent. "
+                      "Nothing was written. Repatch them to sockets the box has.",
+                      file=sys.stderr)
+                return 2
+            for port, device in unknown_boxes(devices).items():
+                print(f"WARNING: AES50-{port} reports a {device!r}, and Atoo has no size "
+                      f"recorded for it -- the sockets patched on {port} were not checked "
+                      "against the box.", file=sys.stderr)
+
             if stack_journal:
                 journal_path = _stack_journal_path(show, "apply", args)
             result = apply_plan(
@@ -2975,8 +3017,7 @@ def apply_cmd(args: argparse.Namespace) -> int:
     print(result.summary())
     # One line per distinct warning, naming the strips it covers
     # (FR-X.15c); the journal keeps every one.
-    for w in finding_groups.group_lines(result.warnings):
-        print(f"  - {w}", file=sys.stderr)
+    _print_result_warnings(result)
 
     if journal_path and not result.dry_run:
         # This goes BEFORE the abort check on purpose: a run that
@@ -3403,6 +3444,18 @@ def _journal_desk(journal: dict) -> dict | None:
     return desk if isinstance(desk, dict) and desk else None
 
 
+def _print_result_warnings(result) -> None:
+    """The warnings and notes under a run's summary line, which promises
+    them ("N warning(s), listed below"). They go to stderr, so stdout is
+    flushed first: a run piped through `tee` or `2>&1` holds stdout in a
+    block buffer, and the lines would otherwise reach the reader long before
+    the summary they belong under."""
+    sys.stdout.flush()
+    for w in finding_groups.group_lines(result.warnings):
+        print(f"  - {w}", file=sys.stderr)
+    sys.stderr.flush()
+
+
 def undo_cmd(args: argparse.Namespace) -> int:
     """`atoo undo` -- reverse an apply from its journal.
 
@@ -3679,8 +3732,7 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
         print(result.summary())
     # One line per distinct warning, naming the strips it covers
     # (FR-X.15c); the journal keeps every one.
-    for w in finding_groups.group_lines(result.warnings):
-        print(f"  - {w}", file=sys.stderr)
+    _print_result_warnings(result)
 
     # The bundle's plan.json follows the stack. Asked of the
     # entry, not the run, so an apply (which never replaces plan.json)
@@ -3759,12 +3811,23 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
             if remaining is not None:
                 print(f"  next on the stack{' for this desk' if link.desk else ''}: "
                       f"{journal_stack.describe(remaining)}")
-    if result.failed or result.refused or result.unreversible:
+    if result.unreversible and not result.dry_run:
+        # Said at INFO, not a failure: the desk cannot be put back to a value
+        # it never held, and nothing here was refused or failed. The first
+        # write of a setting the earlier state did not carry has no earlier
+        # value to restore.
+        addresses = ", ".join(step.address for step in result.unreversible[:6])
+        more = len(result.unreversible) - 6
+        print(f"  INFO {len(result.unreversible)} address(es) had no earlier value on the "
+              f"desk (the run wrote them for the first time), so there is nothing to put "
+              f"back: {addresses}{f', and {more} more' if more > 0 else ''}. "
+              "They stay as the run left them.")
+    if result.failed or result.refused:
         # Exit 2, the "it ran and found problems" code apply/build/verify
-        # use: a reversal that did not land, an address
-        # somebody else has moved, and an address with no prior value are
-        # all "the console is not back where it was", which is precisely
-        # what this command exists to report.
+        # use: a reversal that did not land, or an address somebody else has
+        # moved, is "the console is not back where it was", which is
+        # precisely what this command exists to report. An address with no
+        # earlier value is not that (see the INFO above), so it exits 0.
         return 2
     return 0
 
@@ -4153,6 +4216,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
             if console is not None:
                 console.close()
             print(f"the change could not be compiled: {exc}", file=sys.stderr)
+            print(f"  {install_info.describe().summary()}", file=sys.stderr)
             partial = getattr(exc, "partial_text", "")
             if partial:
                 where = _partial_path(
@@ -4213,11 +4277,16 @@ def patch_cmd(args: argparse.Namespace) -> int:
             print(f"WARNING: {empty_warning}", file=sys.stderr)
 
         # Stage 2/3 -- the delta, and what will NOT be written.
+        # What the desk says is on each AES50 port: a socket past the end of
+        # a stage box is not one it has, whatever the port's 48 addresses say.
+        aes50_devices = _aes50_devices(console, state)
+        gain_texts = _gain_texts(args, show, applied) if mode == "patch" else ()
         if mode == "patch":
             amendment, _merge = patch_engine.plan_patch(
                 applied, change_set, occupancy, allow_strips=set(args.allow_strip or []),
                 console_model=state.console_model or getattr(args, "console_model", None),
-                presets=preset_library, text=change_text)
+                presets=preset_library, text=change_text, aes50_devices=aes50_devices,
+                gain_texts=gain_texts)
         else:
             amendment = amend_engine.plan_amendment(
                 applied, amended, occupancy, allow_strips=set(args.allow_strip or []),
@@ -4238,6 +4307,13 @@ def patch_cmd(args: argparse.Namespace) -> int:
                   "-- 48V is switched the moment it is written:")
             for edit in switched:
                 print(f"!!   {edit.line()}")
+        if amendment.shifted:
+            # An explicit insert rewrites every strip it moves, and audio
+            # moves with the names: said before the notes, with each strip.
+            print(f"\n!! {len(amendment.shifted)} RUNNING STRIP(S) RENUMBERED -- each is "
+                  "rewritten whole on its new number the moment it is written:")
+            for name, old, new in amendment.shifted:
+                print(f"!!   {name!r}: {old} -> {new}")
         for info in amendment.infos:
             print(f"  INFO {info}")
         for warning in amendment.warnings:
@@ -4245,7 +4321,9 @@ def patch_cmd(args: argparse.Namespace) -> int:
 
         targets = amend_engine.amendment_targets(amendment)
         print("\n" + targets.summary())
-        for warning in targets.warnings:
+        # A --confirm run lists the same warnings again under its summary line
+        # (`_print_result_warnings`), which promises them: not twice.
+        for warning in ([] if args.confirm else targets.warnings):
             print(f"  - {warning}", file=sys.stderr)
 
         # Apply's pre-flight: the verify gate over the
@@ -4275,7 +4353,8 @@ def patch_cmd(args: argparse.Namespace) -> int:
                 presets=preset_library,
                 what="change" if mode == "patch" else "amend",
                 rows=rows, rows_name=bundle.INPUT_LIST,
-                layers=_plan_layers(amendment.effective_plan, show, args.plan))
+                layers=_plan_layers(amendment.effective_plan, show, args.plan),
+                aes50_devices=aes50_devices)
             list_notes = preflight.infos + list_notes
             for info in list_notes:
                 print(f"  INFO {info}")
@@ -4378,8 +4457,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
     print("\n" + result.summary())
     # One line per distinct warning, naming the strips it covers
     # (FR-X.15c); the journal keeps every one.
-    for w in finding_groups.group_lines(result.warnings):
-        print(f"  - {w}", file=sys.stderr)
+    _print_result_warnings(result)
     if journal_path and not result.dry_run:
         # Before the abort check, for the reason `apply_cmd` gives: a
         # partial journal is the one nobody planned for.
@@ -4431,6 +4509,10 @@ def patch_cmd(args: argparse.Namespace) -> int:
             scope_line += f"; returned to free: {', '.join(amendment.released)}"
         if amendment.edited:
             scope_line += f"; edited: {', '.join(amendment.edited)}"
+        if amendment.shifted:
+            scope_line += (f"; renumbered {len(amendment.shifted)} strip(s): "
+                           f"{amendment.shifted[0][1]}-{amendment.shifted[-1][1]} down to "
+                           f"{amendment.shifted[0][2]}-{amendment.shifted[-1][2]}")
         print(f"Journal: {journal_path} (scope: {scope_line})")
     if moved:
         print(f"\n{len(moved)} address(es) belonging to strips this {verb} does not own "
@@ -4729,7 +4811,8 @@ PATCH_DESCRIPTION = (
     "are chosen, and each choice is said at INFO.\n"
     "\n"
     "Everything after that is amend's: new channels are placed on genuinely free\n"
-    "strips (skipping occupied ones, never renumbering a running one), a dropped\n"
+    "strips (skipping occupied ones, never renumbering a running one unless the\n"
+    "change says INSERT -- see below), a dropped\n"
     "channel's strip is RETURNED TO FREE where the desk still reads as the strip the\n"
     "show built, the pre-flight verifies the result and checks every socket written\n"
     "against the desk, the review shows what will and will NOT be written, and only\n"
@@ -4745,6 +4828,18 @@ PATCH_DESCRIPTION = (
     "strip is marked MOVES AUDIO LIVE, and switching its 48V phantom power SWITCHES 48V\n"
     "LIVE. A strip's source can be changed in its phantom, type and model, not in\n"
     "which input it is or whether it is stereo. Undo puts the old values back.\n"
+    "\n"
+    "INSERT AND RENUMBER. \"insert HiHat after Snare and renumber the channels after\n"
+    "it\" (or \"insert\", \"renumber\", \"move the rest down\") puts the channel there and\n"
+    "moves the strips after it down: each is rewritten whole on its new number, with\n"
+    "its patch, sends, DCA and mute groups, and the review lists every strip that\n"
+    "moves. Undo puts them all back. \"add HiHat after Snare\" does NOT renumber: the\n"
+    "channel goes on the next free strip and an INFO gives the words that would.\n"
+    "\n"
+    "A Line source patched to a head amp does not keep a mic's gain: it takes 0 dB\n"
+    "unless a gain is stated for it, said at INFO. A socket past the end of a stage\n"
+    "box on an AES50 port (A 17 on an S16) does not exist: the pre-flight REFUSES it,\n"
+    "naming the box and its size.\n"
     "\n"
     "plan.json is never touched: only a build writes it, and a full apply warns\n"
     "before it replaces changes that are not in it. To keep a change for good,\n"
@@ -4786,9 +4881,8 @@ AMEND_DESCRIPTION = (
     "\n"
     "The same operation covers a vocalist who has left and a set of delay speakers\n"
     "dropped from the rider. A channel the rebuild DROPPED is RETURNED TO FREE --\n"
-    "put back on its factory input patch (OFF if the model's factory patch was never\n"
-    "measured or something else uses that socket, with an INFO saying which), left\n"
-    "unmuted, its fader at -inf, and its name, colour and icon cleared on the strip\n"
+    "unpatched (OFF, as a full apply leaves a strip the plan does not use; an INFO\n"
+    "says so), left unmuted, its fader at -inf, and its name, colour and icon cleared on the strip\n"
     "and on the source socket -- only where the desk still reads as the strip your\n"
     "plan built: a strip somebody has renamed, repatched or named on its SOURCE\n"
     "socket since is reported and left exactly as it is, and so is one that did not\n"
@@ -4884,12 +4978,12 @@ def _add_apply_arguments(ap: argparse.ArgumentParser) -> None:
              "every setting that differs and that the plan does not set itself.")
     ap.add_argument(
         "--clean-output-sockets", default=None,
-        help="Opt-in only -- OFF unless you pass this. Disconnect (`.grp = OFF`) any "
-             "physical output socket in the given group(s) that no bus or output in the plan "
-             "routes anywhere to, instead of leaving whatever was already patched there (e.g. "
-             "from an earlier apply, a different show, or manual patching). A full apply "
-             "already does this for the desk's own panel outputs; this is for the groups "
-             "beyond them, such as a stage box's. "
+        help="Disconnect (`.grp = OFF`) any physical output socket in the given "
+             "group(s) that no bus or output in the plan routes anywhere to, instead of "
+             "leaving whatever was already patched there (e.g. from an earlier apply, a "
+             "different show, or manual patching). A full apply already does this by "
+             "default for the desk's own panel outputs; this reaches the groups beyond "
+             "them, such as a stage box's. "
              "Same 'no confirmed default' syntax as `atoo audit`'s --output-sockets: "
              "'LCL=24,A=48'. A socket ALREADY undeclared and already disconnected costs one "
              "read and nothing else. Shown in the dry-run preview like every other write -- "
@@ -5361,7 +5455,8 @@ AUDIT_DESCRIPTION = (
     "trim/balance/invert/head-amp-gain, high-pass/hi-cut/tilt and EQ a channel states should\n"
     "be, so a finding can cite the plan's own provenance text instead of just a structural\n"
     "fact. A filter or an EQ band is compared within 2%, the desk holding the nearest step of\n"
-    "the control; the compressor, a bus's EQ and a channel's PreSend EQ are not diffed.\n"
+    "the control; a bus's, Main's and Matrix's EQ and a channel's PreSend EQ are diffed\n"
+    "the same way. The compressor is not diffed.\n"
     "--plan also flags (CV009) any\n"
     "physical output socket --output-sockets read that's patched to something the plan\n"
     "never routes there at all -- catches stray/leftover routing an apply run never wrote,\n"
@@ -5403,8 +5498,9 @@ WATCH_DESCRIPTION = (
     "\n"
     "With --console it also listens to the console's meters (a read-only native connection on\n"
     "port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,\n"
-    "aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. If the\n"
-    "connection cannot be had it says so at INFO (W002) and carries on.\n"
+    "aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. A clip\n"
+    "ends once the strip has been below -3 dBFS for 200 ms. If the connection cannot be had, or\n"
+    "the meter data stops, it says so at INFO (W002) and carries on.\n"
     "\n"
     "A channel on its alternate input (C004) and the global alternate switch (C005) are\n"
     "warnings, since a show never starts on them. During a virtual soundcheck they are\n"
@@ -6206,6 +6302,11 @@ APPLY_DESCRIPTION = (
     "way, so nothing else -- not the readback, not the journal, not audit -- would\n"
     "tell you the channel is silent.\n"
     "\n"
+    "It asks what is on each AES50 port the plan uses (/$stat/A/dev) and REFUSES a\n"
+    "socket past the end of the stage box there: an S16 has 16 inputs and 8 outputs,\n"
+    "and A 17 is patched to nothing though the desk lists 48 on every port. A box\n"
+    "whose size Atoo has not recorded is reported and its sockets are not checked.\n"
+    "\n"
     "ONE PLAN, TWO MODELS. The desk states its own model on /?, and apply compares it\n"
     "with the plan's. A different model whose panel has every socket the plan patches\n"
     "-- a Compact plan on a Rack backup -- is applied, with an INFO naming both and the\n"
@@ -6241,9 +6342,10 @@ APPLY_DESCRIPTION = (
     "Main or Matrix in the plan is patched to, rather than leave it on what the desk shipped\n"
     "with or an earlier show put there; one INFO line names the sockets and undo restores them.\n"
     "\n"
-    "--clean-output-sockets (opt-in -- off unless passed) additionally\n"
-    "disconnects any physical output socket in the given group(s) that no bus or output in\n"
-    "the plan routes anywhere to, instead of leaving whatever was already patched there."
+    "--clean-output-sockets NAME=COUNT,... extends that to the groups beyond the panel, such\n"
+    "as a stage box's: it disconnects any physical output socket in the given group(s)\n"
+    "that no bus or output in the plan routes anywhere to, instead of leaving whatever was\n"
+    "already patched there."
 )
 
 
@@ -6316,8 +6418,9 @@ UNDO_DESCRIPTION = (
     "becoming a new one.\n"
     "\n"
     "Exit codes: 0 clean, 1 the command could not run (bad journal, no console), 2 it\n"
-    "ran and the console is not fully back -- something refused, unreversible, or a\n"
-    "reversal that did not land."
+    "ran and the console is not fully back -- something refused (changed since) or a\n"
+    "reversal that did not land. An address with no earlier value (the run wrote it\n"
+    "for the first time) has nothing to put back; it is named at INFO and exits 0."
 )
 
 
@@ -6546,7 +6649,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_build_arguments(build_ap)
-    build_ap.set_defaults(func=build)
+    build_ap.set_defaults(announce_install=True, func=build)
 
     verify_ap = sub.add_parser(
         "verify",
@@ -6574,7 +6677,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_apply_arguments(apply_ap)
-    apply_ap.set_defaults(func=apply_cmd)
+    apply_ap.set_defaults(announce_install=True, func=apply_cmd)
 
     patch_ap = sub.add_parser(
         "patch",
@@ -6584,7 +6687,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_patch_arguments(patch_ap)
-    patch_ap.set_defaults(func=patch_cmd)
+    patch_ap.set_defaults(announce_install=True, func=patch_cmd)
 
     amend_ap = sub.add_parser(
         "amend",
@@ -6594,7 +6697,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_amend_arguments(amend_ap)
-    amend_ap.set_defaults(func=amend_cmd)
+    amend_ap.set_defaults(announce_install=True, func=amend_cmd)
 
     undo_ap = sub.add_parser(
         "undo",
@@ -6603,7 +6706,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_undo_arguments(undo_ap)
-    undo_ap.set_defaults(func=undo_cmd)
+    undo_ap.set_defaults(announce_install=True, func=undo_cmd)
 
     ping_ap = sub.add_parser(
         "ping",
@@ -6612,7 +6715,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_ping_arguments(ping_ap)
-    ping_ap.set_defaults(func=ping_cmd)
+    ping_ap.set_defaults(announce_install=True, func=ping_cmd)
 
     audit_ap = sub.add_parser(
         "audit",
@@ -6621,7 +6724,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_audit_arguments(audit_ap)
-    audit_ap.set_defaults(func=audit_cmd)
+    audit_ap.set_defaults(announce_install=True, func=audit_cmd)
 
     watch_ap = sub.add_parser(
         "watch",
@@ -6630,7 +6733,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_watch_arguments(watch_ap)
-    watch_ap.set_defaults(func=watch_cmd)
+    watch_ap.set_defaults(announce_install=True, func=watch_cmd)
 
     presets_ap = sub.add_parser(
         "presets",
@@ -6669,7 +6772,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_resolve_arguments(resolve_ap)
-    resolve_ap.set_defaults(func=resolve_cmd)
+    resolve_ap.set_defaults(announce_install=True, func=resolve_cmd)
 
     return ap, {
         "init": init_ap, "build": build_ap, "verify": verify_ap, "compare": compare_ap, "apply": apply_ap,
@@ -6721,6 +6824,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
+#: Subcommands that neither read or write a desk nor call a model, so they
+#: print no install line. Every other subcommand sets `announce_install`.
+NO_INSTALL_LINE = frozenset({"init", "verify", "compare", "presets", "ui", "lessons"})
+
+
 def _main(argv: list[str] | None = None) -> int:
     ap, subparsers = build_parser()
     args = ap.parse_args(argv)
@@ -6738,6 +6846,14 @@ def _main(argv: list[str] | None = None) -> int:
     # One place, before any command runs. A no-op for every
     # command that has no `--console` of its own.
     _resolve_console_settings(args)
+
+    # Which atoo, and from where, is the first thing to know when a write to
+    # a desk or a paid model call goes wrong. A command opts in with
+    # `announce_install=True` in its `set_defaults`; a test requires every
+    # subcommand to either do so or be named in `NO_INSTALL_LINE`.
+    # On stderr: `build --out -` and the like put data on stdout.
+    if getattr(args, "announce_install", False):
+        print(install_info.describe().summary(), file=sys.stderr)
 
     return args.func(args)
 

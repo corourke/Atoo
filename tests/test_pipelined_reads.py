@@ -320,6 +320,12 @@ def test_audit_per_leaf_reads_the_same_state_at_any_window():
     assert read(8, latency=0.001, jitter=0.003) == read(1)
 
 
+def _same_digits(value):
+    """A float a node dump prints as text and a single read gives in full are
+    the same number to the digits the text has."""
+    return pytest.approx(value, rel=1e-6) if isinstance(value, float) else value
+
+
 def test_the_apply_preview_is_the_same_at_any_window():
     changes = {"/ch/30/fdr": -6.0, "/ch/30/name": "Old show", "/bus/3/mute": 1}
 
@@ -328,7 +334,7 @@ def test_the_apply_preview_is_the_same_at_any_window():
             result = apply_plan(tiny(("ch", 1, "Kick"), ("ch", 2, "Snare")), console,
                                 dry_run=True, full_apply=True, initialize=True,
                                 init_model="wing-compact")
-        return ([(r.address, r.status, r.prior_value, r.intended_value, r.forced_by)
+        return ([(r.address, r.status, _same_digits(r.prior_value), r.intended_value, r.forced_by)
                  for r in result.writes], result.warnings, udp.max_outstanding)
 
     serial, serial_warnings, serial_max = preview(1)

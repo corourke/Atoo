@@ -555,7 +555,10 @@ class ApplyRunRequest(BaseModel):
     confirm: bool = False
     arm: bool = False
     skip_verify: bool = False
-    clean_output_sockets: Optional[str] = None
+    # Whether a full apply resets the desk to its initialized state first.
+    # On unless a request says otherwise, as on the command line; False is
+    # `--no-init`.
+    initialize: bool = True
     expected_console: Optional[str] = None
     expected_bundle: Optional[str] = None
     expected_plan_sha256: Optional[str] = None
@@ -709,19 +712,6 @@ class NewWatchConditionsRequest(BaseModel):
     # bundle, the way step 03's New file makes an empty instructions.md --
     # and, for the same reason, naming the bundle the page showed.
     expected_bundle: Optional[str] = None
-
-
-def _parse_socket_counts(spec: str | None) -> dict:
-    if not spec:
-        return {}
-    counts: dict[str, int] = {}
-    for part in spec.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        group, _, count = part.partition("=")
-        counts[group.strip()] = int(count.strip())
-    return counts
 
 
 def _finding_to_dict(f: Finding) -> dict:
@@ -1514,6 +1504,10 @@ def _apply_findings(payload: dict, address: str) -> list[dict]:
 # this copy exists because a value the server splices into a command line
 # has to be known to be a strip label first, not merely refused later.
 _STRIP_LABEL_RE = re.compile(r"^(ch|aux):[1-9][0-9]{0,2}$")
+
+#: The line a command prints to say which copy of Atoo ran
+#: (`install_info.Install.summary`).
+_VERSION_LINE = re.compile(r"^atoo \d[^ ]* \(")
 
 
 def _object_base(address: str) -> str:
@@ -3573,6 +3567,13 @@ class ApplyRun(BuildRun):
     _PREVIEW_LABEL = {"apply": "Preview", "patch": "Patch preview",
                       "undo": "Undo preview"}
 
+    def _ran_as(self) -> str:
+        """The line the command printed saying which copy of Atoo ran
+        ("atoo 0.2.4 (installed copy at ...)"), or ''. A failure that is
+        reported to someone else is only useful with it."""
+        said = [line.strip() for line in self.log if _VERSION_LINE.match(line.strip())]
+        return f" Ran as {said[-1]}." if said else ""
+
     def _failure_finding(self) -> dict:
         if self.preview:
             # A dry run that failed names the dry run, and says
@@ -3584,7 +3585,7 @@ class ApplyRun(BuildRun):
             return Diagnostic(
                 severity=Severity.ERROR, code="preview.failed",
                 message=f"{label} failed (exit {self.exit_code}): {message} "
-                        "Nothing was written.",
+                        f"Nothing was written.{self._ran_as()}",
                 where="Apply", source=self.kind,
                 fix="read the run log on the Apply screen -- it is the command's own "
                     "output, word for word.",
@@ -3596,7 +3597,8 @@ class ApplyRun(BuildRun):
                                                            "without a word")
             return Diagnostic(
                 severity=Severity.ERROR, code=f"{self.kind}.failed",
-                message=f"The {self.kind} did not run (exit {self.exit_code}): {message}",
+                message=f"The {self.kind} did not run (exit {self.exit_code}): {message}"
+                        f"{self._ran_as()}",
                 where="Apply", source=self.kind,
                 fix=f"read the run log on the Apply screen -- it is `atoo "
                     f"{self.kind}`'s own output, word for word.",
@@ -5429,7 +5431,7 @@ def create_app(
         return payload
 
     @app.get("/api/apply/preflight")
-    def api_apply_preflight():
+    def api_apply_preflight(initialize: bool = True):
         """`verify_plan` against the plan Apply is about to write.
 
         **Fresh, never the plan's own `meta.verify_findings`.** Those are
@@ -5525,7 +5527,12 @@ def create_app(
             ).to_dict())
         # The reset to initialized that comes first. The desk is
         # not read here, so the count is an upper bound.
-        code, note = init_module.preflight_note(plan, model)
+        capture_here = init_module.load_capture(model) is not None
+        if initialize or not capture_here:
+            code, note = init_module.preflight_note(plan, model)
+        else:
+            # The Initialize switch is off: say that, not what the reset would do.
+            code, note = "apply.init-off", init_module.NO_INIT_NOTE
         warn = note.startswith("WARNING ")
         findings.append(Diagnostic(
             severity=Severity.WARNING if warn else Severity.INFO, code=code,
@@ -5557,6 +5564,15 @@ def create_app(
             # typed change here (a model is configured) -- the Demo says
             # at INFO when it cannot, and previews Full build only.
             "plan_counts": _plan_counts(plan),
+            # Whether the Initialize switch can do anything: no capture of
+            # this console model means a full apply cannot reset it first.
+            "initialize": {
+                "available": capture_here,
+                "why": "" if capture_here else (
+                    f"Atoo has no initialized capture of the "
+                    f"{console_facts.CONSOLE_MODELS.get(model or '', {}).get('label', 'desk')} "
+                    "yet, so it cannot reset the desk first."),
+            },
             "patch_model": dict(zip(("ready", "why"), _patch_model_state())),
         }
 
@@ -5646,12 +5662,6 @@ def create_app(
                     f"the file is now {(actual or 'unreadable')[:12]} -- it was rebuilt or "
                     "edited since. Nothing was written -- run the pre-flight again, read what "
                     "it says about the plan there now, and arm the write again.", "plan")
-        if req.clean_output_sockets:
-            try:
-                _parse_socket_counts(req.clean_output_sockets)
-            except ValueError as exc:
-                return JSONResponse({"error": str(exc)}, status_code=400)
-
         if confirmed:
             # A full build rewrites the desk, so any patch preview taken
             # before it no longer describes it.
@@ -5684,8 +5694,8 @@ def create_app(
             argv.append("--confirm")
         if req.skip_verify:
             argv.append("--skip-verify")
-        if req.clean_output_sockets:
-            argv += ["--clean-output-sockets", req.clean_output_sockets]
+        if not req.initialize:
+            argv.append("--no-init")
 
         def finish(code: int) -> list[dict]:
             # Runs in the apply's thread once `apply` has returned. The
@@ -6595,8 +6605,8 @@ def create_app(
                     "timeout": float(defaults.get("timeout") or 1.0),
                 })
             read_kwargs = {
-                "input_sockets": _parse_socket_counts(req.input_sockets),
-                "output_sockets": _parse_socket_counts(req.output_sockets),
+                "input_sockets": console_facts.parse_socket_counts(req.input_sockets),
+                "output_sockets": console_facts.parse_socket_counts(req.output_sockets),
                 "bulk": not req.per_leaf,
             }
 

@@ -217,8 +217,8 @@ def test_undo_puts_the_outputs_back_as_they_were(cli_desk, tmp_path, capsys):
     journal = tmp_path / "j.json"
     assert run(plan, "--confirm", "--journal", str(journal)) == 0
     capsys.readouterr()
-    # Exit 2: the undo ran, and some settings of the Demo's presets had no
-    # earlier value to restore -- unrelated to the outputs.
-    assert cli.main(["undo", str(journal), "--console", HOST, "--confirm", "--no-progress"]) == 2
+    # Exit 0: some settings of the Demo's presets had no earlier value to
+    # restore (first writes), which is said at INFO and is not a failure.
+    assert cli.main(["undo", str(journal), "--console", HOST, "--confirm", "--no-progress"]) == 0
     assert {n: (out_grp(desk, "LCL", n), desk.values[f"/io/out/LCL/{n}/in"])
             for n in range(3, 9)} == before

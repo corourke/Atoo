@@ -2,6 +2,58 @@
 
 What changed in each release, newest first.
 
+## 0.2.4 -- 2026-10-21
+
+Fixes from the first runs of the installed 0.2.3, and a faster, clearer Apply.
+
+- **Apply: "Initialize the console first" is a switch.** Under Options, one
+  switch (on by default) sets the desk to its initialized state before the
+  plan is written, and says what it leaves alone: the desk's network and
+  clock, expansion-card setup, meter and RTA display, monitor and solo
+  listening. The typed "Disconnect output sockets the plan doesn't use" box
+  is gone, and with it the page lock a bad value in that box caused.
+  `atoo apply --clean-output-sockets` stops with a plain sentence and exit 2
+  for a value that is not `LCL=8,A=48`-shaped, not a traceback.
+- **Preview is faster, and is one step.** A preview now reads the desk in one
+  "reading the desk" step instead of two, and reads the plan's current values
+  by node dump rather than one address at a time (the Compact: about a third
+  fewer requests). A figure a preview shows as the current value may be the
+  desk's rounded readout; a number whose rounding could change what "would
+  change" says is read again exactly. A real apply, its journal and Undo
+  always use exact values.
+- **Patch: an insert renumbers, add-after does not.** Say "insert",
+  "renumber" or "make room" and the channels after the new one move down,
+  each rewritten whole, in one undoable scope; "add X after Y" takes the next
+  free strip and says so. A new channel is never given an input that does not
+  exist on the stage box (an S16 has 16), and a line source on a stage-box
+  preamp gets 0 dB unless the conventions or instructions state a gain.
+  A strip a change frees is left off, not reset.
+- **Patch: an overlong name no longer refuses a paid reply.** A name that is
+  only a label is cut to the length it is shown at (48 for a change, 16 for
+  an added channel) and the review says so at INFO. A rename in a change is
+  length-checked too.
+- **Every command that touches a desk or the model says which Atoo ran**
+  (its version and where it is installed), warnings appear where the summary
+  says they will, and preamp gains are compared on the preamp's own
+  2.5 dB steps.
+- **Watch hears channels again.** Clip detection now follows every channel
+  (the desk keeps one meter stream per connection), the status goes to "off:
+  meter data stopped" within a few seconds if the stream stops and recovers
+  by itself, and a clip ends only after the level stays below -3 dBFS for
+  200 ms.
+- **Watch page.** The condition's info icon works on the Demo, is larger and
+  blue, and sits in line with the ID; the "Drafted" tag is blue; the verdict
+  bar and table headings stay at the top; Hide is a check box at the left of
+  the row.
+- **Audit and Watch.** A bus's, Main's and Matrix's EQ and a channel's PreSend
+  EQ are checked against the plan, and a signal that splits and recombines
+  on its way to a Main or Matrix is flagged unless the plan asks for it.
+- **Apply: the History table's columns** give the summary the width and size
+  the rest to their content.
+- **The project page on PyPI links to real pages.** The README's links were
+  relative (`docs/user/install.md`), which point at nothing on pypi.org; they
+  are now absolute.
+
 ## 0.2.3 -- 2026-10-19
 
 The first release on PyPI, with two fixes to the install from the first

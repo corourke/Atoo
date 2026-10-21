@@ -141,6 +141,11 @@ older Demo reads a frozen copy, and a test whose subject is the shipped Demo
   and the plan it was compiled onto, cut down to the four strips (Kick, Lead
   Vox, Playback, Music) and the busses, DCAs, mute groups and output the
   reply names. Read by `test_patch_omitted_sections.py`.
+- `patch-change-name-61.change-reply.json`: a real-model reply to the change
+  *"Add HiHat channel after Snare channel. Add another vocal mic "F Lead2",
+  Move "Playback" to channel 16 and input A16 (make it mono)."*, as `atoo
+  patch` kept it when it refused it for a 61-character short name (limit
+  48). Whole JSON, otherwise valid. Read by `test_patch_cosmetic_names.py`.
 - `demo_2026-10-13/`: a real-model rebuild of the Demo: its `conventions.md`,
   `demo-show/input.csv` and `instructions.md`, the `conventions.resolved.md`
   its resolve call wrote (169 citations), and `generator.reply.json`, the

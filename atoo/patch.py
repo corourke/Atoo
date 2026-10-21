@@ -77,6 +77,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from atoo import amend as amend_engine
+from atoo import apply as apply_module
 from atoo import console_facts as facts
 from atoo import generate
 from atoo import inferred
@@ -316,6 +317,46 @@ def _fill_omitted_sections(change_set: dict) -> list[str]:
     return filled
 
 
+def _cut_cosmetic_names(change_set: dict, infos: list[str] | None) -> None:
+    """Cut the names that are only labels to the length they are shown at,
+    in place, and say so in `infos`.
+
+    A change's short name is a row in a journal and a strip's name is what
+    the console shows in sixteen characters: a longer one is a preference
+    the model did not keep to, not a setting that cannot work, so it must
+    not refuse a reply that is otherwise whole (and was paid for)."""
+    def cut(owner: dict, what: str, limit: int) -> None:
+        name = owner.get("name")
+        if isinstance(name, str) and len(name) > limit:
+            owner["name"] = name[:limit].rstrip() or name[:limit]
+            if infos is not None:
+                infos.append(f"{what} {name!r} is {len(name)} characters, longer than the "
+                             f"{limit} it is shown at; it is cut to {owner['name']!r}")
+
+    cut(change_set, "the change's name", CHANGE_NAME_MAX)
+    modify = change_set.get("modify")
+    if isinstance(modify, list):
+        # A rename of a strip already on the desk is cut the way the name of
+        # one this change adds is; the entries are copied, never edited.
+        change_set["modify"] = modify = list(modify)
+        for index, request in enumerate(modify):
+            if not (isinstance(request, dict) and request.get("object") == "channel"):
+                continue
+            fields = request.get("fields")
+            if isinstance(fields, dict) and isinstance(fields.get("name"), str):
+                modify[index] = request = dict(request, fields=dict(fields))
+                cut(request["fields"], f"the new name for channel {request.get('name')!r}",
+                    facts.NAME_MAX_CHARS)
+    add = change_set.get("add")
+    channels = add.get("channels") if isinstance(add, dict) else None
+    if isinstance(channels, list):
+        change_set["add"] = add = dict(add)
+        add["channels"] = channels = [dict(c) if isinstance(c, dict) else c for c in channels]
+        for channel in channels:
+            if isinstance(channel, dict):
+                cut(channel, "the new channel's name", facts.NAME_MAX_CHARS)
+
+
 def validate_change_set(change_set, *, partial_text: str = "",
                         infos: list[str] | None = None) -> dict:
     if not isinstance(change_set, dict):
@@ -346,6 +387,7 @@ def validate_change_set(change_set, *, partial_text: str = "",
         # then, or a model that reached for the old name, still reads.
         add = change_set["add"] = plan_compat.normalise_plan(add)
         inferred.tag_model_markers(add)
+    _cut_cosmetic_names(change_set, infos)
     violations = validate_schema(change_set, CHANGE_SET_SCHEMA)
     if violations:
         shown = "\n  ".join(violations[:10])
@@ -419,6 +461,15 @@ class MergeResult:
     #: Source keys of the channels this change drops and adds again --
     #: "move Playback to Aux 8" is said that way, there being no other.
     moved: set = field(default_factory=set)
+    #: An explicit insert's renumbering (`_plan_insert`): `{old strip label:
+    #: new strip label}` for each running channel that moves down, and
+    #: `{source key: strip label}` for each channel put in the room made.
+    renumbered: dict = field(default_factory=dict)
+    inserted: dict = field(default_factory=dict)
+    #: Channels the change put "after Snare" without saying insert, that
+    #: went on a free strip instead: `[(name, position asked for, wording
+    #: that would renumber)]`. `plan_patch` says where each landed.
+    not_renumbered: list = field(default_factory=list)
 
     @property
     def refused(self) -> list[Change]:
@@ -471,13 +522,23 @@ def _occupied_sockets(plan: dict, occupancy, *,
     return used
 
 
-def _choose_sockets(group: str, count: int, used, console_model: str | None) -> list[int] | None:
-    """The lowest free socket(s) in `group`: one, or an odd-started
-    consecutive pair for a stereo channel (`facts.STEREO_PAIR_RULE`)."""
+def _socket_limit(group: str, console_model: str | None, boxes: dict | None) -> int:
+    """How many input sockets `group` has: the panel's, or -- on an AES50
+    port with a stage box of a known size on it -- the box's."""
     try:
         limit = facts.input_socket_limit(group, console_model)
     except facts.UnknownConsoleModel:
         limit = facts.INPUT_SOCKETS.get(group, 0)
+    if boxes and group in boxes:
+        limit = min(limit, boxes[group][1])
+    return limit
+
+
+def _choose_sockets(group: str, count: int, used, console_model: str | None,
+                    boxes: dict | None = None) -> list[int] | None:
+    """The lowest free socket(s) in `group`: one, or an odd-started
+    consecutive pair for a stereo channel (`facts.STEREO_PAIR_RULE`)."""
+    limit = _socket_limit(group, console_model, boxes)
     step = 2 if count == 2 else 1
     for start in range(1, limit - count + 2, step):
         sockets = list(range(start, start + count))
@@ -487,7 +548,7 @@ def _choose_sockets(group: str, count: int, used, console_model: str | None) -> 
 
 
 def _settle_socket(channel: dict, used: dict, console_model: str | None,
-                   infos: list[str], warnings: list[str]) -> None:
+                   infos: list[str], warnings: list[str], boxes: dict | None = None) -> None:
     """Decision 5: a socket the change named is honoured; one it did not
     name is chosen, and the choice announces itself at INFO."""
     where = repr(channel.get("name"))
@@ -497,10 +558,7 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
     if not isinstance(group, str) or not sockets or group == "OFF":
         return
     text = f"{group} {'+'.join(str(s) for s in sockets)}"
-    try:
-        limit = facts.input_socket_limit(group, console_model)
-    except facts.UnknownConsoleModel:
-        limit = facts.INPUT_SOCKETS.get(group, 0)
+    limit = _socket_limit(group, console_model, boxes)
     clash = [used[(group, s)] for s in sockets if (group, s) in used]
     if patch.get("stated"):
         if clash:
@@ -518,9 +576,14 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
             "the model picked, and nothing on the desk uses it. Say the socket in the change "
             "to choose it yourself.")
         return
-    chosen = _choose_sockets(group, len(sockets), used, console_model)
-    why = (f"{clash[0]} already uses it" if clash
-           else f"this console has no {group} {missing[0]}")
+    chosen = _choose_sockets(group, len(sockets), used, console_model, boxes)
+    if clash:
+        why = f"{clash[0]} already uses it"
+    elif boxes and group in boxes and missing[0] > boxes[group][1]:
+        device, inputs, _outputs = boxes[group]
+        why = f"the {device} on AES50-{group} has {inputs} inputs, so there is no {group} {missing[0]}"
+    else:
+        why = f"this console has no {group} {missing[0]}"
     if chosen is None:
         warnings.append(
             f"channel {where}: the change named no socket, and {text} was picked -- but {why}, "
@@ -766,7 +829,8 @@ def _find_object(merged: dict, key: str, ref: str, on_desk: dict):
 
 
 def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: list,
-                  infos: list, warnings: list, occupancy, on_desk: dict) -> list:
+                  infos: list, warnings: list, occupancy, on_desk: dict,
+                  renumbered_ids: frozenset | set = frozenset()) -> list:
     """Slice 2: set the fields a change names on objects already on the
     desk, and ONLY those, returning an `amend.FieldEdit` per leaf that moved.
 
@@ -799,6 +863,13 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
             changes.append(Change(
                 ChangeKind.REFUSED, word, repr(ref),
                 f"the change edits it ({asked}), and no {word} of that name is on the desk"))
+            continue
+        if key == "channels" and id(found) in renumbered_ids:
+            changes.append(Change(
+                ChangeKind.REFUSED, word, repr(found.get("name") or ref),
+                f"the change edits it ({asked}), and the same change inserts a channel above it, "
+                "which moves its strip -- a strip is moved or edited in one change, not both; "
+                "say the edit as a second change"))
             continue
         if key == "channels":
             original = found
@@ -931,9 +1002,167 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
     return edits
 
 
+#: Words by which a change asks for room to be made: the strips after the
+#: new one move down. Without one of them, "add HiHat after Snare" adds the
+#: channel on the next free strip and moves nothing.
+_INSERT_WORDS = re.compile(
+    r"\binsert\w*|\brenumber\w*|\bmake\s+(?:room|space)\b"
+    r"|\b(?:move|shift|push|bump)\s+(?:the\s+)?(?:rest|remaining|others|everything|"
+    r"channels|strips)\b[^.;]{0,30}\b(?:down|up)\b", re.IGNORECASE)
+
+_AFTER = re.compile(r"\b(after|behind|below|following|before)\s+(?:the\s+)?([^,.;]+)",
+                    re.IGNORECASE)
+_AT_STRIP = re.compile(r"\b(?:as|at|into|on|in)\s+(?:channel|ch|strip)\s*(\d+)\b", re.IGNORECASE)
+
+
+def _spoken_position(text: str, channels: list[dict]) -> tuple[int, dict | None] | None:
+    """The strip a change's words put a new channel on, as `(number, the
+    channel it is beside or None)`: "after Snare" is the strip below
+    Snare's, "before Kick" Kick's own, "as channel 3" that number. The
+    longest run of words after the preposition that names a channel on the
+    desk is the one meant ("after Snare and renumber the rest" is Snare)."""
+    if (at := _AT_STRIP.search(text or "")):
+        return int(at.group(1)), None
+    for match in _AFTER.finditer(text or ""):
+        words = match.group(2).split()
+        for count in range(min(len(words), 4), 0, -1):
+            beside = _find_channel(channels, " ".join(words[:count]).strip(" '\""))
+            if beside is not None and isinstance(beside.get("channel"), int):
+                before = match.group(1).lower() == "before"
+                return beside["channel"] + (0 if before else 1), beside
+    return None
+
+
+def _spoken_wording(name: str, number: int, channels: list[dict]) -> str:
+    """The words that would make this change an insert, with the channel it
+    sits beside named: what the INFO gives the engineer to say next time."""
+    above = next((c for c in channels if c.get("channel") == number - 1), None)
+    where = f"after {above['name']}" if above is not None and above.get("name") \
+        else f"as channel {number}"
+    return f"insert {name} {where} and renumber the channels after it"
+
+
+def _gain_named(text: str | None, channel: dict, texts=()) -> bool:
+    """Whether the change names a gain for this channel: a clause of it
+    mentions the channel (or its source) and the word gain; so does a line of
+    `texts`, the conventions and instructions the change is compiled with;
+    or the conventions' Category table set it for the channel's category."""
+    return inferred.gain_stated_for(channel, (text, *texts))
+
+
+def _plan_insert(merged: dict, kept: list[dict], text: str | None, dropped: bool,
+                 changes: list, infos: list, result: MergeResult) -> set[int]:
+    """An explicit insert: the channels after the new one move down.
+
+    What the change says decides it (the maintainer's rule): *insert* (or
+    renumber, or "move the rest down") renumbers; "add X after Snare" with no
+    such word does not -- the channel goes on the next free strip and the
+    INFO says so, with the words that would renumber. The usual reason for
+    either is that something was missed on the input list, and the desk has
+    to be lined up with the real one on site.
+
+    The channels from the insertion point up, to the first free strip, each
+    move down by the number inserted; the strips after that gap are left
+    where they are. The plan's channels carry their own sends, DCA and
+    mute-group membership, so those go with them, and the back half
+    (`amend.plan_amendment`) rewrites each moved strip whole. Returns the
+    ids of the channel entries that moved, which a `modify` may not also
+    edit in the same change."""
+    base = [c for c in merged["channels"] if isinstance(c, dict)
+            and str(c.get("bank", "ch")) == "ch" and isinstance(c.get("channel"), int)]
+    by_number = {c["channel"]: c for c in base}
+    new = [c for c in kept if str(c.get("bank", "ch")) == "ch" and isinstance(c.get("channel"), int)
+           and amend_engine._source_key(c) not in result.moved]
+    if not new:
+        return set()
+    explicit = bool(_INSERT_WORDS.search(text or ""))
+    spoken = _spoken_position(text or "", base)
+    colliding = sorted((c for c in new if c["channel"] in by_number), key=lambda c: c["channel"])
+    if not colliding and spoken is not None and spoken[0] in by_number:
+        # The model put it elsewhere (the next free strip) though the change
+        # names a position: the words decide, not the proposal.
+        if explicit:
+            colliding = new
+        else:
+            result.not_renumbered.extend(
+                (c.get("name"), spoken[0], _spoken_wording(str(c.get("name")), spoken[0], base))
+                for c in new)
+            return set()
+    if not colliding:
+        return set()
+    if not explicit:
+        first = colliding[0]["channel"]
+        result.not_renumbered.extend(
+            (c.get("name"), c["channel"], _spoken_wording(str(c.get("name")), first, base))
+            for c in colliding)
+        return set()
+
+    point = spoken[0] if spoken is not None and colliding is new else colliding[0]["channel"]
+    inserts = colliding
+    count = len(inserts)
+    if dropped:
+        for c in inserts:
+            changes.append(Change(
+                ChangeKind.REFUSED, "channel", repr(c.get("name")),
+                "the change inserts it and drops a channel as well -- the strips they touch "
+                "overlap, so say the drop and the insert as two changes"))
+        return set()
+    moves: dict[int, int] = {}
+    cursor = point + count
+    for channel in sorted((c for c in base if c["channel"] >= point), key=lambda c: c["channel"]):
+        if channel["channel"] >= cursor:
+            break
+        moves[channel["channel"]] = cursor
+        cursor += 1
+    capacity = facts.CAPACITY["ch"]
+    if max([point + count - 1, *moves.values()]) > capacity:
+        for c in inserts:
+            changes.append(Change(
+                ChangeKind.REFUSED, "channel", repr(c.get("name")),
+                f"inserting it at ch {point} moves the strips after it down, and the last would "
+                f"go past ch {capacity}, which is as far as this console goes"))
+        return set()
+
+    ids: set[int] = set()
+    for old, new_number in moves.items():
+        channel = by_number[old]
+        channel["channel"] = new_number
+        ids.add(id(channel))
+        note = (f"renumbered ch:{old} -> ch:{new_number} by `atoo patch`: the change inserted "
+                f"a channel at ch:{point}")
+        provenance = channel.get("provenance")
+        if provenance is None:
+            provenance = channel["provenance"] = {}
+        if isinstance(provenance, dict):
+            earlier = provenance.get("channel")
+            provenance["channel"] = f"{earlier}; {note}" if earlier else note
+        result.renumbered[f"ch:{old}"] = f"ch:{new_number}"
+    for offset, channel in enumerate(inserts):
+        channel["channel"] = point + offset
+        result.inserted[amend_engine._source_key(channel)] = f"ch:{point + offset}"
+    names = ", ".join(repr(c.get("name")) for c in inserts)
+    if moves:
+        infos.append(
+            f"the change inserts {names} at ch {point}, so the {len(moves)} channel(s) from "
+            f"ch {min(moves)} to ch {max(moves)} move down to ch {min(moves.values())}-"
+            f"ch {max(moves.values())}: each strip is rewritten whole on its new number (its "
+            "patch, name, colour, processing, sends, DCA and mute-group membership go with it), "
+            "and every strip that moves is listed below. A fader or mute the plan does not "
+            "state is not carried: that strip's fader goes to -inf and it is unmuted, so raise "
+            "it again."
+            + (f" The strips after ch {max(moves.values())} are left where they are, because "
+               "a free strip stood in the way of the move."
+               if max(moves.values()) < max(by_number, default=0) else ""))
+    else:
+        infos.append(f"the change inserts {names} at ch {point}, which nothing stands on, so "
+                     "nothing moved")
+    return ids
+
+
 def merge_change(base: dict, change_set: dict, *, occupancy=None,
                  console_model: str | None = None, presets=None,
-                 text: str | None = None) -> MergeResult:
+                 text: str | None = None, aes50_devices: dict | None = None,
+                 gain_texts=()) -> MergeResult:
     """Merge a change set onto the base. Pure: `base` is not modified.
 
     The rules, in the order they are applied:
@@ -1129,11 +1358,21 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                     f"it names {', '.join(missing)}, which is neither on the desk nor added "
                     "by this change"))
 
-    # 5. Sockets.
+    # 4b. An explicit insert -- the channels after a new one move down.
+    renumbered_ids = _plan_insert(merged, kept, text, bool(dropped_keys), changes, infos, result)
+
+    # 5. Sockets. A socket past the end of a stage box is not one it has: the
+    #    desk lists every AES50 port at 48 whatever is on it, so the box's own
+    #    size (`aes50_devices`, what the desk named on each port) bounds the choice.
+    boxes = apply_module.box_limits(aes50_devices)
     used = _occupied_sockets(
         merged, occupancy, leaving=frozenset(dropped_keys[key] for key in result.moved))
     for channel in kept:
-        _settle_socket(channel, used, model, infos, warnings)
+        _settle_socket(channel, used, model, infos, warnings, boxes)
+        said = inferred.settle_line_gain(
+            channel, stated=_gain_named(text, channel, gain_texts))
+        if said:
+            infos.append(said)
         patch = channel.get("patch") or {}
         for socket in patch.get("sockets") or []:
             if isinstance(patch.get("group"), str) and isinstance(socket, int):
@@ -1165,7 +1404,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     #    and each edit's new value is read again after them (below), so the
     #    review's old -> new is what is written.
     pending = _merge_modify(merged, change_set, text, changes, infos, warnings, occupancy,
-                            on_desk)
+                            on_desk, renumbered_ids)
 
     # 6. Decisions, and the remaining index defaults (a new bus routed to
     #    "main" with no number) -- every index is already set, so this
@@ -1191,7 +1430,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
 
 
 def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
-               console_model: str | None = None, presets=None, text: str | None = None):
+               console_model: str | None = None, presets=None, text: str | None = None,
+               aes50_devices: dict | None = None, gain_texts=()):
     """The whole review of one change: `(amendment, merge)`.
 
     `amend.plan_amendment` over `(base, merged)` -- the back half -- with
@@ -1206,15 +1446,34 @@ def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
     somewhere other than where the build numbered it, and a change that
     did not touch that channel must not forget it."""
     merge = merge_change(base, change_set, occupancy=occupancy, console_model=console_model,
-                         presets=presets, text=text)
+                         presets=presets, text=text, aes50_devices=aes50_devices,
+                         gain_texts=gain_texts)
     amendment = amend_engine.plan_amendment(
         base, merge.plan, occupancy, allow_strips=allow_strips, console_model=console_model,
-        by="the change", edits=merge.edits, moved=merge.moved)
+        by="the change", edits=merge.edits, moved=merge.moved,
+        renumbered=merge.renumbered, inserted=merge.inserted)
     amendment.changes = merge.changes + amendment.changes
     amendment.infos = merge.infos + amendment.infos
     amendment.warnings = merge.warnings + amendment.warnings
 
+    # "Add X after Snare" with no word asking for room: said where it went,
+    # and the exact words that would have moved the strips after it.
+    for name, asked, wording in merge.not_renumbered:
+        landed = next((c.slot for c in amendment.changes
+                       if c.kind is ChangeKind.ADDED and c.where == repr(name)), None)
+        amendment.infos.append(
+            f"channel {name!r}: the change puts it at ch {asked}, which is in use, and does not "
+            "ask for the strips after it to be renumbered, so "
+            + (f"it went on {landed}, the next free strip" if landed else
+               "it goes on the next free strip")
+            + ", and nothing already on the desk moved. To put it there and move the others "
+            f'down, say: "{wording}".')
+
     prior = amend_engine.amend_placements(base)
+    if prior and merge.renumbered:
+        # A strip an insert moved is the same channel on a new number: the
+        # record of where an earlier amend placed it follows it.
+        prior = {merge.renumbered.get(k, k): v for k, v in prior.items()}
     if prior:
         slots = {f"{c.get('bank', 'ch')}:{c.get('channel')}"
                  for c in amendment.effective_plan.get("channels") or [] if isinstance(c, dict)}

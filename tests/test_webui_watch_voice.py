@@ -5,9 +5,9 @@ keeps its empty sentence true (the UI style guide).
    claim is its catalogue title, which is Title Case ("Main Not Patched"); it
    is sentence-cased in Watch only ("Main not patched"), so it reads like an
    engineer's own condition ("has its fader at -144 dB"). Acronyms stay.
-2. **Hide.** Each alert row has a quiet **Hide** button, not a bare check box,
-   with the finding named in its accessible label. The Suppressed fold lists
-   it with **Show**.
+2. **Hide.** Each alert row has a **Hide** check box at the far left (the
+   column is headed "Hide"), with the finding named in its accessible label.
+   The Suppressed fold lists it ticked; clearing it shows the row again.
 3. **The empty sentence.** With no show, "Choose a console in the bar" is
    true; once a console (or the Demo) is chosen it is not, and the header tag
    no longer reads "Not connected" beside a chosen Demo.
@@ -62,16 +62,17 @@ def test_a_built_in_claim_is_sentence_cased_in_watch_only(assets):
     assert any(r.title == "Main Not Patched" for r in audit.DEFAULT_RULES)
 
 
-def test_a_row_is_hidden_by_a_labelled_quiet_button_not_a_check_box(assets):
+def test_a_row_is_hidden_by_a_labelled_check_box_at_the_far_left(assets):
     js, css, html = assets["js"], assets["css"], assets["html"]
     assert "watch-row-check" not in js + css + html
-    hide = _fn(js, "function makeHideButton(f, hidden)")
-    assert 'btn.className = "btn btn-quiet watch-row-hide"' in hide
-    assert 'btn.textContent = hidden ? "Show" : "Hide";' in hide
-    assert 'btn.setAttribute("aria-label"' in hide
-    assert 'appendChild(makeHideButton(f, false))' in js
-    assert "untick" not in js.lower()
-    assert re.search(r"\.watch-row-hide \{[^}]*margin-left", css)
+    hide = _fn(js, "function makeHideCheck(f, hidden)")
+    assert 'box.type = "checkbox"' in hide
+    assert 'box.className = "watch-row-hide"' in hide
+    assert 'box.setAttribute("aria-label", "Hide: " + what)' in hide
+    assert "box.checked = hidden" in hide
+    assert 'tr.querySelector(".col-hide").appendChild(makeHideCheck(f, false))' in js
+    assert '<th class="col-hide">Hide</th>' in html
+    assert re.search(r"\.watch-row-hide-hit \{[^}]*width: 32px", css)
 
 
 def test_the_empty_sentence_is_redrawn_when_start_unlocks(assets):
@@ -129,41 +130,38 @@ def test_the_table_and_the_verdict_speak_one_voice(served_show, width, theme):
 
 
 @pytest.mark.parametrize("width, theme", [(1280, "dark"), (1280, "light"), (390, "dark")])
-def test_hide_is_a_labelled_button_that_moves_the_row_to_suppressed_and_back(served_show, width, theme):
+def test_hide_is_a_labelled_check_box_that_moves_the_row_to_suppressed_and_back(served_show, width, theme):
     with _Page(width, theme) as page:
         _watching(page, [MAIN, CLIP])
         page.goto(served_show + "#watch")
         page.wait_for_selector("#alert-body tr")
-        buttons = page.locator("#alert-body .watch-row-hide")
-        assert buttons.count() == 2
-        assert page.locator("#alert-body input").count() == 0
-        first = buttons.first
-        assert first.inner_text() == "Hide"
+        boxes = page.locator("#alert-body .watch-row-hide")
+        assert boxes.count() == 2
+        first = boxes.first
+        assert first.get_attribute("type") == "checkbox" and not first.is_checked()
         assert first.get_attribute("aria-label") == 'Hide: MAIN 1 "PA": Main not patched'
-        # Quiet: brass words, no box (the UI style guide).
-        assert first.evaluate("e => getComputedStyle(e).backgroundColor") == "rgba(0, 0, 0, 0)"
-        assert first.evaluate("e => getComputedStyle(e).color") == page.evaluate(
-            "() => { const p = document.createElement('span'); p.style.color = 'var(--accent)';"
-            " document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c; }")
-        # The button sits inside its row, and the page does not scroll sideways.
+        # The box is the first thing in its row, under a "Hide" heading, and
+        # the row does not scroll sideways.
+        assert page.locator("#alert-table thead th").first.inner_text().lower() == "hide"
         inside = first.evaluate(
             "e => { const b = e.getBoundingClientRect(), r = e.closest('tr').getBoundingClientRect();"
-            " return b.left >= r.left && b.right <= r.right && b.top >= r.top && b.bottom <= r.bottom; }")
+            " return b.left >= r.left && b.right <= r.right && b.top >= r.top && b.bottom <= r.bottom"
+            " && b.left - r.left < 40; }")
         assert inside
         assert page.evaluate("document.documentElement.scrollWidth") <= width
         first.click()
         assert page.locator("#alert-body tr").count() == 1
-        # Focus moved to the next row's button, not to the page.
+        # Focus moved to the next row's box, not to the page.
         assert page.evaluate("document.activeElement.classList.contains('watch-row-hide')")
         page.locator("#watch-suppressed > summary").click()
         item = page.locator("#watch-suppressed-list li")
         assert item.count() == 1
         assert "MAIN 1 \"PA\": Main not patched" in item.inner_text().replace("\n", " ")
-        show = item.locator(".watch-row-hide")
-        assert show.inner_text() == "Show"
-        assert show.get_attribute("aria-label") == 'Show again: MAIN 1 "PA": Main not patched'
+        again = item.locator(".watch-row-hide")
+        assert again.is_checked()
+        assert again.get_attribute("aria-label") == 'Hide: MAIN 1 "PA": Main not patched'
         assert page.evaluate("document.documentElement.scrollWidth") <= width
-        show.click()
+        again.click()
         assert page.locator("#alert-body tr").count() == 2
 
 

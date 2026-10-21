@@ -123,6 +123,8 @@ def test_a_patch_drawing_keeps_unread_apart_from_free_and_marks_the_change():
     class Amendment:
         scope = Scope({"/ch/2": "new channel 'Horn'", "/io/in/A/21": "its socket"})
         edit_scope = Scope({"/bus/1/send/3/lvl": "a send level"})
+        shift_scope = Scope({})
+        strips = ["ch:2"]
         released: list = []
         horn = dict(_plan()["channels"][0], channel=2, name="Horn", color="Amber",
                     patch={"group": "A", "sockets": [21], "stated": True})
@@ -271,8 +273,13 @@ def test_the_page_draws_four_steps_with_one_heading_style(assets):
     for flag in ("--allow-strip", "--skip-verify", "(<code>--clean-output-sockets</code>"):
         assert flag not in visible, flag
     assert "Allow the change to reuse one occupied strip" in visible
-    assert "Disconnect output sockets the plan doesn't use" in visible
-    assert 'placeholder="LCL=8,A=48"' in visible
+    # Initialize is a switch with the owner's wording; the typed socket box is gone.
+    assert 'id="apply-init"' in visible and 'role="switch"' in visible
+    assert "Initialize the console first" in visible
+    assert "Sets the desk to its initialized state before writing the plan." in visible
+    assert ("Not changed: the desk's network and clock, expansion-card setup, meter and RTA "
+            "display, monitor and solo listening.") in visible
+    assert "Disconnect output sockets" not in visible and "LCL=8,A=48" not in visible
 
 
 def _strip_comments(text: str) -> str:
@@ -311,7 +318,7 @@ def test_the_demo_banner_is_a_popup_and_locked_controls_explain_themselves(asset
     assert 'id="demo-notice"' not in html
     assert 'id="demo-popup"' in html and "This is the Demo show" in html
     assert 'data-popup="demo-popup"' in html and "Demo &middot; what's this?" in html
-    assert 'id="popup-preflight"' in html and 'id="popup-clean-sockets"' in html
+    assert 'id="popup-preflight"' in html and 'popup-clean-sockets' not in html
     assert "that is off here" not in shell + js
     assert 'const DEMO_POPUP_KEY = "atoo.demoPopupSeen";' in shell
     # After the shared "Locked:", so lower-case.

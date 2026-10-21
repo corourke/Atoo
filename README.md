@@ -50,7 +50,7 @@ every write logged and undoable.
 | the desk's channel presets and libraries | set up the show around the strips: patch, busses, sends, DCAs |
 | typing a spreadsheet input list into the desk | confirm that the desk now matches the spreadsheet |
 
-[Why Atoo?](docs/user/why.md) makes the comparison in full, including
+[Why Atoo?](https://github.com/corourke/Atoo/blob/main/docs/user/why.md) makes the comparison in full, including
 where the existing ways are better.
 
 ## Try it in two minutes, with no desk
@@ -76,11 +76,11 @@ Then:
 atoo ui
 ```
 
-[Installing Atoo](docs/user/install.md) has each step, with how to tell
+[Installing Atoo](https://github.com/corourke/Atoo/blob/main/docs/user/install.md) has each step, with how to tell
 it is already done, and Homebrew with pipx if you use them. To run it
 from a clone instead, see [Installing from a
-checkout](docs/user/install-from-checkout.md). A real build also needs
-your own AI API key ([Setting up an AI provider](docs/user/ai-provider.md)).
+checkout](https://github.com/corourke/Atoo/blob/main/docs/user/install-from-checkout.md). A real build also needs
+your own AI API key ([Setting up an AI provider](https://github.com/corourke/Atoo/blob/main/docs/user/ai-provider.md)).
 
 `a2` is the same command as `atoo`, shorter to type (`a2 ui`).
 
@@ -105,7 +105,7 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.
 
 Three horns land on free strips with their presets, on a new Horns bus
 with a compressor, and nothing else on the desk is touched
-([The 6pm change](docs/user/demo.md#the-6pm-change)). The review counts
+([The 6pm change](https://github.com/corourke/Atoo/blob/main/docs/user/demo.md#the-6pm-change)). The review counts
 `4 added`: the three channels and the bus. Its notes that bus 8 was judged
 free from the plan alone, and its `reconcile.not-checked` warning, say what
 this offline run could not check, because no desk and no input list were
@@ -118,16 +118,16 @@ Rack**. No other console is supported.
 
 ## Read next
 
-- [The user guide](docs/user/README.md): installing, writing an input list
+- [The user guide](https://github.com/corourke/Atoo/blob/main/docs/user/README.md): installing, writing an input list
   and conventions, building, applying and watching, in the browser or
   from the command line.
-- [Questions a careful engineer asks](docs/user/faq.md): is it AI slop,
+- [Questions a careful engineer asks](https://github.com/corourke/Atoo/blob/main/docs/user/faq.md): is it AI slop,
   will it touch my desk mid-show, what it costs, what if it goes wrong.
-- [Where Atoo needs work](docs/user/limitations.md): what is not
+- [Where Atoo needs work](https://github.com/corourke/Atoo/blob/main/docs/user/limitations.md): what is not
   built, or not yet proven on a real desk.
 
 ## Licence
 
-[AGPL-3.0](LICENSE) (`AGPL-3.0-or-later`). For use in a closed or
+[AGPL-3.0](https://github.com/corourke/Atoo/blob/main/LICENSE) (`AGPL-3.0-or-later`). For use in a closed or
 commercial product, a commercial licence is available by agreement:
 contact [Act4Audio](https://www.act4audio.com/).

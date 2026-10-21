@@ -9,9 +9,16 @@ What is pinned, in the issue's words: a single clip raises the ERROR; a
 second clip at 40 s keeps it up until 100 s; it clears 60 s after the last
 clip; two strips are timed separately; a stereo strip gives one finding;
 a lost connection gives an INFO, not a crash. Beside those: the bytes a
-Watch sends the desk (nothing but a port declaration, two meter requests
-and their renewals), the level words that count as a clip, and that the
-Watch page keeps showing the finding's sentence as it changes.
+Watch sends the desk (nothing but a port declaration, one meter request
+and its renewals), the level words that count as a clip, that a clip is a
+run which ends only after the strip stays quiet, that a stream which
+stops is said to have stopped, and that the Watch page keeps showing the
+finding's sentence as it changes.
+
+The "console" is a fake that behaves as the WING Compact was measured to:
+it keeps only the LAST meter request on a connection, answers with just
+what that request asked for, and stops the stream when sent a renewal for
+a report id it is not serving.
 """
 
 from __future__ import annotations
@@ -26,12 +33,14 @@ import pytest
 from atoo import metering
 from atoo.audit import ConsoleState, DEFAULT_RULES, run_audit
 from atoo.diagnostics import Severity
-from atoo.metering import (CLIP_THRESHOLD, ClipMonitor, ClipTracker, StripClip, WORDS_PER_STRIP,
-                           clipped_strips, parse_packet, report_strips, requests)
+from atoo.metering import (CLIP_THRESHOLD, REPORT_ID, REPORT_TYPES, RELEASE_THRESHOLD, ClipMonitor,
+                           ClipTracker, StripClip, WORDS_PER_STRIP, clipped_strips, parse_packet,
+                           report_strips, requests)
 from atoo.watch import CLIP_STATUS_RULE_ID, WatchNote, finding_key, present_findings, watch
 
-CH = report_strips(("channel", "aux"))
-BUSES = report_strips(("bus", "main", "matrix"))
+ALL = report_strips(REPORT_TYPES)
+CH = ALL[:48]                       # channels 1-40, aux 1-8
+BUSES = ALL[48:]                    # bus 1-16, main 1-4, matrix 1-8
 
 QUIET = -128 * 256        # a strip with nothing on it: -128 dB
 HOT = 0                   # 0 dBFS
@@ -57,34 +66,31 @@ def test_the_declaration_is_the_specs_own_worked_example():
     assert declaration.hex() == "dfd3d33737"
 
 
-def test_the_only_things_sent_are_a_port_a_pair_of_meter_requests_and_their_renewals():
-    declaration, asks, renewals = requests(40000)
-    # The channel is selected once, in the declaration; after that each
+def test_the_only_things_sent_are_a_port_one_meter_request_and_its_renewals():
+    declaration, ask, renewal = requests(40000)
+    # The channel is selected once, in the declaration; after that the
     # request is the report id (0xd4) and one collection (0xdc ... 0xde).
     assert declaration == bytes([0xDF, 0xD3, 0xD3]) + struct.pack(">H", 40000)
-    assert asks[0] == bytes([0xD4, 0, 0, 0, 1]) + metering.meter_collection(("channel", "aux"))
-    assert asks[1] == (bytes([0xD4, 0, 0, 0, 2])
-                       + metering.meter_collection(("bus", "main", "matrix")))
-    # Renewals are the report id alone.
-    assert [r.hex() for r in renewals] == ["d400000001", "d400000002"]
+    assert ask == bytes([0xD4, 0, 0, 0, REPORT_ID]) + metering.meter_collection(REPORT_TYPES)
+    # A renewal is the whole request again, the form measured to keep a
+    # stream going.
+    assert renewal == ask
     # Nothing in any of it is a token that sets a parameter: only the
-    # port, report-id and collection tokens and type/index bytes.
-    for ask in asks:
-        assert ask[5] == 0xDC and ask[-1] == 0xDE
-        assert set(ask[6:-1]) <= set(range(0x00, 0x28)) | {0xA0, 0xA1, 0xA2, 0xA3, 0xA4}
+    # report-id and collection tokens and type/index bytes.
+    assert ask[5] == 0xDC and ask[-1] == 0xDE
+    assert set(ask[6:-1]) <= set(range(0x00, 0x28)) | {0xA0, 0xA1, 0xA2, 0xA3, 0xA4}
 
 
-def test_meter_collections_name_every_strip_of_their_types():
-    one = metering.meter_collection(("channel", "aux"))
+def test_one_collection_names_every_strip_of_every_type_in_the_order_they_are_split():
+    one = metering.meter_collection(REPORT_TYPES)
     assert one[0] == 0xDC and one[-1] == 0xDE
-    assert one[1] == 0xA0 and list(one[2:42]) == list(range(40))
-    assert one[42] == 0xA1 and list(one[43:51]) == list(range(8))
-    two = metering.meter_collection(("bus", "main", "matrix"))
-    assert two[1] == 0xA2 and list(two[2:18]) == list(range(16))
-    assert two[18] == 0xA3 and list(two[19:23]) == list(range(4))
-    assert two[23] == 0xA4 and list(two[24:32]) == list(range(8))
-    # One collection, at most 128 indices (Table 4).
-    assert 40 + 8 <= 128 and 16 + 4 + 8 <= 128
+    types = [b for b in one[1:-1] if b >= 0xA0]
+    assert types == [0xA0, 0xA1, 0xA2, 0xA3, 0xA4]
+    assert len(one) == 2 + 5 + 76
+    # Table 4's limit is 128 indices to a collection.
+    assert 76 <= 128
+    assert len(ALL) == 76 and ALL[0] == "/ch/1" and ALL[40] == "/aux/1" and ALL[48] == "/bus/1"
+    assert ALL[64] == "/main/1" and ALL[68] == "/mtx/1" and ALL[-1] == "/mtx/8"
 
 
 def test_the_strips_are_named_as_the_rest_of_watch_names_them():
@@ -172,14 +178,56 @@ def test_a_clip_after_the_minute_is_a_new_episode_not_a_second_count():
     assert seconds(t, 71.0)["/ch/3"].count == 1
 
 
-def test_a_run_of_clipped_packets_is_one_clip_and_a_gap_makes_the_next_a_second():
+def test_a_run_of_clipped_packets_is_one_clip_and_a_long_enough_quiet_makes_the_next_a_second():
     t = ClipTracker()
     for i in range(5):
         t.observe(i * 0.05, {"/ch/3"})            # one clip, five packets
     assert seconds(t, 1.0)["/ch/3"].count == 1
     t.observe(0.25, set())
-    t.observe(0.30, {"/ch/3"})                    # a second
+    t.observe(0.50, set())                        # more than 200 ms quiet
+    t.observe(0.55, {"/ch/3"})                    # a second
     assert seconds(t, 1.0)["/ch/3"].count == 2
+
+
+def test_a_level_hovering_at_the_threshold_is_one_clip_not_hundreds():
+    """Packets at 20/s whose strip flickers between clipped and just under
+    it (above the release level) are one run."""
+    t = ClipTracker()
+    for i in range(200):                          # 10 s
+        now = i * 0.05
+        t.observe(now, {"/ch/3"} if i % 3 else set(), {"/ch/3"})
+    clip = seconds(t, 10.0)["/ch/3"]
+    assert clip.count == 1
+    assert clip.longest == pytest.approx(9.9, abs=0.2)
+
+
+def test_dips_shorter_than_the_release_time_do_not_end_a_clip_and_longer_ones_do():
+    t = ClipTracker()
+    t.observe(0.00, {"/ch/3"})
+    t.observe(0.05, set())                        # quiet from here ...
+    t.observe(0.15, set())
+    t.observe(0.20, {"/ch/3"})                    # ... 150 ms: the same clip
+    assert seconds(t, 0.3)["/ch/3"].count == 1
+    t.observe(0.25, set())
+    t.observe(0.50, set())
+    t.observe(0.55, {"/ch/3"})                    # 350 ms quiet: a second clip
+    assert seconds(t, 0.6)["/ch/3"].count == 2
+
+
+def test_the_release_level_is_minus_three_dBFS_and_a_level_between_it_and_a_clip_holds_a_run():
+    assert RELEASE_THRESHOLD == -3 * 256
+    strips = ["/ch/1"]
+    just_under = [RELEASE_THRESHOLD + 1] + [QUIET] * 7
+    quiet = [RELEASE_THRESHOLD - 1] + [QUIET] * 7
+    assert clipped_strips(strips, just_under, RELEASE_THRESHOLD) == {"/ch/1"}
+    assert clipped_strips(strips, just_under) == set()
+    assert clipped_strips(strips, quiet, RELEASE_THRESHOLD) == set()
+    t = ClipTracker()
+    t.observe(0.0, {"/ch/1"}, {"/ch/1"})
+    for i in range(1, 20):                        # a full second at -2 dBFS
+        t.observe(i * 0.05, set(), {"/ch/1"})
+    t.observe(1.0, {"/ch/1"}, {"/ch/1"})
+    assert seconds(t, 1.0)["/ch/1"].count == 1
 
 
 def test_clipped_packets_far_apart_are_two_clips_even_with_nothing_heard_between():
@@ -211,17 +259,6 @@ def test_a_packet_rate_too_slow_to_time_a_clip_says_that_it_clipped_and_nothing_
     assert seconds(t, 3.0)["/ch/3"].longest is None
 
 
-def test_the_two_reports_keep_their_own_runs():
-    """Report 2's packet, between two of report 1's, must not end report 1's
-    clip."""
-    t = ClipTracker()
-    t.observe(0.00, {"/ch/3"}, 1)
-    t.observe(0.01, set(), 2)
-    t.observe(0.05, {"/ch/3"}, 1)
-    t.observe(0.06, set(), 2)
-    assert seconds(t, 1.0)["/ch/3"].count == 1
-
-
 # ---- the rule ---------------------------------------------------------------
 
 
@@ -247,7 +284,8 @@ def test_a_clip_is_an_error_named_the_way_the_desk_labels_the_strip():
 def test_the_sentence_says_how_often_and_how_long_when_it_can():
     (finding,) = l003(state_with(StripClip("/bus/5", 3, 4.0, 56.0, longest=1.2),
                                  names={"/bus/5": "Drums"}))
-    assert finding.detail == ('BUS 5 "Drums" clipped 3 times, the longest for about 1.2 s; '
+    assert finding.detail == ('BUS 5 "Drums" clipped 3 times (a clip ends once the level stays '
+                              'below -3 dBFS for 200 ms), the longest for about 1.2 s; '
                               "the last was 4.0 s ago. This clears in 56 s unless it clips again.")
     (one,) = l003(state_with(StripClip("/main/1", 1, 30.0, 30.0, longest=0.4)))
     assert one.detail.startswith("MAIN 1 clipped for about 0.4 s; the last was 30 s ago.")
@@ -311,7 +349,7 @@ def test_the_error_is_new_once_stays_through_a_restart_and_clears_sixty_seconds_
         [], [], [], [], [], ["L003"]]
     # The restart is seen in the sentence.
     assert "clipped; the last was 28 s ago" in l003s(events[2])[0].detail
-    assert "clipped 2 times; the last was 5.0 s ago" in l003s(events[3])[0].detail
+    assert "clipped 2 times (a clip ends once the level stays below -3 dBFS for 200 ms); the last was 5.0 s ago" in l003s(events[3])[0].detail
     assert "This clears in 1.0 s" in l003s(events[4])[0].detail
 
 
@@ -320,7 +358,7 @@ def test_a_stereo_strip_is_one_finding_through_the_whole_path():
     finding on one strip."""
     strips = ["/bus/5", "/bus/6"]
     t = ClipTracker()
-    t.observe(0.0, clipped_strips(strips, [HOT, HOT, HOT, HOT] + [QUIET] * 4 + [QUIET] * 8), 2)
+    t.observe(0.0, clipped_strips(strips, [HOT, HOT, HOT, HOT] + [QUIET] * 4 + [QUIET] * 8))
     state = ConsoleState({}, clips=t.snapshot(0.5))
     assert [f.addresses for f in l003(state)] == [("/bus/5/clip",)]
 
@@ -354,16 +392,40 @@ def test_the_note_is_keyed_on_off_so_the_command_line_says_when_it_changes():
 
 
 class FakeConsole:
-    """The desk's native port: accepts one connection, keeps what it is
-    sent, and can send UDP meter packets to whoever declared a port."""
+    """The desk's native port, behaving as the WING Compact was measured to.
 
-    def __init__(self) -> None:
+    It accepts one connection and reads what it is sent as the desk does:
+    a UDP port declaration (0xd3), a report id (0xd4) alone, or a report id
+    followed by a collection (0xdc ... 0xde).
+
+    - **It keeps only the last collection request** on the connection: a
+      second request replaces the first, so a monitor that asks for two
+      collections is only ever served the second.
+    - **It serves exactly what that collection asked for**, in order, eight
+      words a strip -- `meters()` builds the packet from it.
+    - **A report id alone for an id it is not serving stops the stream**
+      (`stopped`), and a meter request not renewed within `timeout` desk
+      seconds (the `clock`) does too. A renewal that is the full request
+      keeps it going.
+    """
+
+    def __init__(self, clock=None, timeout: float = 5.0) -> None:
         self.server = socket.socket()
         self.server.bind(("127.0.0.1", 0))
         self.server.listen(1)
         self.port = self.server.getsockname()[1]
         self.received = bytearray()
         self.conn: socket.socket | None = None
+        self.clock = clock or time.monotonic
+        self.timeout = timeout
+        self.lock = threading.Lock()
+        self.udp_port: int | None = None
+        self.declarations = 0
+        self.requests_seen = 0
+        self.serving: tuple[int, list[tuple[int, int]]] | None = None    # (report id, [(type, count)])
+        self.stopped = False
+        self.renewed_at = 0.0
+        self._pos = 0
         self._stop = threading.Event()
         self.thread = threading.Thread(target=self._serve, daemon=True)
         self.thread.start()
@@ -388,20 +450,95 @@ class FakeConsole:
                 return
             if not data:
                 return
-            self.received.extend(data)
+            with self.lock:
+                self.received.extend(data)
+                self._parse()
+
+    def _parse(self) -> None:
+        buf = bytes(self.received)
+        i = self._pos
+        while i < len(buf):
+            tok = buf[i]
+            if tok == 0xDF:                       # channel select
+                i += 2
+            elif tok == 0xD3:
+                if i + 3 > len(buf):
+                    break
+                self.udp_port = struct.unpack(">H", buf[i + 1:i + 3])[0]
+                self.declarations += 1
+                i += 3
+            elif tok == 0xD4:
+                if i + 5 > len(buf):
+                    break
+                report_id = struct.unpack(">I", buf[i + 1:i + 5])[0]
+                j = i + 5
+                if j < len(buf) and buf[j] == 0xDC:          # a collection follows
+                    end = buf.find(bytes([0xDE]), j)
+                    if end < 0:
+                        break
+                    self._collection(report_id, buf[j + 1:end])
+                    i = end + 1
+                else:
+                    if j >= len(buf):
+                        # An id alone, or the start of a request not yet in?
+                        # The desk reads the next byte, so wait for it.
+                        break
+                    self._renewal(report_id)
+                    i = j
+            else:
+                i += 1
+        self._pos = i
+
+    def _collection(self, report_id: int, body: bytes) -> None:
+        groups: list[tuple[int, int]] = []
+        for byte in body:
+            if byte >= 0xA0:
+                groups.append((byte, 0))
+            else:
+                kind, count = groups[-1]
+                groups[-1] = (kind, count + 1)
+        self.requests_seen += 1
+        self.serving = (report_id, groups)        # the last request is the only one kept
+        self.stopped = False
+        self.renewed_at = self.clock()
+
+    def _renewal(self, report_id: int) -> None:
+        if self.serving is None or self.serving[0] != report_id:
+            self.stopped = True
+        else:
+            self.renewed_at = self.clock()
 
     def declared_udp_port(self) -> int:
         deadline = time.time() + 3
         while time.time() < deadline:
-            raw = bytes(self.received)
-            if raw.startswith(bytes([0xDF, 0xD3, 0xD3])) and len(raw) >= 5:
-                return struct.unpack(">H", raw[3:5])[0]
+            with self.lock:
+                if self.udp_port is not None and self.serving is not None:
+                    return self.udp_port
             time.sleep(0.02)
-        raise AssertionError("the monitor never declared a UDP port")
+        raise AssertionError("the monitor never declared a UDP port and asked for meters")
 
-    def send_meters(self, udp_port: int, data: bytes) -> None:
+    def meters(self, levels: dict[str, tuple[int, ...]] | None = None) -> bytes | None:
+        """The packet the desk would send now: None when it is not serving."""
+        with self.lock:
+            if self.serving is None or self.stopped or self.clock() - self.renewed_at > self.timeout:
+                return None
+            report_id, groups = self.serving
+        bases = {0xA0: "ch", 0xA1: "aux", 0xA2: "bus", 0xA3: "main", 0xA4: "mtx"}
+        strips = [f"/{bases[kind]}/{n}" for kind, count in groups for n in range(1, count + 1)]
+        return packet(report_id, strips, levels)
+
+    def send_meters(self, levels: dict[str, tuple[int, ...]] | None = None) -> bool:
+        """One UDP packet to the declared port, if the desk is serving."""
+        data = self.meters(levels)
+        if data is None or self.udp_port is None:
+            return False
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.sendto(data, ("127.0.0.1", udp_port))
+            s.sendto(data, ("127.0.0.1", self.udp_port))
+        return True
+
+    def send_raw(self, data: bytes) -> None:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.sendto(data, ("127.0.0.1", self.udp_port))
 
     def drop(self) -> None:
         if self.conn is not None:
@@ -433,29 +570,70 @@ def wait_for(condition, timeout=3.0):
     return False
 
 
-def monitor_for(console: FakeConsole) -> ClipMonitor:
+def monitor_for(console: FakeConsole, **options) -> ClipMonitor:
     return ClipMonitor(
         "127.0.0.1", port=console.port,
-        connect=lambda: socket.create_connection(("127.0.0.1", console.port), timeout=2))
+        connect=lambda: socket.create_connection(("127.0.0.1", console.port), timeout=2), **options)
 
 
-def test_the_monitor_declares_a_port_asks_for_both_reports_and_hears_a_clip(console):
+def test_the_fake_console_keeps_only_the_last_request_and_stops_on_an_unknown_renewal():
+    """The fake is what lets CI see the failure the real desk showed."""
+    fake = FakeConsole()
+    try:
+        client = socket.create_connection(("127.0.0.1", fake.port))
+        declaration, _, _ = requests(40001)
+        first = bytes([0xD4, 0, 0, 0, 1]) + metering.meter_collection(("channel", "aux"))
+        second = bytes([0xD4, 0, 0, 0, 2]) + metering.meter_collection(("bus", "main", "matrix"))
+        client.sendall(declaration + first + second)
+        fake.declared_udp_port()
+        assert wait_for(lambda: fake.requests_seen == 2)
+        packet_ = fake.meters()
+        assert parse_packet(packet_)[0] == 2 and len(parse_packet(packet_)[1]) == 8 * 28
+        client.sendall(bytes([0xD4, 0, 0, 0, 1]) + b"\xd4")          # renew report 1: not served
+        assert wait_for(lambda: fake.stopped)
+        assert fake.meters() is None
+        client.close()
+    finally:
+        fake.close()
+
+
+def test_the_monitor_declares_a_port_asks_once_and_hears_a_clip_on_a_channel_and_a_bus(console):
     monitor = monitor_for(console)
     monitor.start()
     try:
         udp = console.declared_udp_port()
-        declaration, asks, _ = requests(udp)
-        assert wait_for(lambda: bytes(console.received) == declaration + b"".join(asks)
-                        or bytes(console.received).startswith(declaration + b"".join(asks)))
-        # Quiet packets first, then a clip on channel 3 and on bus 2.
-        console.send_meters(udp, packet(1, CH))
+        declaration, ask, _ = requests(udp)
+        assert wait_for(lambda: bytes(console.received) == declaration + ask)
+        assert console.requests_seen == 1
+        assert console.send_meters()
         assert wait_for(lambda: monitor.status().summary.startswith("on"))
         assert monitor.snapshot() == ()
-        console.send_meters(udp, packet(1, CH, {"/ch/3": (HOT, QUIET, QUIET, QUIET)}))
-        console.send_meters(udp, packet(2, BUSES, {"/bus/2": (QUIET, QUIET, HOT, HOT)}))
-        assert wait_for(lambda: {c.base for c in monitor.snapshot()} == {"/ch/3", "/bus/2"})
+        # Channel 3 and bus 2, in the same packet, as the desk sends them.
+        assert console.send_meters({"/ch/3": (HOT, QUIET, QUIET, QUIET),
+                                    "/bus/2": (QUIET, QUIET, HOT, HOT),
+                                    "/mtx/8": (HOT,)})
+        assert wait_for(lambda: {c.base for c in monitor.snapshot()} == {"/ch/3", "/bus/2", "/mtx/8"})
         status = monitor.status()
         assert status.on and "ERROR stands for 60 s" in status.detail
+    finally:
+        monitor.close()
+
+
+def test_renewals_keep_the_desk_serving_and_a_clip_after_them_is_still_heard(console):
+    clock = [0.0]
+    console.clock = lambda: clock[0]
+    monitor = monitor_for(console, clock=lambda: clock[0])
+    monitor.start()
+    try:
+        console.declared_udp_port()
+        for step in range(1, 5):                  # 8 desk-seconds, renewed every 2
+            clock[0] = step * 2.0
+            seen = console.requests_seen
+            assert wait_for(lambda: console.requests_seen > seen), "no renewal sent"
+            assert not console.stopped
+        assert console.requests_seen == 5 and console.serving[0] == REPORT_ID
+        assert console.send_meters({"/ch/1": (HOT,)})
+        assert wait_for(lambda: {c.base for c in monitor.snapshot()} == {"/ch/1"})
     finally:
         monitor.close()
 
@@ -464,38 +642,87 @@ def test_a_packet_from_a_stranger_or_for_a_report_we_did_not_ask_for_is_ignored(
     monitor = monitor_for(console)
     monitor.start()
     try:
-        udp = console.declared_udp_port()
-        console.send_meters(udp, packet(9, CH, {"/ch/3": (HOT,)}))        # not our report
-        console.send_meters(udp, b"\x00\x01")                              # not a packet
-        console.send_meters(udp, packet(1, CH))
+        console.declared_udp_port()
+        console.send_raw(packet(9, ALL, {"/ch/3": (HOT,)}))               # not our report
+        console.send_raw(b"\x00\x01")                                     # not a packet
+        console.send_meters()
         assert wait_for(lambda: monitor.status().on and monitor.status().summary.startswith("on"))
         assert monitor.snapshot() == ()
     finally:
         monitor.close()
 
 
-def test_report_two_with_packets_of_another_size_is_switched_off_and_report_one_still_works(console):
+def test_a_packet_of_another_size_cannot_be_split_so_none_is_read_and_the_status_says_so(console):
     monitor = monitor_for(console)
     monitor.start()
     try:
-        udp = console.declared_udp_port()
-        short = struct.pack(">I", 2) + struct.pack(">28h", *([HOT] * 28))     # 4 words a strip
-        console.send_meters(udp, short)
-        console.send_meters(udp, packet(1, CH, {"/ch/7": (HOT,)}))
+        console.declared_udp_port()
+        short = struct.pack(">I", REPORT_ID) + struct.pack(">28h", *([HOT] * 28))
+        console.send_raw(short)
+        assert wait_for(lambda: monitor.status().summary == "off: unexpected meter layout")
+        assert monitor.snapshot() == ()
+        detail = monitor.status().detail
+        assert "28 words, not the 608 the layout says" in detail and "none are read" in detail
+        assert "40 channel, 8 aux, 16 bus, 4 main, 8 matrix" in detail
+        console.send_meters({"/ch/7": (HOT,)})                             # a good packet works
         assert wait_for(lambda: {c.base for c in monitor.snapshot()} == {"/ch/7"})
-        status = monitor.status()
-        assert status.on and "busses, mains, matrices not read" in status.summary
-        assert "not the size the layout says" in status.detail
+        assert "not read" in monitor.status().summary
     finally:
         monitor.close()
+
+
+def test_meter_data_that_stops_is_said_to_have_stopped_and_asked_for_again(console):
+    clock = [0.0]
+    console.clock = lambda: clock[0]
+    monitor = monitor_for(console, clock=lambda: clock[0])
+    monitor.start()
+    try:
+        console.declared_udp_port()
+        console.send_meters()
+        assert wait_for(lambda: monitor.status().summary.startswith("on"))
+        clock[0] = 2.0
+        assert monitor.status().on                               # a quiet moment is not a stall
+        clock[0] = 4.5
+        status = monitor.status()
+        assert not status.on and status.summary == "off: meter data stopped"
+        assert "meter data stopped" in status.detail and "asking the console for it again" in status.detail
+        # It asks again, declaration included.
+        before = console.declarations
+        assert wait_for(lambda: console.declarations > before)
+        # And when packets come back, so does the detection.
+        clock[0] = 5.0
+        console.renewed_at = clock[0]
+        console.send_meters({"/ch/2": (HOT,)})
+        assert wait_for(lambda: monitor.status().on)
+        assert {c.base for c in monitor.snapshot()} == {"/ch/2"}
+    finally:
+        monitor.close()
+
+
+def test_a_desk_that_stopped_serving_is_noticed_through_the_page_note(console):
+    clock = [0.0]
+    console.clock = lambda: clock[0]
+    provider, close = metering.with_clip_detection(
+        lambda: ConsoleState({}), "127.0.0.1", port=console.port, clock=lambda: clock[0],
+        connect=lambda: socket.create_connection(("127.0.0.1", console.port), timeout=2))
+    try:
+        console.declared_udp_port()
+        console.send_meters()
+        assert wait_for(lambda: provider().clip_status.on and provider().clip_status.summary != "starting")
+        clock[0] = 10.0
+        (event,) = list(watch(provider, interval=0, max_iterations=1, sleep=lambda s: None))
+        (note,) = [f for f in event.all_findings if f.rule_id == CLIP_STATUS_RULE_ID]
+        assert note.title == "Clip detection is off" and "meter data stopped" in note.detail
+    finally:
+        close()
 
 
 def test_a_lost_connection_is_an_info_and_not_a_crash(console):
     monitor = monitor_for(console)
     monitor.start()
     try:
-        udp = console.declared_udp_port()
-        console.send_meters(udp, packet(1, CH, {"/ch/3": (HOT,)}))
+        console.declared_udp_port()
+        console.send_meters({"/ch/3": (HOT,)})
         assert wait_for(lambda: monitor.snapshot())
         console.drop()
         assert wait_for(lambda: not monitor.status().on)
@@ -549,9 +776,7 @@ def test_no_free_udp_port_is_an_info_too():
 
 def test_no_meter_packets_at_all_is_said_after_ten_seconds(console):
     clock = [0.0]
-    monitor = ClipMonitor(
-        "127.0.0.1", port=console.port, clock=lambda: clock[0],
-        connect=lambda: socket.create_connection(("127.0.0.1", console.port), timeout=2))
+    monitor = monitor_for(console, clock=lambda: clock[0])
     monitor.start()
     try:
         console.declared_udp_port()
@@ -568,9 +793,9 @@ def test_the_packet_rate_is_reported_for_the_desk_test(console):
     monitor = monitor_for(console)
     monitor.start()
     try:
-        udp = console.declared_udp_port()
+        console.declared_udp_port()
         for _ in range(8):
-            console.send_meters(udp, packet(1, CH))
+            console.send_meters()
             time.sleep(0.05)
         assert wait_for(lambda: "packets/s" in monitor.status().summary)
         assert "times a second" in monitor.status().detail

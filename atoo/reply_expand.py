@@ -1391,6 +1391,8 @@ def build_instructed_strips(plan: dict, work: list[dict], *, rules: "CategoryRul
         category, category_why = strip.category, None
         if not category and rules is not None and rules.table is not None:
             category, category_why = _strip_category(rules.table, strip)
+        if not category and merged.get("color") is None:
+            category, category_why = ic.playback_category(strip.quote, strip.name, colours.keys())
         color = merged.get("color")
         if color is not None:
             written.add("color")
@@ -1469,11 +1471,17 @@ def _strip_category(table, strip) -> tuple[str | None, str | None]:
     defaults from, and why: its whole name as a category word ("MUSIC"),
     then each word of its name, then its strip kind ("aux"). None when
     nothing matches -- the strip then has no category defaults, as before."""
+    from atoo import instructed_channels as ic
+
     words = [strip.name] + [w for w in re.split(r"[^\w/]+", strip.name) if w]
     for word in words:
         entry = table.entry_for(word)
         if entry is not None:
             return entry["name"], f"its name {strip.name!r} is a {entry['name']} word"
+    names = [a for e in table.entries for a in [e["name"], *e["aliases"]]]
+    music, music_why = ic.playback_category(strip.quote, strip.name, names)
+    if music is not None:
+        return table.entry_for(music)["name"], music_why
     entry = table.entry_for(strip.bank)
     if entry is not None:
         return entry["name"], (f"no category is stated, and {entry['name']} is the category "
@@ -1836,6 +1844,7 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
     if built:
         write_instructed_sends(reply, built, findings)
     fill_defaults(reply)
+    settle_line_gains(reply, findings, [getattr(layer, "text", "") for layer in layers or []])
     if rows is not None:
         apply_stated_presets(reply, rows, findings=findings, pairs=pairs)
     return repairs
@@ -1879,6 +1888,26 @@ def _build_strips_on_full_reply(plan: dict, rows, strips, *, console_model, cate
 # --------------------------------------------------------------------------
 # the input list's preset column
 # --------------------------------------------------------------------------
+
+def settle_line_gains(plan: dict, findings: list | None = None, texts=()) -> int:
+    """A Line source on a head amp does not keep the mic gain the reply
+    copied onto it (`inferred.settle_line_gain`): it takes a line gain, said
+    at INFO per channel. Returns how many it set."""
+    from atoo import inferred
+
+    count = 0
+    for channel in plan.get("channels") or []:
+        if not isinstance(channel, dict):
+            continue
+        said = inferred.settle_line_gain(
+            channel, stated=inferred.gain_stated_for(channel, texts))
+        if said is None:
+            continue
+        count += 1
+        if findings is not None:
+            findings.append(_info("reply.line-gain", f"channels[{channel.get('name')}]", said))
+    return count
+
 
 def apply_stated_presets(plan: dict, rows, *, findings: list | None = None,
                          pairs: dict | None = None) -> int:

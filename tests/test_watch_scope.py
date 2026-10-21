@@ -249,6 +249,11 @@ def _full_state() -> ConsoleState:
     values["/io/out/LCL/2/grp"], values["/io/out/LCL/2/in"] = "MAIN", 1
     values["/ch/1/send/MX7/on"] = 1
     values["/io/out/LCL/4/grp"], values["/io/out/LCL/4/in"] = "MTX", 13
+    # R012: a strip routed to Main 4 directly and through bus 3, which is
+    # routed to Main 4 as well.
+    values["/ch/20/name"] = "Split Kick"
+    values["/ch/20/main/4/on"], values["/ch/20/send/3/on"] = 1, 1
+    values["/bus/3/main/4/on"] = 1
     # The watch conditions: muted when it must not be, fader over its cap,
     # patched somewhere other than LCL 9.
     values["/ch/10/name"], values["/ch/10/mute"], values["/ch/10/fdr"] = "Crowd Mic", 1, -5.0
@@ -615,7 +620,8 @@ def test_the_fixture_state_trips_every_rule_watch_runs(full_state):
     missing = {rule.id for rule in _rules()} - fired
     # R007 fires only where R002/R005/R006 stand down, so not in the
     # same state; `unchecked_state` below is its fixture.
-    assert missing == {"R007"}
+    # R013 speaks only for a plan that states the split (`test_signal_split_rules`).
+    assert missing == {"R007", "R013"}
     assert "R007" in {f.rule_id for f in run_audit(_unchecked_state(), _rules())}
 
 
@@ -682,6 +688,9 @@ def test_each_rule_alone_keeps_every_address_it_reads(full_state, rule):
     if rule.id == "R007":
         pytest.skip("fires only where R002/R005/R006 stand down: "
                     "test_sp_r007_alone_keeps_every_address_it_reads")
+    if rule.id == "R013":
+        pytest.skip("fires only for a plan that states the split; "
+                    "test_r013_reads_what_r012_reads")
     assert rule.check(full_state), f"{rule.id} does not fire on the fixture state"
     assert (rule.check(_restrict(full_state, scope, plan.reads_source_names, plan.reads_expansion_bays, plan.reads_talkback))
             == rule.check(full_state))
@@ -751,6 +760,9 @@ MUTATIONS = [
     ("R010", "/ch/18/send/MX5/on"),
     ("R010", "/ch/18/send/MX5/lvl"),
     ("R010", "/ch/18/name"),
+    ("R012", "/ch/20/main/4/on"),
+    ("R012", "/ch/20/send/3/on"),
+    ("R012", "/bus/3/main/4/on"),
     ("R011", "/bus/6/busmono"),
     ("R011", "/main/1/busmono"),
     ("R011", "/mtx/7/busmono"),
@@ -847,6 +859,11 @@ def test_mutating_a_rules_own_scope_is_caught(full_state, rule_id, address):
             != rule.check(full_state)), (
         f"dropping {address} changed nothing {rule_id} reports -- this fixture "
         f"does not actually pin that address, so the scope is unchecked for it")
+
+
+def test_r013_reads_what_r012_reads():
+    assert (watch_scope.RULE_ADDRESS_PATTERNS["R013"]
+            == watch_scope.RULE_ADDRESS_PATTERNS["R012"])
 
 
 def test_dropping_a_send_mode_changes_nothing(full_state, scoped):

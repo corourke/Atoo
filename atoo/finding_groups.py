@@ -530,6 +530,9 @@ CODE_SUMMARIES: dict[str, tuple[str, str, str]] = {
     "reply.pair-phantom": ("channel", "channels",
                            "a stereo pair's two input-list rows disagreed about 48V; the pair "
                            "takes it if either wants it"),
+    "reply.line-gain": ("channel", "channels",
+                        "a Line source's head-amp gain chosen from its type, not copied from "
+                        "the mic channels"),
     "inferred.pair-phantom": ("channel", "channels",
                               "one 48V value for a stereo pair, read as both sockets'"),
     "reply.from-instructions": ("strip", "strips",

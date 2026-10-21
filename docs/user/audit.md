@@ -106,10 +106,12 @@ see the [exit-code table](cli-reference.md#exit-codes).
 
 ## How long a live read takes, and what it prints while it works
 
-A read of a live WING takes **a few seconds**: some
-6,000 values, fetched a whole channel, bus or socket at a time, with
-several requests on the wire at once (8 by default; see [A desk read is
-slow](troubleshooting-desk.md#a-desk-read-is-slow)). It is the
+A read of a live WING Compact takes **about five seconds** at most: some
+6,000 values, fetched a whole channel, bus or socket at a time. That was
+timed one request at a time. Reads now keep several requests on the wire
+at once (8 by default; see [A desk read is
+slow](troubleshooting-desk.md#a-desk-read-is-slow)), which should make it
+shorter, and has not yet been timed on a desk. It is the
 slowest thing Atoo does. A progress line on **stderr** names the
 address in flight, so stdout stays a clean report; `--no-progress` turns
 it off.
@@ -144,11 +146,8 @@ atoo audit --state tonight.state.json --plan my_show_plan.json
 ```
 
 The file is written as soon as the read finishes, before any rule runs.
-It records which stage box (an S16, say) is on each AES50 port, so a
-later `atoo patch --state` can refuse a socket past the box's size, as it
-does against the desk; a file saved before Atoo did this has none, and
-`patch` says so with a warning. It does not record which WING model it came
-from, so pass the `--plan` when you replay it: its console model is used. `--dump-state` saves a
+It does not record which WING model it came from, so pass the `--plan`
+when you replay it: its console model is used. `--dump-state` saves a
 live read only, and is refused with `--state`.
 
 ## Socket counts, and when you need to say them

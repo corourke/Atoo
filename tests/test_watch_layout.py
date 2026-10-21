@@ -202,7 +202,7 @@ def test_the_alert_table_fits_its_frame_at_phone_width(assets):
     already goes in the generic table rule)."""
     css = assets["css"]
     assert ".watch-table-scroll { overflow-x: auto; }" in css
-    assert "padding: 0; overflow: hidden;" in _rule(css, ".watch-table-wrap.panel.box")
+    assert "padding: 0; overflow: clip;" in _rule(css, ".watch-table-wrap.panel.box")
     narrow = _media_block(css, "max-width: 760px", "/* The folds: each summary IS the block header")
     assert "#alert-table :is(.col-sev, .col-rule, .col-since) { width: auto; }" in narrow
     phone = _media_block(css, "max-width: 640px", "/* The folds: each summary IS the block header")

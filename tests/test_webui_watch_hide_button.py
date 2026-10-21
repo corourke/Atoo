@@ -1,10 +1,11 @@
-"""Watch's Hide button sits in the same place on every row, and is a
-finger-sized target on a small screen.
+"""Watch's Hide check box sits at the far left of every row, in the same
+place whatever the row, and is a finger-sized target on a small screen.
 
-The button used to follow the severity tag, so its position moved with the
-tag's word (ERROR, WARNING and INFO measure differently); it now sits at the
-severity cell's right edge. At phone width it stacks under the tag and takes
-the 32px a button takes everywhere else.
+It is a check box in the table's first column (headed "Hide"), as the
+findings pane puts its own; ticked, the finding leaves the table, and in the
+Suppressed list the same box is ticked and brings the finding back when
+cleared. The label around the box is the 32px target; the box is drawn at the
+pane's size.
 
 The Python suite cannot see a browser, so the first test holds the served
 assets to the rule and the others measure the real page in Chromium, dark
@@ -42,12 +43,14 @@ MEASURE = """() => {
   return {
     sideways: document.documentElement.scrollWidth - window.innerWidth,
     rows: rows.map(tr => {
-      const cell = tr.querySelector('.col-sev').getBoundingClientRect();
+      const row = tr.getBoundingClientRect();
+      const hit = tr.querySelector('.watch-row-hide-hit').getBoundingClientRect();
+      const box = tr.querySelector('input.watch-row-hide');
       const tag = tr.querySelector('.sev').getBoundingClientRect();
-      const btn = tr.querySelector('.watch-row-hide').getBoundingClientRect();
       return {sev: tr.querySelector('.sev').textContent, tagWidth: tag.width,
-              fromCellLeft: btn.left - cell.left, fromCellRight: cell.right - btn.right,
-              height: btn.height, below: btn.top >= tag.bottom - 0.5};
+              hitFromRowLeft: hit.left - row.left, hitHeight: hit.height, hitWidth: hit.width,
+              boxType: box.type, boxChecked: box.checked,
+              leftOfTag: hit.right <= tag.left + 0.5};
     }),
   };
 }"""
@@ -87,50 +90,62 @@ def _watch_page(browser, address, width, theme):
     return page
 
 
-def test_the_served_assets_carry_the_fixed_button_and_the_touch_target(url):
+def test_the_served_assets_carry_the_far_left_check_box_and_the_touch_target(url):
     import urllib.request
     css = urllib.request.urlopen(url + "static/styles.css").read().decode()
     js = urllib.request.urlopen(url + "static/watch.js").read().decode()
-    assert re.search(r"#alert-table \.watch-row-hide \{ margin-left: auto; \}", css)
-    assert re.search(r"#alert-table \.sev-cell \{ display: flex;", css)
-    assert re.search(r"@media \(max-width: 900px\) \{\s*#alert-table \.watch-row-hide[^{]*\{ min-height: 32px; \}",
-                     css)
-    # The button is added to the cell the CSS lays out, or it floats free.
-    assert 'class="sev-cell"' in js
-    assert 'tr.querySelector(".sev-cell").appendChild(makeHideButton(f, false))' in js
+    html = urllib.request.urlopen(url + "static/shell.html").read().decode()
+    assert '<th class="col-hide">Hide</th>' in html
+    assert html.index('class="col-hide"') < html.index('class="col-sev"')
+    assert re.search(r"\.watch-row-hide-hit \{[^}]*width: 32px; height: 32px", css)
+    assert re.search(r"\.watch-row-hide \{[^}]*accent-color: var\(--accent\)", css)
+    # The box is made as the findings pane makes its own, and added to the
+    # first cell, or it floats free.
+    assert 'box.type = "checkbox"' in js
+    assert '<td class="col-hide"></td>' in js
+    assert 'tr.querySelector(".col-hide").appendChild(makeHideCheck(f, false))' in js
+    assert "makeHideButton" not in js
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])
-def test_the_hide_button_is_in_the_same_place_whatever_the_tags_width(url, theme):
+@pytest.mark.parametrize("width", [1280, 390])
+def test_the_hide_box_is_at_the_far_left_in_the_same_place_on_every_row(url, theme, width):
     sync_api, path = _chromium()
     with sync_api.sync_playwright() as p:
         browser = p.chromium.launch(executable_path=path)
         try:
-            m = _watch_page(browser, url, 1280, theme).evaluate(MEASURE)
+            m = _watch_page(browser, url, width, theme).evaluate(MEASURE)
         finally:
             browser.close()
     rows = m["rows"]
     assert [r["sev"] for r in rows] == ["Error", "Warning", "Info"], rows
     # The three tags are not the same width, or this proves nothing.
     assert len({round(r["tagWidth"]) for r in rows}) > 1, rows
-    assert max(r["fromCellRight"] for r in rows) - min(r["fromCellRight"] for r in rows) < 0.5, rows
-    assert max(r["fromCellLeft"] for r in rows) - min(r["fromCellLeft"] for r in rows) < 0.5, rows
+    for r in rows:
+        assert r["boxType"] == "checkbox" and not r["boxChecked"], r
+        assert r["leftOfTag"], r
+        assert r["hitFromRowLeft"] < 40, r
+        assert r["hitHeight"] >= 32 and r["hitWidth"] >= 32, r
+    assert max(r["hitFromRowLeft"] for r in rows) - min(r["hitFromRowLeft"] for r in rows) < 0.5, rows
     assert m["sideways"] <= 0, m
 
 
-@pytest.mark.parametrize("theme", ["dark", "light"])
-def test_at_phone_width_the_hide_button_is_a_32px_target_and_nothing_scrolls_sideways(url, theme):
+def test_ticking_a_box_hides_the_row_and_clearing_it_in_the_list_brings_it_back(url):
     sync_api, path = _chromium()
     with sync_api.sync_playwright() as p:
         browser = p.chromium.launch(executable_path=path)
         try:
-            m = _watch_page(browser, url, 390, theme).evaluate(MEASURE)
+            page = _watch_page(browser, url, 1280, "dark")
+            first = page.locator("#alert-body tr .watch-row-hide").first
+            first.focus()
+            page.keyboard.press("Space")
+            assert page.locator("#alert-body tr").count() == 2
+            # Keyboard focus lands on the next row's box, not on <body>.
+            assert page.evaluate("document.activeElement.classList.contains('watch-row-hide')")
+            page.locator("#watch-suppressed > summary").click()
+            hidden = page.locator("#watch-suppressed-list .watch-row-hide")
+            assert hidden.count() == 1 and hidden.is_checked()
+            hidden.click()
+            assert page.locator("#alert-body tr").count() == 3
         finally:
             browser.close()
-    rows = m["rows"]
-    assert len(rows) == 3
-    for r in rows:
-        assert r["height"] >= 32, r
-        assert r["below"], r
-    assert max(r["fromCellLeft"] for r in rows) - min(r["fromCellLeft"] for r in rows) < 0.5, rows
-    assert m["sideways"] <= 0, m

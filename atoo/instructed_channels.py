@@ -333,6 +333,28 @@ def decide_category(quote: str, name: str, categories) -> tuple[str | None, str]
     return None, "the conventions colour no category that fits, so no category colour"
 
 
+# Words that make a strip a playback source: walk-in music, a playlist, a
+# backing-track player. The conventions colour "Playback", and say the aux
+# the show adds for music belongs to it (in the DCA line, not the colour
+# line), so the colour must not hang on the model remembering that.
+_PLAYBACK_RE = re.compile(r"\b(?:music|walk-?in|playlist|playback|backing tracks?)\b",
+                          re.IGNORECASE)
+PLAYBACK_CATEGORIES = ("playback", "tracks", "backing tracks", "backing")
+
+
+def playback_category(quote: str, name: str, categories) -> tuple[str | None, str | None]:
+    """(category, why) when the text is about music or playback and the
+    conventions name a playback category among `categories`; else
+    (None, None). A judgement the build announces at INFO."""
+    if not _PLAYBACK_RE.search(f"{quote} {name}"):
+        return None, None
+    known = {str(c).strip().casefold(): str(c) for c in categories or ()}
+    for key in PLAYBACK_CATEGORIES:
+        if key in known:
+            return known[key], f"{name!r} is music or playback, which the conventions' {known[key]!r} category covers"
+    return None, None
+
+
 def is_instructed(channel: dict) -> bool:
     """A plan channel built from the conventions or instructions."""
     source = channel.get("source") if isinstance(channel, dict) else None

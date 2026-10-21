@@ -167,3 +167,47 @@ def test_the_patch_page_heads_a_refusal_for_what_it_is(tmp_path, monkeypatch, de
     assert "Refused: cannot be written as asked" in kinds
     assert "names something that is not there" not in body
     assert "processing.foo: not a field this format has" in body
+
+
+def test_the_patch_page_shows_which_atoo_ran_when_a_compile_fails(tmp_path, monkeypatch, desk):
+    """Dark first: a refused compile leaves the page with the failure in the
+    findings dock, and the atoo version line in it and in the footer."""
+    from playwright.sync_api import sync_playwright
+    from atoo import webui
+    from test_webui_choosers import _chromium, _serve
+
+    chromium = _chromium()
+    monkeypatch.setattr(cli, "provider_from_env",
+                        lambda: FakeProvider(response="this is not json at all"))
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(webui, "_patch_model_state", lambda: (True, None))
+    directory = tmp_path / "show"
+    directory.mkdir()
+    (directory / "plan.json").write_text(json.dumps(preset_plan(), indent=2))
+    server, thread, url = _serve(_app(directory))
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(executable_path=chromium)
+            try:
+                page = browser.new_page(viewport={"width": 1100, "height": 1000})
+                page.add_init_script(
+                    "try { localStorage.setItem('atoo.demoPopupSeen', '1');"
+                    " localStorage.setItem('atoo.theme', 'dark'); } catch (e) {}")
+                page.goto(url)
+                page.click("#nav-apply")
+                page.click("#apply-mode-amend")
+                page.fill("#patch-change-text", "add a thing")
+                page.click("#apply-preview-btn")
+                page.wait_for_function(
+                    "document.getElementById('apply-run-state').textContent.includes('Failed')",
+                    timeout=60000)
+                assert page.evaluate("document.documentElement.dataset.theme") == "dark"
+                body = page.text_content("body")
+                assert "usable change set" in body
+                assert "Ran as atoo " in body
+                assert page.locator("#about-line").is_visible()
+            finally:
+                browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)

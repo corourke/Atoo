@@ -498,3 +498,35 @@ def test_every_uv_install_command_names_the_python():
                     and not any(p.strip("\n") in line for p in prose):
                 bad.append(f"{path.relative_to(_REPO)}:{number}: {line.strip()[:100]}")
     assert not bad, "\n".join(bad)
+
+
+def test_the_readme_has_no_relative_links():
+    """PyPI shows README.md as the project page, where a relative link
+    (`docs/user/install.md`) points at nothing. Every link is absolute."""
+    text = (_REPO / "README.md").read_text(encoding="utf-8")
+    relative = [target for target in re.findall(r"\]\(([^)\s]+)\)", text)
+                if not target.startswith(("http://", "https://", "#", "mailto:"))]
+    assert not relative, relative
+
+
+
+def test_every_subcommand_prints_the_install_line_or_is_named_as_exempt(capsys):
+    """A new command cannot forget the version line: it opts in with
+    `announce_install` or is named in `NO_INSTALL_LINE`."""
+    from atoo import cli
+    _, subs = cli.build_parser()
+    for name, sub in subs.items():
+        announces = sub.get_default("announce_install")
+        assert bool(announces) != (name in cli.NO_INSTALL_LINE), name
+
+
+@pytest.mark.parametrize("argv", [
+    ["audit", "--console", "127.0.0.1", "--port", "9", "--timeout", "0.1"],
+    ["apply", "--plan", "nope.json", "--console", "127.0.0.1", "--port", "9"],
+    ["patch", "--change-set", "nope.json", "--confirm"],
+    ["ping", "--console", "127.0.0.1", "--port", "9", "--timeout", "0.1"],
+])
+def test_a_desk_command_prints_the_install_line_first(argv, capsys):
+    main(argv)
+    err = capsys.readouterr().err
+    assert err.splitlines()[0] == install_info.describe().summary()

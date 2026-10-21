@@ -57,6 +57,9 @@ def test_the_page_takes_each_readings_sentence_into_a_row_it_already_shows():
     with fastapi_testclient.TestClient(create_app()) as client:
         js = client.get("/static/watch.js").text
     assert "known.detail = f.detail;" in js
+    # "This watch" shows the note's short form, so "off: meter data stopped"
+    # (and "on, 20 packets/s") reaches the page unchanged.
+    assert 'const item = n.summary || n.detail || "";' in js
     # Keyed by rule and strip, so a second clip is the same row.
     assert 'return f.rule_id + "|" + f.addresses.join(",") + "|" + f.severity;' in js
     # No level display: nothing in the page asks for a meter.
@@ -109,7 +112,8 @@ def test_the_demo_clips_in_the_real_page(home, demo_copy, monkeypatch):
                 # same row.
                 page.wait_for_function(
                     "[...document.querySelectorAll('#alert-body tr')].some("
-                    "r => /clipped \\d+ times/.test(r.innerText))", timeout=60000)
+                    "r => /clipped \\d+ times \\(a clip ends once the level stays below -3 dBFS "
+                    "for 200 ms\\)/.test(r.innerText))", timeout=60000)
                 # Where it is said: the strip as the desk names it.
                 text = page.locator("#alert-body").inner_text()
                 assert any(label in text for label in

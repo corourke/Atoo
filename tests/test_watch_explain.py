@@ -181,3 +181,8 @@ def test_the_page_wires_the_info_icon_beside_the_id():
     assert "explanation" in js
     assert "data-hover-open" in shell and "mouseover" in shell
     assert ".wc-explain" in css
+    # The icon has its own room beside the ID box, so the Description box does
+    # not cover it, and it is the info blue, a pixel larger than other help buttons.
+    assert "#wc-table .wc-id-cell input { vertical-align: middle; width: calc(100% - 28px); }" in css
+    assert "width: 19px; height: 19px; font-size: 12px" in css
+    assert "color: var(--info-fg); border-color: var(--info-fg);" in css

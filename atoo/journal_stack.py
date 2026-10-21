@@ -599,6 +599,11 @@ def summarize(journal: dict, kind: str) -> tuple[str, int, int]:
             parts.append(", ".join(strips))
         if released:
             parts.append("returned to free: " + ", ".join(released))
+        renumbered = scope.get("renumbered") or []
+        if renumbered:
+            parts.append(f"renumbered {len(renumbered)} strip(s): "
+                         + ", ".join(str(x) for x in renumbered[:3])
+                         + (", ..." if len(renumbered) > 3 else ""))
         if parts:
             line += "  (scope: " + "; ".join(parts) + ")"
     return line, mismatches, len(rows)

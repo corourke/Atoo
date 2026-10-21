@@ -316,6 +316,12 @@ NO_INIT_NOTE = ("INFO not reset to initialized first (--no-init): anything the p
 #: What the reset's read is called on the progress line.
 READ_PHASE = "reading the desk for the reset"
 
+#: The same read when a preview also asks for the plan's own baselines in it.
+COMBINED_READ_PHASE = "reading the desk"
+
+#: The settings the reset will change, read exactly (a dump rounds) for the journal.
+EXACT_PHASE = "reading the settings the reset will change"
+
 
 class _Absent:
     def __repr__(self) -> str:
@@ -330,6 +336,19 @@ class DeskRead:
     #: address -> value (in the leaf's type) or ABSENT.
     values: dict[str, object] = field(default_factory=dict)
     unanswered: set[str] = field(default_factory=set)
+    #: address -> reply, for the `extra` addresses a caller had this read
+    #: ask in the same pass (`read_desk`); never for a leaf of `wanted`.
+    replies: dict[str, object] = field(default_factory=dict)
+    #: address -> `(value, error)` for the `extra` addresses a node dump
+    #: gave, in the shape `OscReply.value()` gives for a single read.
+    plan_values: dict[str, tuple[object, str | None]] = field(default_factory=dict)
+    #: The dump's own text for each of `plan_values`: a float in it is the
+    #: desk's display text, so it carries a rounding (`console.dump_text_rounding_band`).
+    plan_texts: dict[str, str] = field(default_factory=dict)
+    #: The dump's own text for each float of `values` that came from a dump.
+    dump_texts: dict[str, str] = field(default_factory=dict)
+    #: How many of `gets` were for `extra` addresses.
+    extra_gets: int = 0
     dumps: int = 0
     gets: int = 0
     seconds: float = 0.0
@@ -340,7 +359,8 @@ class DeskRead:
         return self.dumps + self.gets
 
 
-def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskRead:
+def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
+              extra: list[tuple[str, str]] | None = None) -> DeskRead:
     """The desk's value at every `(address, type)` in `wanted`, by node dump
     where a node covers it (`audit.bulk_node_for`, A11's measured fast path)
     and by GET otherwise -- names and tags, which a dump is never
@@ -359,7 +379,21 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
     request in flight -- each dump, each GET, each probe -- so a slow read
     says which request it is waiting on, and its summary counts the
     requests that went unanswered (each one the full timeout and its
-    retries), which is where a slow read's time usually goes."""
+    retries), which is where a slow read's time usually goes.
+
+    `extra` is `(address, type)` pairs a caller wants read in the same pass
+    (a preview reads the plan's own current values here, so the desk is
+    asked once, under one progress phase, instead of twice). They are read
+    as the leaves of `wanted` are: by the node dump that covers them
+    (`audit.bulk_node_for`, so never a name or a tag), their `(value,
+    error)` in `DeskRead.plan_values` -- the value a single read would give
+    (`osc.value_from_dump_text`: the dump's text is the un-offset number a
+    connector's single read is corrected to) -- and the rest, or one the dump
+    did not give or could not parse, by a single GET, its reply untouched in
+    `DeskRead.replies`. An address already read by GET in `wanted` is not
+    asked a second time: its one reply serves both. The GETs go through the
+    same window and the same cut-off for a family the desk does not answer:
+    one that was cut off has no entry, and the caller reads it itself."""
     from atoo import apply as apply_module
     from atoo import audit
     from atoo import console as osc
@@ -373,13 +407,23 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
     if not callable(dump_node):
         alone = [pair for pairs in by_node.values() for pair in pairs] + alone
         by_node = {}
-    progress.set_total(len(by_node) + len(alone))
+    extra_pairs = list({address: (address, value_type)
+                        for address, value_type in (extra or ())}.values())
+    extra_by_node, extra_alone = audit.group_plan_by_node(extra_pairs)
+    if not callable(dump_node):
+        extra_alone, extra_by_node = extra_pairs, {}
+    keep_reply = {address for address, _ in extra_pairs}
+    get_extra = [address for address, _ in extra_alone]
+    nodes = list(dict.fromkeys([*by_node, *extra_by_node]))
+    progress.set_total(len(nodes) + len(alone) + len(get_extra))
     # Up to the console's window of dumps, and below of GETs,
     # in flight at once; `osc.node_dumps`/`osc.read_in_windows` are the
     # serial loop this was for a window of 1.
-    dumps = osc.node_dumps(console, list(by_node),
+    dumps = osc.node_dumps(console, nodes,
                            on_start=lambda node: progress.start_address(node + " (node)"))
-    for node, pairs in by_node.items():
+    for node in nodes:
+        pairs = by_node.get(node, [])
+        plan_pairs = extra_by_node.get(node, [])
         try:
             _node, dump = next(dumps)
         except OSError as exc:
@@ -396,7 +440,8 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
                 parsed = None
         if parsed is None:
             alone.extend(pairs)
-            progress.add_total(len(pairs))
+            get_extra.extend(address for address, _ in plan_pairs)
+            progress.add_total(len(pairs) + len(plan_pairs))
             continue
         for address, value_type in pairs:
             text = parsed.get(address)
@@ -406,8 +451,21 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
             value, error = osc.value_from_dump_text(text, value_type)
             if error is None:
                 out.values[address] = value
+                if value_type == "f":
+                    out.dump_texts[address] = text
             else:
                 alone.append((address, value_type))
+                progress.add_total()
+        for address, value_type in plan_pairs:
+            text = parsed.get(address)
+            value, error = (None, "not in the dump") if text is None else \
+                osc.value_from_dump_text(text, value_type)
+            if error is None:
+                out.plan_values[address] = (value, None)
+                out.plan_texts[address] = text
+            else:
+                # Not in the dump, or not a value of its type: read singly.
+                get_extra.append(address)
                 progress.add_total()
 
     def alive(address: str) -> bool:
@@ -419,12 +477,20 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
         return reply is not None and not reply.is_transport_error and reply.error is None
 
     families = audit.UnansweredFamilies(alive)
-    replies = osc.read_in_windows(console, [address for address, _ in alone],
+    # A `None` type marks an `extra` address: its reply is kept as it came.
+    asked_by_get = {address for address, _ in alone}
+    deduped = [a for a in dict.fromkeys(get_extra) if a not in asked_by_get]
+    # Counted above before it was known to be a repeat: one request serves both.
+    progress.add_total(len(deduped) - len(get_extra))
+    get_extra = deduped
+    asks = list(alone) + [(address, None) for address in get_extra]
+    replies = osc.read_in_windows(console, [address for address, _ in asks],
                                   should_ask=families.should_ask,
                                   on_start=progress.start_address)
-    for (address, value_type), (_address, reply) in zip(alone, replies):
+    for (address, value_type), (_address, reply) in zip(asks, replies):
         if reply is osc.SKIPPED:
-            out.unanswered.add(address)
+            if value_type is not None:
+                out.unanswered.add(address)
             progress.skip_address(address, audit.address_family(address))
             continue
         out.gets += 1
@@ -432,6 +498,16 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None) -> DeskR
         if reply is not None and reply.is_socket_error:
             out.abort_reason = reply.args[0] if reply.args else "socket error"
             break
+        if value_type is not None and address in keep_reply:
+            # Asked as a leaf of `wanted`, and wanted by the caller too: one
+            # request, and the caller gets the reply as it came.
+            out.replies[address] = reply
+        if value_type is None:
+            out.replies[address] = reply
+            out.extra_gets += 1
+            families.record(address, reply is not None and reply.error is None
+                            and not reply.is_transport_error)
+            continue
         if reply is not None and reply.error is not None:
             # NODE NOT FOUND and its kin: the desk answered, and has no such leaf.
             out.values[address] = ABSENT
@@ -528,6 +604,8 @@ class InitReset:
     forced: int = 0
     skipped: Counter = field(default_factory=Counter)
     read: DeskRead = field(default_factory=DeskRead)
+    #: Floats to be written whose prior was read exactly, for the journal.
+    exact_priors: int = 0
 
     @property
     def abort_reason(self) -> str | None:
@@ -557,7 +635,8 @@ def _governors(addresses: list[str]) -> dict[str, list[str]]:
     return out
 
 
-def plan_reset(console, capture: Capture, run_targets: list, *, phases=None) -> InitReset:
+def plan_reset(console, capture: Capture, run_targets: list, *, phases=None,
+               also_read: list[tuple[str, str]] | None = None) -> InitReset:
     """Read the desk and decide the reset's writes. `run_targets` is every
     other write this run makes (the plan's, and the full apply's own), so
     no leaf is written twice. `phases` (a `progress.Phases`)
@@ -598,8 +677,10 @@ def plan_reset(console, capture: Capture, run_targets: list, *, phases=None) -> 
     run_selectors = {s for gov in governors.values() for s in gov if s in run}
     wanted = [(leaf.address, leaf.value_type) for leaf in in_scope
               if leaf.address not in run or leaf.address in run_selectors]
-    phase = None if phases is None else phases.start(READ_PHASE, len(wanted))
-    reset.read = read_desk(console, wanted, progress=phase)
+    extra = also_read or None
+    phase = None if phases is None else phases.start(
+        COMBINED_READ_PHASE if extra else READ_PHASE, len(wanted))
+    reset.read = read_desk(console, wanted, progress=phase, extra=extra)
     if phase is not None:
         phase.finish()
     if reset.read.abort_reason is not None:
@@ -653,6 +734,31 @@ def plan_reset(console, capture: Capture, run_targets: list, *, phases=None) -> 
         chosen.append(leaf)
         reset.known[address] = ((None, "not on the desk under its old selector")
                                 if value is None or value is ABSENT else (value, None))
+
+    # A float the reset will write is journalled with the value the desk held,
+    # which Undo puts back: not the dump's rounded text. Read exactly.
+    exact = [leaf.address for leaf in chosen
+             if leaf.value_type == "f" and leaf.address in reset.read.dump_texts]
+    if exact:
+        from atoo import console as osc
+
+        exact_phase = None if phases is None else phases.start(EXACT_PHASE, len(exact))
+        for address, reply in osc.read_in_windows(
+                console, exact, on_start=None if exact_phase is None else exact_phase.start_address):
+            if exact_phase is not None:
+                exact_phase.finish_address(
+                    answered=reply is not None and not reply.is_transport_error)
+            if reply is not None and reply.is_socket_error:
+                reset.read.abort_reason = reply.args[0] if reply.args else "socket error"
+                break
+            value, error = apply_module._extract_reply_value(reply, "f", address)
+            if error is None:
+                reset.known[address] = (value, None)
+                reset.exact_priors += 1
+        if exact_phase is not None:
+            exact_phase.finish()
+        if reset.read.abort_reason is not None:
+            return reset
 
     description = f"{DESCRIPTION} ({capture.label} capture)"
     chosen.sort(key=lambda leaf: _order(leaf.address))
@@ -741,7 +847,13 @@ def run_notes(reset: InitReset, records: list, *, dry_run: bool,
     if reset.skipped:
         parts.append(f"left alone: {skipped_words(reset.skipped)}")
     read = reset.read
-    timing = f"reading the desk took {_seconds(read.seconds)} ({read.requests:,} requests)"
+    requests = f"{read.requests:,} requests"
+    if read.extra_gets or read.plan_values:
+        requests += (f"; the plan's own settings: {len(read.plan_values):,} from the node dumps, "
+                     f"{read.extra_gets:,} read one by one")
+    if reset.exact_priors:
+        requests += f"; {reset.exact_priors:,} read exactly for the journal"
+    timing = f"reading the desk took {_seconds(read.seconds)} ({requests})"
     if dry_run:
         timing += (f"; writing would take about {_seconds(estimate_write_seconds(len(moving)))} "
                    "at the rate measured on a WING Compact")

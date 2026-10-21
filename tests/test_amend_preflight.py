@@ -194,23 +194,17 @@ def test_the_socket_check_covers_a_new_output_the_amend_writes():
     assert written_sockets_missing(amendment, "wing-full") == []
 
 
-def test_the_factory_patch_a_freed_strip_goes_back_on_is_checked_too():
-    """A strip returned to free goes back on its measured factory socket. That comes from measured data for the model the desk stated
-    and so should never be missing -- but it is a socket the amend writes,
-    so it is checked. Forced here by checking a Compact's restore (ch 19 back
-    on LCL 19) against a full-size panel."""
+def test_a_freed_strip_writes_no_socket_so_none_is_checked():
+    """A strip returned to free is written OFF, which names no socket, so a
+    panel that lacks the socket it used to sit on is not an obstacle."""
     applied = applied_plan()
     rebuilt = copy.deepcopy(applied)
     dropped = next(c for c in rebuilt["channels"] if c["channel"] == 19)
     rebuilt["channels"].remove(dropped)
-    applied_19 = next(c for c in applied["channels"] if c["channel"] == 19)
     occupancy = strip_occupancy(occupancy_state(), applied)
     amendment = plan_amendment(applied, rebuilt, occupancy, console_model="wing-compact")
     assert amendment.released == ["ch:19"]
-    missing = written_sockets_missing(amendment, "wing-full")
-    assert [m["socket"] for m in missing] == ["LCL 19"], missing
-    assert missing[0]["what"] == (f"the factory patch ch:19 is returned to (channel "
-                                  f"{applied_19['name']!r}, dropped by the rebuild)")
+    assert written_sockets_missing(amendment, "wing-full") == []
 
 
 # --------------------------------------------------------------------------

@@ -503,3 +503,53 @@ def test_a_strip_with_no_category_takes_the_one_its_name_or_kind_points_at():
     assert ("category Misc (no category is stated, and Misc is the category for aux strips)"
             in said["channels[TALKBACK]"])
     assert _strip(plan, "aux", 8)["provenance"]["category"].startswith("decided: Misc")
+
+
+# A music strip whose category the resolve step left out must still take the
+# playback colour the conventions give, whichever way the model worded the
+# rest: the colour does not hang on the model writing it again.
+_PLAYBACK_TABLE = """## Category table
+
+```json
+[{"name": "Drums", "aliases": ["drums"], "color": "Red"},
+ {"name": "Playback", "aliases": ["playback", "tracks"], "color": "Yellow"}]
+```
+"""
+
+
+def _music_strips():
+    no_category = RESOLVED.replace('"preset": null, "category": "Misc"',
+                                   '"preset": null, "category": null')
+    return [s for s in _strips(no_category) if s.name == "MUSIC"]
+
+
+def test_a_music_strip_with_no_category_takes_the_playback_table_colour():
+    findings: list = []
+    plan = _expand(json.loads(SIXPIECE_REPLY), SIXPIECE_CSV, findings,
+                   table=category_table.parse(_PLAYBACK_TABLE).table, strips=_music_strips(),
+                   instructions=SIXPIECE_INSTRUCTIONS)
+    music = _strip(plan, "aux", 1)
+    assert music["color"] == "Yellow"
+    assert music["provenance"]["category"].startswith("decided: Playback")
+    said = [f for f in findings if f.code == "reply.instructed-strip"
+            and f.where == "channels[MUSIC]"]
+    assert "category Playback" in said[0].message and said[0].severity == Severity.INFO
+
+
+def test_a_music_strip_takes_the_reply_playback_colour_when_there_is_no_table():
+    reply = json.loads(SIXPIECE_REPLY)
+    reply["category_colors"] = [{"category": "Playback", "color": "Yellow"}]
+    plan = _expand(reply, SIXPIECE_CSV, table=None, strips=_music_strips(),
+                   instructions=SIXPIECE_INSTRUCTIONS)
+    music = _strip(plan, "aux", 1)
+    assert music["color"] == "Yellow"
+    assert music["provenance"]["color"].casefold().startswith("category map: playback -> yellow")
+
+
+def test_a_non_music_strip_with_no_category_gets_no_playback_colour():
+    reply = json.loads(SIXPIECE_REPLY)
+    reply["category_colors"] = [{"category": "Playback", "color": "Yellow"}]
+    plan = _expand(reply, SIXPIECE_CSV, table=None,
+                   strips=[s for s in _strips() if s.name == "HOST"],
+                   instructions=SIXPIECE_INSTRUCTIONS)
+    assert _strip(plan, "aux", 2)["color"] is None

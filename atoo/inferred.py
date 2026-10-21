@@ -113,6 +113,21 @@ ALLOCATED, and marked the same way (`plan_schema.ALLOCATED_FIELDS`):
     reports it (`inferred.bus-main-index`). A plain "routes to main" means
     the main mix, so a wrong pick displeases rather than breaks.
 
+A LINE SOURCE'S HEAD-AMP GAIN FOLLOWS ITS TYPE, and is announced
+(`settle_line_gain`):
+
+  * a channel whose source type is Line, patched to a socket with a head
+    amp, takes `LINE_GAIN_DB` (0) where the plan gave it more than
+    `LINE_GAIN_CEILING_DB` (10 dB) when no gain is stated anywhere. "Gain
+    20 dB on each channel" is a mic's gain, and a model that copies it
+    onto a playback feed unprompted clips the preamp, which breaks where a
+    low gain merely displeases. But a gain the engineer states -- in the
+    conventions (a line about every channel included), the instructions, the
+    change or the Category table -- stands: his number, not a default.
+    Anything else is chosen from the type and said.
+    Build (`reply_expand.expand`) and Patch (`patch.merge_change`) both
+    run it.
+
 READ AS ONE VALUE FOR TWO SOCKETS, and announced:
 
   * a stereo channel's 48V. Phantom lives on each socket, so apply writes
@@ -142,6 +157,7 @@ one in a plan.json edited by hand.
 from __future__ import annotations
 
 import copy
+import re
 
 from atoo import plan_compat
 from atoo.diagnostics import Diagnostic, Severity
@@ -557,6 +573,68 @@ def pair_phantom_is_inferred(channel: dict) -> bool:
     sockets = (channel.get("patch") or {}).get("sockets") or []
     return (bool(source.get("stereo")) and len(sockets) == 2
             and not isinstance(source.get("pair_phantom"), bool))
+
+
+#: A Line source's head-amp gain, and the most it may keep when nothing was
+#: stated for it. 0 dB is inside the range of every head amp this project has
+#: seen (`console_facts.HEAD_AMP_GAIN_DB_RANGE` is -3 to 45.5 dB).
+LINE_GAIN_DB = 0.0
+LINE_GAIN_CEILING_DB = 10.0
+_LINE_TYPES = frozenset({"line", "line level", "line-level"})
+
+
+def is_line_source(channel: dict) -> bool:
+    """A channel whose source type says it is line level."""
+    kind = (channel.get("source") or {}).get("type")
+    return isinstance(kind, str) and kind.strip().casefold() in _LINE_TYPES
+
+
+def gain_stated_for(channel: dict, texts=()) -> bool:
+    """Whether a head-amp gain was STATED anywhere the plan answers to: the
+    conventions' Category table set it for this channel's category, or a
+    line of one of `texts` (the conventions, the show's instructions, the
+    change) says gain. A line about every channel ("set the input gain on
+    each channel to 20dB") is a stated gain for a line source too, and it
+    stands: the type decides only when nothing
+    anywhere states one, so the plan's number was the model's own."""
+    cited = str((channel.get("provenance") or {}).get("processing") or "").casefold()
+    if "category table:" in cited and "gain" in cited:
+        return True
+    return any(re.search(r"\bgain\b", str(text or ""), re.IGNORECASE) for text in texts)
+
+
+def settle_line_gain(channel: dict, *, stated: bool = False) -> str | None:
+    """A Line source patched to a head amp does not keep a mic's gain.
+
+    Returns the sentence that announces the choice (INFO), or None when the
+    channel is not one this applies to. `stated` is the caller's word that
+    the gain was asked for this channel (`gain_stated_for`, or the change's
+    own words). Mutates `channel` and records the choice in its provenance;
+    never touches a channel with no gain set, since an unset gain leaves
+    the head amp as the desk had it."""
+    from atoo import console_facts as facts
+
+    processing = channel.get("processing")
+    group = (channel.get("patch") or {}).get("group")
+    gain = processing.get("gain_db") if isinstance(processing, dict) else None
+    if (not is_line_source(channel) or group not in facts.PHANTOM_CAPABLE_GROUPS
+            or isinstance(gain, bool) or not isinstance(gain, (int, float))
+            or gain <= LINE_GAIN_CEILING_DB or stated):
+        return None
+    processing["gain_db"] = LINE_GAIN_DB
+    sockets = "+".join(str(n) for n in (channel.get("patch") or {}).get("sockets") or [])
+    name = channel.get("name")
+    note = (f"head-amp gain {LINE_GAIN_DB:g} dB, chosen because the source is line level "
+            f"(the plan had {gain:g} dB)")
+    provenance = channel.setdefault("provenance", {})
+    if isinstance(provenance, dict):
+        before = provenance.get("processing")
+        provenance["processing"] = f"{before}; {note}" if before else note
+    return (f"channel {name!r}: a Line source on {group} {sockets}, a head amp, so its gain is "
+            f"{LINE_GAIN_DB:g} dB, not the {gain:g} dB the plan had -- that is a mic's gain, "
+            f"and a line-level feed with it would clip the preamp. Chosen from the source "
+            f"type, because no gain is stated in your conventions or instructions. Say a gain "
+            f"for {name!r} (say, 'gain 6 dB') if you want another.")
 
 
 def inferred_diagnostics(plan: dict) -> list[Diagnostic]:

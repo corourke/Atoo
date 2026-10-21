@@ -462,6 +462,37 @@ def parse_node_dump(node: str, dump: str) -> dict[str, str]:
 
 
 
+def dump_text_rounding_band(text: str) -> float:
+    """How far from the exact value a float printed as `text` in a node dump
+    can be: half a unit of the text's last non-zero digit, or 0.0 for a
+    level at -oo (exact).
+
+    A dump prints the desk's DISPLAY text, not the value a single read gives:
+    on a Compact, `144.6788` came back as `144.7`, `999.2505` as `999.0` and
+    `100.4755` as `100.0`. Where the desk rounds is not stated, but a number
+    printed with trailing zeros was rounded at that digit or a finer one, so
+    the error is at most half a unit of the last digit that is not zero --
+    `100.0` is within 50 of the truth, `144.7` within 0.05. That bound is
+    derived from the text alone, so it holds for every parameter and every
+    model, and is deliberately wide for a round number: a caller that cannot
+    tell its verdict from it reads the address singly. A zero has no
+    non-zero digit, so its own printed precision is the unit (`0.0`: 0.05).
+    """
+    from decimal import Decimal, InvalidOperation
+
+    stripped = text.strip()
+    if stripped in ("-oo", "-\u221e"):
+        return 0.0
+    try:
+        number = Decimal(stripped)
+    except InvalidOperation:
+        return float("inf")
+    if not number.is_finite():
+        return float("inf")
+    exponent = (number.normalize() if number else number).as_tuple().exponent
+    return float(Decimal(5).scaleb(exponent - 1))
+
+
 def value_from_dump_text(text: str, value_type: str) -> tuple[object, str | None]:
     """`(value, error)` for one dump value, in the same shape and with the
     same meanings `OscReply.value()` returns for a per-leaf reply -- so a

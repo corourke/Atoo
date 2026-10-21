@@ -25,7 +25,7 @@ from atoo import console_facts
 from atoo.audit import (
     DEFAULT_RULES, ConsoleState, Severity, aes50_output_addresses, console_read_plan,
     diff_against_plan, mute_drift_findings, plan_watch_rules, read_console_state,
-    route_drift_findings, run_audit, socket_groups_to_read,
+    route_drift_findings, run_audit, socket_groups_to_read, split_path_rules,
 )
 from atoo.console import OscReply
 from atoo.watch import watch
@@ -100,7 +100,8 @@ def _without_aes50_outputs(values: dict) -> dict:
 
 
 def _rules():
-    return list(DEFAULT_RULES) + plan_watch_rules(PLAN_PATH)
+    # R012 told which splits the plan states, as Watch runs it on a show with a plan.
+    return split_path_rules(DEFAULT_RULES, PLAN) + plan_watch_rules(PLAN_PATH)
 
 
 def _ids(findings, *, at_least=Severity.WARNING):
@@ -355,8 +356,13 @@ def test_watch_raises_the_kick_and_clears_it_when_sent_again():
     states = iter([_state(), _state(**cut), _state()])
     events = list(watch(lambda: next(states), rules=_rules(), interval=0, max_iterations=3,
                         sleep=lambda _s: None))
-    assert [f.rule_id for f in events[1].new_findings] == ["CV016"]
-    assert [f.rule_id for f in events[2].cleared_findings] == ["CV016"]
+    # R013 is the INFO that lists the planned splits; it changes its members when a strip
+    # stops being split, which is not what this test is about.
+    def warnings(findings):
+        return [f.rule_id for f in findings if f.rule_id != "R013"]
+
+    assert warnings(events[1].new_findings) == ["CV016"]
+    assert warnings(events[2].cleared_findings) == ["CV016"]
 
 
 # --------------------------------------------------------------------------

@@ -187,7 +187,7 @@
   }
 
   // How many drafted conditions nobody has reviewed is a
-  // state in the block's header (`.state.is-warn`), and
+  // state in the block's header (`.state.is-info`), and
   // what that means is its title.
   function wcRenderDraftedNote() {
     const drafted = wcConditions.filter(wcIsDrafted).length;
@@ -284,11 +284,13 @@
       if (wcIsDrafted(cond)) {
         // A button, not a label: pressing it is how an engineer keeps a
         // drafted condition exactly as proposed and still says "reviewed".
-        // Drafted is a state (unreviewed, §6), so it is yellow; on a
-        // read-only show there is nothing to press, so it is only the tag.
+        // Drafted is a state (unreviewed, §6), and blue: a call to look,
+        // not a fault, so it cannot be read as the yellow WARNING beside
+        // it. On a read-only show there is nothing to press, so it is
+        // only the tag.
         const tag = document.createElement(readOnly ? "span" : "button");
         if (!readOnly) tag.type = "button";
-        tag.className = "state is-warn wc-source-drafted";
+        tag.className = "state is-info wc-source-drafted";
         tag.textContent = "Drafted";
         tag.title = readOnly ? "Proposed by a bundle build, and not yet reviewed."
           : "Proposed by a bundle build. Edit it, or press this, "
@@ -323,8 +325,14 @@
     // A read-only show: the same columns, as text (no remove column).
     if (readOnly) {
       wcRowRefs[index] = {};
-      const roIdCell = wcTextCell(tr, cond.id, "wc-text wc-text-id");
-      roIdCell.appendChild(wcMakeExplain(index).pop);
+      const roIdCell = wcTextCell(tr, "", "wc-text wc-text-id");
+      const roIdWrap = document.createElement("div");
+      roIdWrap.className = "wc-id-wrap";
+      const roIdText = document.createElement("span");
+      roIdText.textContent = cond.id == null ? "" : String(cond.id);
+      roIdWrap.appendChild(roIdText);
+      roIdWrap.appendChild(wcMakeExplain(index).pop);
+      roIdCell.appendChild(roIdWrap);
       wcTextCell(tr, cond.description, "wc-text wc-text-desc");
       wcTextCell(tr, cond.channel, "wc-text");
       wcTextCell(tr, cond.bus ? cond.field + " \u2192 " + cond.bus : cond.field,
@@ -985,6 +993,13 @@
   const verdictBar = el("watch-verdict");
   const verdictWord = el("watch-verdict-word");
   const verdictLine = el("watch-verdict-line");
+  // The column headings stick just below the verdict bar, whose height
+  // changes as its line wraps; the stylesheet reads it from `--verdict-h`.
+  if (verdictBar && typeof ResizeObserver === "function") {
+    new ResizeObserver(() => {
+      verdictBar.parentElement.style.setProperty("--verdict-h", verdictBar.offsetHeight + "px");
+    }).observe(verdictBar);
+  }
   const alertHead = document.querySelector("#alert-table thead");
   const consoleOrigin = el("console-origin");
   const watchNotes = el("watch-notes");
@@ -994,7 +1009,7 @@
   // "Flash on new" is the engineer's choice: off until turned on, and
   // remembered on this device. A switch (role="switch"), not a
   // checkbox -- the only checkbox that reaches a console is Apply's
-  // arming control. (The rows' Hide buttons only hide a
+  // arming control. (The rows' Hide boxes only hide a
   // row here.)
   let flashOn = false;
   try { flashOn = localStorage.getItem("atoo.watchFlash") === "1"; } catch (e) { /* off */ }
@@ -1177,7 +1192,7 @@
   }
 
   // The fold below the table: each finding hidden by its row's Hide
-  // button, with a Show button in its place to bring the row back.
+  // box, which is ticked in the list and brings the row back when cleared.
   function renderSuppressed() {
     if (!suppressedFold) return;
     const items = Array.from(shown.values()).filter((f) => suppressed.has(findingKey(f)));
@@ -1191,6 +1206,7 @@
       const li = document.createElement("li");
       li.className = "watch-suppressed-item";
       li.dataset.sev = SEVERITY_ORDER[f.severity] !== undefined ? f.severity : "info";
+      li.appendChild(makeHideCheck(f, true));
       const badge = document.createElement("span");
       badge.className = "sev sev-" + f.severity;
       badge.textContent = SEVERITY_LABEL[f.severity] || f.severity;
@@ -1199,35 +1215,40 @@
       where.textContent = parts.where ? parts.where + ":" : "\u2014";
       li.appendChild(where);
       li.appendChild(document.createTextNode(" " + (parts.claim || "")));
-      li.appendChild(makeHideButton(f, true));
       li.appendChild(makeCode(f.rule_id));
       suppressedList.appendChild(li);
     }
   }
 
-  // The row's Hide button, and the fold's Show: a quiet button (the guide's
-  // §4), labelled in words, with the finding named in its accessible label
-  // so a list of them is not twelve buttons called "Hide".
-  function makeHideButton(f, hidden) {
+  // The row's Hide check box, at the far left of its row and of the
+  // Suppressed list, as the findings pane puts its own: ticked, the finding
+  // leaves the table (the desk is not touched); a ticked box in the list
+  // brings it back when cleared. The finding is named in the accessible
+  // label so a column of them is not twelve boxes called "Hide". The label
+  // around the box is a 32px target; the box itself stays small.
+  function makeHideCheck(f, hidden) {
     const parts = splitFinding(f);
     const what = joinWhere(parts.where, parts.claim) || f.rule_id;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-quiet watch-row-hide";
-    btn.textContent = hidden ? "Show" : "Hide";
-    btn.title = hidden ? "Show this finding again"
-                       : "Hide this finding on this page while it stands; the desk is not touched";
-    btn.setAttribute("aria-label", (hidden ? "Show again: " : "Hide: ") + what);
-    btn.addEventListener("click", () => {
-      // Hiding moves the row out of the table, so this button goes with it:
-      // keep keyboard focus on the next row's button rather than <body>.
-      const row = btn.closest("tr, li");
+    const label = document.createElement("label");
+    label.className = "watch-row-hide-hit";
+    label.title = hidden ? "Hidden on this page; clear to show this finding again"
+                         : "Hide this finding on this page while it stands; the desk is not touched";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "watch-row-hide";
+    box.checked = hidden;
+    box.setAttribute("aria-label", "Hide: " + what);
+    box.addEventListener("change", () => {
+      // Hiding moves the row out of the table, so this box goes with it:
+      // keep keyboard focus on the next row's box rather than <body>.
+      const row = box.closest("tr, li");
       const next = row && (row.nextElementSibling || row.previousElementSibling);
-      setSuppressed(f, !hidden);
+      setSuppressed(f, box.checked);
       const target = next && next.isConnected ? next.querySelector(".watch-row-hide") : null;
       if (target) target.focus();
     });
-    return btn;
+    label.appendChild(box);
+    return label;
   }
 
   for (const sev of SUPPRESSIBLE_SEVS) {
@@ -1456,6 +1477,7 @@
     const parts = splitFinding(f);
     const solid = f.severity === "error" || f.severity === "warning" ? " solid" : "";
     return (
+      '<td class="col-hide"></td>' +
       '<td class="col-sev"><div class="sev-cell"><span class="sev big' + solid + " sev-" + f.severity + '">' + sevLabel + "</span></div></td>" +
       '<td class="col-where"><span class="row-where">' + escapeHtml(parts.where || "\u2014") + "</span></td>" +
       '<td class="col-title">' + findingHtml(f) + "</td>" +
@@ -1587,7 +1609,7 @@
           : "Not watching yet. Press Start watching.")
         : hiddenNow
           ? "Nothing shown: " + hiddenNow + " finding(s) hidden. Click a struck-through " +
-            "count above, or choose Show on one under Suppressed, to show them."
+            "count above, or clear the box on one under Suppressed, to show them."
           : "";
     }
     emptyState.hidden = !tableEmpty || !emptyState.textContent;
@@ -1634,7 +1656,7 @@
         tr.dataset.key = key;
         tr.className = "sev-row-" + f.severity;
         tr.innerHTML = rowHtml(f);
-        tr.querySelector(".sev-cell").appendChild(makeHideButton(f, false));
+        tr.querySelector(".col-hide").appendChild(makeHideCheck(f, false));
         if (f._isNew) {
           f._isNew = false;
           tr.classList.add("row-new");

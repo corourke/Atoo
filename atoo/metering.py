@@ -11,20 +11,30 @@ of this module reaches the page but the finding.
 at all; they are the one thing that needs the native protocol's metering
 channel on TCP 2222 (`WING_Remote-Protocols-3.1-03.pdf` pp96-98). A Watch
 opens one native connection (one of the desk's 24 client slots), declares
-a UDP port, asks for two meter collections and renews them under the
+a UDP port, asks for **one** meter collection and renews it under the
 desk's 5-second timeout. It **never writes a parameter** (FR-6.7): the
-only bytes sent are the port declaration, two meter requests and their
+only bytes sent are the port declaration, the meter request and its
 renewals.
 
-- **Report 1**: channels 1-40 and aux 1-8 -- 8 words each (input L/R,
-  output L/R, gate key/gain, dyn key/gain), confirmed for `channel` on a
-  WING Compact, 2026-09-09 (a metering spike).
-- **Report 2**: bus 1-16, main 1-4 and matrix 1-8. Table 5 lists them
-  under the same 8-word layout as the channel, but that is the spec's
-  grouping, **not yet seen on a desk**. They are a separate report (the
-  spec asks for a different report id per collection) so that if a desk's
-  packets are not the size the layout says, only this half is switched
-  off, with an INFO saying so, and channel clips are still caught.
+**One collection, one report id.** The desk keeps only the last
+collection request on a connection (measured on a WING Compact, fw 3.1:
+with two requests only the second was ever served, and renewing the id of
+the first stopped the stream). So channels 1-40, aux 1-8, bus 1-16,
+main 1-4 and matrix 1-8 are one collection under `REPORT_ID`, and a packet
+is split by position: its words must be exactly `WORDS_PER_STRIP` for
+each strip of each type, in the order the types were asked. Each strip is
+8 words (input L/R, output L/R, gate key/gain, dyn key/gain), confirmed
+for channels and for bus, main and matrix on a Compact. A packet of any
+other size cannot be split, so none of it is read and the status says so.
+
+**Renewal repeats the whole request.** That is the form measured to keep
+the stream going with one report and with several; it also re-asks for
+the data should the desk have forgotten it.
+
+**Liveness.** A stream that stops after it began is not "on": after
+`STALL_AFTER` seconds with no packet the status says the meter data
+stopped, and the monitor asks again (declaration and request) every
+`RENEW_SECONDS` until packets come back.
 
 **Which word means "clipped", and at what level -- a judgement call,
 announced here and at INFO in the product.** A strip clips
@@ -38,11 +48,19 @@ level meter reads a clipped converter at 0 dBFS to within a quantum.
 The WING's own clip indicator is what the desk test
 compares this against; if the two disagree, this constant is what moves.
 
-**How long the clip lasted.** The length of a run of consecutive clipped
-packets, at the packet rate's resolution -- reported only when that
-resolution is fine enough to mean something (`MAX_DURATION_INTERVAL`) and
-the run is long enough to measure (`MIN_DURATION`). Otherwise the finding
-says it clipped and nothing about for how long.
+**One clip, however it flickers.** A converter near full scale hovers
+around the threshold, and a count of every crossing would say "clipped 222
+times" for one sustained overload. A run of clipped packets ends only when
+the strip has been below `RELEASE_THRESHOLD_DB` (-3 dBFS) for more than
+`RELEASE_SECONDS` (200 ms); a level between the two thresholds neither
+starts a clip nor ends one. "Clipped N times" counts runs, and the
+finding's sentence says so.
+
+**How long the clip lasted.** The span of a run, from its first clipped
+packet to its last, plus one packet interval -- reported only when packets
+come fast enough to mean something (`MAX_DURATION_INTERVAL`) and the run
+is long enough to measure (`MIN_DURATION`). Otherwise the finding says it
+clipped and nothing about for how long.
 
 **The timer.** `ClipTracker` keeps, per strip, when it last clipped. A
 strip's ERROR stands for `HOLD_SECONDS` after that and a new clip starts
@@ -117,10 +135,12 @@ HOLD_SECONDS = 60.0
 MAX_DURATION_INTERVAL = 0.25
 MIN_DURATION = 0.1
 
-#: Clipped packets this far apart (seconds) are not one run, whatever came
-#: between them: a run is consecutive packets, and packets are tens of ms
-#: apart.
-RUN_GAP = 1.0
+#: A run of clips ends only when its strip has been below this level for
+#: more than `RELEASE_SECONDS`; levels between this and the clip threshold
+#: keep a run going and never start one.
+RELEASE_THRESHOLD_DB = -3.0
+RELEASE_THRESHOLD = round(RELEASE_THRESHOLD_DB * UNITS_PER_DB)
+RELEASE_SECONDS = 0.2
 
 #: The desk drops a meter request not renewed within 5 s; renew well inside.
 RENEW_SECONDS = 2.0
@@ -128,12 +148,13 @@ RENEW_SECONDS = 2.0
 #: No packet this long after the request went out: say so at INFO.
 NO_PACKETS_AFTER = 10.0
 
-#: The two collections, in the order they are requested: (report id, which
-#: meter types).
-REPORTS: tuple[tuple[int, tuple[str, ...]], ...] = (
-    (1, ("channel", "aux")),
-    (2, ("bus", "main", "matrix")),
-)
+#: No packet this long after the stream began: the data has stopped.
+STALL_AFTER = 3.0
+
+#: The one report id, and the meter types of its collection in the order
+#: they are requested (and so the order the desk answers them).
+REPORT_ID = 1
+REPORT_TYPES: tuple[str, ...] = ("channel", "aux", "bus", "main", "matrix")
 
 
 def report_strips(meter_types: Iterable[str]) -> list[str]:
@@ -179,20 +200,17 @@ def meter_collection(meter_types: Iterable[str]) -> bytes:
     return bytes(out)
 
 
-def requests(udp_port: int) -> tuple[bytes, list[bytes], list[bytes]]:
-    """The bytes a Watch sends, as (declaration, one request per report,
-    one renewal per report), framed for the native channel. Nothing else
-    is ever sent: this is the whole of what Watch says to the desk's
-    native port."""
+def requests(udp_port: int) -> tuple[bytes, bytes, bytes]:
+    """The bytes a Watch sends, as (declaration, request, renewal), framed
+    for the native channel. The renewal is the whole request again: the
+    form measured to keep a stream going. Nothing else is ever sent: this
+    is the whole of what Watch says to the desk's native port."""
     framing: dict = {}
     declaration = _stuff(METERING_CHANNEL_ID, bytes([_TOKEN_UDP_PORT]) + struct.pack(">H", udp_port),
                          framing)
-    asks, renewals = [], []
-    for report_id, types in REPORTS:
-        ident = bytes([_TOKEN_REPORT_ID]) + struct.pack(">I", report_id)
-        asks.append(_stuff(METERING_CHANNEL_ID, ident + meter_collection(types), framing))
-        renewals.append(_stuff(METERING_CHANNEL_ID, ident, framing))
-    return declaration, asks, renewals
+    ident = bytes([_TOKEN_REPORT_ID]) + struct.pack(">I", REPORT_ID)
+    ask = _stuff(METERING_CHANNEL_ID, ident + meter_collection(REPORT_TYPES), framing)
+    return declaration, ask, ask
 
 
 def parse_packet(data: bytes) -> tuple[int, list[int]]:
@@ -235,72 +253,73 @@ class StripClip:
 @dataclass
 class _Episode:
     first_at: float
-    last_at: float
-    source: object = 0
+    last_at: float                 # the last clipped packet
     count: int = 1
     run_start: float = 0.0
-    longest_packets: int = 1
-    run_packets: int = 1
+    run_last: float = 0.0          # the last clipped packet of the current run
+    last_loud: float = 0.0         # the last packet at or above the release level
+    longest_span: float = 0.0      # longest run, first to last clipped packet
 
 
 class ClipTracker:
     """Per-strip clip timers, driven by the times its caller passes.
 
-    `observe(now, clipped, source)` is one meter packet: the set of strips
-    that clipped in it, from the report `source` (each report has its own
-    packet stream, so runs and rates are kept per source). `snapshot(now)`
-    is every strip whose ERROR stands.
+    `observe(now, clipped, loud)` is one meter packet: the set of strips
+    that clipped in it, and the set at or above the release level (a
+    superset of `clipped`; the same set when omitted). `snapshot(now)` is
+    every strip whose ERROR stands.
 
-    A strip's episode starts at its first clip; each later clip -- a run
-    of clipped packets is one clip, however long -- adds to its count and
-    moves its end `hold` seconds past it; and the episode is over once
-    `hold` seconds pass with no clip. A strip that clips after that starts
-    a new episode, which is a new finding.
+    A strip's episode starts at its first clip; each later clip adds to its
+    count and moves its end `hold` seconds past it; and the episode is
+    over once `hold` seconds pass with no clip. A strip that clips after
+    that starts a new episode, which is a new finding. A clip is a *run*:
+    it goes on while the strip stays loud, and ends once the strip has been
+    quiet (below the release level) for more than `RELEASE_SECONDS`.
     """
 
     def __init__(self, hold: float = HOLD_SECONDS) -> None:
         self.hold = hold
         self._episodes: dict[str, _Episode] = {}
-        self._last_clipped: dict[object, set[str]] = {}
-        self._last_packet_at: dict[object, float] = {}
-        self._intervals: dict[object, float] = {}
+        self._last_packet_at: float | None = None
+        self._interval: float | None = None
         self.packets = 0
         self._lock = threading.Lock()
 
     @property
     def interval(self) -> float | None:
-        """Seconds between packets, smoothed -- the slowest report's, which
-        is the resolution the least certain duration has. None until a
-        report has sent two."""
+        """Seconds between packets, smoothed. None until two have come."""
         with self._lock:
-            return max(self._intervals.values()) if self._intervals else None
+            return self._interval
 
-    def observe(self, now: float, clipped: Iterable[str], source: object = 0) -> None:
+    def observe(self, now: float, clipped: Iterable[str], loud: Iterable[str] | None = None) -> None:
         clipped = set(clipped)
+        loud = clipped if loud is None else set(loud) | clipped
         with self._lock:
-            before = self._last_packet_at.get(source)
+            before = self._last_packet_at
             if before is not None and 0 < now - before < 2.0:
-                old = self._intervals.get(source)
                 dt = now - before
-                self._intervals[source] = dt if old is None else 0.8 * old + 0.2 * dt
-            self._last_packet_at[source] = now
+                self._interval = dt if self._interval is None else 0.8 * self._interval + 0.2 * dt
+            self._last_packet_at = now
             self.packets += 1
             self._expire(now)
-            previous = self._last_clipped.get(source, set())
             for base in clipped:
                 ep = self._episodes.get(base)
                 if ep is None:
-                    self._episodes[base] = _Episode(now, now, source, run_start=now)
-                elif base in previous and now - ep.last_at < RUN_GAP:
-                    ep.run_packets += 1          # the same clip, still going
-                    ep.last_at = now
-                    ep.longest_packets = max(ep.longest_packets, ep.run_packets)
+                    self._episodes[base] = _Episode(now, now, run_start=now, run_last=now,
+                                                    last_loud=now)
+                    continue
+                if now - ep.last_loud <= RELEASE_SECONDS:
+                    ep.run_last = now                # the same clip, still going
                 else:
-                    ep.count += 1                # a new clip, the minute restarts
-                    ep.last_at = now
+                    ep.count += 1                    # a new clip, the minute restarts
                     ep.run_start = now
-                    ep.run_packets = 1
-            self._last_clipped[source] = clipped
+                    ep.run_last = now
+                ep.last_at = now
+                ep.longest_span = max(ep.longest_span, ep.run_last - ep.run_start)
+            for base in loud:
+                ep = self._episodes.get(base)
+                if ep is not None:
+                    ep.last_loud = now
 
     def _expire(self, now: float) -> None:
         for base in [b for b, ep in self._episodes.items() if now - ep.last_at >= self.hold]:
@@ -309,13 +328,12 @@ class ClipTracker:
     def snapshot(self, now: float) -> tuple[StripClip, ...]:
         with self._lock:
             self._expire(now)
+            interval = self._interval
             out = []
             for base, ep in self._episodes.items():
-                interval = self._intervals.get(ep.source)
                 longest = None
                 if interval is not None and interval <= MAX_DURATION_INTERVAL:
-                    # N consecutive packets cover N intervals.
-                    seconds = ep.longest_packets * interval
+                    seconds = ep.longest_span + interval      # N packets cover N intervals
                     if seconds >= MIN_DURATION:
                         longest = seconds
                 out.append(StripClip(base, ep.count, now - ep.last_at,
@@ -374,9 +392,11 @@ class ClipMonitor:
         self._problem: str | None = None       # why it is off, once it is
         self._started_at: float | None = None
         self._first_packet_at: float | None = None
-        #: Reports (by id) whose packets were not the size the layout says.
-        self._bad_reports: dict[int, int] = {}
-        self._strips = {rid: report_strips(types) for rid, types in REPORTS}
+        self._last_packet_at: float | None = None
+        #: The word count of the last packet that was not the size the
+        #: layout says, if any came.
+        self._bad_words: int | None = None
+        self._strips = report_strips(REPORT_TYPES)
 
     # -- the public face --
 
@@ -396,17 +416,15 @@ class ClipMonitor:
     def status(self) -> ClipStatus:
         with self._lock:
             problem = self._problem
-            bad = dict(self._bad_reports)
+            bad = self._bad_words
+            last = self._last_packet_at
         threshold = f"{CLIP_THRESHOLD_DB:g} dBFS"
         off = "Clip detection is off, and Watch carries on without it: "
         if problem:
             return ClipStatus(False, "off", off + problem)
         now = self.clock()
-        if self._first_packet_at is None and bad:
-            said = ", ".join(_report_name(r) for r in sorted(bad))
-            return ClipStatus(False, "off: unexpected meter layout",
-                              off + f"the console's meter packets for {said} are not the size "
-                              "the layout says, so none are read.")
+        if self._first_packet_at is None and bad is not None:
+            return ClipStatus(False, "off: unexpected meter layout", off + _bad_layout(bad))
         if self._first_packet_at is None:
             waited = now - (self._started_at if self._started_at is not None else now)
             if waited >= NO_PACKETS_AFTER:
@@ -417,9 +435,16 @@ class ClipMonitor:
                     "clip detection.")
             return ClipStatus(True, "starting", "Clip detection is starting: waiting for the "
                               "console's first meter packets.")
+        silent = now - (last if last is not None else now)
+        if silent > STALL_AFTER:
+            return ClipStatus(
+                False, "off: meter data stopped",
+                off + f"meter data stopped (no packet for {silent:.0f} s). Atoo is asking the "
+                "console for it again; clip detection comes back by itself when packets do.")
         rate = self._rate()
-        said = ", ".join(_report_name(r) for r in sorted(bad))
-        parts = [f"Listening to the console's meters for clips (a strip clips at {threshold}); "
+        parts = [f"Listening to the console's meters for clips (a strip clips at {threshold}; "
+                 f"a clip ends once the strip has been below {RELEASE_THRESHOLD_DB:g} dBFS for "
+                 f"{RELEASE_SECONDS * 1000:.0f} ms, and \"clipped N times\" counts those clips); "
                  f"an ERROR stands for {HOLD_SECONDS:.0f} s after its last clip."]
         summary = "on"
         if rate:
@@ -428,10 +453,9 @@ class ClipMonitor:
                          + ("" if self.tracker.interval is not None
                             and self.tracker.interval <= MAX_DURATION_INTERVAL
                             else ", too slowly to say how long a clip lasted") + ".")
-        if bad:
-            summary += f"; {said} not read"
-            parts.append(f"The console's meter packets for {said} are not the size the layout "
-                         "says, so those are not read.")
+        if bad is not None:
+            summary += "; some packets not read"
+            parts.append(_bad_layout(bad))
         return ClipStatus(True, summary, " ".join(parts))
 
     # -- internals --
@@ -470,9 +494,9 @@ class ClipMonitor:
                            "native client slots; a console with all 24 in use refuses it.")
                 return
             tcp.setblocking(False)
-            declaration, asks, renewals = requests(udp.getsockname()[1])
-            tcp.sendall(declaration + b"".join(asks))
-            self._loop(udp, tcp, renewals)
+            declaration, ask, renewal = requests(udp.getsockname()[1])
+            tcp.sendall(declaration + ask)
+            self._loop(udp, tcp, declaration, renewal)
         except OSError as exc:
             self._fail(f"the meter connection was lost ({_why(exc)}). Stop and Start watching "
                        "to try again.")
@@ -486,12 +510,17 @@ class ClipMonitor:
                     except OSError:
                         pass
 
-    def _loop(self, udp: socket.socket, tcp: socket.socket, renewals: list[bytes]) -> None:
+    def _loop(self, udp: socket.socket, tcp: socket.socket, declaration: bytes,
+              renewal: bytes) -> None:
         last_renew = self.clock()
         while not self._stop.is_set():
             now = self.clock()
             if now - last_renew >= RENEW_SECONDS:
-                tcp.sendall(b"".join(renewals))
+                # The renewal is the whole request. Once packets have stopped
+                # the port is declared again too, in case the desk forgot it.
+                stalled = (self._last_packet_at is not None
+                           and now - self._last_packet_at > STALL_AFTER)
+                tcp.sendall((declaration if stalled else b"") + renewal)
                 last_renew = now
             ready, _, _ = select.select([udp, tcp], [], [], 0.25)
             if tcp in ready:
@@ -507,28 +536,26 @@ class ClipMonitor:
                     self.feed(data)
 
     def feed(self, data: bytes) -> None:
-        """One UDP datagram. A packet that is not one of ours, or is not the
-        size its report's layout says, is not read (and the second kind is
+        """One UDP datagram. A packet that is not our report, or is not the
+        size the layout says, is not read (and the second kind is
         remembered, for the status)."""
         try:
             report_id, words = parse_packet(data)
         except ValueError:
             return
-        strips = self._strips.get(report_id)
-        if strips is None:
+        if report_id != REPORT_ID:
             return
-        if len(words) != WORDS_PER_STRIP * len(strips):
+        if len(words) != WORDS_PER_STRIP * len(self._strips):
             with self._lock:
-                self._bad_reports[report_id] = len(words)
+                self._bad_words = len(words)
             return
+        now = self.clock()
         with self._lock:
             if self._first_packet_at is None:
-                self._first_packet_at = self.clock()
-        self.tracker.observe(self.clock(), clipped_strips(strips, words), report_id)
-
-
-_PLURAL = {"channel": "channels", "aux": "aux", "bus": "busses", "main": "mains",
-           "matrix": "matrices"}
+                self._first_packet_at = now
+            self._last_packet_at = now
+        self.tracker.observe(now, clipped_strips(self._strips, words),
+                             clipped_strips(self._strips, words, RELEASE_THRESHOLD))
 
 
 def with_clip_detection(provider: Callable[[], object], host: str,
@@ -550,8 +577,12 @@ def with_clip_detection(provider: Callable[[], object], host: str,
     return detecting, monitor.close
 
 
-def _report_name(report_id: int) -> str:
-    return ", ".join(_PLURAL[t] for t in dict(REPORTS)[report_id])
+def _bad_layout(words: int) -> str:
+    expected = WORDS_PER_STRIP * len(report_strips(REPORT_TYPES))
+    counts = ", ".join(f"{STRIP_COUNTS[t]} {t}" for t in REPORT_TYPES)
+    return (f"The console's meter packets have {words} words, not the {expected} the layout says "
+            f"({counts}, {WORDS_PER_STRIP} words each), so they cannot be split by strip and "
+            "none are read.")
 
 
 def _why(exc: OSError) -> str:

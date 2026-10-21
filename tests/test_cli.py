@@ -20,10 +20,12 @@ import copy
 import json
 import re
 import socket
+import sys
 from pathlib import Path
 
 import pytest
 
+from atoo import install_info
 from atoo.cli import main
 from atoo.diagnostics import Diagnostic, Severity
 
@@ -605,7 +607,9 @@ def test_watch_with_no_flag_and_no_config_default_behaves_as_before(tmp_path, mo
     assert exit_code == 0
     out, err = capsys.readouterr()
     assert "WATCH:" not in out
-    assert err == ""  # nothing to report -- no config file, and no note about it
+    # Nothing to report -- no config file, and no note about it -- but the
+    # install line every desk command prints first.
+    assert err.splitlines() == [install_info.describe().summary()]
 
 
 # --- `atoo ui` --watch-conditions ------------------------
@@ -1414,3 +1418,28 @@ def test_a_successful_build_removes_an_old_partial_reply(stub_build, tmp_path, c
                  "--out", str(out)]) == 0
     assert out.is_file() and not (tmp_path / "plan.partial.json").exists()
     assert "plan.partial.json removed" in capsys.readouterr().err
+
+
+def test_warnings_under_a_summary_flush_stdout_first(monkeypatch):
+    """The summary says "listed below"; piped, stdout is block-buffered and
+    stderr is not, so the summary must be flushed before the lines."""
+    import io
+    import types
+    from atoo import cli
+    events = []
+
+    class Out(io.StringIO):
+        def flush(self):
+            events.append("stdout flushed")
+
+    class Err(io.StringIO):
+        def write(self, text):
+            if text.strip():
+                events.append("stderr: " + text.strip())
+            return super().write(text)
+
+    monkeypatch.setattr(sys, "stdout", Out())
+    monkeypatch.setattr(sys, "stderr", Err())
+    cli._print_result_warnings(types.SimpleNamespace(warnings=["ch 14: socket assigned"]))
+    assert events[0] == "stdout flushed"
+    assert events[1] == "stderr: - ch 14: socket assigned"

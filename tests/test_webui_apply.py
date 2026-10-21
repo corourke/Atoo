@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import time
 from pathlib import Path
 
@@ -771,19 +772,26 @@ def test_an_apply_needs_a_console_and_says_the_two_ways_to_set_one(tmp_path, des
     assert "[console]" in r.json()["error"]
 
 
-def test_a_bad_clean_output_sockets_spec_is_a_400_before_anything_runs(apply_client, desk):
-    r = apply_client.post("/api/apply/run",
-                          json={"clean_output_sockets": "LCL=lots"})
-    assert r.status_code == 400
-    assert apply_client.get("/api/apply/status").json()["state"] == "idle"
-    assert _writes(desk) == 0
+def test_a_full_apply_initializes_unless_the_request_says_not_to(apply_client):
+    apply_client.post("/api/apply/run", json={})
+    assert "--no-init" not in _wait(apply_client)["command"]
+    apply_client.post("/api/apply/run", json={"initialize": False})
+    assert "--no-init" in _wait(apply_client)["command"]
 
 
-def test_clean_output_sockets_reaches_the_command(apply_client):
-    apply_client.post("/api/apply/run",
-                      json={"confirm": False, "arm": False, "clean_output_sockets": "LCL=8"})
-    status = _wait(apply_client)
-    assert status["command"][-2:] == ["--clean-output-sockets", "LCL=8"]
+def test_the_preflight_says_whether_initialize_can_do_anything_and_whether_it_is_off(apply_client):
+    on = apply_client.get("/api/apply/preflight").json()
+    assert on["initialize"]["available"] is True and on["initialize"]["why"] == ""
+    codes = {f.get("code") for f in on["findings"]}
+    off = apply_client.get("/api/apply/preflight?initialize=0").json()
+    off_codes = {f.get("code") for f in off["findings"]}
+    assert "apply.init" in codes and "apply.init" not in off_codes
+    assert "apply.init-off" in off_codes
+
+
+def test_a_request_with_the_old_clean_output_sockets_field_does_not_send_the_flag(apply_client):
+    apply_client.post("/api/apply/run", json={"clean_output_sockets": "LCL=8"})
+    assert "--clean-output-sockets" not in _wait(apply_client)["command"]
 
 
 def test_a_second_apply_while_one_runs_is_refused(apply_client, monkeypatch):
@@ -834,7 +842,9 @@ def test_a_failed_preview_is_a_finding_not_a_crash(tmp_path, desk, monkeypatch):
     failed = [f for f in status["findings"] if f["code"] == "preview.failed"]
     assert len(failed) == 1 and "no reply from 198.51.100.9" in failed[0]["message"]
     assert failed[0]["message"].startswith("Preview failed (exit 1)")
-    assert failed[0]["message"].endswith("Nothing was written.")
+    # The command's own "which Atoo ran" line follows, so a failure reported to
+    # someone else says which copy it came from.
+    assert re.search(r"Nothing was written\.( Ran as atoo [^\n]*)?$", failed[0]["message"])
 
 
 def test_a_failed_write_and_a_failed_preview_are_worded_apart():
@@ -875,6 +885,15 @@ def assets():
     app = create_app()
     with fastapi_testclient.TestClient(app) as c:
         yield c
+
+
+def test_apply_js_wires_the_initialize_switch_and_the_typed_socket_box_is_gone(assets):
+    js = assets.get("/static/apply.js").text
+    html = assets.get("/static/shell.html").text
+    assert 'el("apply-init")' in js and "initialize: initOn()" in js
+    assert 'role="switch"' in html and 'id="apply-init"' in html
+    assert "cleanValue" not in js and "clean_output_sockets" not in js
+    assert "apply-clean" not in html and "apply-clean" not in js
 
 
 def test_apply_js_is_served_and_the_shell_loads_it(assets):
@@ -1110,16 +1129,15 @@ def test_watch_mode_adds_no_write_path_and_no_second_arming_control(assets):
         "the Watch panel's static markup carries a checkbox -- the only checkbox "
         "that means anything near a console is Apply's arming control"
     )
-    # Watch's rows carry a Hide button, drawn by watch.js, which hides a row
-    # on this page and reaches nothing. It is a button, not a checkbox: the
-    # only checkboxes watch.js makes are none at all, bar the watch-conditions
-    # editor's value box (a condition's `muted == true`), which is a field of
-    # the file, not a control.
-    assert watch_js.count('.type = "checkbox"') == 0
+    # Watch's rows carry a Hide check box, drawn by watch.js, which hides a
+    # row on this page and reaches nothing (like the findings pane's own). The
+    # other checkbox is the watch-conditions editor's value box (a condition's
+    # `muted == true`), which is a field of the file, not a control.
+    assert watch_js.count('.type = "checkbox"') == 1
     assert watch_js.count('wcMakeInput("checkbox"') == 1
     assert 'wcMakeInput("checkbox", cond.value, "wc-value-checkbox")' in watch_js
-    maker = watch_js[watch_js.index("function makeHideButton("):]
+    maker = watch_js[watch_js.index("function makeHideCheck("):]
     maker = maker[:maker.index("\n  }\n")]
-    assert 'btn.type = "button"' in maker
-    assert 'btn.className = "btn btn-quiet watch-row-hide"' in maker
+    assert 'box.type = "checkbox"' in maker
+    assert 'box.className = "watch-row-hide"' in maker
     assert "fetch(" not in maker

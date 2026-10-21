@@ -2797,31 +2797,43 @@ def test_a_dca_gets_its_starting_fader_and_mute():
     assert not [t for t in quiet if t.address.endswith(("/fdr", "/mute"))]
 
 
-# Through a Behringer stage box on AES50 A: "Got a
-# bunch of errors on the gain" -- 16 MISMATCHes, every one half a dB high
-# (20.0 asked, 20.5 held; 0.0 asked, 0.5 held). The box answers on its own
-# steps. Within half a dB it set the gain; beyond that it did not.
-@pytest.mark.parametrize("address, asked, held, readback, equal", [
-    ("/io/in/A/1/g", 20.0, 20.5, True, True),
-    ("/io/in/A/8/g", 0.0, 0.5, True, True),
-    ("/io/in/C/3/g", 20.0, 19.5, True, True),
-    ("/io/in/A/1/g", 20.0, 21.5, True, False),     # a real miss still shows
-    ("/io/in/A/1/g", 20.0, 20.5, False, False),    # "is a write needed" stays exact
-    ("/io/in/LCL/1/g", 20.0, 20.5, True, False),   # the desk's own preamps hold 20.0
+# Measured with a Compact (fw 3.1) and an S16 on AES50 A: a preamp gain lands
+# on the hardware's own 2.5 dB steps. S16: -2.0 .. 45.5 (0 asked holds 0.5,
+# 20 asked holds 20.5, 33.3 holds 33.0, 55 holds 45.5); Compact local:
+# -2.5 .. 45 (1.2 holds 0.0, 1.3 holds 2.5, 20.5 holds 20.0, 50 holds 45).
+# A held value within half a step of the request is the nearest step: the
+# same answer to "is a write needed" and "did it land".
+@pytest.mark.parametrize("address, asked, held, equal", [
+    ("/io/in/A/1/g", 20.0, 20.5, True),
+    ("/io/in/A/8/g", 0.0, 0.5, True),
+    ("/io/in/A/8/g", 1.25, 0.5, True),
+    ("/io/in/A/8/g", 1.8, 0.5, False),             # 3.0 is the nearer step
+    ("/io/in/A/8/g", 45.0, 45.5, True),             # at the top of the range
+    ("/io/in/A/8/g", -3.0, -2.0, True),            # the bottom of the plan's range
+    ("/io/in/C/3/g", 20.0, 19.5, True),
+    ("/io/in/A/1/g", 20.0, 21.5, False),           # a real miss still shows
+    ("/io/in/LCL/20/g", 1.2, 0.0, True),
+    ("/io/in/LCL/20/g", 1.3, 0.0, False),          # 2.5 is the nearer step
+    ("/io/in/LCL/20/g", 20.5, 20.0, True),
+    ("/io/in/LCL/20/g", 33.3, 32.5, True),
+    ("/io/in/LCL/20/g", 45.5, 45.0, True),
+    ("/io/in/USB/1/g", 20.0, 20.5, False),         # a group with no measured step is exact
 ])
-def test_a_stage_box_gain_reads_back_on_the_boxs_own_steps(address, asked, held, readback, equal):
+def test_a_preamp_gain_is_compared_on_the_hardwares_own_steps(address, asked, held, equal):
     from atoo.apply import _values_equal
-    assert _values_equal("f", held, asked, address, readback=readback) is equal
+    assert _values_equal("f", held, asked, address) is equal
 
 
-class _StageBoxConsole(FakeConsole):
-    """Holds an AES50 preamp gain half a dB above what was written, as the
-    Behringer box did on 2026-10-09."""
+class _SteppedPreampConsole(FakeConsole):
+    """Holds every `/io/in/*/g` on the nearest step of a 2.5 dB grid (an S16
+    on AES50 A: -2.0 + 2.5k), as measured."""
+
+    GRID = [-2.0 + 2.5 * k for k in range(20)]
 
     def _snap(self, address):
         if address.startswith("/io/in/A/") and address.endswith("/g") and address in self.state:
             value, value_type = self.state[address]
-            self.state[address] = (float(value) + 0.5, value_type)
+            self.state[address] = (min(self.GRID, key=lambda g: abs(g - float(value))), value_type)
 
     def set_param(self, address, value, value_type="f"):
         super().set_param(address, value, value_type)
@@ -2833,17 +2845,35 @@ class _StageBoxConsole(FakeConsole):
         return reply
 
 
-def test_a_stage_box_gain_is_a_match_and_says_so():
+def _gain_targets(*asked):
+    return [WriteTarget(f"/io/in/A/{n}/g", "f", f"A {n}: gain", lambda _, v=v: v, 1)
+            for n, v in enumerate(asked, 1)]
+
+
+def test_a_stepped_preamp_gain_is_a_match_and_says_it_was_snapped():
     plan = {"channels": [], "busses": {}, "mute_groups": {}, "outputs": {}, "dcas": {}}
-    console = _StageBoxConsole({"/io/in/A/1/g": (0.0, "f"), "/io/in/A/2/g": (0.0, "f")})
-    gains = [WriteTarget(f"/io/in/A/{n}/g", "f", f"A {n}: gain", lambda _: 20.0, 1) for n in (1, 2)]
-    result = apply_plan(plan, console, dry_run=False, extra_targets=gains)
+    console = _SteppedPreampConsole({"/io/in/A/1/g": (-2.0, "f"), "/io/in/A/2/g": (-2.0, "f")})
+    result = apply_plan(plan, console, dry_run=False, extra_targets=_gain_targets(20.0, 0.0))
     rows = {w.address: w for w in result.writes if w.address.startswith("/io/in/A/")}
     assert {w.status for w in rows.values()} == {"match"}
     assert rows["/io/in/A/1/g"].readback_value == 20.5
-    [note] = [w for w in result.warnings if "stage-box preamp gain" in w]
-    assert note.startswith("INFO 2 stage-box preamp gain(s) read back on the box's own steps")
+    [note] = [w for w in result.warnings if "preamp gain(s) snapped" in w]
+    assert note.startswith("INFO 2 preamp gain(s) snapped to the nearest step")
     assert "A 1: 20 dB asked, 20.5 dB held" in note
+
+
+def test_a_preview_after_a_stepped_gain_apply_proposes_nothing():
+    """The loop the stage box made: 0 asked, 0.5 held, and every preview
+    after it proposed the same write again."""
+    plan = {"channels": [], "busses": {}, "mute_groups": {}, "outputs": {}, "dcas": {}}
+    console = _SteppedPreampConsole({"/io/in/A/1/g": (-2.0, "f"), "/io/in/A/2/g": (-2.0, "f")})
+    apply_plan(plan, console, dry_run=False, extra_targets=_gain_targets(20.0, 0.0))
+    preview = apply_plan(plan, console, dry_run=True, extra_targets=_gain_targets(20.0, 0.0))
+    gains = [w for w in preview.writes if w.address.endswith("/g")]
+    assert gains and not [w for w in gains if w.would_change]
+    assert not [w for w in preview.writes if w.address.endswith("/g")
+                and w.status == "dry_run" and w.would_change]
+    assert any("preamp gain(s) snapped" in w for w in preview.warnings)
 
 
 def test_a_main_and_a_matrix_get_their_names():
@@ -2859,3 +2889,12 @@ def test_a_main_and_a_matrix_get_their_names():
     assert by_addr["/main/1/name"].compute_value(None) == "FOH"
     assert by_addr["/mtx/4/name"].compute_value(None) == "Phones"
     assert by_addr["/mtx/4/name"].description == "output Phones (matrix 4): name"
+
+
+def test_the_audit_reads_a_stepped_gain_as_the_planned_one():
+    """CV008 compares the plan's gain with the live one on the same grid, so
+    an audit straight after an apply does not report 20.5 held for 20."""
+    from atoo.audit import ConsoleState, _differs
+    state = ConsoleState({"/io/in/A/1/g": 20.5, "/io/in/A/2/g": 23.0})
+    assert _differs(state, "/io/in/A/1/g", "f", 20.0) is None
+    assert _differs(state, "/io/in/A/2/g", "f", 20.0) == 23.0

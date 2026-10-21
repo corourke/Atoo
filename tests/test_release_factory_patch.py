@@ -1,23 +1,17 @@
-"""What a released strip's input patch goes back to.
+"""What a released strip's input patch goes to: OFF.
 
-At the Compact session of 2026-09-24 a channel returned to free did not
-look like an initialized one: *"A truly initialized channel 19 would be
-patched to LCL 19 and have an icon like the other initialized channels.
-Otherwise, it is reset and appears ready to be patched."* The icon is the
-LCL socket's own glyph, shown through the patch, so the patch is the one
-real difference. Of three options he chose:
+A strip returned to free by a change used to be patched back to its measured
+factory socket (a Compact's ch 19 on LCL 19), while a full apply's reset
+left a strip the plan does not use at OFF. Two answers to "what is free?"
+meant a strip freed by a change and then fully applied ended up different.
+The decision: *"freed channels are left unpatched (input off). Patch's
+return-to-free should match full apply/reset, not restore LCL n."*
 
-    *"The factory patch, unless the plan uses that socket, otherwise OFF.
-    Ch 19 goes back to LCL 19 and looks exactly like an initialized
-    channel, glyph included. If the rebuilt plan now uses LCL 19 for
-    something else, it stays OFF rather than double-patching the socket,
-    and an INFO says so."*
-
-**The trap these tests exist for** is `console_facts.factory_input_patch`'s
-channel-n-from-LCL-n fallback. It is right for reading occupancy and wrong
-for a write: a model nobody measured may not have LCL 19 at all. Several
-tests below use `wing-rack` (24 local inputs, never measured) and an
-unknown model to pin that the fallback never reaches the wire.
+So the release writes `.grp = OFF` for every model, measured or not, claimed
+socket or not, and the INFO says so. What still takes the factory patch is
+the READ: a strip found on its factory socket, blank, is free (a desk
+initialized by hand, or a release that got partway), and a release
+re-run must accept it.
 
 Every plan and desk here is built in the test -- nothing is read from a
 bundle under `examples/`.
@@ -133,168 +127,72 @@ def release_info(amendment, label: str = "ch:19") -> str:
 # --------------------------------------------------------------------------
 
 
-def test_a_compact_release_goes_back_on_its_own_lcl_socket():
-    """The case the maintainer named: ch 19 goes back to LCL 19. Both halves of
-    the patch, the number the desk shows (19, not the GET's 18)."""
-    targets = apply_module.release_write_targets([VOX], console_model="wing-compact")
-    assert patch_writes(targets) == {"/ch/19/in/conn/grp": "LCL", "/ch/19/in/conn/in": 19}
-    order = [t.address for t in targets]
-    assert order.index("/ch/19/in/conn/grp") < order.index("/ch/19/in/conn/in")
-    # Where the unpatch used to sit: after the old socket's label and
-    # phantom are cleared, before the strip's own name and clink.
-    assert order.index("/io/in/A/5/name") < order.index("/ch/19/in/conn/grp")
-    assert order.index("/io/in/A/5/vph") < order.index("/ch/19/in/conn/grp")
-    assert order.index("/ch/19/in/conn/in") < order.index("/ch/19/clink")
-
-
-def test_a_claimed_factory_socket_is_left_off():
-    claim = {("LCL", 19): "channel 'Horn' on ch:21 in the rebuilt plan"}
-    targets = apply_module.release_write_targets(
-        [VOX], console_model="wing-compact", claimed_sockets=claim)
-    assert patch_writes(targets) == {"/ch/19/in/conn/grp": "OFF"}
-    grp = next(t for t in targets if t.address == "/ch/19/in/conn/grp")
-    assert "LCL 19" in grp.description and "'Horn'" in grp.description
-
-
-def test_a_kept_socket_is_a_claim_even_when_the_caller_names_no_claims():
-    """The absent case of the guard above: a caller passing only
-    `keep_sockets` (as every caller did before this change) must still
-    never be handed a double patch."""
-    targets = apply_module.release_write_targets(
-        [VOX], console_model="wing-compact", keep_sockets={("LCL", 19)})
-    assert patch_writes(targets) == {"/ch/19/in/conn/grp": "OFF"}
-
-
-@pytest.mark.parametrize("model", ["wing-rack", "wing-ultra", None])
-def test_an_unmeasured_model_is_left_off_and_never_given_the_identity(model):
-    """The trap. `factory_input_patch("wing-rack", "ch", 19)` answers
-    LCL 19 -- the identity fallback -- and a write must not use it.
-    `None` is the absent case: no model passed at all."""
-    assert facts.factory_input_patch(model, "ch", 19) == ("LCL", 19)  # the fallback exists
+@pytest.mark.parametrize("model", ["wing-compact", "wing-full", "wing-rack", None])
+def test_a_release_leaves_the_patch_off_whatever_the_model(model):
+    """Ch 19 on a Compact would have gone back on LCL 19; now every model
+    gets OFF, `.grp` alone (OFF is fully disconnected, `.in` is
+    meaningless after it)."""
     kwargs = {} if model is None else {"console_model": model}
     targets = apply_module.release_write_targets([VOX], **kwargs)
     assert patch_writes(targets) == {"/ch/19/in/conn/grp": "OFF"}
-    assert not [t for t in targets if t.compute_value(None) == "LCL"]
+    order = [t.address for t in targets]
+    # After the old socket's label and phantom are cleared, before the
+    # strip's own name and clink.
+    assert order.index("/io/in/A/5/name") < order.index("/ch/19/in/conn/grp")
+    assert order.index("/io/in/A/5/vph") < order.index("/ch/19/in/conn/grp")
+    assert order.index("/ch/19/in/conn/grp") < order.index("/ch/19/clink")
 
 
-def test_a_full_size_channel_past_its_local_inputs_goes_off():
-    """Measured: a full-size WING has 8 local inputs and ships ch 9-40
-    unpatched. The identity fallback would have written LCL 19 -- a socket
-    that does not exist on that panel."""
-    targets = apply_module.release_write_targets([VOX], console_model="wing-full")
-    assert patch_writes(targets) == {"/ch/19/in/conn/grp": "OFF"}
-    socket, why = apply_module.release_patch_decision(VOX, console_model="wing-full")
-    assert socket is None and "unpatched from the factory" in why
-
-
-def test_a_full_size_channel_inside_its_local_inputs_is_restored():
-    vox5 = channel(5, "Lead Vox", "A", 5)
-    targets = apply_module.release_write_targets([vox5], console_model="wing-full")
-    assert patch_writes(targets, "/ch/5") == {"/ch/5/in/conn/grp": "LCL", "/ch/5/in/conn/in": 5}
-
-
-def test_a_strip_the_factory_leaves_unpatched_goes_off():
-    """Ch 25-40 on a Compact are OFF from the factory, so OFF is their
-    factory patch -- and the reason says so."""
-    ch30 = channel(30, "Horn", "A", 30)
-    targets = apply_module.release_write_targets([ch30], console_model="wing-compact")
-    assert patch_writes(targets, "/ch/30") == {"/ch/30/in/conn/grp": "OFF"}
-    _, why = apply_module.release_patch_decision(ch30, console_model="wing-compact")
-    assert "leaves ch:30 unpatched from the factory" in why
-
-
-def test_a_compact_media_aux_goes_back_on_its_player():
+def test_a_media_aux_is_left_off_too():
     aux1 = channel(1, "Walk-in", "A", 40, bank="aux")
     targets = apply_module.release_write_targets([aux1], console_model="wing-compact")
-    assert patch_writes(targets, "/aux/1") == {"/aux/1/in/conn/grp": "USB",
-                                               "/aux/1/in/conn/in": 1}
+    assert patch_writes(targets, "/aux/1") == {"/aux/1/in/conn/grp": "OFF"}
 
 
-def test_a_measured_socket_the_panel_lacks_is_never_written(monkeypatch):
-    """The panel check behind the measured table: a measured row naming a
-    socket `CONSOLE_MODELS` says is not there (a transcription slip) goes
-    OFF rather than onto the wire."""
-    monkeypatch.setitem(facts.FACTORY_INPUT_PATCHES, "wing-full",
-                        {"ch": {19: ("LCL", 19)}, "aux": {}, "bus": {}})
-    targets = apply_module.release_write_targets([VOX], console_model="wing-full")
-    assert patch_writes(targets) == {"/ch/19/in/conn/grp": "OFF"}
+def test_the_release_writes_the_same_off_a_full_apply_leaves_an_unused_strip():
+    """"Free" means one thing: the full apply's unpatch of a strip the plan
+    does not use writes `.grp = OFF`, and so does the release."""
+    targets = apply_module.release_write_targets([VOX], console_model="wing-compact")
+    grp = next(t for t in targets if t.address == "/ch/19/in/conn/grp")
+    assert grp.compute_value(None) == "OFF"
 
 
 # --------------------------------------------------------------------------
-# Through the amend engine: the claims, the INFO, the model
+# Through the amend engine: the INFO
 # --------------------------------------------------------------------------
 
 
-def test_amend_restores_the_factory_patch_and_says_so():
+def test_amend_leaves_the_patch_off_and_says_so():
     applied = plan([KICK, VOX])
     amendment = release(applied, plan([KICK]), desk(applied))
     assert amendment.released == ["ch:19"]
-    assert patch_writes(amendment_targets(amendment).releases) == {
-        "/ch/19/in/conn/grp": "LCL", "/ch/19/in/conn/in": 19}
+    assert patch_writes(amendment_targets(amendment).releases) == {"/ch/19/in/conn/grp": "OFF"}
     info = release_info(amendment)
-    assert "patched back to LCL 19" in info and "WING Compact" in info
+    assert "left unpatched (OFF)" in info and "full apply" in info
 
 
-def test_amend_leaves_it_off_when_the_rebuilt_plan_uses_the_socket():
-    """The maintainer's own example: the rebuild now uses LCL 19 for something
-    else, so ch 19 stays OFF and the INFO names the socket and what took
-    it."""
+def test_a_rebuilt_plan_using_the_factory_socket_changes_nothing_about_the_release():
+    """The old rule left ch 19 OFF here to avoid a double patch; OFF is now
+    the answer in every case, so the socket is simply not touched."""
     applied = plan([KICK, VOX])
     rebuilt = plan([KICK, channel(21, "Podium Mic", "LCL", 19)])
     amendment = release(applied, rebuilt, desk(applied))
     assert kinds(amendment, ChangeKind.ADDED) and amendment.released == ["ch:19"]
-    targets = amendment_targets(amendment)
-    assert patch_writes(targets.releases) == {"/ch/19/in/conn/grp": "OFF"}
-    info = release_info(amendment)
-    assert "LCL 19" in info and "'Podium Mic'" in info and "OFF" in info
-
-
-def test_amend_leaves_it_off_when_the_desk_has_something_else_on_the_socket():
-    """A strip in neither plan -- somebody else's -- patched to LCL 19.
-    The kept plan cannot see it; the occupancy read can."""
-    applied = plan([KICK, VOX])
-    state = desk(applied, extra={"/ch/30/in/conn/grp": "LCL", "/ch/30/in/conn/in": 19,
-                                 "/io/in/LCL/19/name": "Podium"})
-    amendment = release(applied, plan([KICK]), state)
-    assert {s for s in amendment.released} == {"ch:19"}
     assert patch_writes(amendment_targets(amendment).releases) == {"/ch/19/in/conn/grp": "OFF"}
-    assert "ch:30" in release_info(amendment)
 
 
-def test_a_strip_being_released_does_not_claim_its_own_old_socket():
-    """Two strips released in one run, one of them sitting on the other's
-    factory socket: both are vacating, so neither blocks the other."""
+def test_two_released_strips_both_go_off():
     applied = plan([KICK, VOX, channel(3, "BV", "LCL", 19)])
     amendment = release(applied, plan([KICK]), desk(applied))
     assert sorted(amendment.released) == ["ch:19", "ch:3"]
     releases = amendment_targets(amendment).releases
-    assert patch_writes(releases) == {"/ch/19/in/conn/grp": "LCL", "/ch/19/in/conn/in": 19}
-    assert patch_writes(releases, "/ch/3") == {"/ch/3/in/conn/grp": "LCL", "/ch/3/in/conn/in": 3}
+    assert patch_writes(releases) == {"/ch/19/in/conn/grp": "OFF"}
+    assert patch_writes(releases, "/ch/3") == {"/ch/3/in/conn/grp": "OFF"}
 
 
-def test_amend_on_an_unmeasured_model_leaves_it_off_and_says_why():
+def test_the_model_does_not_change_the_answer():
     applied = plan([KICK, VOX], model="wing-rack")
     amendment = release(applied, plan([KICK], model="wing-rack"), desk(applied, "wing-rack"))
-    assert patch_writes(amendment_targets(amendment).releases) == {"/ch/19/in/conn/grp": "OFF"}
-    assert "nobody has measured" in release_info(amendment)
-
-
-def test_the_model_comes_from_the_plan_when_the_desk_did_not_say():
-    """A `--state` file carries no model. The plan's `meta.console_model`
-    fills the gap, as it does for the audit."""
-    applied = plan([KICK, VOX])
-    state = desk(applied, model=None)
-    amendment = plan_amendment(applied, plan([KICK]), strip_occupancy(state, applied))
-    assert amendment.console_model == "wing-compact"
-    assert patch_writes(amendment_targets(amendment).releases)["/ch/19/in/conn/grp"] == "LCL"
-
-
-def test_the_desk_s_model_beats_the_plan_s():
-    """The plan says Compact, the desk says full-size: ch 19 has no
-    factory socket on a Full, so it goes OFF."""
-    applied = plan([KICK, VOX])
-    amendment = release(applied, plan([KICK]), desk(applied, "wing-full"))
-    assert amendment.console_model == "wing-full"
     assert patch_writes(amendment_targets(amendment).releases) == {"/ch/19/in/conn/grp": "OFF"}
 
 
@@ -368,7 +266,7 @@ def test_the_freed_strip_reads_free_on_a_fresh_occupancy_read(model):
     """A15's step 5, on a fake desk: release ch 19, then read the desk
     again through `read_occupancy` -- the real read, readback offset and
     second pass included -- and ask about it with the rebuild as the
-    applied plan. It is back on LCL 19 and it is FREE.
+    applied plan. It is unpatched (OFF) and it is FREE.
 
     `None` is the offline replay: a state with no model of its own, which
     `strip_occupancy` fills from the plan, as the release did."""
@@ -381,7 +279,7 @@ def test_the_freed_strip_reads_free_on_a_fresh_occupancy_read(model):
 
     fresh = read_occupancy(console, console_model=model)
     status = {s.label: s for s in strip_occupancy(fresh, rebuilt)}["ch:19"]
-    assert status.patch == ("LCL", 19)
+    assert status.patch is None
     assert status.name == ""
     assert status.state is StripState.FREE, status
 
@@ -397,11 +295,9 @@ def test_a_restored_media_aux_reads_free_when_the_state_has_no_model():
 
 
 def test_the_cli_takes_the_model_the_desk_states(tmp_path, monkeypatch, capsys):
-    """`atoo amend --console`: the desk says it is a full-size WING
-    on its `/?` reply, the plans say Compact. The desk wins, so ch 19 --
-    which a Full ships unpatched -- goes OFF, and the INFO says why. If the
-    command dropped the desk's answer on the floor, the plan's Compact
-    would put ch 19 back on LCL 19: a socket a Full does not have."""
+    """`atoo amend --console`: the desk says it is a full-size WING on its
+    `/?` reply, the plans say Compact. The model is taken from the desk;
+    ch 19 goes OFF, and the INFO says so."""
     import json
     from atoo import cli
 
@@ -418,6 +314,6 @@ def test_the_cli_takes_the_model_the_desk_states(tmp_path, monkeypatch, capsys):
                      "--console", "192.0.2.16", "--no-progress"])
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "WING (full-size console) leaves ch:19 unpatched from the factory" in out
+    assert "left unpatched (OFF)" in out
     assert "/ch/19/in/conn/in" not in out
     assert console.set_param_calls == [] and console.set_node_calls == []

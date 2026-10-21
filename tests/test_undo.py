@@ -698,6 +698,37 @@ def test_cli_exits_2_when_the_console_is_not_fully_back(tmp_path, capsys, monkey
     assert "undoing THAT file is the redo" in out
 
 
+def test_cli_exits_0_when_only_first_writes_cannot_be_put_back(tmp_path, capsys, monkeypatch):
+    """An address the run wrote for the first time has no earlier value; the
+    desk cannot go back to a value it never held, and nothing was refused."""
+    from atoo import cli
+
+    journal_file = tmp_path / "apply-journal.json"
+    journal_file.write_text(json.dumps(journal(
+        row("/ch/1/name", "", "Kick"), row("/ch/2/gate/depth", None, -40.0, value_type="f"))))
+    console = console_holding(__ch__1__name=("Kick", "s"), __ch__2__gate__depth=(-40.0, "f"))
+    console.close = lambda: None
+    monkeypatch.setattr(cli, "_open_console", lambda args: console)
+
+    assert cli.main(["undo", str(journal_file), "--console", "198.51.100.1", "--confirm"]) == 0
+    out = capsys.readouterr().out
+    assert "1 reversed" in out and "1 unreversible (no prior value)" in out
+    assert "INFO 1 address(es) had no earlier value" in out and "/ch/2/gate/depth" in out
+
+
+def test_cli_still_exits_2_for_a_refusal_beside_a_first_write(tmp_path, capsys, monkeypatch):
+    from atoo import cli
+
+    journal_file = tmp_path / "apply-journal.json"
+    journal_file.write_text(json.dumps(journal(
+        row("/ch/1/name", "", "Kick"), row("/ch/2/gate/depth", None, -40.0, value_type="f"))))
+    console = console_holding(__ch__1__name=("Theirs", "s"), __ch__2__gate__depth=(-40.0, "f"))
+    console.close = lambda: None
+    monkeypatch.setattr(cli, "_open_console", lambda args: console)
+
+    assert cli.main(["undo", str(journal_file), "--console", "198.51.100.1", "--confirm"]) == 2
+
+
 def test_cli_refuses_a_dry_run_journal(tmp_path, capsys):
     from atoo.cli import main
 

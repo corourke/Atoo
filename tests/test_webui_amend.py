@@ -734,3 +734,43 @@ def test_review_json_is_written_even_when_the_amend_is_refused(tmp_path, capsys)
     assert review["amendment_summary"] in out
     assert review["occupancy_summary"] in out
     assert review["proof"] is None
+
+
+def test_a_compile_that_fails_says_which_atoo_ran(tmp_path, desk, monkeypatch):
+    """The Patch page's failure is the command's own, and it carries the
+    line saying which copy of Atoo ran -- in the finding, where a reader
+    forwarding the failure finds it, as well as in the run log."""
+    monkeypatch.setattr(cli, "provider_from_env",
+                        lambda: FakeProvider(response="this is not json at all"))
+    with fastapi_testclient.TestClient(_app(_bundle(tmp_path))) as c:
+        c.post(PATCH, json={"confirm": False, "arm": False, "change": "add a thing"})
+        status = _wait(c)
+    assert status["exit_code"] == 1
+    [finding] = [f for f in status["findings"] if f["code"] == "preview.failed"]
+    assert "usable change set" in finding["message"]
+    assert re.search(r" Ran as atoo \d[^ ]* \(", finding["message"]), finding["message"]
+    assert any(line.strip().startswith("atoo ") for line in status["log"])
+
+
+def test_a_socket_past_the_end_of_the_stage_box_is_refused_in_the_preview(
+        tmp_path, desk, monkeypatch):
+    """The desk names an S16 on AES50-A, and the horns are on A 21-23: not
+    sockets that box has. The Patch page's preview says so and arms nothing."""
+    desk.next_state["/$stat/A/dev"] = ("S16", "s")
+    fake_model(monkeypatch)
+    with fastapi_testclient.TestClient(_app(_bundle(tmp_path))) as c:
+        r = c.post(PATCH, json={"confirm": False, "arm": False, "change": TEXT})
+        assert r.status_code == 200, r.json()
+        status = _wait(c)
+        review = status["review"]
+        pre = review["preflight"]
+        assert review["blocked"] and "review_id" not in review
+        assert pre["refusal_code"] == "amend.socket-missing-on-box"
+        assert "the S16 on AES50-A" in pre["refusal"] and "has 16 inputs" in pre["refusal"]
+        assert {"A 21", "A 22", "A 23"} <= {m.split(" (")[0] for m in pre["missing"]}
+        [finding] = [f for f in status["findings"]
+                     if f["code"] == "amend.socket-missing-on-box"]
+        assert finding["severity"] == "error"
+        refused = _write(c)
+        _wait(c)
+    assert refused.status_code == 409 and _writes(desk) == []

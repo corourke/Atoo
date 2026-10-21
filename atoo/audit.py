@@ -127,9 +127,9 @@ which nothing compared at all until `plan_schema.DCA_SCHEMA`
 gave a DCA somewhere to state one. The filters and the EQ are `log`
 controls, compared with `apply`'s own readback tolerance (2%) rather than the
 fader's half a decibel, and, like trim, balance, invert and head-amp gain,
-read only when `audit --plan` states them (`plan_processing_read_addresses`). Deliberately still NOT diffed: the
-compressor (no schema), a bus's, Main's or Matrix's EQ, and a channel's
-PreSend EQ.
+read only when `audit --plan` states them (`plan_processing_read_addresses`). A bus's, Main's
+and Matrix's EQ and tilt and a channel's PreSend EQ are compared the same way. Deliberately still
+NOT diffed: the compressor (no schema).
 """
 
 from __future__ import annotations
@@ -158,7 +158,7 @@ from atoo import console_facts, diagnostics, inferred
 from atoo.diagnostics import Diagnostic, Severity
 from atoo.apply import (
     _SEND_MODE_TO_WING, _VPH_CAPABLE_GROUPS, _channel_processing_targets, _declared_output_patches,
-    _values_equal, eq_band_leaves,
+    _strip_processing_targets, _values_equal, eq_band_leaves,
 )
 from atoo.input_list import format_socket
 # "which console is this plan for" has one answer, `verify_plan`'s, and an
@@ -1385,6 +1385,8 @@ def run_audit(
     if state.console_model is None and plan_model:
         state = replace(state, console_model=plan_model)
     rule_list = list(rules) if rules is not None else DEFAULT_RULES
+    if plan is not None:
+        rule_list = split_path_rules(rule_list, plan)
     findings: list[Finding] = []
     for rule in rule_list:
         findings.extend(rule.check(state))
@@ -1902,6 +1904,245 @@ def _rule_feedback_loop_held_closed(state: ConsoleState) -> list[Finding]:
         f"{position_label(loop.strip)} from another source.",
         _loop_addresses(loop),
     ) for loop in feedback_loops(state) if not loop.open]
+
+
+# --------------------------------------------------------------------------
+# R012, R013: a signal that splits and recombines
+# --------------------------------------------------------------------------
+#
+# When one strip reaches the same Main or Matrix by two routes, the copies sum,
+# and if the routes add different latency they comb-filter. It is a judgement
+# and not a physical impossibility (the desk works), so a WARNING, and it
+# stands down where the plan states every leg of the split, which is how a
+# parallel-compression bus the conventions asked for stays quiet. R013 says
+# so at INFO, so that a rule standing down is never silent.
+
+_STRIP_LEG_RX = re.compile(r"^(/(?:ch|aux)/\d+)/(?:send/(?:(\d+)|MX(\d+))|main/(\d+))/on$")
+
+
+def _strip_legs_by_strip(state: ConsoleState, bases: list[str]) -> dict[str, list[_Leg]]:
+    """`_strip_legs` for every strip in `bases` in one pass over the
+    addresses, rather than three scans of them per strip."""
+    wanted = set(bases)
+    found: dict[str, list[_Leg]] = {}
+    for address in state.values:
+        m = _STRIP_LEG_RX.match(address)
+        if not m or m.group(1) not in wanted:
+            continue
+        base, bus, matrix, main = m.groups()
+        if bus:
+            leg = _leg(state, base, f"bus:{bus}", f"{base}/send/{bus}/on", f"{base}/send/{bus}/lvl")
+        elif matrix:
+            leg = _leg(state, base, f"mtx:{matrix}", f"{base}/send/MX{matrix}/on",
+                       f"{base}/send/MX{matrix}/lvl")
+        else:
+            leg = _leg(state, base, f"main:{main}", f"{base}/main/{main}/on")
+        if leg is not None:
+            found.setdefault(base, []).append(leg)
+    for legs in found.values():
+        legs.sort(key=lambda leg: leg.target)
+    return found
+
+
+@dataclass(frozen=True)
+class SplitPath:
+    """One strip's signal reaching `destination` (a Main or a Matrix, as a
+    node id) by more than one route. `routes` has one route per leg into the
+    destination, each the legs from the strip, in order."""
+
+    strip: str
+    destination: str
+    routes: tuple[tuple[_Leg, ...], ...]
+
+    @property
+    def legs(self) -> list[_Leg]:
+        return list(dict.fromkeys(leg for route in self.routes for leg in route))
+
+
+def split_paths(state: ConsoleState) -> list[SplitPath]:
+    """Every strip in use whose signal reaches a Main or a Matrix by two or
+    more routes, found on the graph R002 and R009 walk, counting only legs
+    that are switched on and above the floor.
+
+    A destination is where the copies meet: two or more distinct legs into it
+    that each carry the strip's signal. Routes that share their last leg met
+    earlier and are reported there, so a strip on Main 1 twice that also
+    feeds a Matrix from Main 1 is one split, at Main 1."""
+    bases = [b for b in strip_bases(state) if is_in_use(state, b)]
+    first_legs = _strip_legs_by_strip(state, bases)
+    edges: dict[str, list[_Leg]] = {}
+    for leg in _routing_legs(state):
+        if leg.state == "open":
+            edges.setdefault(leg.source, []).append(leg)
+    found = []
+    for base in bases:
+        starts = [leg for leg in first_legs.get(base, []) if leg.state == "open"]
+        if len(starts) < 2:
+            continue
+        reach: dict[str, tuple[_Leg, ...]] = {base: ()}
+        arrivals: dict[str, list[tuple[_Leg, ...]]] = {}
+        queue = deque([base])
+        while queue:
+            node = queue.popleft()
+            for leg in (starts if node == base else edges.get(node, ())):
+                route = reach[node] + (leg,)
+                arrivals.setdefault(leg.target, []).append(route)
+                if leg.target not in reach:
+                    reach[leg.target] = route
+                    queue.append(leg.target)
+        for node in sorted(arrivals):
+            routes = arrivals[node]
+            if node.startswith(("main:", "mtx:")) and len(routes) >= 2:
+                routes.sort(key=lambda route: (len(route), [leg.target for leg in route]))
+                found.append(SplitPath(base, node, tuple(routes)))
+    return sorted(found, key=lambda split: (split.strip, split.destination))
+
+
+def _node_base(node: str) -> str:
+    """A signal-graph node id as the console address of its object: `bus:3`
+    is `/bus/3`; a strip's base is already one."""
+    if node.startswith("/"):
+        return node
+    kind, number = node.split(":")
+    return f"/{kind}/{number}"
+
+
+def _node_text(state: ConsoleState, node: str) -> str:
+    base = _node_base(node)
+    return position_label(base) if base.startswith(("/main/", "/mtx/")) else strip_label(state, base)
+
+
+def _route_text(state: ConsoleState, route: tuple[_Leg, ...]) -> str:
+    if len(route) == 1:
+        return "directly"
+    return "through " + ", then ".join(_node_text(state, leg.target) for leg in route[:-1])
+
+
+def _split_text(state: ConsoleState, split: SplitPath) -> str:
+    texts = [_route_text(state, route) for route in split.routes]
+    count = {2: "twice", 3: "three times", 4: "four times"}.get(len(texts), f"{len(texts)} times")
+    if len(texts) == 2:
+        joined = f"{texts[0]}, and {texts[1]}"
+    else:
+        joined = "; ".join(texts[:-1]) + f"; and {texts[-1]}"
+    return (f"{_node_text(state, split.strip)} reaches {_node_text(state, split.destination)} "
+            f"{count}: {joined}")
+
+
+def _split_muted(state: ConsoleState, split: SplitPath) -> list[str]:
+    """What on the routes is muted, which leaves them routes all the same."""
+    nodes = dict.fromkeys([split.strip] + [leg.target for leg in split.legs])
+    return [f"{_node_text(state, node)} is muted, so the signal through it is silent now and "
+            f"joins the moment it is unmuted"
+            for node in nodes if state.mute(_node_base(node))]
+
+
+def _split_addresses(split: SplitPath) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(a for leg in split.legs for a in leg.addresses))
+
+
+def _split_unstated(split: SplitPath, planned: frozenset) -> list[_Leg]:
+    return [leg for leg in split.legs if (leg.source, leg.target) not in planned]
+
+
+def _rule_signal_split(state: ConsoleState, planned: "frozenset | None" = None) -> list[Finding]:
+    """R012. `planned` is the legs a plan states (`planned_routing_legs`), or
+    None with no plan. A split whose every leg is stated was asked for and is
+    R013's; one the plan only partly states says which legs it does not."""
+    findings = []
+    for split in split_paths(state):
+        unstated = _split_unstated(split, planned) if planned is not None else None
+        if unstated is not None and not unstated:
+            continue
+        notes = _split_muted(state, split)
+        if unstated:
+            notes.append("The plan was applied and does not state "
+                         + "; ".join(f"{_node_text(state, leg.source)} to "
+                                     f"{_node_text(state, leg.target)}" for leg in unstated)
+                         + ", so this is not read as asked for")
+        findings.append(Diagnostic.audit(
+            "R012", Severity.WARNING, "routing", "Signal Splits And Recombines",
+            f"{_split_text(state, split)}. The copies sum there, so level builds up, and if one "
+            f"route adds more latency than the other (an insert, a delay) they comb-filter. "
+            + "".join(f"{note}. " for note in notes)
+            + "If it is parallel processing, state every leg in the plan and this stays "
+            "quiet; if not, switch one of the routes off.",
+            _split_addresses(split),
+        ))
+    return findings
+
+
+def _rule_signal_split_asked_for(state: ConsoleState,
+                                 planned: "frozenset | None" = None) -> list[Finding]:
+    """R013: the splits R012 stood down for because the plan states every
+    leg of them, one finding per destination. Nothing without a plan."""
+    if planned is None:
+        return []
+    by_destination: dict[str, list[SplitPath]] = {}
+    for split in split_paths(state):
+        if not _split_unstated(split, planned):
+            by_destination.setdefault(split.destination, []).append(split)
+    findings = []
+    for destination, splits in by_destination.items():
+        strips = ", ".join(_node_text(state, split.strip) for split in splits)
+        addresses = tuple(dict.fromkeys(a for split in splits for a in _split_addresses(split)))
+        findings.append(Diagnostic.audit(
+            "R013", Severity.INFO, "routing", "Signal Split Asked For",
+            f"{strips} reach{'es' if len(splits) == 1 else ''} {_node_text(state, destination)} "
+            f"by more than one route, and the plan states every leg of it, so it is read as "
+            f"asked for (parallel processing) and R012 is quiet about it.",
+            addresses,
+        ))
+    return findings
+
+
+def planned_routing_legs(plan: dict) -> frozenset:
+    """Every leg of the routing a plan states, as `(source, target)` node
+    ids: a strip's `bus_sends` and `main_routes`, a bus's Main
+    `destinations`, and a Matrix's `fed_by`. A leg to a bus that the plan does
+    not name resolves to nothing and is not stated."""
+    busses = {name: entry["index"] for name, entry in (plan.get("busses") or {}).items()
+              if isinstance(entry, dict) and isinstance(entry.get("index"), int)}
+    legs: set[tuple[str, str]] = set()
+    for entry in plan.get("channels") or []:
+        if not isinstance(entry, dict) or not isinstance(entry.get("channel"), int):
+            continue
+        base = f"/{entry.get('bank') or 'ch'}/{entry['channel']}"
+        for send in entry.get("bus_sends") or []:
+            if isinstance(send, dict) and send.get("bus") in busses:
+                legs.add((base, f"bus:{busses[send['bus']]}"))
+        for route in entry.get("main_routes") or []:
+            if isinstance(route, dict) and isinstance(route.get("index"), int):
+                legs.add((base, f"main:{route['index']}"))
+    for entry in (plan.get("busses") or {}).values():
+        if not isinstance(entry, dict) or not isinstance(entry.get("index"), int):
+            continue
+        destinations = entry.get("destinations") or ([entry["destination"]]
+                                                      if entry.get("destination") else [])
+        for destination in destinations:
+            if isinstance(destination, dict) and destination.get("type") == "main":
+                index = destination.get("index", 1)
+                legs.add((f"bus:{entry['index']}", f"main:{index}"))
+    for entry in (plan.get("outputs") or {}).values():
+        if not isinstance(entry, dict) or entry.get("kind") != "matrix":
+            continue
+        fed_by = entry.get("fed_by")
+        if not isinstance(entry.get("index"), int) or not isinstance(fed_by, dict):
+            continue
+        if fed_by.get("type") == "main" and isinstance(fed_by.get("index"), int):
+            legs.add((f"main:{fed_by['index']}", f"mtx:{entry['index']}"))
+        elif fed_by.get("type") == "bus" and fed_by.get("name") in busses:
+            legs.add((f"bus:{busses[fed_by['name']]}", f"mtx:{entry['index']}"))
+    return frozenset(legs)
+
+
+def split_path_rules(rules, plan: dict) -> list[AuditRule]:
+    """`rules` with R012 and R013 bound to `plan`: the same rules, told
+    which legs the plan states."""
+    planned = planned_routing_legs(plan)
+    bound = {"R012": _rule_signal_split, "R013": _rule_signal_split_asked_for}
+    return [replace(rule, check=lambda state, check=bound[rule.id]: check(state, planned))
+            if rule.id in bound else rule for rule in rules]
 
 
 # --------------------------------------------------------------------------
@@ -2918,17 +3159,22 @@ def _rule_clipped(state: ConsoleState) -> list[Finding]:
     passes; the rule only words what the clip monitor reports, and is
     silent on any state that carries none -- `audit` and every captured
     state. One finding per strip: both sides of a stereo strip, and all
-    four of its level words, are one.
+    four of its level words, are one. "Clipped N times" counts runs: a
+    clip ends only after the strip stays below the release level for a
+    moment, and the sentence says so beside the count.
 
     The finding's key is its rule and strip, so a second clip inside the
     minute is the same finding with the timer moved on, and the sentence
     says where the timer stands: that is how the restart is seen."""
+    from atoo.metering import RELEASE_SECONDS, RELEASE_THRESHOLD_DB
+
     findings = []
     for clip in state.clips:
         label = strip_label(state, clip.base)
         said = f"{label} clipped"
         if clip.count > 1:
-            said += f" {clip.count} times"
+            said += (f" {clip.count} times (a clip ends once the level stays below "
+                     f"{RELEASE_THRESHOLD_DB:g} dBFS for {RELEASE_SECONDS * 1000:.0f} ms)")
             if clip.longest is not None:
                 said += f", the longest for about {_seconds(clip.longest)}"
         elif clip.longest is not None:
@@ -3018,6 +3264,16 @@ DEFAULT_RULES: list[AuditRule] = [
               "A stereo bus, Main or Matrix in use whose output patches all use the same side of "
               "its pair, so anything panned to the other side is not heard.",
               _rule_stereo_one_side, scope=RuleScope.HAZARD),
+    # A judgement (the desk works, the level is wrong), at the level the
+    # product owner set. `judges` names a parameter no plan states: only the leg-by-leg test
+    # against the plan, bound by `split_path_rules`, stands R012 down.
+    AuditRule("R012", Severity.WARNING, "routing", "Signal Splits And Recombines",
+              "A strip in use reaches one Main or Matrix by two or more routes, every leg on "
+              "and above the floor, unless the plan states every leg.",
+              _rule_signal_split, scope=RuleScope.HAZARD, judges=("split-path",)),
+    AuditRule("R013", Severity.INFO, "routing", "Signal Split Asked For",
+              "The splits R012 stood down for because the plan states every leg of them.",
+              _rule_signal_split_asked_for, scope=RuleScope.HAZARD, judges=("split-path",)),
     # 48V does not care whose strip it is -- the issue's own example of
     # why this is not simply "filter by plan membership".
     AuditRule("C001", Severity.WARNING, "configuration", "Phantom Power On Unpatched Socket",
@@ -3535,8 +3791,8 @@ def apply_plan_scope(
 # above: mute, fader level, DCA membership, mute-group membership, patch,
 # plus bus sends, direct-to-Main routes, and processing: trim, balance,
 # invert, head-amp gain, and the filters and EQ.
-# Still NOT covered: the compressor (no plan schema), a bus's EQ and a
-# channel's PreSend EQ. Left for a follow-up rather than guessed at.
+# Still NOT covered: the compressor (no plan schema). Left for a follow-up
+# rather than guessed at.
 #
 # Same rule as cli.py's expectations-check output ("Only fields the plan
 # actually states are compared -- a null fader is not an assertion about
@@ -3587,7 +3843,7 @@ def planned_processing_leaves(entry: dict) -> list:
     """The filter and EQ leaves a plan channel states, as the write targets
     `apply` builds from the same fields (`address`, `value_type`,
     `compute_value`): the high-pass, hi-cut and tilt (each with its on
-    switch) and a channel's or aux strip's EQ. Asking `apply` rather than
+    switch), a channel's or aux strip's EQ and a channel's PreSend EQ. Asking `apply` rather than
     reading the plan's fields again is what keeps the leaf names, the
     "a stated value implies the switch is on" rule and the aux strip's
     missing filter node the same on both sides.
@@ -3599,7 +3855,40 @@ def planned_processing_leaves(entry: dict) -> list:
         return []
     base = f"/{bank}/{entry['channel']}"
     targets = _channel_processing_targets({"name": "", **entry}, bank, base, [])
-    return [t for t in targets if t.address.startswith((f"{base}/flt/", f"{base}/eq/"))]
+    return [t for t in targets
+            if t.address.startswith((f"{base}/flt/", f"{base}/eq/", f"{base}/peq/"))]
+
+
+def planned_strip_processing_objects(plan: dict) -> list[tuple[str, str, str, dict, object]]:
+    """`(console base, EQ strip class, label, processing, provenance)` for
+    every bus, Main and Matrix a plan gives its own `processing` block:
+    `/bus/{n}` for an entry of `busses`, `/main/{n}` and `/mtx/{n}` for an
+    entry of `outputs` of that kind. An entry with no integer `index` names
+    no console object and is left out."""
+    found = []
+    for name, entry in (plan.get("busses") or {}).items():
+        if (isinstance(entry, dict) and isinstance(entry.get("index"), int)
+                and entry.get("processing")):
+            base = f"/bus/{entry['index']}"
+            found.append((base, "bus", f'{position_label(base)} "{name}"',
+                          entry["processing"], entry.get("provenance")))
+    for name, entry in (plan.get("outputs") or {}).items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("index"), int):
+            continue
+        strip = console_facts.OUTPUT_KIND_TO_EQ_STRIP.get(entry.get("kind"))
+        if strip is not None and entry.get("processing"):
+            base = f"/{strip}/{entry['index']}"
+            found.append((base, strip, f'{position_label(base)} "{name}"',
+                          entry["processing"], entry.get("provenance")))
+    return found
+
+
+def planned_strip_processing_leaves(base: str, strip: str, processing: dict) -> list:
+    """The EQ and tilt leaves a bus, Main or Matrix `processing` block
+    states, as the write targets `apply` builds from it (the same
+    `_strip_processing_targets` that writes them)."""
+    targets, _warnings = _strip_processing_targets(base, strip, "", processing)
+    return [t for t in targets if t.address.startswith(f"{base}/eq/")]
 
 
 def planned_input_leaves(entry: dict) -> list[tuple[str, str]]:
@@ -3636,10 +3925,12 @@ def plan_processing_read_addresses(plan: dict | None) -> list[tuple[str, str]]:
     """Every processing leaf the plan states, with the type each is read
     as -- what `audit --plan` adds to a read (`console_read_plan(extra=...)`)
     so `diff_against_plan` has something to compare: the filters and EQ
-    (`planned_processing_leaves`) and trim, balance, invert and head-amp
-    gain (`planned_input_leaves`). They sit in the node a dump already
-    fetches (the strip's own `/ch/{n}` or `/aux/{n}`, and the socket's
-    `/io/in/{group}/{socket}` that carries its 48V), so under the node-dump
+    (`planned_processing_leaves`, a channel's PreSend EQ included), trim,
+    balance, invert and head-amp gain (`planned_input_leaves`), and a bus's,
+    Main's or Matrix's EQ and tilt (`planned_strip_processing_leaves`). They
+    sit in the node a dump already fetches (the strip's own `/ch/{n}` or
+    `/aux/{n}`, the object's `/bus/{n}`, `/main/{n}` or `/mtx/{n}`, and the
+    socket's `/io/in/{group}/{socket}` that carries its 48V), so under the node-dump
     read this is no extra request; and only the leaves a plan states are
     asked for, so an audit with no plan, or Watch, reads nothing more."""
     found: dict[str, str] = {}
@@ -3649,6 +3940,9 @@ def plan_processing_read_addresses(plan: dict | None) -> list[tuple[str, str]]:
                 found.setdefault(target.address, target.value_type)
             for address, value_type in planned_input_leaves(entry):
                 found.setdefault(address, value_type)
+    for base, strip, _label, processing, _provenance in planned_strip_processing_objects(plan or {}):
+        for target in planned_strip_processing_leaves(base, strip, processing):
+            found.setdefault(target.address, target.value_type)
     return list(found.items())
 
 
@@ -3681,19 +3975,44 @@ def _differs(state: ConsoleState, address: str, value_type: str, wanted: object)
 
 def _processing_leaf_findings(state: ConsoleState, entry: dict, base: str, label: str,
                               provenance: dict) -> list[Finding]:
-    """CV008 for the high-pass, hi-cut, tilt and EQ the plan states on this
-    strip (`planned_processing_leaves`), against the leaves the read took.
+    """CV008 for the high-pass, hi-cut, tilt, EQ and PreSend EQ the plan
+    states on this channel or aux (`planned_processing_leaves`), against the
+    leaves the read took."""
+    return _compare_processing_leaves(
+        state, planned_processing_leaves(entry), base, entry.get("bank", "ch"), label,
+        _cite(provenance, "processing"))
+
+
+def _strip_processing_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV008 for the EQ and tilt the plan states on a bus, a Main or a
+    Matrix (`planned_strip_processing_objects`), compared as a channel's
+    EQ is."""
+    findings: list[Finding] = []
+    for base, strip, label, processing, provenance in planned_strip_processing_objects(plan):
+        cite = _cite({"processing": provenance} if isinstance(provenance, str) else provenance,
+                     "processing")
+        findings.extend(_compare_processing_leaves(
+            state, planned_strip_processing_leaves(base, strip, processing), base, strip,
+            label, cite))
+    return findings
+
+
+def _compare_processing_leaves(state: ConsoleState, leaves: list, base: str, eq_strip: str,
+                               label: str, cite: str) -> list[Finding]:
+    """CV008 for the filters, EQ and PreSend EQ the plan states on one
+    object, as the write targets `leaves` apply builds from the same fields,
+    against the leaves the read took.
 
     A stated filter implies it is on, as `apply` writes it, so a filter that
     reads off is a finding of its own and its frequency is not then
     compared. The EQ is grouped for the reader: one finding per band naming
-    every leaf that differs, and one for the EQ's switch, model and mix.
-    A leaf that was not read is not compared."""
-    wanted = {t.address: (t.value_type, t.compute_value(None))
-              for t in planned_processing_leaves(entry)}
+    every leaf that differs, and one for the EQ's switch, model and mix; a
+    bus's, Main's or Matrix's tilt is a leaf of its EQ node and a finding of
+    its own, and a PreSend EQ is read the same way, band by band and then its
+    switch. A leaf that was not read is not compared."""
+    wanted = {t.address: (t.value_type, t.compute_value(None)) for t in leaves}
     if not wanted:
         return []
-    cite = _cite(provenance, "processing")
     findings: list[Finding] = []
 
     def finding(message: str, addresses: list[str]) -> None:
@@ -3717,7 +4036,6 @@ def _processing_leaf_findings(state: ConsoleState, entry: dict, base: str, label
             finding(f"plan says the {name} is {_shown(value, unit)}, live console reads "
                     f"{_shown(live, unit)} (tolerance 2%).", [value_address])
 
-    eq_strip = entry.get("bank", "ch")
     for band in console_facts.eq_band_ids(eq_strip):
         freq_leaf, gain_leaf, q_leaf, shape_leaf = eq_band_leaves(band)
         parts: list[str] = []
@@ -3736,6 +4054,14 @@ def _processing_leaf_findings(state: ConsoleState, entry: dict, base: str, label
         if parts:
             finding(f"EQ band {band}: plan says {'; '.join(parts)} (tolerance 2%).", addresses)
 
+    tilt_address = f"{base}/eq/tilt"
+    if tilt_address in wanted:
+        value_type, want = wanted[tilt_address]
+        live = _differs(state, tilt_address, value_type, want)
+        if live is not None:
+            finding(f"plan says the tilt is {_shown(want, 'dB')}, live console reads "
+                    f"{_shown(live, 'dB')} (tolerance 2%).", [tilt_address])
+
     parts, addresses = [], []
     for leaf, word, unit in (("on", "EQ", ""), ("mdl", "model", ""), ("mix", "mix", "%")):
         address = f"{base}/eq/{leaf}"
@@ -3752,6 +4078,29 @@ def _processing_leaf_findings(state: ConsoleState, entry: dict, base: str, label
             addresses.append(address)
     if parts:
         finding(f"plan says {'; '.join(parts)}.", addresses)
+
+    for band in console_facts.presend_eq_band_ids(eq_strip):
+        parts, addresses = [], []
+        for suffix, kind, word in (("f", "f", "frequency"), ("g", "g", "gain"), ("q", "q", "Q")):
+            address = f"{base}/peq/{band}{suffix}"
+            if address not in wanted:
+                continue
+            value_type, want = wanted[address]
+            live = _differs(state, address, value_type, want)
+            if live is not None:
+                parts.append(f"{word} {_shown(want, _EQ_UNITS[kind])} but "
+                             f"{_shown(live, _EQ_UNITS[kind])} live")
+                addresses.append(address)
+        if parts:
+            finding(f"PreSend EQ band {band}: plan says {'; '.join(parts)} (tolerance 2%).",
+                    addresses)
+    peq_on = f"{base}/peq/on"
+    if peq_on in wanted:
+        value_type, want = wanted[peq_on]
+        live = _differs(state, peq_on, value_type, want)
+        if live is not None:
+            finding(f"plan says the PreSend EQ {'on' if want else 'off'} but it is "
+                    f"{'on' if live else 'off'} live.", [peq_on])
     return findings
 
 
@@ -4808,7 +5157,8 @@ def with_plan_rules(rules, plan_path) -> list[AuditRule]:
     """`rules` as Watch runs them on a show whose bundle has a plan: L002,
     R008, C001, CH004 and R011 bound to the plan (`fader_floor_rule`,
     `strip_reaches_nothing_rule`, `phantom_unpatched_rule`, `dca_muted_rule`,
-    `stereo_one_side_rule`),
+    `stereo_one_side_rule`), R012 and R013 told which legs the plan
+    states (`split_path_rules`),
     then the plan-bound rules (`plan_watch_rules`). An unreadable plan leaves
     `rules` as they are."""
     plan = _read_plan(plan_path)
@@ -4820,7 +5170,7 @@ def with_plan_rules(rules, plan_path) -> list[AuditRule]:
              else stereo_one_side_rule(plan) if rule.id == "R011"
              else dca_muted_rule(plan) if rule.id == "CH004"
              else rule for rule in rules]
-    return bound + plan_watch_rules(plan_path)
+    return split_path_rules(bound, plan) + plan_watch_rules(plan_path)
 
 
 def plan_watch_rules(plan_path) -> list[AuditRule]:
@@ -5261,6 +5611,7 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
         # readback tolerance rather than the fader's.
         findings.extend(_processing_leaf_findings(state, entry, base, label, provenance))
 
+    findings.extend(_strip_processing_findings(state, plan))
     findings.extend(_diff_group_faders(state, plan))
     findings.extend(_diff_talkback_strip(state, plan))
     findings.extend(fx_insert_findings(state, plan))

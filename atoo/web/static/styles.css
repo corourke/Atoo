@@ -1321,9 +1321,26 @@ details.fold > summary.dock-head:focus-visible { outline: 2px solid var(--accent
 /* Watch's "i" beside a condition's ID: the same help button, its text the
    rule in plain English. */
 #wc-table .wc-id-cell { white-space: nowrap; }
-#wc-table .wc-id-cell input { vertical-align: middle; }
-#wc-table .wc-explain { margin-left: 6px; }
-#wc-table .wc-explain-btn { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
+/* In the editable table the ID box fills its cell, so the icon is given its
+   own room beside it, not left to spill under the Description box. */
+#wc-table .wc-id-cell input { vertical-align: middle; width: calc(100% - 28px); }
+#wc-table .wc-explain { margin-left: 4px; }
+/* A read-only table's ID is text: the icon goes to the cell's right edge, so
+   the icons line up in one column as they do beside the ID boxes. */
+#wc-table .wc-id-wrap { display: flex; align-items: center; justify-content: space-between; }
+/* The icon looks 19px; its hit area is 33px, which a finger can find. */
+#wc-table .wc-explain-btn { position: relative; }
+#wc-table .wc-explain-btn::after { content: ""; position: absolute; inset: -7px; }
+/* One pixel bigger than the other help buttons, and in the info blue so it
+   reads as a thing to press. */
+#wc-table .wc-explain-btn {
+  width: 19px; height: 19px; font-size: 12px; font-style: italic;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--info-fg); border-color: var(--info-fg);
+}
+#wc-table .wc-explain-btn:hover, #wc-table .wc-explain-btn[aria-expanded="true"] {
+  background: var(--info-bg);
+}
 .run-build-actions { display: inline-flex; align-items: center; gap: 8px; }
 
 /* Step 04's live build readout (GET /api/build/status's `progress`). The
@@ -2005,8 +2022,8 @@ button.wc-source-drafted:focus-visible { outline: 2px solid var(--accent); outli
   flex: none; min-width: 128px; font: 700 11px ui-monospace, Menlo, Consolas, monospace;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
-.amend-change.kind-added { border-left-color: var(--info-fg); }
-.amend-change.kind-added .amend-change-kind { color: var(--info-fg); }
+.amend-change.kind-added, .amend-change.kind-shifted { border-left-color: var(--info-fg); }
+.amend-change.kind-added .amend-change-kind, .amend-change.kind-shifted .amend-change-kind { color: var(--info-fg); }
 .amend-change.kind-released { border-left-color: var(--warning-fg); background: var(--warning-bg); }
 .amend-change.kind-released .amend-change-kind { color: var(--warning-fg); }
 .amend-change.kind-removed .amend-change-kind,
@@ -2115,12 +2132,15 @@ details.apply-options { font-size: 13px; }
 .apply-option { margin: 8px 0 0 16px; }
 .apply-option > label { display: inline-flex; align-items: center; gap: 6px; }
 .apply-option-sub { margin: 6px 0 0 24px; }
+.apply-option-hint { display: block; margin-top: 4px; font-size: 12px; color: var(--text-dim); }
+.apply-option-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.apply-option-name { font-weight: 600; }
+.apply-init .apply-dim { margin: 2px 0 0; }
 .apply-option-sub[hidden] { display: none; }
 .apply-option-sub input {
   font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; width: 260px; max-width: 100%;
   background: var(--bg-row); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px;
 }
-.apply-option-hint { display: block; margin-top: 4px; font-size: 12px; color: var(--text-dim); }
 
 .apply-stale { margin: 6px 0 0; font-size: 13px; color: var(--warning-fg); }
 .apply-stale[hidden] { display: none; }
@@ -2206,6 +2226,7 @@ details.apply-options { font-size: 13px; }
 .desk-strip.is-unknown .desk-strip-name { color: var(--warning-fg); }
 .desk-strip.is-new { border-color: var(--ready-fg); box-shadow: 0 0 0 1px var(--ready-fg); }
 .desk-strip.is-edit { border-color: var(--info-fg); }
+.desk-strip.is-moved { border: 2px dashed var(--info-fg); }
 .desk-strip.is-changes { border-color: var(--info-fg); }
 .desk-strip.is-released { border: 2px dashed var(--warning-fg); }
 .desk-legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; margin-top: 8px; }
@@ -2218,6 +2239,7 @@ details.apply-options { font-size: 13px; }
 .desk-legend .l-unused::before { opacity: 0.45; }
 .desk-legend .l-new::before { border: 2px solid var(--ready-fg); }
 .desk-legend .l-edit::before, .desk-legend .l-changes::before { border: 2px solid var(--info-fg); }
+.desk-legend .l-moved::before { border: 2px dashed var(--info-fg); }
 .desk-legend .l-unknown::before { border: 1px dashed var(--warning-fg); background: var(--warning-bg); }
 .desk-legend .l-released::before { border: 2px dashed var(--warning-fg); }
 
@@ -2240,6 +2262,23 @@ details.apply-options { font-size: 13px; }
 
 @media (max-width: 600px) {
   .desk-strips { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+}
+
+/* History at a wide width: Summary takes the slack; When, Kind,
+   Desk and Mismatches shrink to their content (width: 1% + nowrap makes an
+   auto-layout column as narrow as its widest cell; the desk's long name wraps
+   at 16-22ch); the two buttons stay together in the last, content-sized cell. */
+@container (min-width: 761px) {
+  .journal-stack-table th:nth-child(1), .journal-stack-table td:nth-child(1),
+  .journal-stack-table th:nth-child(2), .journal-stack-table td:nth-child(2),
+  .journal-stack-table th:nth-child(5), .journal-stack-table td:nth-child(5),
+  .journal-stack-table th:nth-child(6), .journal-stack-table td:nth-child(6) { width: 1%; white-space: nowrap; }
+  .journal-stack-table td:nth-child(5) { text-align: center; }
+  .journal-stack-table th:nth-child(3), .journal-stack-table td:nth-child(3) { width: 1%; }
+  .journal-stack-table td.journal-desk-cell { white-space: normal; min-width: 16ch; max-width: 22ch; overflow-wrap: break-word; }
+  .journal-stack-table th:nth-child(4), .journal-stack-table td:nth-child(4) { width: auto; min-width: 24ch; overflow-wrap: anywhere; }
+  .journal-stack-table td.journal-act-cell { min-width: 0; }
+  .journal-stack-table th, .journal-stack-table td { padding-left: 8px; padding-right: 8px; }
 }
 
 /* History at a narrow width: each row is a stack of labelled lines and its
@@ -2498,7 +2537,7 @@ body.is-demo-show :is(#change-conventions, #new-conventions, #change-input-list,
   #input-add-row, #input-table button, #plan-input-save-btn, #plan-browse-btn, #run-build-btn, #plan-rebuild-btn,
   #status-rebuild-btn, #apply-arm-checkbox, #apply-run-btn,
   #undo-preview-btn, #undo-run-btn, #promote-confirm-btn, #wc-change-btn, #wc-new-btn,
-  #wc-save-btn, #wc-add-btn, #wc-table button) {
+  #wc-save-btn, #wc-add-btn, #wc-table .wc-remove, #wc-table button.wc-source-drafted) {
   pointer-events: none;
 }
 /* A locked `.btn` already has the one locked look (no hue, a
@@ -2571,19 +2610,20 @@ body.is-demo-show :is(#input-table input, #input-table select, #wc-table input,
 #alert-table tbody td { border-bottom: 2px solid var(--bg); }
 #alert-table tbody tr:last-child td { border-bottom: none; }
 
-/* Each row's Hide button: a quiet button in the severity cell, so the bar
-   and tint are untouched. The tag sits at the left and the button at the
-   cell's right edge, so the button is in the same place on every row
-   whatever the tag's word (ERROR, WARNING, INFO) measures. */
+/* Each row's Hide box: a check box in the table's first column, as the
+   findings pane puts its own, so it is in the same place on every row
+   whatever the tag's word (ERROR, WARNING, INFO) measures. The label
+   around it is the 32px target; the box is drawn as the pane's is. */
 #alert-table .col-sev { white-space: nowrap; }
 #alert-table .sev-cell { display: flex; align-items: center; gap: 6px; }
-.watch-row-hide { vertical-align: middle; }
-#alert-table .watch-row-hide { margin-left: auto; }
-/* Under a laptop's width a finger is the pointer: the button is a 32px
-   target, as every other button is. */
-@media (max-width: 900px) {
-  #alert-table .watch-row-hide, .watch-suppressed-item .watch-row-hide { min-height: 32px; }
+#alert-table .col-hide { width: 56px; }
+#alert-table thead th.col-hide { padding-left: 22px; }
+.watch-row-hide-hit {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin: -8px 0 -8px -8px; cursor: pointer; vertical-align: middle;
 }
+.watch-row-hide { margin: 0; width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+.watch-row-hide:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* The Warning and Info counts are buttons: a click hides
    every row of that severity. Suppressed, the pill is struck through and
    dashed, so nobody forgets that rows are hidden. */
@@ -2608,7 +2648,7 @@ button.count-pill:focus-visible { outline: 2px solid var(--accent); outline-offs
 .watch-suppressed-item[data-sev="error"] { border-left-color: var(--alarm-solid); }
 .watch-suppressed-item[data-sev="warning"] { border-left-color: var(--caution-solid); }
 .watch-suppressed-item[data-sev="info"] { border-left-color: color-mix(in srgb, var(--info-fg) 45%, transparent); }
-.watch-suppressed-item .watch-row-hide { margin-left: auto; }
+.watch-suppressed-item .watch-row-hide-hit { margin: -6px 0 -6px -8px; }
 .watch-suppressed-item b { color: var(--text); }
 .watch-suppressed-item code { font-size: 11px; }
 
@@ -2673,10 +2713,8 @@ body[data-watch-worst="stale"] .watch-table-scroll { opacity: .5; filter: graysc
   #alert-table tbody tr td:first-child { padding-left: 16px; }
   #alert-table .col-where { width: auto; }
   .row-where { white-space: normal; }
-  /* The Hide button stacks under the badge rather than widening the row. */
   #alert-table .col-sev { white-space: normal; }
-  #alert-table .sev-cell { flex-direction: column; align-items: flex-start; gap: 4px; }
-  #alert-table .watch-row-hide { margin: 0 0 0 -4px; }
+  #alert-table .col-hide { width: 40px; }
 }
 @media (max-width: 640px) {
   /* Phone width: Since already goes (the generic table rule above);
@@ -2778,6 +2816,7 @@ details.fold-details .setup-notes { font-size: 13px; }
 .state.is-ok { background: var(--ready-bg); color: var(--ready-fg); border-color: transparent; }
 .state.is-warn { background: var(--warning-bg); color: var(--warning-fg); border-color: transparent; }
 .state.is-err { background: var(--danger-bg); color: var(--danger-fg); border-color: transparent; }
+.state.is-info { background: var(--info-bg); color: var(--info-fg); border-color: transparent; }
 .state.is-live::before { animation: state-live 1.6s ease-in-out infinite; }
 @keyframes state-live { 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .state.is-live::before { animation: none; } }
@@ -3003,8 +3042,22 @@ details.watch-fold > summary .push { flex: none; margin-left: auto; display: fle
 .watch-fold-note { margin: 0 0 8px; }
 
 /* The box is the table: edge to edge, the sideways scroll inside it. */
-.watch-table-wrap.panel.box { padding: 0; overflow: hidden; }
+.watch-table-wrap.panel.box { padding: 0; overflow: clip; }
 .watch-table-scroll { overflow-x: auto; }
+/* The verdict and the column headings stay at the top of the window while
+   the table's rows scroll under them, and go with the box when its last
+   row has passed. The box clips (`overflow: clip`, not `hidden`) so it is
+   not a scroll container, and the table's sideways scroll is only where
+   the table is too wide for the window; there the headings scroll with
+   the rows and only the verdict stays. `--verdict-h` is the verdict's own
+   height, set by watch.js, so the headings start exactly below it. */
+.watch-table-wrap .verdict-bar { position: sticky; top: 0; z-index: 4; }
+@media (min-width: 641px) {
+  .watch-table-scroll { overflow-x: visible; }
+  #alert-table thead th {
+    position: sticky; top: var(--verdict-h, 0px); z-index: 3; background: var(--bg-panel);
+  }
+}
 .watch-box-line { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--border); }
 .watch-table-wrap .empty.is-centered, .empty.is-centered { text-align: center; padding: 24px 16px; }
 #alert-table .readout { font-size: 12px; }

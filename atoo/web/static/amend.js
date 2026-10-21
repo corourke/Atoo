@@ -45,6 +45,7 @@
     removed: "Removed, left alone",
     modified: "Modified, not written",
     edited: "Edited: named fields only",
+    shifted: "Moved down by the insert",
     renumbered: "Refused: renumbered",
     unplaceable: "Refused: no free strip",
     refused: "Refused: cannot be written as asked",

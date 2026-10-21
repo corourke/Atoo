@@ -84,7 +84,9 @@ class _Desk(FakeConsole):
 
     def get(self, address):
         if address not in self.state:
-            self.state[address] = ("desk-was-" + address, "s")
+            # A desk with nothing on its AES50 ports names no device there.
+            was = "" if address.startswith("/$stat/") else "desk-was-" + address
+            self.state[address] = (was, "s")
         return super().get(address)
 
     def identity(self):

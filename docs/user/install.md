@@ -229,7 +229,7 @@ Atoo reads and writes every file as UTF-8, so save your input list,
 conventions and instructions as UTF-8: Excel's *CSV UTF-8* and
 Notepad's default both do.
 
-Please [tell us](faq.md#found-something-wrong) how it went, good or bad.
+Please [tell us](limitations.md#telling-us) how it went, good or bad.
 
 To run Atoo from a clone of its repository instead, see [Installing from
 a checkout](install-from-checkout.md).

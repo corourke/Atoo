@@ -669,14 +669,13 @@ def test_a_dropped_channel_is_returned_to_free():
     assert amendment.allows("/ch/1/name") is False
 
 
-def test_returned_to_free_means_muted_factory_patched_and_blank():
+def test_returned_to_free_means_muted_unpatched_and_blank():
     """"the end state should be indistinguishable from a strip
     the show never touched".
 
-    The patch half is the maintainer's of 2026-09-24: an untouched Compact strip
-    in 1-24 sits on its own LCL socket, so that is where a released one
-    goes back to -- not OFF. 'MLD VOX' was on A 10; its strip goes back to
-    LCL n, which nothing in the kept plan uses.
+    The patch half is the maintainer's of 2026-10-20: a freed strip is left
+    unpatched (OFF), as a full apply's reset leaves an unused one. 'MLD VOX'
+    was on A 10; its strip goes OFF.
 
     Asserted as the WHOLE write set, not a sample: this list is the
     definition of "free", and something quietly dropping out of it is the
@@ -707,8 +706,7 @@ def test_returned_to_free_means_muted_factory_patched_and_blank():
         (f"/io/in/{group}/{socket}/vph", 0),
         (f"/io/in/{group}/{socket}/name", ""),
         (f"/io/in/{group}/{socket}/col", _facts.FACTORY_SOURCE_COLOUR_INDEX),
-        (f"{MLD_VOX_BASE}/in/conn/grp", "LCL"),
-        (f"{MLD_VOX_BASE}/in/conn/in", number),
+        (f"{MLD_VOX_BASE}/in/conn/grp", "OFF"),
         (f"{MLD_VOX_BASE}/name", ""),
         (f"{MLD_VOX_BASE}/col", _facts.FACTORY_STRIP_COLOUR_INDEX),
         (f"{MLD_VOX_BASE}/clink", 1),
@@ -1405,9 +1403,8 @@ def test_a_released_strip_reads_as_free_on_the_next_occupancy_read():
     assert status.state is StripState.FREE
     assert status.available is True
     assert status.name == ""
-    # Back on its factory socket, and FREE all the
-    # same -- `is_in_use` discounts the patch the model ships with.
-    assert status.patch == factory_socket
+    # Unpatched (2026-10-20), as a full apply leaves an unused strip.
+    assert status.patch is None
 
 
 def test_a_release_writes_nothing_outside_the_strip_and_its_socket():
@@ -1651,7 +1648,7 @@ def test_cli_returns_a_dropped_channel_to_free_offline():
     assert "3 added, 1 returned to free, 10 unchanged" in out
     assert "RETURNED TO FREE channel 'BG Vox 1' -> ch:10" in out
     assert "returns to free: ch:10" in out
-    assert "25 of them RETURN A STRIP TO FREE" in out
+    assert "24 of them RETURN A STRIP TO FREE" in out
     for address in ("/ch/10/mute", "/ch/10/in/conn/grp", "/ch/10/name",
                     "/ch/10/tags", "/io/in/LCL/10/name", "/io/in/LCL/10/vph",
                     # The filter this plan set, and the unmute.

@@ -53,10 +53,9 @@ value: -144 (-inf), the reading every untouched strip gives**
 (`console_facts.FACTORY_STRIP_FADER_DB`, measured on a Compact and a
 full-size). That is not a level chosen for a show, which is what this
 rule forbids; it is the same "return to the factory reading" as the
-name, colour and processing. It became necessary when release started
-restoring the factory patch: an unmuted strip left
-at the plan's level, routed to Main 1 and patched to its factory socket,
-would carry a stray source on that jack to the PA. Pulled to -inf before
+name, colour and processing. It is necessary because the strip is
+routed to Main 1 again: an unmuted strip left at the plan's level would
+carry a stray source on its socket to the PA. Pulled to -inf before
 the closing unmute, it passes nothing until somebody raises it -- exactly
 like an initialized strip.
 
@@ -1988,6 +1987,105 @@ def unfitted_bays_the_plan_needs(bay_use: dict[str, list[str]],
     }
 
 
+# --------------------------------------------------------------------------
+# Stage boxes: is the socket the plan patches one the box has?
+# --------------------------------------------------------------------------
+#
+# The same shape as the expansion bays above, and for the same reason: the
+# address space (48 sockets on each AES50 port) is not the inventory. An S16
+# has 16 inputs and 8 outputs, and `A 17` is accepted, written and read back
+# by a desk that has an S16 on A -- the mic is simply silent. The desk names
+# what is on each port, so this is checked where Atoo holds a connection.
+
+def read_aes50_devices(console) -> dict[str, str | None]:
+    """What the desk says is on each AES50 port: `{"A": "S16", "B": "",
+    "C": ""}`. An empty string is an empty port; None is "the desk did not
+    answer", which is not the same claim and is never treated as empty."""
+    devices: dict[str, str | None] = {}
+    for port in facts.AES50_PORTS:
+        reply = console.get(facts.aes50_device_address(port))
+        answered = reply is not None and getattr(reply, "error", None) is None
+        args = getattr(reply, "args", None) if answered else None
+        value = args[0] if isinstance(args, list) and len(args) == 1 else None
+        devices[port] = value if isinstance(value, str) else None
+    return devices
+
+
+def plan_uses_aes50(plan: dict, output_sockets=None) -> bool:
+    """Does this plan patch to or from any AES50 port at all? A plan that does
+    not never pays for asking the desk what is on them."""
+    groups: set[object] = set()
+    for ch in plan.get("channels") or []:
+        if isinstance(ch, dict):
+            for key in ("patch", "alt_patch"):
+                if isinstance(ch.get(key), dict):
+                    groups.add(ch[key].get("group"))
+    for group, _n in (list(_declared_output_patches(plan)) if output_sockets is None
+                      else output_sockets):
+        groups.add(group)
+    return bool(groups & set(facts.AES50_PORTS))
+
+
+def box_limits(devices: dict[str, str | None] | None) -> dict[str, tuple[str, int, int]]:
+    """`{port: (device, inputs, outputs)}` for each port whose device this
+    project knows the size of."""
+    limits: dict[str, tuple[str, int, int]] = {}
+    for port, device in (devices or {}).items():
+        size = facts.box_size(device)
+        if size is not None:
+            limits[port] = (str(device).strip(), size[0], size[1])
+    return limits
+
+
+def unknown_boxes(devices: dict[str, str | None] | None) -> dict[str, str]:
+    """`{port: device}` for a device on a port that this project has no size
+    for: its sockets are not checked, and that is said."""
+    return {port: str(device).strip() for port, device in (devices or {}).items()
+            if isinstance(device, str) and device.strip() and facts.box_size(device) is None}
+
+
+def box_sockets_missing(plan: dict, devices: dict[str, str | None] | None, *,
+                        output_sockets=None) -> list[dict]:
+    """Every socket this plan patches past the end of the stage box on its
+    port, as `{"socket": "A 17", "box": "the S16 on AES50-A", "line": ...}`.
+
+    Inputs are every channel's `patch` and `alt_patch`; outputs are every
+    physical output the plan routes (`_declared_output_patches`), or
+    `output_sockets` -- the ones a caller will actually write, as for
+    `sockets_missing_on_model`. A port with nothing known on it is not
+    checked (see `unknown_boxes`)."""
+    limits = box_limits(devices)
+    if not limits:
+        return []
+    missing: list[dict] = []
+
+    def check(group: object, n: object, direction: str, what: str) -> None:
+        if group not in limits or not isinstance(n, int) or isinstance(n, bool):
+            return
+        device, inputs, outputs = limits[group]
+        count = inputs if direction == "input" else outputs
+        if n > count:
+            box = f"the {device} on AES50-{group}"
+            missing.append({
+                "socket": f"{group} {n}", "box": box, "direction": direction, "what": what,
+                "line": f"{group} {n} ({direction}) -- {what}; {box} has {count} "
+                        f"{direction}s, so {group} {n} does not exist"})
+
+    for ch in plan.get("channels") or []:
+        if not isinstance(ch, dict):
+            continue
+        for key, whose in (("patch", ""), ("alt_patch", "'s alternate")):
+            patch = ch.get(key)
+            if isinstance(patch, dict):
+                for n in patch.get("sockets") or []:
+                    check(patch.get("group"), n, "input", f"channel {ch.get('name')!r}{whose}")
+    if output_sockets is None:
+        output_sockets = list(_declared_output_patches(plan))
+    for group, n in output_sockets:
+        check(group, n, "output", "an output routed there")
+    return missing
+
+
 def sockets_missing_on_model(plan: dict, console_model: str, *,
                              output_sockets=None) -> list[str]:
     """Every socket this plan patches that `console_model`'s panel does not
@@ -2506,9 +2604,8 @@ def _full_apply_run_notes(records: list[WriteRecord]) -> list[str]:
 # answer is to return it to free: channels are not an unlimited resource
 # and the tool should do what the engineer is asking for.
 #
-# So a channel the rebuild dropped has its strip muted, put back on its
-# factory input patch (or OFF, see
-# `release_patch_decision`; decided 2026-09-24), and its name, colour and
+# So a channel the rebuild dropped has its strip muted, its
+# input patch set OFF (`release_patch_reason`), and its name, colour and
 # icon blanked -- on
 # the SOURCE as well as the strip,
 # because with `clink` on that is where the name the desk displays lives.
@@ -2562,69 +2659,19 @@ def _released_tags(current: object, dca_indices: list[int],
     return ",".join(kept)
 
 
-def _model_words(console_model: str | None) -> str:
-    """`a WING Compact` / `a console of unstated model`, for a sentence."""
-    model = facts.CONSOLE_MODELS.get(console_model or "")
-    if model is None:
-        return ("a console whose model nobody stated" if not console_model
-                else f"a console of unknown model {console_model!r}")
-    return f"a {model['label']}"
+def release_patch_reason(channel: dict) -> str:
+    """Why a released strip's input patch is written OFF: a sentence for a
+    person, put in the review at INFO by `amend.plan_amendment`.
 
-
-def release_patch_decision(
-        channel: dict, *, console_model: str | None,
-        claimed_sockets: dict[tuple[str, int], str] | None = None,
-) -> tuple[tuple[str, int] | None, str]:
-    """What a released strip's input patch goes back to: `(socket, why)`
-    to restore its factory patch, or `(None, why)` to write OFF.
-
-    `why` is a sentence for a person, and it always comes back, because
-    either answer is a choice the engineer should be able to see
-    (an inferred value that does not announce itself is the
-    defect). `amend.plan_amendment` puts it in the review at INFO;
-    `release_write_targets` makes the same call for the wire. One
-    function, so the review and the write cannot disagree.
-
-    Of three options, off a Compact session where a freed channel 19 did
-    not look like an initialized one, the choice is the factory patch,
-    unless the plan uses that socket, otherwise OFF. Ch 19 goes back to
-    LCL 19 and looks exactly like an initialized channel, glyph included.
-    If the rebuilt plan now uses LCL 19 for something else, it stays OFF
-    rather than double-patching the socket, and an INFO says so.
-
-    The factory socket comes from
-    `console_facts.measured_factory_input_patch` -- **measured data only**.
-    `factory_input_patch()`'s channel-n-from-LCL-n fallback is right for
-    reading occupancy and wrong for a write: on a model nobody measured it
-    can name a socket the panel does not have. OFF is the answer there,
-    and OFF is the answer when the factory leaves this strip unpatched.
-
-    `claimed_sockets` maps every socket something else needs to a
-    description of what -- a channel of the rebuilt plan, or a strip the
-    desk read showed patched to it. A claimed factory socket is left OFF.
+    A strip returned to free is left unpatched, the same state a full apply's
+    reset leaves a strip the plan does not use, so "free" means one thing
+    whichever way a strip got there. An input patched back to its factory
+    socket was a second answer to the same question (a freed channel 19 on
+    LCL 19 against channel 19 on OFF), and the desk, the audit and the
+    occupancy read all take OFF as free.
     """
-    bank = channel.get("bank", "ch")
-    n = channel.get("channel")
-    label = f"{bank}:{n}"
-    model = _model_words(console_model)
-    socket, reason = facts.measured_factory_input_patch(console_model, bank, n)
-    if socket is None:
-        if reason == facts.FACTORY_PATCH_NONE:
-            return None, (f"{model} leaves {label} unpatched from the factory, so OFF is its "
-                          "factory patch")
-        if reason == facts.FACTORY_PATCH_NO_SUCH_SOCKET:
-            return None, (f"its measured factory socket is not on the panel of {model} -- "
-                          "left unpatched (OFF) rather than patched to a socket that is not "
-                          "there")
-        return None, (f"nobody has measured which socket {label} comes from on {model} "
-                      "straight from the factory -- left unpatched (OFF) rather than patched "
-                      "to a guessed socket that may not exist on this desk")
-    claimant = (claimed_sockets or {}).get(socket)
-    if claimant is not None:
-        return None, (f"its factory socket {socket[0]} {socket[1]} is used by {claimant} -- "
-                      "left unpatched (OFF) rather than patching one socket to two strips")
-    return socket, (f"patched back to {socket[0]} {socket[1]}, its factory socket on {model} "
-                    "(measured), so it looks exactly like an initialized channel")
+    return ("left unpatched (OFF), as a full apply leaves a strip the plan does not "
+            "use, so a freed strip is the same whichever way it was freed")
 
 
 def release_write_targets(channels: list[dict], *,
@@ -2634,7 +2681,6 @@ def release_write_targets(channels: list[dict], *,
                           keep_sockets: set[tuple[str, int]] | None = None,
                           shared_sockets: dict[tuple[str, int], list[str]] | None = None,
                           console_model: str | None = None,
-                          claimed_sockets: dict[tuple[str, int], str] | None = None,
                           warnings: list[str] | None = None) -> list[WriteTarget]:
     """The writes that return each of `channels` -- entries from the plan
     that BUILT them -- to the reading an untouched strip gives.
@@ -2645,17 +2691,10 @@ def release_write_targets(channels: list[dict], *,
     on, the source label cleared next, and only then the patch goes back
     to what the factory left there.
 
-    **The patch goes back to the factory's, not to OFF** (decided
-    2026-09-24; `release_patch_decision`). A Compact's channel 19 returns
-    to LCL 19 -- and with `clink` back on it shows that socket's glyph,
-    which is the whole of what made a freed strip look different from an
-    initialized one. It is OFF instead when the model's factory patch was
-    never measured (`console_model` absent or unmeasured -- never the
-    identity fallback, which can name a socket the panel lacks), when the
-    factory leaves the strip unpatched, or when the socket is claimed:
-    `claimed_sockets` (socket -> what uses it) and `keep_sockets` both
-    count, so a caller that passes only the latter is still never handed a
-    double patch.
+    **The patch goes OFF, as a full apply's reset leaves an unused strip**
+    (decided 2026-10-20, `release_patch_reason`): a strip returned to free
+    reads the same however it was freed. `.grp` alone, since WING treats OFF
+    as fully disconnected.
 
     **The mute is a bracket, not an end state**. `mute` is
     written ON first and OFF again as the strip's very last address, so
@@ -2671,8 +2710,8 @@ def release_write_targets(channels: list[dict], *,
     **`fdr` goes to -inf, the factory reading, just before the closing
     unmute**. Never to any other value: picking a
     level for a strip no plan is building is still the one thing this
-    module must never do. See the module docstring for why restoring the
-    factory patch made the factory fader necessary.
+    module must never do. See the module docstring for why the factory fader
+    is necessary.
 
     **The processing block is cleared too** (from the first
     hardware run: a strip "returned to free" came back still carrying the
@@ -2698,12 +2737,6 @@ def release_write_targets(channels: list[dict], *,
     """
     keep_sockets = set(keep_sockets or ())
     shared_sockets = shared_sockets or {}
-    # What a factory socket must not be restored onto: everything the
-    # caller named, and every socket the kept plan patches, whether or not
-    # the caller also named it.
-    claims: dict[tuple[str, int], str] = {
-        socket: "a strip the plan keeps" for socket in keep_sockets}
-    claims.update(claimed_sockets or {})
     dca_index = dca_index or {}
     mute_group_index = mute_group_index or {}
     bus_index = bus_index or {}
@@ -2770,32 +2803,15 @@ def release_write_targets(channels: list[dict], *,
                             f"/io/in/{group}/{socket}/icon", "i",
                             f"returned to free: icon cleared on source {group} {socket} ({was})",
                             _const(facts.factory_source_icon(group)), STAGE_SOURCE_LABEL))
-            # 4. The patch, back to what the factory left there:
-            # the measured factory socket when
-            # nothing else claims it, OFF otherwise. Where OFF sat, and for
-            # the same reason: last of the socket-side writes, so phantom
-            # and the label above were cleared while the patch still said
-            # which socket was ours. Both halves are written for a restore,
-            # `.grp` first as the build does; `.in` is the number the desk
-            # shows (the GET offset is corrected on read, never here). OFF
-            # is `.grp` alone, as `_clean_write_targets` writes it: WING
-            # treats OFF as fully disconnected, so `.in` is meaningless
-            # afterwards.
-            factory, why = release_patch_decision(
-                channel, console_model=console_model, claimed_sockets=claims)
-            if factory is not None:
-                targets.append(WriteTarget(
-                    f"{base}/in/conn/grp", "s",
-                    f"returned to free: {was} back on its factory patch {factory[0]} {factory[1]}",
-                    _const(factory[0]), STAGE_PATCH))
-                targets.append(WriteTarget(
-                    f"{base}/in/conn/in", "i",
-                    f"returned to free: {was} back on its factory patch {factory[0]} {factory[1]}",
-                    _const(factory[1]), STAGE_PATCH))
-            else:
-                targets.append(WriteTarget(
-                    f"{base}/in/conn/grp", "s", f"returned to free: {was} unpatched -- {why}",
-                    _const("OFF"), STAGE_PATCH))
+            # 4. The patch goes OFF: `.grp` alone, as `_clean_write_targets`
+            # writes it (WING treats OFF as fully disconnected, so `.in` is
+            # meaningless afterwards). Last of the socket-side writes, so
+            # phantom and the label above were cleared while the patch still
+            # said which socket was ours.
+            targets.append(WriteTarget(
+                f"{base}/in/conn/grp", "s",
+                f"returned to free: {was} {release_patch_reason(channel)}",
+                _const("OFF"), STAGE_PATCH))
         # The alternate this plan wrote goes back to the factory reading,
         # OFF (every initialized snapshot on disk), `.altgrp` alone as OFF
         # always is. Only when the plan stated one: otherwise the desk's
@@ -2876,9 +2892,8 @@ def release_write_targets(channels: list[dict], *,
 
         # 8. The fader to the factory reading, -inf -- BEFORE the unmute,
         # so the strip is silent by level before it stops being silent by
-        # mute. With the factory patch restored, a
-        # strip left unmuted at the plan's level would carry a stray source
-        # on its factory jack to Main 1. This is not a level chosen for a
+        # mute. A strip left unmuted at the plan's level would carry a stray
+        # source on its socket to Main 1. This is not a level chosen for a
         # show; it is the reading an untouched strip gives, like every
         # other value this function writes.
         targets.append(WriteTarget(
@@ -3256,17 +3271,26 @@ _REL_TOLERANCE = {"gate/rel": 0.03, "dyn/rel": 0.03}
 _DESK_FLOOR = {"in/set/dly": 0.1}
 
 
-# A stage box's own preamp gain, read back after a write. An
-# apply of 2026-10-09 through a Behringer stage box on AES50 A: all 16
-# gains read back half a dB high -- 20.0 asked, 20.5 held; 0.0 asked,
-# 0.5 held. The box sets its own preamps and answers on its own steps,
-# which are not the desk's (every earlier run, with nothing on AES50,
-# read 20.0 back as 20.0). Within half a dB the box has set the gain, as
-# near as it can. Only on a READBACK: whether a write is needed at all is
-# still decided exactly, so a desk that CAN hold 20.0 is never left at
-# 19.5 because the two were "close" -- the 2026-09-22 Q lesson below.
-_STAGE_BOX_GAIN_RE = re.compile(r"^/io/in/[ABC]/\d+/g$")
-_STAGE_BOX_GAIN_TOLERANCE_DB = 0.5
+# A preamp's gain is held on the hardware's own steps (`HEAD_AMP_GAIN_STEP_DB`,
+# 2.5 dB on the desk's local inputs and on a Behringer stage box), not on the
+# 0.5 dB values the desk accepts: the preamp holds the nearest step it has, and
+# that is a limit of the hardware, not a disagreement. So a gain is compared
+# on that grid, everywhere: "is a write needed" (a desk already holding 20.5
+# where the plan says 20 on a box that has no 20.0 is done, and a preview
+# after an apply is empty), the readback, and the audit. A request within
+# half a step of the held value IS that step's value.
+_GAIN_ADDRESS_RE = re.compile(r"^/io/in/([A-Za-z0-9]+)/\d+/g$")
+
+
+def _gain_step_db(address: str | None) -> float | None:
+    """The step of the preamp whose gain `address` is, or None for any other
+    address or a group with no measured step."""
+    # `_values_equal` runs for every leaf of a reset (tens of thousands), so
+    # the cheap test goes first.
+    if not address or not address.endswith("/g") or not address.startswith("/io/in/"):
+        return None
+    match = _GAIN_ADDRESS_RE.match(address)
+    return facts.HEAD_AMP_GAIN_STEP_DB.get(match.group(1)) if match else None
 
 
 def _keyed(table: dict, address: str | None):
@@ -3275,14 +3299,14 @@ def _keyed(table: dict, address: str | None):
     return next((v for k, v in table.items() if address.endswith("/" + k)), None)
 
 
-def _values_equal(value_type: str, a: object, b: object, address: str | None = None,
-                  *, readback: bool = False) -> bool:
+def _values_equal(value_type: str, a: object, b: object, address: str | None = None) -> bool:
     if a is None or b is None:
         return a is None and b is None
     if value_type == "f":
         try:
-            if readback and _STAGE_BOX_GAIN_RE.match(str(address or "")):
-                return abs(float(a) - float(b)) <= _STAGE_BOX_GAIN_TOLERANCE_DB + 1e-9
+            step = _gain_step_db(address)
+            if step is not None:
+                return abs(float(a) - float(b)) <= step / 2 + 1e-9
             floor = _keyed(_DESK_FLOOR, address)
             if floor is not None:
                 a, b = max(float(a), floor), max(float(b), floor)
@@ -3330,6 +3354,58 @@ def _values_equal(value_type: str, a: object, b: object, address: str | None = N
         except ValueError:
             return False
     return a == b
+
+
+def _dump_value_is_decisive(value_type: str, address: str, prior: object, intended: object,
+                            text: str | None) -> bool:
+    """Whether "already holds `intended` / would change" for a value taken
+    from a node dump is the verdict a single exact read would give.
+
+    A float in a dump is the desk's display text, within
+    `console.dump_text_rounding_band` of the exact value. The verdict is
+    `_values_equal` of the prior against the intended value, a tolerance
+    around the intended value; it is certain when it reads the same at the
+    low end of the band, at the high end, and at the point of the band
+    nearest the intended value, because the values it calls equal are one
+    interval. Anything else is read singly. Only floats can be uncertain: a
+    switch, a list choice or a connector index prints exactly.
+    """
+    from atoo import console as osc
+
+    if value_type != "f" or text is None:
+        return True
+    band = osc.dump_text_rounding_band(text)
+    if band == 0.0:
+        return True
+    if not (isinstance(prior, (int, float)) and isinstance(intended, (int, float))):
+        return False
+    low, high = prior - band, prior + band
+    middle = min(max(float(intended), low), high)
+    return len({_values_equal("f", value, intended, address)
+                for value in (low, middle, high)}) == 1
+
+
+def _dump_verdict_is_certain(target: WriteTarget, prior: object, intended: object,
+                             text: str | None) -> bool:
+    """`_dump_value_is_decisive` for a baseline a preview took from a dump."""
+    return _dump_value_is_decisive(target.value_type, target.address, prior, intended, text)
+
+
+def _dump_values_to_reread(targets: list[WriteTarget], dumped: dict, texts: dict) -> list[str]:
+    """The addresses, in target order, whose baseline a node dump gave but whose
+    verdict the dump's rounding could change (`_dump_verdict_is_certain`)."""
+    again: list[str] = []
+    seen: set[str] = set()
+    for target in targets:
+        address = target.address
+        if address not in dumped or address in seen:
+            continue
+        seen.add(address)
+        value, error = dumped[address]
+        if error is None and not _dump_verdict_is_certain(
+                target, value, target.compute_value(value), texts.get(address)):
+            again.append(address)
+    return again
 
 
 def _write_target(console, target: WriteTarget, value) -> tuple[str, str | None]:
@@ -3430,7 +3506,7 @@ def _late_confirmation(console, target: WriteTarget, intended_value, after: int)
         return None
     value, error = _extract_reply_value(reply, target.value_type, target.address)
     if error is not None or not _values_equal(target.value_type, value, intended_value,
-                                                target.address, readback=True):
+                                                target.address):
         return None
     consume = getattr(console, "use_late_reply", None)
     if consume is not None:
@@ -3448,7 +3524,7 @@ def _adopt_reply(pending: _PendingCheck, value, source: str) -> bool:
     every path into it already compares, and a later edit that adds one
     which doesn't must not be able to fabricate a match."""
     if not _values_equal(pending.target.value_type, value, pending.intended_value,
-                         pending.target.address, readback=True):
+                         pending.target.address):
         return False
     pending.record.readback_value = value
     pending.record.status = "match"
@@ -3572,6 +3648,8 @@ def _recheck_disagreements(console, pending: list[_PendingCheck], *,
 #: the slow one. A write is read back as soon as it is sent, so the write
 #: phases name both.
 PREVIEW_PHASE = "reading the desk for the preview"
+#: The values a node dump rounded, read again together (a preview with the reset on).
+REREAD_PHASE = "reading again the values a dump rounded"
 RESET_WRITE_PHASE = "resetting to initialized, reading each back"
 #: The plan's own stretch looks at every setting it states and sends only
 #: those the desk does not already hold, so its count is of settings looked
@@ -3803,6 +3881,7 @@ def apply_plan(
     reset = None
     reset_phase = 0
     known: dict[str, tuple[object, str | None]] = {}
+    combined_read = False
     if initialize is False and full_apply:
         from atoo import initialize as init
 
@@ -3814,7 +3893,20 @@ def apply_plan(
         if capture is None:
             warnings = warnings + [init.no_capture_warning(init_model, init_token)]
         else:
-            reset = init.plan_reset(console, capture, targets, phases=phases)
+            # A preview that can read several at once asks for the plan's own
+            # baselines in the reset's read, one pass under one phase. A real
+            # run reads each one just before its write, as it always has.
+            also_read = None
+            if dry_run and targets and getattr(console, "window", 1) > 1:
+                types: dict[str, set] = {}
+                for t in targets:
+                    types.setdefault(t.address, set()).add(t.value_type)
+                # An address two targets read as different types is left to the loop.
+                also_read = [(address, next(iter(kinds)))
+                             for address, kinds in types.items() if len(kinds) == 1]
+            reset = init.plan_reset(console, capture, targets, phases=phases,
+                                    also_read=also_read)
+            combined_read = also_read is not None
             if reset.abort_reason is not None:
                 return _finish(ApplyResult(
                     dry_run=dry_run, writes=[], journal_path=journal_path, warnings=warnings,
@@ -3848,7 +3940,35 @@ def apply_plan(
     # takes each from here instead of asking. A real run reads each one
     # just before its write, as it always has.
     prefetched = None
-    if dry_run and targets and getattr(console, "window", 1) > 1:
+    # What a node dump gave for the plan's own addresses, in the same pass.
+    dumped = reset.read.plan_values if combined_read else {}
+    dump_rereads = 0
+    if combined_read:
+        # The reset's read already asked for them (above), under its own
+        # phase. The loop below asks for any it did not get, such as one in a
+        # family the desk does not answer, itself, in a phase of its own.
+        prefetched = dict(reset.read.replies)
+        dumped = dict(dumped)
+        # The dump values whose rounding could change a verdict are read again
+        # now, all together with the window of requests in flight, not one at
+        # a time as the loop below reaches them (each a round trip).
+        again = _dump_values_to_reread(targets, dumped, reset.read.plan_texts)
+        if again:
+            from atoo import console as osc
+
+            reread_phase = phases.start(REREAD_PHASE, len(again))
+            for address, reply in osc.read_in_windows(
+                    console, again, on_start=reread_phase.start_address):
+                reread_phase.finish_address(
+                    answered=reply is not None and not reply.is_transport_error)
+                if reply is not None and reply.is_socket_error:
+                    abort_reason = reply.args[0] if reply.args else "socket error"
+                    break
+                prefetched[address] = reply
+                dumped.pop(address, None)
+                dump_rereads += 1
+            reread_phase.finish()
+    elif dry_run and targets and getattr(console, "window", 1) > 1:
         phase = phases.start(PREVIEW_PHASE, len(targets))
         prefetched = _prefetch_baselines(console, targets, known, phase)
 
@@ -3890,7 +4010,12 @@ def apply_plan(
         if prefetched is not None and target.address in prefetched:
             # Counted by the phase as its reply came in.
             in_flight = False
+        elif combined_read and (target.address in known or target.address in dumped):
+            # Decided on the reset's read: nothing is asked.
+            in_flight = False
         else:
+            if phase is None:
+                phase = phases.start(PREVIEW_PHASE, len(targets))
             phase.start_address(target.address)
             in_flight = True
         records_before = len(records)
@@ -3898,6 +4023,8 @@ def apply_plan(
             reset_seconds = time.monotonic() - reset_started
         if prefetched is not None and target.address in prefetched:
             prior_reply = prefetched[target.address]
+        elif target.address in dumped:
+            prior_reply = None
         elif target.address in pre_read:
             prior_reply = pre_read.pop(target.address)
         elif target.address in known:
@@ -3909,7 +4036,9 @@ def apply_plan(
         if prior_reply is not None and prior_reply.is_socket_error:
             abort_reason = prior_reply.args[0] if prior_reply.args else "socket error"
             break
-        if prior_reply is None and target.address in known:
+        if prior_reply is None and target.address in dumped:
+            prior_value, read_error = dumped[target.address]
+        elif prior_reply is None and target.address in known:
             prior_value, read_error = known.pop(target.address)
         else:
             prior_value, read_error = _extract_reply_value(
@@ -3921,6 +4050,19 @@ def apply_plan(
         # actually depends on a real prior value, and it degrades to
         # "start from no existing tags" the same way a fresh channel would.
         intended_value = target.compute_value(prior_value)
+        if (target.address in dumped and read_error is None
+                and not _dump_verdict_is_certain(
+                    target, prior_value, intended_value, reset.read.plan_texts.get(target.address))):
+            # The dump's display rounding could change the verdict: ask the
+            # desk for the exact value, as a real run does.
+            dump_rereads += 1
+            reread = console.get(target.address)
+            if reread is not None and reread.is_socket_error:
+                abort_reason = reread.args[0] if reread.args else "socket error"
+                break
+            prior_value, read_error = _extract_reply_value(
+                reread, target.value_type, target.address)
+            intended_value = target.compute_value(prior_value)
 
         # A value governed by a selector this run changed was read under
         # the OLD selector, and a value that exists only
@@ -4046,7 +4188,7 @@ def apply_plan(
             readback_reply, target.value_type, target.address)
         readback_source = None
         disagrees = readback_error is not None or not _values_equal(
-            target.value_type, readback_value, intended_value, target.address, readback=True)
+            target.value_type, readback_value, intended_value, target.address)
         if disagrees and not (readback_reply is not None and readback_reply.is_socket_error):
             late = _late_confirmation(console, target, intended_value, mark)
             if late is not None:
@@ -4063,8 +4205,7 @@ def apply_plan(
             break
         if readback_error is not None:
             status = "unreadable"
-        elif _values_equal(target.value_type, readback_value, intended_value, target.address,
-                           readback=True):
+        elif _values_equal(target.value_type, readback_value, intended_value, target.address):
             status = "match"
         else:
             status = "mismatch"
@@ -4091,7 +4232,7 @@ def apply_plan(
     if reset is not None and reset_seconds is None:
         reset_seconds = time.monotonic() - reset_started
     warnings = (warnings + _fixed_default_notes(records) + _selector_notes(records)
-                + _stage_box_gain_notes(records))
+                + _gain_step_notes(records))
     if full_apply:
         warnings = warnings + _full_apply_run_notes(records)
     if reset is not None:
@@ -4099,6 +4240,12 @@ def apply_plan(
 
         warnings = warnings + init.run_notes(reset, records, dry_run=dry_run,
                                              write_seconds=reset_seconds)
+    if dump_rereads:
+        warnings = warnings + [
+            f"INFO {dump_rereads:,} value(s) taken from a node dump were read again one by one: a "
+            "dump prints the desk's rounded text, and the rounding could have changed whether "
+            "the plan's value is already held. The rest of a dump's values are shown as the "
+            "dump printed them"]
 
     return _finish(ApplyResult(
         dry_run=dry_run, writes=records, journal_path=journal_path, warnings=warnings,
@@ -4173,21 +4320,33 @@ def _selector_notes(records: list[WriteRecord]) -> list[str]:
         f"({shown}){extra} -- their prior is the reading taken before the selector was written"]
 
 
-def _stage_box_gain_notes(records: list[WriteRecord]) -> list[str]:
-    """One INFO line for the stage-box gains that were set but read back
-    on the box's own steps, not the value asked for (see
-    `_STAGE_BOX_GAIN_TOLERANCE_DB`) -- a match, but not silently one."""
-    held = [r for r in records if r.status == "match" and _STAGE_BOX_GAIN_RE.match(r.address)
-            and r.readback_value is not None
-            and not _values_equal(r.value_type, r.readback_value, r.intended_value, r.address)]
+def _gain_step_notes(records: list[WriteRecord]) -> list[str]:
+    """One INFO line for the preamp gains the hardware holds on a step other
+    than the value the plan states (`HEAD_AMP_GAIN_STEP_DB`): written and
+    read back on the nearest step, or already held there so no write was
+    needed. Compared on the hardware's grid (`_values_equal`), so none of
+    these is a mismatch or a change; the line says the value was snapped, and
+    to what."""
+    held = []
+    for r in records:
+        if _gain_step_db(r.address) is None or r.status not in (
+                "match", "skipped_no_change", "dry_run"):
+            continue
+        value = r.readback_value if r.readback_value is not None else r.prior_value
+        if (value is not None and float(value) != float(r.intended_value)
+                and _values_equal(r.value_type, value, r.intended_value, r.address)):
+            held.append((r, value))
     if not held:
         return []
     shown = ", ".join(f"{r.address.split('/')[3]} {r.address.split('/')[4]}: "
-                      f"{_format_db(r.intended_value)} asked, {_format_db(r.readback_value)} held"
-                      for r in held[:3]) + (f" and {len(held) - 3} more" if len(held) > 3 else "")
-    return [f"INFO {len(held)} stage-box preamp gain(s) read back on the box's own steps, "
-            f"within {_STAGE_BOX_GAIN_TOLERANCE_DB} dB of the plan ({shown}) -- the box sets its "
-            "own preamps over AES50 and holds the nearest step it has"]
+                      f"{_format_db(r.intended_value)} asked, {_format_db(value)} held"
+                      for r, value in held[:3]) + (
+        f" and {len(held) - 3} more" if len(held) > 3 else "")
+    steps = sorted({_gain_step_db(r.address) for r, _ in held})
+    return [f"INFO {len(held)} preamp gain(s) snapped to the nearest step the hardware has "
+            f"({', '.join(f'{x:g}' for x in steps)} dB steps): {shown} -- a preamp holds only "
+            "its own steps, so the plan's value is as near as the preamp can be, and a preview "
+            "after this apply reports no change for it"]
 
 
 def _format_db(value: object) -> str:

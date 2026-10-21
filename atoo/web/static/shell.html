@@ -939,7 +939,15 @@
               <p class="panel-note" id="apply-preflight-input-note" hidden></p>
               </div>
               <details class="section fold apply-options" id="apply-advanced">
-                <summary class="section-head"><h3>Options</h3><span class="meta">skip the pre-flight; disconnect unused output sockets</span></summary>
+                <summary class="section-head"><h3>Options</h3><span class="meta" id="apply-options-aside">initialize on &middot; verify on</span></summary>
+                <div class="apply-option apply-init">
+                  <div class="apply-option-row">
+                    <span class="apply-option-name" id="apply-init-name">Initialize the console first</span>
+                    <button type="button" id="apply-init" class="switch" role="switch" aria-checked="true" aria-labelledby="apply-init-name" aria-describedby="apply-init-says"><span class="track"></span><span class="word" id="apply-init-word">On</span></button>
+                  </div>
+                  <p class="apply-dim" id="apply-init-says">Sets the desk to its initialized state before writing the plan.</p>
+                  <p class="apply-dim" id="apply-init-kept">Not changed: the desk's network and clock, expansion-card setup, meter and RTA display, monitor and solo listening.</p>
+                </div>
                 <div class="apply-option">
                   <label><input type="checkbox" id="apply-skip-verify"> Skip the pre-flight verify</label>
                   <button type="button" class="apply-help" data-popup="popup-preflight" aria-label="What is pre-flight verify?">?</button>
@@ -947,14 +955,6 @@
                     This is the check that catches an impossible plan before it reaches the desk.
                     Skipping it writes a plan nothing has agreed is applicable.
                   </span>
-                </div>
-                <div class="apply-option">
-                  <label><input type="checkbox" id="apply-clean-toggle"> Disconnect output sockets the plan doesn't use</label>
-                  <button type="button" class="apply-help" data-popup="popup-clean-sockets" aria-label="What does disconnecting unused output sockets do?">?</button>
-                  <div class="apply-option-sub" id="apply-clean-sub" hidden>
-                    <input type="text" id="apply-clean-sockets" autocomplete="off" spellcheck="false" placeholder="LCL=8,A=48" aria-label="Socket groups to clean">
-                    <span class="apply-option-hint">Which socket groups to clean, and how many sockets each has. Example: <code>LCL=8,A=48</code>.</span>
-                  </div>
                 </div>
               </details>
             </div>
@@ -1360,6 +1360,7 @@
               <table id="alert-table">
                 <thead>
                   <tr>
+                    <th class="col-hide">Hide</th>
                     <th class="col-sev">Severity</th>
                     <th class="col-where">Where</th>
                     <th class="col-title">Finding</th>
@@ -1374,7 +1375,7 @@
           </section>
 
           <!-- Findings hidden one at a time by their row's Hide button, folded
-               below the table. Its Show button brings the row back. Held by
+               below the table. Clearing its box brings the row back. Held by
                this page for the watch session only. -->
           <details id="watch-suppressed" class="fold watch-fold watch-suppressed" hidden>
             <summary class="block-head">
@@ -1383,7 +1384,7 @@
               <span class="push"><span class="btn btn-quiet watch-fold-hint">Open the hidden list</span></span>
             </summary>
             <div class="panel box">
-              <p class="meta watch-fold-note">Hidden while they stand. Choose Show to bring one back.</p>
+              <p class="meta watch-fold-note">Hidden while they stand. Clear a box to bring one back.</p>
               <ul id="watch-suppressed-list" class="watch-suppressed-list"></ul>
               <p class="dock-resolved-hint">
                 Suppressing only hides a finding on this page; the desk is not
@@ -1434,7 +1435,7 @@
               <h2>Watch conditions</h2>
               <span class="notation" id="wc-fold-meta">0 conditions</span>
               <span class="push">
-                <span class="state is-warn" id="wc-drafted-badge" hidden
+                <span class="state is-info" id="wc-drafted-badge" hidden
                       title="A bundle build proposed these. Editing one makes it yours, and so does pressing its Drafted tag; a deleted one is not re-added by the next build. Nothing is saved until you press Save."></span>
                 <span class="btn btn-quiet watch-fold-hint" id="wc-fold-hint">Edit</span>
               </span>
@@ -1652,18 +1653,6 @@
     <p class="apply-dim">It runs again whenever you come back to Apply, or press Re-check. You
       can skip it under Options, for example to write a plan you've already checked against this
       desk.</p>
-    <div class="sp-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-popup-close>Close</button></div>
-  </div>
-  <div class="sp-popup" id="popup-clean-sockets" role="dialog" aria-modal="true" aria-labelledby="popup-clean-title" hidden>
-    <h3 id="popup-clean-title">Disconnect output sockets the plan doesn't use</h3>
-    <p>A full build writes every output socket the plan routes something to. Any other socket
-      keeps whatever was patched there before: from an earlier show, an earlier apply, or by
-      hand. That can put a stray signal on a cable you thought was dead.</p>
-    <p>Turn this on to disconnect those other sockets as well. Name each socket group to clean
-      and how many sockets it has, for example <code>LCL=8,A=48</code>. Groups you don't name
-      are left as they are.</p>
-    <p class="apply-dim">The disconnects show in the preview like every other write, and Undo
-      puts them back.</p>
     <div class="sp-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-popup-close>Close</button></div>
   </div>
 </div>

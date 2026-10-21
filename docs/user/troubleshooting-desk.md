@@ -43,7 +43,8 @@ about 60s one at a time.
 
 - **Every address answered, but slow:** the network. Use a wired
   connection to the desk if you can. `ATOO_CONSOLE_WINDOW=16` keeps
-  more reads in flight; if a read with 16 reports unanswered addresses
+  more reads in flight; whether the desk is happy with more than 8 has
+  not been measured, so if a read with 16 reports unanswered addresses
   that 8 did not, go back to 8.
 - **Some addresses went unanswered:** each one cost the timeout and two
   retries (about 3s). With several in flight they wait side by side, so
@@ -223,7 +224,7 @@ WARNING: 198.51.100.8 calls itself 'wing-racksize', a model name Atoo has never 
 
 Not a failure: the apply carries on. Atoo recognises a desk's model
 only from spellings read off a real console, and this one has not been
-seen yet. The plan was verified
+seen yet — a WING Rack's has never been captured. The plan was verified
 against the model it was built for, so a socket that model lacks has
 already been refused; what could not be checked is whether *this desk*
 has the same panel. Every write is still read back, so a patch that did

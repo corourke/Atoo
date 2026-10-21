@@ -201,7 +201,10 @@ def test_the_desk_is_read_by_node_dump_and_reset_baselines_are_not_asked_again()
     apply_plan(tiny(("ch", 1, "Kick")), desk, dry_run=True, full_apply=True,
                initialize=True, init_model="wing-compact")
     assert "/ch/30" in desk.dumps
-    assert "/ch/30/fdr" not in desk.gets
+    # The one float the reset will write is read once, exactly, for the journal
+    # (a dump prints rounded text); a leaf that matches is not asked for singly.
+    assert desk.gets.count("/ch/30/fdr") == 1
+    assert "/ch/30/in/set/inv" not in desk.gets
 
 
 # ======================================================================

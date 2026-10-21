@@ -851,6 +851,9 @@
   // The same swallow for the demo show's write controls --
   // dimmed by styles.css (`body.is-demo-show`), refused by the server,
   // and a keyboard press on one stops here with the reason on screen.
+  // The lock stops edits, never reading: a table lists its editing buttons
+  // by name (`.wc-remove`, the Drafted tag), never "every button in it", or
+  // a read-only control (Watch's info icon) is swallowed with them.
   const DEMO_LOCKED = [
     "#change-conventions", "#new-conventions", "#change-input-list", "#change-instructions",
     "#new-instructions", "#instr-create-btn", "#conv-save-btn", "#instr-save-btn",
@@ -860,7 +863,7 @@
     "#plan-rebuild-btn", "#status-rebuild-btn", "#apply-arm-checkbox",
     "#apply-run-btn", "#undo-preview-btn", "#undo-run-btn", "#promote-confirm-btn",
     "#wc-change-btn", "#wc-new-btn", "#wc-save-btn", "#wc-add-btn", "#wc-table input",
-    "#wc-table select", "#wc-table button",
+    "#wc-table select", "#wc-table .wc-remove", "#wc-table button.wc-source-drafted",
   ].join(", ");
   function demoLocked(target) {
     return isDemoShow() && target && target.closest ? target.closest(DEMO_LOCKED) : null;

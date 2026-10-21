@@ -836,6 +836,27 @@ TRIM_DB_RANGE = (-18.0, 18.0)
 BALANCE_DB_RANGE = (-9.0, 9.0)
 HEAD_AMP_GAIN_DB_RANGE = (-3.0, 45.5)
 
+# The step of a preamp the desk can ask for (`/io/in/{grp}/{n}/g` takes any
+# 0.5 dB value, -3 .. 45.5) against the step the hardware holds. A write
+# lands on the nearest step the preamp has, and that step is 2.5 dB:
+#
+#   * a Behringer S16 on AES50 A, written and read back (Compact, fw 3.1):
+#     -2.0 .. +45.5 in 2.5 dB steps, so 0 asked holds 0.5, 20 asked holds
+#     20.5, 33.3 asked holds 33.0, 55 asked holds 45.5;
+#   * the Compact's own local preamps (LCL 20): -2.5 .. +45 in 2.5 dB steps,
+#     so 1.2 asked holds 0.0, 1.3 asked holds 2.5, 20.5 asked holds 20.0,
+#     33.3 asked holds 32.5, 50 asked holds 45.0.
+#
+# The two grids sit on different offsets, but a 2.5 dB grid has exactly one
+# step within half a step (1.25 dB) of any request that lies inside its
+# range, so "the nearest step" is the same question as "within half a step"
+# for either offset, and the offset need not be known. Every plan value the
+# schema allows (`HEAD_AMP_GAIN_DB_RANGE`) is within half a step of a step
+# of both. The Behringer design team gives the same 2.5 dB step for the
+# X32-family boxes on AES50, which is why the three AES50 ports share it.
+# A group not named here has no measured step.
+HEAD_AMP_GAIN_STEP_DB = {"LCL": 2.5, "A": 2.5, "B": 2.5, "C": 2.5}
+
 # --------------------------------------------------------------------------
 # The parametric EQ
 # --------------------------------------------------------------------------
@@ -1561,6 +1582,33 @@ def aes50_status_address(port: str) -> str:
     return f"/$stat/{port}/stat"
 
 
+def aes50_device_address(port: str) -> str:
+    """The leaf naming the device on an AES50 port (`S16`, or empty)."""
+    return f"/$stat/{port}/dev"
+
+
+# The size of a stage box. `/io/in/A` lists 48 sockets whatever is on the
+# port (that is the address space, like the expansion bays' 64), so the
+# count the DESK gives says nothing of the box: an S16 on AES50-A has 16
+# inputs, and a channel patched to `A 17` is patched to nothing -- silent on
+# stage, and the console accepts and reads it back. The device names what is
+# on the port (`/$stat/A/dev` reads `S16`), and this table gives its size.
+#
+# **Only boxes with a measured or documented size are here, never a guess**:
+# a name this table does not have is reported and its sockets are left
+# unchecked (`box_size`). The S16 is the Behringer S16 manual's own count,
+# 16 mic/line inputs and 8 outputs; an SD8, SD16, DL16 or DL32 goes in once
+# its name has been read off a desk and its size confirmed.
+#: `{device name as `/$stat/{port}/dev` reads it, casefolded: (inputs, outputs)}`
+AES50_BOX_SOCKETS = {"s16": (16, 8)}
+
+
+def box_size(device: object) -> tuple[int, int] | None:
+    """`(inputs, outputs)` of the stage box `device` names, or None for a
+    name this project has no size for."""
+    return AES50_BOX_SOCKETS.get(str(device or "").strip().casefold())
+
+
 MONITOR_SOURCES = ("/cfg/mon/1/src", "/cfg/mon/2/src")
 #: `MTX.4` -> ("MTX", 4): the objects a monitor source can name.
 MONITOR_SOURCE_RE = re.compile(r"^(MAIN|MTX|BUS|AUX)\.(\d+)$")
@@ -1874,3 +1922,24 @@ def send_has_leaf(bank: str, leaf: str) -> bool:
     """
     leaves = SEND_LEAVES.get(bank)
     return True if leaves is None else leaf in leaves
+
+
+def parse_socket_counts(spec: str | None) -> dict[str, int]:
+    """"LCL=20,A=48" -> {"LCL": 20, "A": 48}: socket groups and how many sockets
+    each has. Physical socket counts have no confirmed console-wide default
+    (they vary with hardware and expansion cards), so stating them is the only
+    way to give them, never a guess. Anything that is not `GROUP=COUNT` raises
+    a ValueError that says what to write instead."""
+    counts: dict[str, int] = {}
+    for part in (spec or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        group, equals, count = part.partition("=")
+        group, count = group.strip(), count.strip()
+        if not (equals and group and count.isascii() and count.isdigit()):
+            raise ValueError(f"{part!r} is not a socket group and its count. Write "
+                             "GROUP=COUNT pairs separated by commas, for example LCL=8,A=48.")
+        counts[group] = int(count)
+    return counts
+

@@ -370,6 +370,18 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     "R011": _OUTPUT_SIDE + (BUS_WIDTH, MAIN_WIDTH, MTX_WIDTH, BUS_NAME, STRIP_NAME,
                 SOURCE_NAME, MAIN_PRESENCE, STRIP_SEND_ON, STRIP_MAIN_ON, BUS_SEND_ON,
                 BUS_MAIN_ON, MAIN_SEND_ON),
+    # A strip that reaches one Main or Matrix by two routes: every strip's
+    # sends and Main routes with their levels, each bus's Main routes and
+    # Matrix sends, each Main's Matrix sends, the mutes it names, and the
+    # names the labels quote. R013 reads the same.
+    "R012": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL,
+                BUS_MAIN_ON, MAIN_SEND_ON, MAIN_SEND_LVL, STRIP_MUTE, BUS_MUTE,
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME)
+               + _IN_USE_STRIP,
+    "R013": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL,
+                BUS_MAIN_ON, MAIN_SEND_ON, MAIN_SEND_LVL, STRIP_MUTE, BUS_MUTE,
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME)
+               + _IN_USE_STRIP,
     # 48V on a jack nothing takes: every strip's patch, every USER PATCH
     # slot's source, the jack's own `vph`, and the width of the socket
     # before it -- a stereo strip takes the even socket too.

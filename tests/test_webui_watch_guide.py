@@ -185,7 +185,7 @@ def test_on_a_read_only_show_the_conditions_are_text(assets):
     assert "wcTextCell(tr, cond.channel" in readonly and "return tr;" in readonly
     assert 'tag.className = "sev sev-" + sev;' in readonly
     assert "input" not in readonly.replace("wcTextCell", "")
-    assert 'tag.className = "state is-warn wc-source-drafted";' in row
+    assert 'tag.className = "state is-info wc-source-drafted";' in row
     assert 'tag.className = "prop wc-source-yours";' in row
     assert "wc-source-drafted:hover" not in css.replace("button.wc-source-drafted:hover", "")
     assert "body.is-demo-show :is(#wc-change-btn, #wc-new-btn, #wc-add-btn) { display: none; }" in css

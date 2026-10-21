@@ -149,7 +149,13 @@ def test_demo_provider_never_duplicates_or_grows_unbounded():
     provider, closer = demo_provider_factory(rng=random.Random(42))
     assert closer is None
 
-    events = list(watch(provider, interval=0, max_iterations=300, sleep=lambda s: None))
+    # The rules as the Watch page runs them on the Demo show: R012 told which
+    # splits the plan states (the Demo's vocals are parallel on purpose).
+    from atoo import webui
+    from atoo.audit import DEFAULT_RULES, split_path_rules
+    plan = json.loads((Path(webui.DEMO_SHOW_DIR) / "plan.json").read_text(encoding="utf-8"))
+    events = list(watch(provider, rules=split_path_rules(DEFAULT_RULES, plan), interval=0,
+                        max_iterations=300, sleep=lambda s: None))
 
     # Baseline: the clean rig, nothing armed yet -- nothing above info (the
     # Demo's conventions start every channel fader at the floor, L002 INFO).
@@ -3389,3 +3395,35 @@ def test_step_04_reads_the_bus_preset_fields_the_plan_carries(client):
     for field in ("b.preset_values", "b.preset", "ins.engine", "ins.model",
                   "ins.point", "ins.saved_on", "v.file"):
         assert field in js, field
+
+
+def test_watch_verdict_and_table_headings_stay_at_the_top(client):
+    """The verdict bar and the alert table's column headings are sticky, and
+    the box that holds them clips rather than scrolls (a scroll container
+    would stop them sticking to the window); watch.js feeds the headings'
+    offset from the verdict bar's own height."""
+    import re
+
+    css = client.get("/static/styles.css").text
+    box = re.search(r"\.watch-table-wrap\.panel\.box \{([^}]*)\}", css).group(1)
+    assert "overflow: clip" in box and "overflow: hidden" not in box
+    bar = re.search(r"\.watch-table-wrap \.verdict-bar \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in bar and "top: 0" in bar
+    heads = re.search(r"#alert-table thead th \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in heads and "var(--verdict-h" in heads
+    js = client.get("/static/watch.js").text
+    assert '"--verdict-h"' in js and "ResizeObserver" in js
+
+
+def test_the_drafted_tag_is_blue_not_yellow(client):
+    """Drafted is a call to look, not a fault: the info blue, so it cannot
+    be read as the yellow WARNING severity beside it in the conditions table."""
+    import re
+
+    css = client.get("/static/styles.css").text
+    rule = re.search(r"\.state\.is-info \{([^}]*)\}", css).group(1)
+    assert "var(--info-bg)" in rule and "var(--info-fg)" in rule
+    js = client.get("/static/watch.js").text
+    assert 'tag.className = "state is-info wc-source-drafted"' in js
+    assert "state is-warn wc-source-drafted" not in js
+    assert 'class="state is-info" id="wc-drafted-badge"' in client.get("/").text

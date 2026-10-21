@@ -89,9 +89,10 @@
   const planStaleText = el("apply-plan-stale-text");
   const skipVerify = el("apply-skip-verify");
   const skipVerifyWarn = el("apply-skip-verify-warn");
-  const cleanToggle = el("apply-clean-toggle");
-  const cleanSub = el("apply-clean-sub");
-  const cleanSockets = el("apply-clean-sockets");
+  const initSwitch = el("apply-init");
+  const initWord = el("apply-init-word");
+  const initSays = el("apply-init-says");
+  const optionsAside = el("apply-options-aside");
   const preflightBadge = el("apply-preflight-badge");
   const preflightBtn = el("apply-preflight-btn");
   const preflightSummary = el("apply-preflight-summary");
@@ -192,8 +193,14 @@
     return (amendAllow.value || "").split(",").map((x) => x.trim()).filter(Boolean);
   }
 
-  function cleanValue() {
-    return cleanToggle.checked ? ((cleanSockets.value || "").trim() || null) : null;
+  // The Initialize switch: on unless the person turned it off, and never
+  // on for a console Atoo has no initialized capture of (the pre-flight says).
+  let initWanted = true;
+  function initAvailable() {
+    return !preflight || !preflight.initialize || preflight.initialize.available !== false;
+  }
+  function initOn() {
+    return initWanted && initAvailable();
   }
 
   function amendInputs() {
@@ -224,7 +231,7 @@
   // review key carries the console too.
   function stepOneKey() {
     if (applyMode === "full") {
-      return JSON.stringify({ kind: "apply", skip: !!skipVerify.checked, clean: cleanValue(),
+      return JSON.stringify({ kind: "apply", skip: !!skipVerify.checked, init: initOn(),
         plan: (preflight && preflight.plan_sha256) || null, console: deskLabel() });
     }
     return JSON.stringify({ kind: "patch", inputs: amendInputs(), console: deskLabel() });
@@ -487,7 +494,7 @@
     // and asking would only put a 404 in the browser's console.
     if (SP.bundle()) {
       try {
-        const r = await fetch("/api/apply/preflight");
+        const r = await fetch("/api/apply/preflight" + (initWanted ? "" : "?initialize=0"));
         answer = r.ok ? await r.json() : null;
       } catch (e) {
         answer = null;
@@ -532,6 +539,22 @@
   // refuses a `confirm` that arrives without an `arm` as well -- this is
   // the courtesy, that is the guard.
 
+  // The Initialize switch and its line, from the switch and the console model.
+  function renderInitSwitch() {
+    const on = initOn();
+    const available = initAvailable();
+    initSwitch.setAttribute("aria-checked", String(on));
+    initSwitch.disabled = !available;
+    initWord.textContent = on ? "On" : "Off";
+    initSays.textContent = !available
+      ? "Not available: " + preflight.initialize.why
+      : on ? "Sets the desk to its initialized state before writing the plan."
+        : "Off: the plan is written over whatever the desk holds. Anything the plan doesn\u2019t set " +
+          "keeps its present value.";
+    optionsAside.textContent = (on ? "initialize on" : "initialize off") + " \u00b7 " +
+      (skipVerify.checked ? "verify skipped" : "verify on");
+  }
+
   function updateArmState() {
     const desk = SP.console();
     const demo = !!desk.demo;
@@ -545,6 +568,7 @@
     const stalePage = SP.isStale();
     const hasDesk = demo || !!desk.address;
     const blocker = patchBlocker();
+    renderInitSwitch();
 
     // Step 2's Preview.
     previewBtn.disabled = stalePage || !hasBundle || !hasDesk || running || noChange || !!blocker;
@@ -844,12 +868,13 @@
     allowSub.hidden = !allowToggle.checked;
     stepOneEdited();
   });
-  cleanToggle.addEventListener("change", () => {
-    cleanSub.hidden = !cleanToggle.checked;
-    if (cleanToggle.checked) cleanSockets.focus();
+  initSwitch.addEventListener("click", () => {
+    if (initSwitch.disabled) return;
+    initWanted = !initWanted;
+    // The pre-flight's note says what the reset will do, or that it is off.
+    fetchPreflight();
     stepOneEdited();
   });
-  cleanSockets.addEventListener("input", stepOneEdited);
 
   armCheckbox.addEventListener("change", updateArmState);
   skipVerify.addEventListener("change", () => {
@@ -1481,6 +1506,7 @@
     });
     const counts = drawing.counts || {};
     const entries = (patch ? LEGEND.patch : LEGEND.full).slice();
+    if (patch && counts.moved) entries.push(["l-moved", "moved by the insert"]);
     if (patch && counts.released) entries.push(["l-released", "returned to free"]);
     if (patch && counts.unknown) entries.push(["l-unknown", "never answered — treated as in use"]);
     entries.forEach(([cls, words]) => {
@@ -1500,6 +1526,7 @@
     if (strip.state === "unknown") cls += " is-unknown";
     if (strip.mark === "new") cls += " is-new";
     if (strip.mark === "edit") cls += " is-edit";
+    if (strip.mark === "moved") cls += " is-moved";
     if (strip.mark === "released") cls += " is-released";
     if (!patch && strip.changes && strip.state === "plan") cls += " is-changes";
     cell.className = cls;
@@ -1523,6 +1550,7 @@
       (strip.source_name ? " (the name on its source socket)" : "") +
       (strip.colour ? ", " + strip.colour : "") + " — " +
       ({ new: "added by this change", edit: "edited by this change",
+         moved: "moved here by this change's insert, and rewritten whole",
          released: "returned to free" }[strip.mark] || words[strip.state] || strip.state) +
       (strip.changes ? "; this write changes it" : "");
     return cell;
@@ -1632,7 +1660,7 @@
       confirm: !!confirmMode,
       arm: !!armCheckbox.checked,
       skip_verify: !!skipVerify.checked,
-      clean_output_sockets: cleanValue(),
+      initialize: initOn(),
       expected_console: deskLabel(),
       expected_bundle: bundleShown(),
       expected_plan_sha256: (preflight && preflight.plan_sha256) || null,

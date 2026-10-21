@@ -100,8 +100,9 @@ someone else can pick it up.
 
 ## Which consoles?
 
-Behringer WING only: the Compact, the full-size WING and the Rack. No
-other console, the X32 and M32 included.
+Behringer WING only: the Compact, the full-size WING and the Rack. Full
+applies have run on the Compact and the full-size WING; the Rack has not
+been tried yet ([Where Atoo needs work](limitations.md#consoles)).
 
 ## Will it mix for me?
 
@@ -113,9 +114,3 @@ state and gets out of the way.
 [Why Atoo?](why.md) compares it with building by hand or in WING
 Edit, copying last month's show, the desk's presets, and a spreadsheet
 input list.
-
-## Found something wrong?
-
-Open an issue on the repository with what you ran, what you expected,
-and what you saw. For a desk of your own, [Testing on your
-desk](testing-on-your-desk.md#4-report) says what to send.

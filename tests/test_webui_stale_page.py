@@ -185,6 +185,9 @@ def test_a_plan_rebuilt_after_the_preflight_is_refused_not_written_unread(two_co
         # Re-run the pre-flight (what the page does on this 409) and it arms.
         r = c.post(APPLY, json=armed(c, APPLY))
         assert r.status_code == 200, r.json()
+        # The write it started runs on a thread; left running it writes into
+        # the next test's desk, which counts it as its own.
+        apply_tests._wait(c)
 
 
 def test_a_preview_from_a_stale_page_is_not_refused(two_copies, desk):

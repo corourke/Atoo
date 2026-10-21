@@ -77,13 +77,27 @@ def test_the_history_table_scrolls_in_its_own_box_and_stacks_without_a_nowrap_ce
     assert "overflow-wrap: anywhere" in stacked
 
 
-def test_the_suppressed_fold_is_opened_by_its_own_words_and_the_row_keeps_show(assets):
+def test_the_history_table_gives_summary_the_width_and_sizes_the_rest_to_their_content(assets):
+    css = assets["css"]
+    wide = css[css.index("@container (min-width: 761px)"):]
+    wide = wide[:wide.index("\n}\n")]
+    # When, Kind, Mismatches and the buttons' cell shrink to their content ...
+    assert "width: 1%; white-space: nowrap;" in wide
+    for n in (1, 2, 5, 6):
+        assert f".journal-stack-table td:nth-child({n})" in wide
+    # ... the Desk's long name wraps within a bounded width ...
+    assert re.search(r"td\.journal-desk-cell \{[^}]*max-width: 22ch", wide)
+    # ... and Summary is the one column left to take the slack.
+    assert re.search(r"td:nth-child\(4\) \{ width: auto; min-width: 24ch;", wide)
+
+
+def test_the_suppressed_fold_is_opened_by_its_own_words_and_the_row_keeps_a_ticked_box(assets):
     html, js = assets["html"], assets["watch"]
     fold = html[html.index('<details id="watch-suppressed"'):]
     head = fold[:fold.index("</summary>")]
     assert ">Open the hidden list</span>" in head
     assert ">Show</span>" not in head
-    assert 'btn.textContent = hidden ? "Show" : "Hide";' in js
+    assert "box.checked = hidden" in js
 
 
 def test_apply_and_watch_do_not_ask_for_what_a_page_with_no_show_cannot_have(assets):
@@ -91,7 +105,7 @@ def test_apply_and_watch_do_not_ask_for_what_a_page_with_no_show_cannot_have(ass
     preflight = apply_js[apply_js.index("async function loadPreflight(mine)"):]
     preflight = preflight[:preflight.index("if (mine !== preflightSeq) return;")]
     assert "if (SP.bundle()) {" in preflight
-    assert preflight.index("SP.bundle()") < preflight.index('fetch("/api/apply/preflight")')
+    assert preflight.index("SP.bundle()") < preflight.index('fetch("/api/apply/preflight"')
     refresh = watch_js[watch_js.index("async function wcRefresh()"):]
     refresh = refresh[:refresh.index('fetch("/api/watch-conditions")')]
     assert "if (!wcBundle() && !wcLoadedPath && !wcStartedWith) {" in refresh
@@ -222,7 +236,7 @@ def test_a_page_with_no_show_open_logs_no_404_on_load_or_when_visiting_apply_and
 
 
 @pytest.mark.parametrize("width, theme", [(1280, "dark"), (1280, "light"), (390, "dark")])
-def test_the_suppressed_fold_and_the_row_do_not_both_say_show(tmp_path, monkeypatch, show,
+def test_the_suppressed_fold_keeps_the_rows_ticked_box_and_nothing_scrolls(tmp_path, monkeypatch, show,
                                                               demo_copy, width, theme):
     from test_webui_watch_guide import _serve as serve_watch
 
@@ -239,7 +253,7 @@ def test_the_suppressed_fold_and_the_row_do_not_both_say_show(tmp_path, monkeypa
             assert hint.inner_text() == "Open the hidden list"
             assert page.evaluate("document.documentElement.scrollWidth") <= width
             page.locator("#watch-suppressed > summary").click()
-            assert fold.locator("#watch-suppressed-list .watch-row-hide").inner_text() == "Show"
+            assert fold.locator("#watch-suppressed-list .watch-row-hide").is_checked()
             assert hint.is_hidden()
     finally:
         server.should_exit = True

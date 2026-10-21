@@ -49,6 +49,7 @@ In this order, the first time:
 |---|---|
 | [Reading findings](reading-findings.md) | what ERROR, WARNING and INFO mean, the verdicts, and the codes |
 | [Troubleshooting](troubleshooting.md) | can't reach the desk, a build that fails, a refused plan, the UI not starting |
+| [Where Atoo needs work](limitations.md) | what is not built or not yet proven on a desk, before you rely on it |
 | [Words Atoo uses](glossary.md) | one name for each thing: Choices, Arm, History, the journal, a show bundle |
 | [Questions](faq.md) | is it AI slop, will it touch my desk mid-show, what if it goes wrong |
 

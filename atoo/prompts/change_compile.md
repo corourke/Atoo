@@ -39,7 +39,7 @@ Emit exactly one JSON object, no prose and no fence:
            does ("Add Trumpet, Sax and Trombone on LCL 21-23", "Lose the MD
            vocal"). It names the change in the journal. Do not state or
            imply when or why the change is wanted: no time, occasion or
-           reason, only the change.
+           reason, only the change. At most 48 characters; a longer name is cut.
   add      {"channels": [...], "busses": {...}, "dcas": {...},
             "mute_groups": {...}, "outputs": {...}}
            Each entry is the SAME shape as in the plan format above: a
@@ -74,6 +74,13 @@ this change is the only new source of inputs.
    names it ("Trumpet"). Propose `channel` numbers after the highest strip
    the desk plan uses; the code places each new channel on a strip that is
    genuinely free and says where.
+   WHEN THE CHANGE NAMES A POSITION ("after Snare", "before the kick", "as
+   channel 3", "insert ..."), propose the strip that position means -- the
+   one below Snare's for "after Snare" -- even though a channel is on it,
+   and give channels added together consecutive numbers. The code decides
+   what happens next: only a change that says insert or renumber moves the
+   strips after it; "add X after Snare" puts X on the next free strip, and
+   says so. You never renumber anything yourself.
 
 3. REFER TO WHAT IS THERE BY ITS EXACT NAME. A new channel joins an existing
    DCA, mute group or bus by the name the plan on the desk uses. Never
