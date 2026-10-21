@@ -42,7 +42,7 @@ nothing.
 Step 2 draws the desk as its scribble strips: every channel, aux, bus,
 main, matrix, DCA and mute group, in its colour, with its name and
 number. Strips in use are drawn solid, free strips dashed, the strips
-this change adds have a green outline and the ones it edits a blue one.
+this change adds have a green outline, the ones it edits a blue one, and the ones an insert moves a dashed blue one.
 A strip that never answered the read is hatched: it is treated as in
 use, never as free.
 
@@ -52,9 +52,10 @@ Under the drawing, **Will be written** lists every change in groups:
 |---|---|
 | **Added** | a new channel, going into a free strip |
 | **Returned to free** | a dropped channel's strip, cleared back to unused |
+| **Moved down by the insert** | a running channel that an *insert* ("insert HiHat after Snare and renumber the channels after it") moves to the next strip down: one line for every strip that moves, each rewritten whole on its new number. Undo puts them all back. Without those words, *"add HiHat after Snare"* moves nothing, and a note says so and gives the words that would. See [Inserting a channel](patch.md#inserting-a-channel-and-renumbering-the-strips-after-it) |
 | **Edited: named fields only** | something already running, changed only in the fields you named (*"HPF 100 on the vocals"*), listed old → new |
 | **Modified, not written** | something running that the change did not name field by field, or a fader it did not name; left alone |
-| **Refused** | a change that names something not on the desk, or has no free strip |
+| **Refused** | a change that names something not on the desk, or has no free strip, or patches a socket past the end of the stage box on an AES50 port (`A 17` on an S16: the pre-flight panel names the box and its size) |
 
 A new channel or bus that your conventions give a preset takes it from
 the preset library the show was built with, so the horns arrive with
@@ -90,6 +91,13 @@ its short name and the words you typed.
 - **Keep this in the show** writes it into the show's `input.csv` and
   `instructions.md`, so the next build includes it. Until you press it,
   the change is on the desk only and the show's files do not change.
+
+## When the change cannot be compiled
+
+A model reply Atoo cannot use stops the preview with **Failed**. The
+findings dock says why, and ends with the line saying which Atoo ran
+(*Ran as atoo 0.2.4 (…)*), so that the failure can be passed on as it
+stands; the footer of the page carries the same line.
 
 ## Edge cases
 

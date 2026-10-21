@@ -1,0 +1,60 @@
+{
+  "change": "HiHat on A 17",
+  "name": "HiHat on A 17",
+  "add": {
+    "channels": [
+      {
+        "channel": 14,
+        "bank": "ch",
+        "name": "HiHat",
+        "color": "Red",
+        "source": {
+          "input": "HiHat",
+          "type": "Mic",
+          "model": "SM81",
+          "stereo": false,
+          "phantom": true
+        },
+        "patch": {
+          "group": "A",
+          "sockets": [
+            17
+          ],
+          "stated": true
+        },
+        "processing": {
+          "gain_db": 20,
+          "trim_db": 0,
+          "preset": null,
+          "hpf_hz": 120,
+          "hi_cut_hz": null,
+          "tilt_db": null,
+          "balance_db": null,
+          "invert": null
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "dca": [],
+        "mute_group": [],
+        "bus_sends": [],
+        "main_routes": [],
+        "provenance": {}
+      }
+    ],
+    "busses": {},
+    "dcas": {},
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [],
+    "dcas": [],
+    "mute_groups": [],
+    "outputs": []
+  },
+  "modify": [],
+  "notes": []
+}

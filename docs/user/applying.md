@@ -55,6 +55,10 @@ stderr.
 3. **The desk is asked what is in its expansion bays**, and a plan that
    patches from or to an empty one stops here. See
    [Expansion bays](what-apply-changes.md#expansion-bays-crd-and-mod).
+   It is also asked what is on each AES50 port the plan uses, and a
+   socket past the end of that stage box (`A 17` on an S16) stops the
+   run too. See [Stage
+   boxes](what-apply-changes.md#stage-boxes-a-socket-past-the-end-of-the-box).
 4. **The desk is reset to its initialized state**, so nothing from the
    last show carries over (`--no-init` skips it). See [What a full apply
    changes on the desk](what-apply-changes.md).

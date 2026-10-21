@@ -144,8 +144,9 @@ Fifty-seven addresses for two new strips and a new DCA; 532 that a full
 ## The pre-flight: the same checks as `apply`
 
 Before its preview is offered for arming, and again before a `--confirm`
-run writes anything, `amend` asks the two questions
-[`apply` asks](two-desks.md#a-plan-built-for-a-different-model).
+run writes anything, `amend` asks the questions
+[`apply` asks](two-desks.md#a-plan-built-for-a-different-model), and the
+stage-box one `apply` asks too.
 
 1. **The verify gate**, over the *effective* plan — the rebuild with this
    amend's placements in it, which is what `plan.json` becomes after a
@@ -160,6 +161,13 @@ run writes anything, `amend` asks the two questions
    and this is about the hardware. Unlike apply's, it runs on the same
    model too, not only across models: with `--skip-verify` it is the only
    thing between a bad rebuild and the panel.
+3. **The stage-box check**, over the same sockets: the desk is asked what
+   is on each AES50 port (`/$stat/A/dev`), and a socket written past the
+   end of that box (`A 17` on an S16, which has 16 inputs and 8 outputs)
+   is refused the same way, naming the box and its size. The desk lists 48
+   sockets on every port whatever is plugged in, so it would take the
+   patch and the channel would be silent. A box Atoo has no size for is
+   said at INFO and its sockets are not checked.
 
 The show is on a full-size WING — 8 local inputs — and the rebuild, made
 for the Compact, patches the new Trumpet to `LCL 20`. On a copy of the
@@ -196,6 +204,24 @@ Exit `2`, and the same with `--confirm` or `--skip-verify`: nothing is
 written, `plan.json` is left alone, and no journal is filed. The
 refusal names the strip the channel *would* have gone on (`ch:21`, since
 20 is somebody's), because that is the one you would go and look at.
+
+A socket past the end of a stage box is refused in the same way. On
+the Demo's capture with an S16 on AES50-A, and a change that puts a hi-hat
+on `A 17`:
+
+```bash
+python3 -c "import json; d=json.load(open('atoo/web/demo_states/before.json')); d['/\$stat/A/dev']='S16'; json.dump(d, open('/tmp/s16.json','w'))"
+atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/hihat-a17.change-set.json --state /tmp/s16.json "HiHat on A 17"
+```
+
+```
+ERROR: This change would patch 1 socket(s) that do not exist on the S16 on AES50-A:
+  - A 17 (input) -- channel 'HiHat'; the S16 on AES50-A has 16 inputs, so A 17 does not exist
+Refusing to write this change: A 17 (channel 'HiHat') does not exist on the S16 on AES50-A. Nothing was written; --skip-verify does not change that. Repatch the change to sockets the box has.
+```
+
+Exit `2`. A socket the change leaves to Atoo is chosen within the box in
+the first place.
 
 **A different model, every socket present: it proceeds, with apply's
 INFO.** The same rebuild, Trumpet on `A 21`, amending the Rack backup:

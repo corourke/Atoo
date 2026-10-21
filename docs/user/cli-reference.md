@@ -378,6 +378,11 @@ sockets whether or not a card or module is fitted, and accepts the patch either
 way, so nothing else -- not the readback, not the journal, not audit -- would
 tell you the channel is silent.
 
+It asks what is on each AES50 port the plan uses (/$stat/A/dev) and REFUSES a
+socket past the end of the stage box there: an S16 has 16 inputs and 8 outputs,
+and A 17 is patched to nothing though the desk lists 48 on every port. A box
+whose size Atoo has not recorded is reported and its sockets are not checked.
+
 ONE PLAN, TWO MODELS. The desk states its own model on /?, and apply compares it
 with the plan's. A different model whose panel has every socket the plan patches
 -- a Compact plan on a Rack backup -- is applied, with an INFO naming both and the
@@ -776,7 +781,8 @@ neither on the desk nor added). Sockets the change names are honoured; others
 are chosen, and each choice is said at INFO.
 
 Everything after that is amend's: new channels are placed on genuinely free
-strips (skipping occupied ones, never renumbering a running one), a dropped
+strips (skipping occupied ones, never renumbering a running one unless the
+change says INSERT -- see below), a dropped
 channel's strip is RETURNED TO FREE where the desk still reads as the strip the
 show built, the pre-flight verifies the result and checks every socket written
 against the desk, the review shows what will and will NOT be written, and only
@@ -792,6 +798,18 @@ proof. A fader moves only when the change says "fader"; a repatch of a running
 strip is marked MOVES AUDIO LIVE, and switching its 48V phantom power SWITCHES 48V
 LIVE. A strip's source can be changed in its phantom, type and model, not in
 which input it is or whether it is stereo. Undo puts the old values back.
+
+INSERT AND RENUMBER. "insert HiHat after Snare and renumber the channels after
+it" (or "insert", "renumber", "move the rest down") puts the channel there and
+moves the strips after it down: each is rewritten whole on its new number, with
+its patch, sends, DCA and mute groups, and the review lists every strip that
+moves. Undo puts them all back. "add HiHat after Snare" does NOT renumber: the
+channel goes on the next free strip and an INFO gives the words that would.
+
+A Line source patched to a head amp does not keep a mic's gain: it takes 0 dB
+unless a gain is stated for it, said at INFO. A socket past the end of a stage
+box on an AES50 port (A 17 on an S16) does not exist: the pre-flight REFUSES it,
+naming the box and its size.
 
 plan.json is never touched: only a build writes it, and a full apply warns
 before it replaces changes that are not in it. To keep a change for good,

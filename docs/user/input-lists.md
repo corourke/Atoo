@@ -36,7 +36,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`. A column headed `socket`, like the one above, is read the same. Blank is legitimate. See [The `patch` column](#the-patch-column). |
 | `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". |
 | `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
-| `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary: Atoo never hardcodes what a type implies, it is there for your conventions to match against. |
+| `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary, there for your conventions to match against, with one exception: a channel of type `Line` on a head amp does not keep a mic's gain (below the table). |
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
 | `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
@@ -45,6 +45,23 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 **Column order does not matter**: every column is read by its header.
 Atoo writes `order` first when there is one, then `patch`, because
 it is what you check against the stage box, and `notes` last.
+
+### A `Line` row on a head amp, when your conventions say no gain
+
+If your conventions and instructions state **no** head-amp gain anywhere,
+a model sometimes still puts a mic's 20 dB on a row of type `Line` (a
+laptop, a playback feed) patched to a head amp, where it would clip the
+preamp. The build then gives that channel 0 dB and says so at INFO
+(`reply.line-gain`):
+
+```
+channel 'Playback': a Line source on A 16, a head amp, so its gain is 0 dB, not the 20 dB the plan had -- that is a mic's gain, and a line-level feed with it would clip the preamp. Chosen from the source type, because no gain is stated in your conventions or instructions. Say a gain for 'Playback' (say, 'gain 6 dB') if you want another.
+```
+
+Where you do state a gain — the Category table's, or any line saying gain,
+including "set the head-amp gain on each channel to 20dB" — it applies to
+line sources too, and stands. [Patch](patch.md#the-rules) holds a change to
+the same rule.
 
 ## One row per physical input
 

@@ -162,6 +162,25 @@ empty bay the plan does not use is not a problem.
 Offline, `atoo verify` cannot know what is in a slot, so it warns
 instead (`patch.expansion-bay-not-checked`).
 
+## Stage boxes: a socket past the end of the box
+
+An AES50 port (`A`, `B`, `C`) lists 48 sockets whatever is plugged into
+it, so `A 17` on an S16 (16 inputs, 8 outputs) is accepted, written and
+read back by the desk — and the mic on it is heard by nobody. Apply asks
+the desk what is on each port the plan uses (`/$stat/A/dev` reads `S16`)
+and stops if the plan patches a socket past the end of that box:
+
+```
+This plan patches 1 socket(s) that do not exist on the stage box 192.0.2.16 reports:
+  - A 17 (input) -- channel 'Mic 2'; the S16 on AES50-A has 16 inputs, so A 17 does not exist
+```
+
+It exits `2` and nothing is written; `--skip-verify` does not turn it
+off. A box Atoo has no size recorded for (only the S16's is) is reported
+with a WARNING and its sockets are not checked. A plan that patches no
+AES50 socket never asks. [Patch](patch.md) holds a change to the same
+rule.
+
 ## Names go on the source socket
 
 The desk's **Link Customization to Source** switch is on by default, and

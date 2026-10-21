@@ -1,0 +1,60 @@
+{
+  "change": "insert HiHat after Snare and renumber the channels after it",
+  "name": "Insert HiHat after Snare",
+  "add": {
+    "channels": [
+      {
+        "channel": 3,
+        "bank": "ch",
+        "name": "HiHat",
+        "color": "Red",
+        "source": {
+          "input": "HiHat",
+          "type": "Mic",
+          "model": "SM81",
+          "stereo": false,
+          "phantom": true
+        },
+        "patch": {
+          "group": "LCL",
+          "sockets": [
+            20
+          ],
+          "stated": false
+        },
+        "processing": {
+          "gain_db": 20,
+          "trim_db": 0,
+          "preset": null,
+          "hpf_hz": 120,
+          "hi_cut_hz": null,
+          "tilt_db": null,
+          "balance_db": null,
+          "invert": null
+        },
+        "fader": {
+          "fader_db": 0,
+          "muted": false
+        },
+        "dca": [],
+        "mute_group": [],
+        "bus_sends": [],
+        "main_routes": [],
+        "provenance": {}
+      }
+    ],
+    "busses": {},
+    "dcas": {},
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [],
+    "dcas": [],
+    "mute_groups": [],
+    "outputs": []
+  },
+  "modify": [],
+  "notes": []
+}
