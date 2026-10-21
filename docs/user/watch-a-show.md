@@ -248,7 +248,8 @@ name the strip: by its number and its console name, such as `CH 1
 "Kick"`. The sentence is written from the row's own cells, not from your
 description, so it is a check that the row says what you meant. It
 follows the row as you edit it; a row with a refused cell has no sentence
-until the cell is fixed. The *i* is there on the read-only Demo show too.
+until the cell is fixed. The *i* works on the read-only Demo show too, and
+its press area is larger than the icon, so it is easy to tap on a phone.
 
 1. Press **+ Add condition**, fill in the row, and press **Save**.
    **Save** appears once there is something to save, beside an
