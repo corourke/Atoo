@@ -117,8 +117,9 @@ When a channel, aux, bus, main or matrix **clips**, a red **ERROR** row,
 clip, then clears by itself. Watch shows no meter and no level: the row
 is the only sign.
 
-> **CH 1 "Kick"** clipped 2 times; the last was 1.0 s ago. This clears in
-> 59 s unless it clips again.
+> **CH 1 "Kick"** clipped 2 times (a clip ends once the level stays below
+> -3 dBFS for 200 ms); the last was 1.0 s ago. This clears in 59 s unless
+> it clips again.
 
 - One row per strip, however many sides, words or times it clipped. A
   clip inside the minute is the same row: it does not flash again, its
@@ -128,6 +129,10 @@ is the only sign.
   a decibel of full scale (-0.5 dBFS). That is Watch's reading of "clip",
   not the desk's: if the desk's own clip light and a row ever
   disagree, say so.
+- *Clipped N times* counts separate clips, not separate packets. A clip
+  goes on while the strip stays loud and ends only once the level has
+  been below -3 dBFS for more than 200 ms, so a signal hovering at full
+  scale is one clip, not hundreds.
 - When the packets are frequent enough to time a clip, the row says how
   long it lasted (*clipped for about 1.2 s*); otherwise only that it
   did.
@@ -135,9 +140,13 @@ is the only sign.
   up to a reading after it happens, and cleared up to a reading after
   the minute is up.
 - Watch listens to the desk's meters on one more connection (port 2222,
-  one of the desk's 24 client slots) and writes nothing. If it cannot, or
-  the connection drops, **This watch** says **Clip detection: off** and
-  why, and the rest of Watch carries on. The meter data comes back to
+  one of the desk's 24 client slots) and writes nothing. It asks for
+  every channel, aux, bus, main and matrix in one request and renews it
+  every two seconds. If it cannot, or the connection drops, or the
+  packets stop for three seconds, **This watch** says **Clip detection:
+  off** and why (*meter data stopped* for the last), asks the desk
+  again, and says **on** again when packets return. The rest of Watch
+  carries on. The meter data comes back to
   the laptop by UDP, so clip detection needs the laptop on the desk's
   own network: over a routed link, such as a VPN, it stays off. On the
   [Demo show](demo.md)
@@ -273,8 +282,9 @@ has the full reference: matching by position, range or name.
 
 - **This watch says Clip detection: off.** The desk's metering
   connection could not be opened (it uses one of its 24 client slots),
-  no meter data arrived, or the connection dropped. Nothing else is
-  affected. *No meter data* means the desk's UDP meter packets are not
+  no meter data arrived, the meter data stopped, or the connection
+  dropped. Nothing else is affected. *Meter data stopped* clears by
+  itself when the desk starts sending again. *No meter data* means the desk's UDP meter packets are not
   reaching this computer: a firewall, or a laptop that reaches the desk
   through a router or VPN (a Tailscale subnet router, say) rather than on
   the desk's own network. Put the laptop on that network.

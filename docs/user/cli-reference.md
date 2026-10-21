@@ -1259,8 +1259,9 @@ refresh -- the findings say so at INFO (W001). --name-refresh 1 reads them every
 
 With --console it also listens to the console's meters (a read-only native connection on
 port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,
-aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. If the
-connection cannot be had it says so at INFO (W002) and carries on.
+aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. A clip
+ends once the strip has been below -3 dBFS for 200 ms. If the connection cannot be had, or
+the meter data stops, it says so at INFO (W002) and carries on.
 
 A channel on its alternate input (C004) and the global alternate switch (C005) are
 warnings, since a show never starts on them. During a virtual soundcheck they are
