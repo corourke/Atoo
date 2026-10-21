@@ -106,12 +106,10 @@ see the [exit-code table](cli-reference.md#exit-codes).
 
 ## How long a live read takes, and what it prints while it works
 
-A read of a live WING Compact takes **about five seconds** at most: some
-6,000 values, fetched a whole channel, bus or socket at a time. That was
-timed one request at a time. Reads now keep several requests on the wire
-at once (8 by default; see [A desk read is
-slow](troubleshooting-desk.md#a-desk-read-is-slow)), which should make it
-shorter, and has not yet been timed on a desk. It is the
+A read of a live WING takes **a few seconds**: some
+6,000 values, fetched a whole channel, bus or socket at a time, with
+several requests on the wire at once (8 by default; see [A desk read is
+slow](troubleshooting-desk.md#a-desk-read-is-slow)). It is the
 slowest thing Atoo does. A progress line on **stderr** names the
 address in flight, so stdout stays a clean report; `--no-progress` turns
 it off.

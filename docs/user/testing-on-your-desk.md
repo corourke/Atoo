@@ -1,17 +1,10 @@
 # Testing on your desk
 
-Atoo has written full shows to one model of desk. Yours is the
-test it has not had. This page is four steps, each safer than the next
-one, and you can stop after any of them: a report from step 2 is worth
-sending.
-
-**Wanted most:**
-
-- **A WING Rack**, any step. A Rack has never been connected. Above all,
-  its **initialized capture** ([below](#a-wing-rack-the-initialized-capture)):
-  without one, a full apply cannot reset a Rack first.
-- **Undo on a full-size WING.** Full applies have run on a WING Compact
-  and a full-size WING; undo has been run on a Compact only.
+Atoo works with the WING Compact, the full-size WING and the WING
+Rack. This page takes your own desk, with its own stage boxes and
+firmware, through four steps, each safer than the next, and you can
+stop after any of them. If something looks wrong, a report is what
+fixes it: a report from step 2 is worth sending.
 
 Do [Try the Demo show](demo.md) first: it is the same screens with no
 desk. Then you need a laptop on the same network as the desk. The
@@ -193,16 +186,6 @@ atoo verify --show ~/Documents/Atoo/demo-show --console-model wing-full
   ...
 ```
 
-### A WING Rack: the initialized capture
-
-If you can spare a Rack for ten minutes, this is the most wanted thing
-on the page. Save its show first; this clears the desk.
-
-1. Initialize the Rack from **Setup** on the desk.
-2. `atoo audit --console 192.0.2.16 --dump-state rack-initialized.state.json`
-3. Save the show (`.snap`) from the desk or WING Edit.
-4. Load your own show back.
-
 ## 4. Report
 
 Open a **Desk test report** on the repository's **Issues** tab (**New
@@ -219,7 +202,6 @@ Attach, zipped, whatever you have of:
 - `my-desk.state.json`, `before.state.json` and `after.state.json`;
 - the journals of your write and its undo: the files in
   `~/Documents/Atoo/demo-show/journals/`;
-- from a Rack, `rack-initialized.state.json` and the `.snap`;
 - a screenshot of anything confusing.
 
 A state file holds the desk's names and settings, not audio. Tick
@@ -233,6 +215,5 @@ you can build.
 
 ## See also
 
-- [Limitations](limitations.md): what has and has not been seen on a real desk
 - [Apply a plan to the desk](apply-to-desk.md) and [Undo](undo.md): the write and its undo, in full
 - [Troubleshooting: the desk](troubleshooting-desk.md)

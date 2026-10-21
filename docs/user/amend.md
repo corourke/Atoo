@@ -366,15 +366,6 @@ describe the last build, not the desk. A full `apply` of the bundle puts
 the last build back on the desk and [warns first](patch.md#the-rules)
 that it replaces the changes standing there.
 
-## How much of this has met a real console
-
-The whole path has run on a WING Compact carrying a show: a channel the
-rebuild dropped was returned to free, 672 unrelated addresses were read
-before and after and none had moved, and a strip renamed by hand on the
-desk was **refused**. Leaving a freed strip at `OFF`, as a full apply does, has not yet been on
-a desk. The test suite builds the
-same scenarios against a simulated desk, address by address.
-
 ## See also
 
 - [Applying a plan](applying.md) — `apply`, flags and exit codes; [the journal](journals.md)

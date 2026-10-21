@@ -47,9 +47,7 @@ of a percent off. The settings the reset will change are read exactly, though,
 because that is the value the journal records and [Undo](undo.md) puts back; the
 line says how many.
 
-On a real Compact the read took about half a minute, one request at a
-time; reads now keep several requests in flight, which should make it
-shorter. A desk far from
+The read takes a few seconds. A desk far from
 initialized can need a few thousand writes, at about 40 ms each.
 
 - **`--no-init`** skips the reset, for a desk you have initialized by
