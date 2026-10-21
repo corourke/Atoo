@@ -103,11 +103,27 @@ run against a test desk (so the times are tiny):
 The count in `checking each setting, writing what differs` is of the
 settings it looks at, 2788 here, and the end of the line says how many of
 them it wrote: 1189. The rest already held what the plan says. A preview
-shows `reading the desk for the preview` in place of the writes. If some
+reads the desk once, in one pass, for the reset and for the plan's own
+settings together, and shows it as one step, `reading the desk`, in place
+of the writes (below). If some
 readbacks disagree, `reading back again what disagreed` follows the
 writes. In a terminal the line is rewritten in place; in a log it is a
 plain line about twenty times per step. `--no-progress` turns it off.
 stdout and the journal are the same either way.
+
+A preview, against the Demo's simulated desk:
+
+```
+  reading the desk 184/3693 (4%) 0s -- /io/in/SC/8 (node)
+  ...
+  reading the desk: 3696 of 3696 addresses in 0.2s
+  every address answered.
+```
+
+and the reset's line in the summary says what that one read covered:
+`reading the desk took 0.2s (3,696 requests, 1,665 of them for the plan's own settings)`.
+Each address is asked once. With `--no-init`, or on a console with no
+initialized capture, the one read is `reading the desk for the preview`.
 
 Steps 1 and 2 need no console: point `apply` at an address where nothing
 is listening and the verdict still prints first. Here it is on the Demo
