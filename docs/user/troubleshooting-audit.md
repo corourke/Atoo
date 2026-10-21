@@ -164,8 +164,7 @@ one on its alternate input (`C004` says that); it says nothing for them.
 input sockets, left and right, as it has two output slots, so `BUS 5` as a
 channel's input is the left side of Bus 3 and `BUS 6` its right. The finding
 quotes the socket it read (`patched from BUS 5, its left side`) so you can
-see at a glance if that is not what the desk shows. This has not yet been
-confirmed on a desk.
+see at a glance if that is not what the desk shows.
 
 ## A channel is on and named, but nothing is patched to it: `C006`
 
@@ -265,7 +264,7 @@ read the output sockets, and say that `C008` and `C009` could not be
 checked when they did not. A channel on its alternate input is reported by
 `C004` instead.
 
-**What `ERR` and `UPD` mean is not yet confirmed on a stage box.** The
+**What `ERR` and `UPD` mean.** The
 desk's own list has those words and Atoo reads them as they say: a link
 error, and an update. `R002` follows sockets, not links, so a bus patched to
 a dead stage box's output still counts as routed there; `C008` is the check

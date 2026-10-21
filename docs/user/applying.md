@@ -139,7 +139,34 @@ value is already held is read again by itself, and the run says how many
 never uses a dump: it reads each setting by itself just before it writes it,
 and the journal and Undo hold those exact values. Each address is asked
 once. With `--no-init`, or on a console with no initialized capture, the
-one read is `reading the desk for the preview`, one setting at a time.
+plan's values are read by the same node dumps, in one step, `reading the desk
+for the preview`.
+
+Every preview ends with one line saying what it read, on whichever path it
+took, so a slow one says why:
+
+```
+- INFO the preview read the desk with 2,396 requests (922 node dumps, 1,474 single reads) in 0.2s: node dumps for the reset and the plan's settings
+- INFO the preview read the desk with 454 requests (92 node dumps, 362 single reads) in 0.1s: node dumps for the plan's settings; the reset is off (--no-init)
+```
+
+(the first from a preview of the Demo show with the reset on, the second with
+`--no-init`). The path is one of: node dumps for the reset and the plan's
+settings; node dumps for the plan's settings, with the reset off or, on a console
+with no initialized capture, absent; or one request at a time when the console
+window is 1 (`ATOO_CONSOLE_WINDOW`). If some addresses did not answer, the line
+says how many and names a few of their families: each costs the full timeout
+and its retries (about 3 s), up to eight at a time, which is where a slow read
+on a console that lacks something the plan names, such as AUX on a Rack, goes.
+A read that takes more than a few seconds also says how long the node dumps
+and the single reads each took, how many requests were in flight, and how long
+one request takes on its own on that console, so that "the console answers
+slowly" can be told from "the requests are not going out side by side".
+
+The time estimates in the reset's line (for the read before a first
+preview, and for the writes) are given only for a console whose request rate
+has been measured, a WING Compact so far. For any other console they say "no
+measured request rate for the ..." rather than quoting the Compact's.
 
 Steps 1 and 2 need no console: point `apply` at an address where nothing
 is listening and the verdict still prints first. Here it is on the Demo

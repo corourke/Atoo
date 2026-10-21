@@ -515,9 +515,8 @@ does this for you: its write is always the change set its preview showed.
 
 ## How long a change takes
 
-Every run ends with a `Timing:` line: the desk read, which took about
-1.4 seconds on a WING Compact when reads went one request at a time, and the model call, which varies with the
-provider and the model and has not yet been timed against a real one.
+Every run ends with a `Timing:` line: the desk read, a second or two,
+and the model call, which varies with the provider and the model.
 
 While it runs, each read and write of the desk says what it is doing on
 stderr: `occupancy read`, `reading the untouched strips, before writing`,
