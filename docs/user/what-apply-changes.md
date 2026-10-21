@@ -30,12 +30,22 @@ part of a show:
 | Meter and RTA display (`/cfg/mtr`, `/cfg/rta`) | What the screen shows, not what the desk does. |
 | Monitor and solo listening (`/cfg/mon`, `/cfg/solo`) | Your headphones and monitor speakers, set for you and the room. |
 
-One INFO line counts what was reset, by area. This is a preview of a
-23-channel plan on a WING Compact that had had another show on it:
+One INFO line counts what was reset, by area. This is a preview of the
+Demo show against the Demo's simulated desk:
 
 ```
-INFO reset to initialized (WING Compact capture) before the plan's writes: 128 setting(s) would change -- 97 channel, 24 I/O, 6 bus, 1 DCA; 18,048 already initialized; left alone: 2,762 the plan sets itself, 84 on the skip-list (monitor/solo listening), 56 under a selector the plan sets to another model, 26 on the skip-list (meter/RTA display), 12 on the skip-list (expansion cards), 4 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.1s (1,990 requests); writing would take about 5.2s at the rate measured on a WING Compact
+INFO reset to initialized (WING Compact capture) before the plan's writes: 11 setting(s) would change -- 11 channel; 19,318 already initialized; left alone: 1,648 the plan sets itself, 84 on the skip-list (monitor/solo listening), 26 on the skip-list (meter/RTA display), 18 under a selector the plan sets to another model, 12 on the skip-list (expansion cards), 3 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.2s (2,121 requests; the plan's own settings: 1,582 from the node dumps, 83 read one by one); writing would take about 0.4s at the rate measured on a WING Compact
 ```
+
+The desk is read mostly by node dump, a few requests for hundreds of
+settings, and a dump prints the desk's *rounded* text (`144.7` for
+`144.6788`). So a value is judged already initialized from the desk's rounded
+readout: one edited by less than the readout's rounding may be left as it is.
+That was chosen over reading every number again by itself, which would add
+thousands of requests to every preview, for a value that is at worst a fraction
+of a percent off. The settings the reset will change are read exactly, though,
+because that is the value the journal records and [Undo](undo.md) puts back; the
+line says how many.
 
 On a real Compact the read took about half a minute, one request at a
 time; reads now keep several requests in flight, which should make it
