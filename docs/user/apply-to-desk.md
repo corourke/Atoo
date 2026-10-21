@@ -92,6 +92,12 @@ read, how many will change, how many already match, and how many did
 not answer. **All … changes, address by address** opens them with each value now
 and after, the first 250 of a long list.
 
+**A value "now" can be the desk's rounded readout.** The figure shown
+for what a setting holds now can be rounded the way the desk displays
+it: `0.71` where the desk holds 0.70568, `147.8` for 147.836. Which
+settings would change is always decided exactly, and the write, its
+journal and Undo always use the exact value.
+
 Once the preview is current, the button reads **Preview again** and is
 no longer the gold one: the next thing to do is step 3. If you change
 anything in step 1 after a preview, step 2 says the preview is out of

@@ -198,6 +198,11 @@ Every address ends in one of five states:
   plan's, so a plan applied to a desk that did not move in between writes
   exactly the number the preview gave. Undo reverses those, and only
   those: a `skipped_no_change` row has nothing to reverse.
+- **A preview's current value can be the desk's rounded readout.** The
+  figure shown for what a setting holds now can be rounded the way the
+  desk displays it: `0.71` where the desk holds 0.70568, `147.8` for
+  147.836. Which settings would change is always decided exactly, and a
+  real apply, its journal and Undo always use the exact value.
 - **An `UNREADABLE` line is not a pass.** Nothing was written there, and
   the run cannot vouch for it.
 - **Mismatches exit `2`** and are repeated on stderr by address. A

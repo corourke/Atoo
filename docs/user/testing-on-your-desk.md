@@ -146,7 +146,9 @@ the plan does not build, then writes the plan
 4. **Keep a reading from before**:
    `atoo audit --console 192.0.2.16 --dump-state before.state.json`.
 5. **Preview**. It reads the desk and shows each value now and after,
-   and writes nothing:
+   and writes nothing. A value now can be the desk's rounded readout
+   ([Applying a plan](applying.md#reading-the-result)); which settings
+   would change is decided exactly:
 
    ```bash
    atoo apply --show ~/Documents/Atoo/demo-show --console 192.0.2.16
