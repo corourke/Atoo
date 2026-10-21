@@ -404,8 +404,8 @@ its initialized state: it reads the desk by node dump and writes back, from an
 initialized capture of the desk's model, every setting that differs -- except the
 ones the plan sets itself, and a skip-list (network, clock, expansion cards,
 meter/RTA display, monitor/solo listening). One INFO line counts it by area and
-says how long it took; every write is journalled, so undo reverses it. The WING
-Rack has no capture yet: a WARNING says so and the plan is applied without the
+says how long it took; every write is journalled, so undo reverses it. A desk whose
+model Atoo has no capture for gets a WARNING and the plan is applied without the
 reset. --no-init skips it, for a desk already initialized by hand.
 
 A plan may state a strip's parametric EQ: a channel's

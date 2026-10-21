@@ -52,9 +52,10 @@ initialized can need a few thousand writes, at about 40 ms each.
 
 - **`--no-init`** skips the reset, for a desk you have initialized by
   hand. The run says so at INFO.
-- **The WING Rack has no capture yet.** A full apply to a Rack, or to a
-  desk whose model Atoo cannot tell, says so at WARNING and writes
-  the plan without the reset. Initialize a Rack by hand first.
+- **A desk whose model Atoo cannot tell** (or has no capture for) gets a
+  WARNING, and the plan is written without the reset. Initialize it by
+  hand first. A Compact, a full-size WING and a Rack each have a capture,
+  taken from a real desk of that model.
 
 ## Strips the plan does not build: unpatched from their sources
 

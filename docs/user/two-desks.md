@@ -147,12 +147,11 @@ atoo apply --show touringband --console 198.51.100.6
 Console: WING,198.51.100.6,MON-RACK,wing-rack,S2301R7,3.1-0-g9f314617:release
 
 INFO: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
-DRY RUN: 1082 address(es) evaluated, 786 would change, nothing written.
-  1 warning(s), listed below
-  - WARNING not reset to initialized first: there is no initialized capture for the WING Rack (19", 4U). The plan is applied as it stands; anything the plan does not write keeps what the desk holds. Initialize the desk by hand first if it carries an old show. To give Atoo a capture: initialize the desk, save its show file (.snap) from the desk or WING Edit, and attach it to a desk test report (https://github.com/corourke/Atoo/issues/new?template=desk-test-report.yml).
+DRY RUN: 1089 address(es) evaluated, 493 would change, nothing written.
+  - INFO reset to initialized (WING Rack (19", 4U) capture) before the plan's writes: nothing would change; 19,905 already initialized; left alone: 1,089 the plan sets itself, 84 on the skip-list (monitor/solo listening), 26 on the skip-list (meter/RTA display), 12 on the skip-list (expansion cards), 4 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.5s (2,100 requests; the plan's own settings: 997 from the node dumps, 92 read one by one); writing would take about 0.0s at the rate measured on a WING Compact
   - INFO 19 strip(s) set to their main input (not their alternate) -- a show apply means stage inputs live
   - INFO 3 direct Main route(s) and 1 Matrix feed(s) set to unity (0 dB), post-fader -- apply's documented default; the conventions have no phrasing for a route's own level or tap
-  - INFO ch 20-40, aux 1-8: not in this plan, unpatched from their sources so none listens to a socket the plan uses
+  - INFO output LCL 1-6: no bus or output in this plan is patched there, so each is disconnected rather than left on what the desk came with or an earlier show put there
   ...
 
 Nothing was written -- this was a preview. Re-run with --confirm to apply.

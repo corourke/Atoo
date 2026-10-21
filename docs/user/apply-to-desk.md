@@ -73,7 +73,7 @@ desk's network and clock, expansion-card setup, meter and RTA display,
 monitor and solo listening. Turn it off to add a plan to a show already on
 the desk: the plan is then written over whatever the desk holds, and what the
 plan does not set keeps its present value. On a console Atoo has no
-initialized capture of (the WING Rack) the switch is off and says why. The
+initialized capture of the switch is off and says why. The
 line beside **Options** says which is set.
 
 ![Apply, Full build: the four steps before a preview](img/apply-screen.png)
