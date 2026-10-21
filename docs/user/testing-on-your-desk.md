@@ -10,9 +10,8 @@ sending.
 - **A WING Rack**, any step. A Rack has never been connected. Above all,
   its **initialized capture** ([below](#a-wing-rack-the-initialized-capture)):
   without one, a full apply cannot reset a Rack first.
-- **A full-size WING through step 3.** Full applies, readback and undo
-  are proven on a WING Compact only. A full-size WING has been read and
-  watched on a real desk.
+- **Undo on a full-size WING.** Full applies have run on a WING Compact
+  and a full-size WING; undo has been run on a Compact only.
 
 Do [Try the Demo show](demo.md) first: it is the same screens with no
 desk. Then you need a laptop on the same network as the desk. The

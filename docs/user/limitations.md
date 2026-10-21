@@ -14,11 +14,11 @@ as you would with any new tool.
 Shipped, and checked against a simulated WING, but not yet run against
 a real one:
 
-- **The four-step Apply screen.** Its preview, the desk drawn as
-  scribble strips, a write and Undo from the browser have run only on a
-  simulated WING, so the strip colours (approximations of the WING's
-  eighteen) and the names a real desk reads back are unchecked. The same
-  writes from the command line have been proven on a WING Compact.
+- **Undo from the Apply screen, and its strip colours.** The screen's
+  write has run on a WING Compact (Arm, then Write, with the Initialize
+  switch off and on, every value read back). Its Undo has run only on a
+  simulated WING, and the strip colours it draws (approximations of the
+  WING's eighteen) have not been compared with a real desk.
 - **Several reads in flight at once.** Desk reads now keep 8 requests on
   the wire. How much faster that is on a real desk, and whether a desk
   drops requests when several arrive together, has not been measured;
@@ -32,11 +32,11 @@ a real one:
 
 - **Behringer WING only**: the Compact, the full-size WING and the Rack.
   No other console, the X32 and M32 included.
-- **Full applies have been proven on a WING Compact.** A full-size WING
-  has been read and watched on a real desk. A WING Rack has not yet been
-  connected at all: its sockets come from Behringer's documentation, and
-  a full apply cannot reset a Rack to its initialized state first (it
-  says so with a WARNING).
+- **Full applies have run on a WING Compact and a full-size WING.**
+  Undo has been run on a Compact. A WING Rack has not yet been connected
+  at all: its sockets come from Behringer's documentation, and a full
+  apply cannot reset a Rack to its initialized state first (it says so
+  with a WARNING).
 - **It cannot recall the desk's own scenes, snapshots or libraries.**
   Those cannot be reached over the network. Your channel presets are
   written as ordinary values instead ([Using channel presets](presets.md)),

@@ -101,8 +101,8 @@ someone else can pick it up.
 ## Which consoles?
 
 Behringer WING only: the Compact, the full-size WING and the Rack. Full
-applies are proven on a Compact; the others less so
-([Where Atoo needs work](limitations.md#consoles)).
+applies have run on the Compact and the full-size WING; the Rack has not
+been tried yet ([Where Atoo needs work](limitations.md#consoles)).
 
 ## Will it mix for me?
 
