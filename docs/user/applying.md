@@ -201,7 +201,7 @@ Every address ends in one of five states:
 - **A preview's current value can be the desk's rounded readout.** The
   figure shown for what a setting holds now can be rounded the way the
   desk displays it: `0.71` where the desk holds 0.70568, `147.8` for
-  147.836. Which settings would change is always decided exactly, and a
+  147.836. That is by design, and is how a preview stays quick. Which settings would change is always decided exactly, and a
   real apply, its journal and Undo always use the exact value.
 - **An `UNREADABLE` line is not a pass.** Nothing was written there, and
   the run cannot vouch for it.

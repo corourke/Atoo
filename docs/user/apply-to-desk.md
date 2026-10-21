@@ -94,7 +94,8 @@ and after, the first 250 of a long list.
 
 **A value "now" can be the desk's rounded readout.** The figure shown
 for what a setting holds now can be rounded the way the desk displays
-it: `0.71` where the desk holds 0.70568, `147.8` for 147.836. Which
+it: `0.71` where the desk holds 0.70568, `147.8` for 147.836. That is
+by design, and is how Preview stays quick. Which
 settings would change is always decided exactly, and the write, its
 journal and Undo always use the exact value.
 
