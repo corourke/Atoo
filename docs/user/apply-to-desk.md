@@ -64,12 +64,17 @@ too; **show in Findings** picks them out there.
   stop the write: apply it as it is if the edit is not meant for the desk,
   or rebuild on **Build** step 04 first.
 
-**Options** holds two things you rarely need: **Skip the pre-flight
-verify**, and **Disconnect output sockets the plan doesn't use**. Ticking
-the second opens a box for the socket groups to clean and how many
-sockets each has, such as `LCL=8,A=48`; its **?** says why you would. Write
-`GROUP=COUNT` pairs separated by commas: anything else is flagged under the
-box, and Preview stays locked until it is fixed.
+**Options** holds **Initialize the console first** and **Skip the pre-flight
+verify**. Initialize is a switch, on: it sets the desk to its initialized
+state before writing the plan, which also disconnects every output the plan
+does not patch, a stage box's and a card's included
+([what a full apply changes](what-apply-changes.md)). Not changed: the
+desk's network and clock, expansion-card setup, meter and RTA display,
+monitor and solo listening. Turn it off to add a plan to a show already on
+the desk: the plan is then written over whatever the desk holds, and what the
+plan does not set keeps its present value. On a console Atoo has no
+initialized capture of (the WING Rack) the switch is off and says why. The
+line beside **Options** says which is set.
 
 ![Apply, Full build: the four steps before a preview](img/apply-screen.png)
 

@@ -80,10 +80,13 @@ INFO output LCL 3-8: no bus or output in this plan is patched there, so each is 
 
 Without it, the audit would call those patches leftovers, and a stereo bus
 the plan only feeds into a Main would show as patched on its left side
-only. Only the desk's own panel is covered. An AES50 stage box or a card
-has outputs only when something is fitted, and those are the plan's to
-patch; [`--clean-output-sockets`](applying.md#flags-worth-knowing) reaches
-them. [Undo](undo.md) puts each socket back as it was.
+only. This step covers the desk's own panel. The outputs beyond it (an
+AES50 stage box, StageCONNECT, a card, USB) are already disconnected by the
+[reset to initialized](#first-the-desk-is-reset-to-its-initialized-state)
+above, which sets every output group to its initialized state, so nothing
+needs to be told how many sockets each has. With `--no-init`, or on a Rack
+(no capture), [`--clean-output-sockets`](applying.md#flags-worth-knowing)
+reaches them. [Undo](undo.md) puts each socket back as it was.
 
 ## Direct Main routes: every Main is written, OFF included
 
