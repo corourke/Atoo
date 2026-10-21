@@ -238,6 +238,7 @@ console and to none that do not.
 | `ATOO_AI_MAX_TOKENS` | claude | the model's output limit: `128000`, or `64000` on Haiku (thinking tokens count against it). A role on a model with a lower limit is sent that limit |
 | `ATOO_AI_THINKING_SUMMARIES` | claude | on -- `0` stops asking for the thinking summaries step 04 shows while the model thinks |
 | `ATOO_AI_STREAM` | api | on -- `0` asks the host for one reply instead of a stream (step 04 then has no live text) |
+| `ATOO_AI_PRICE_IN`, `ATOO_AI_PRICE_OUT` | api | unset = the usage line says `no price set`. Dollars per million input and output tokens; both or neither. They add the `-- $x.xx` a Claude call prints and the build log's cost |
 | `ATOO_PROMPT_DIR` | generate, critic | the packaged `atoo/prompts` |
 | `ATOO_OSC_REPLY_MATCH` | apply, audit, watch, compare, ui | on -- set to `off` to disable reply matching |
 

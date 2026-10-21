@@ -56,6 +56,36 @@ export ATOO_AI_MODEL=gpt-4o-mini
 export ATOO_AI_BASE_URL=https://api.openai.com   # the host, without /v1
 ```
 
+### Pricing a host
+
+Atoo knows what Claude models cost, so a Claude call ends its usage line
+with a dollar figure. It does not know any other host's rates and will
+not guess them. With nothing more set, an `api` call ends like this:
+
+```
+  my-model (generator): 21,027 in, 6,100 out -- no price set
+```
+
+Give it your host's rates, in dollars per million tokens (read them off
+the host's price list; both are required, or neither):
+
+```bash
+export ATOO_AI_PRICE_IN=0.20     # per million input tokens
+export ATOO_AI_PRICE_OUT=0.50    # per million output tokens
+```
+
+and the line carries the same `-- $x.xx` a Claude call prints, and the
+build log records the cost:
+
+```
+  my-model (generator): 21,027 in, 6,100 out -- $0.01
+```
+
+Setting only one of the two is refused, and so is a value that is not a
+number of dollars (`ATOO_AI_PRICE_IN and ATOO_AI_PRICE_OUT go together
+(dollars per million input and output tokens): set both, or neither`).
+The rates change nothing about which model runs or what is sent.
+
 ## Check it took
 
 A build names the model before it sends anything. On a Claude build the
