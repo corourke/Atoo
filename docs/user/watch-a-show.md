@@ -192,10 +192,11 @@ A warning you know about and cannot fix tonight should not take the eye
 from the next one. Hiding a finding only changes this page; nothing is
 sent to the desk.
 
-- **One finding:** press **Hide** beside its severity tag. The row moves
-  to **Suppressed**, folded under the table with its count beside the
-  title. Press **Open the hidden list** to open it, then **Show** on the
-  row to bring that finding back.
+- **One finding:** tick the box at the far left of its row, under the
+  **Hide** heading (Space, from the keyboard). The row moves to
+  **Suppressed**, folded under the table with its count beside the title.
+  Press **Open the hidden list** to open it, then clear the box on the row
+  to bring that finding back.
 - **Every warning, or every info:** click its count at the head of the
   table. The count is struck through and reads, for example, *0 Warning
   (4 hidden)*. Click it again to show them. Errors cannot be hidden this
@@ -205,7 +206,7 @@ A hidden finding is left out of the counts (they show what is in the
 table, with the hidden number beside them), does not change the word
 over the table, and does not set off **Flash on new**. The Error and Warning counts take
 their colour only for rows still in the table; the Info count stays blue
-while any info is hidden by its **Hide** button (*0 Info (3 hidden)*), as it is in
+while any info is hidden by its **Hide** box (*0 Info (3 hidden)*), as it is in
 **Suppressed**.
 
 A suppression lasts while the same fault stands. If the fault clears and
