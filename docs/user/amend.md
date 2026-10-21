@@ -153,9 +153,8 @@ run writes anything, `amend` asks the two questions
    Errors refuse the amend; warnings never do. It is apply's gate, with
    apply's escape: `--skip-verify`.
 2. **The socket check**, over the sockets this amend actually **writes**:
-   each new strip's input patch, each output socket a new bus or output
-   is given, and the factory socket a strip [returned to
-   free](#a-channel-the-rebuild-dropped) goes back on. A socket the desk
+   each new strip's input patch and each output socket a new bus or output
+   is given. A socket the desk
    does not have is refused, naming the socket and the channel, **with or
    without `--skip-verify`** — that flag is about the plan's findings,
    and this is about the hardware. Unlike apply's, it runs on the same
@@ -225,7 +224,7 @@ shows the refusal word for word and the write cannot be armed.
 ## A channel the rebuild dropped
 
 Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that
-strip to free**: back on its factory input patch, and its name, colour,
+strip to free**: unpatched (`OFF`), and its name, colour,
 icon, DCA/mute-group tags, bus sends and **the processing your plan set**
 all cleared, and its direct Main routing back to the factory's (Main 1
 on, the others off) — on the
@@ -234,32 +233,16 @@ the name the desk shows actually lives. The end state is the reading an
 untouched strip gives, so the next person allocating a strip finds this
 one genuinely free rather than nearly free.
 
-**The patch goes back to what the factory left there.** On a WING
-Compact, channel 19 goes back to `LCL 19` — and with the strip linked to
-its source again it shows that socket's little glyph, exactly like every
-other initialized channel. When that is not possible, the strip is left
-**unpatched (OFF)** instead, with an INFO line saying which of these
-it was:
-
-- **something else uses that socket** — a channel of your rebuilt plan
-  (including one this amend is adding), or a strip the desk read found
-  patched to it. Patching one socket to two strips is not what "free"
-  means; the INFO names the socket and what has it;
-- **the factory leaves that strip unpatched** — channels 25-40 on a
-  Compact, 9-40 on a full-size WING, auxes 3-8 on both. OFF *is* the
-  factory patch there;
-- **nobody has measured this model's factory patch** — the WING Rack
-  today, or a desk whose model neither it nor the plan states. Atoo
-  will not guess "channel 19 from LCL 19" for a desk it has never seen
-  initialized: on a full-size WING, with 8 local inputs, that socket
-  does not exist.
-
-The model is the one the desk states when `amend` connects, else the
-plan's `console_model`.
+**The patch goes `OFF`, exactly as a full apply leaves a strip your plan
+does not use.** A freed strip reads the same whichever way it was freed,
+so a change followed by a full apply ends with the same desk, and an INFO
+line says what was done. A strip an earlier run left
+blank on its factory socket still counts as free, so a clear that got
+partway is finished rather than refused.
 
 **The strip is muted while it is cleared, its fader goes to −∞, and it
 is left unmuted**, as an untouched strip reads. The fader comes down
-because the strip is back on its factory socket and routed to Main 1:
+because the strip is routed to Main 1 again:
 left where your plan put it, it would pass whatever is plugged in there
 to the PA.
 
@@ -362,8 +345,8 @@ that it replaces the changes standing there.
 The whole path has run on a WING Compact carrying a show: a channel the
 rebuild dropped was returned to free, 672 unrelated addresses were read
 before and after and none had moved, and a strip renamed by hand on the
-desk was **refused**. Putting a freed strip back on its factory patch,
-rather than `OFF`, has not yet been on a desk. The test suite builds the
+desk was **refused**. Leaving a freed strip at `OFF`, as a full apply does, has not yet been on
+a desk. The test suite builds the
 same scenarios against a simulated desk, address by address.
 
 ## See also

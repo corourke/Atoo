@@ -193,8 +193,8 @@ Refusing to amend: LCL 20 (channel 'Trumpet', new on ch:21) does not exist on th
 
 The same refusal as `apply`'s, above, worded for an amend: it names the
 strip the new channel *would* have gone on, and it checks only the
-sockets the amend writes — a new strip's patch, a new output's socket,
-the factory socket a freed strip goes back on — not the running show. It
+sockets the amend writes — a new strip's patch and a new output's socket
+— not the running show. It
 fires on the same model too, not only across models. The
 preview says it, so it is seen before anything can be armed; on the Apply
 screen it is in the review's Pre-flight panel and the write will not arm.

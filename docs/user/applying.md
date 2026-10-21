@@ -168,9 +168,14 @@ Every address ends in one of five states:
   mismatch you can see is the point: a write that failed silently is
   what this tool exists to catch. See [`apply` says a value did not land, but the desk shows
   it](troubleshooting-desk.md#apply-says-a-value-did-not-land-but-the-desk-shows-it).
-- **A stage box's gain is read back on the box's own steps.** A preamp
-  on an AES50 stage box holds the nearest gain it has (20.0 asked, 20.5
-  held). Within half a dB that is a `match`, and one INFO line says so.
+- **A preamp gain lands on the hardware's own steps.** The desk's local
+  preamps and a stage box's hold 2.5 dB steps, not the 0.5 dB the desk
+  accepts: an S16 on AES50 holds 20.5 for a plan's 20.0 (its grid is
+  −2.0 … 45.5), a Compact's local preamps hold 20.0 (−2.5 … 45). A gain
+  within half a step of what the plan states is the plan's value as near
+  as the preamp can be, so it is a `match`, a preview after the apply
+  proposes nothing for it, and the [audit](audit.md) does not report it.
+  One INFO line says which gains were snapped and to what.
 
 [The journal](journals.md) records every one of these, with the value
 the desk held before, and explains how a late answer from the desk is
@@ -189,7 +194,7 @@ writes. See [The journal](journals.md).
 | `--confirm` | actually write. Without it, nothing is written. |
 | `--journal PATH` | put the journal somewhere other than the default |
 | `--raw-log PATH` | append every raw OSC request and reply, with hex bytes. What you want when a mismatch needs diagnosing rather than describing — and worth passing on any apply you may have questions about later. |
-| `--clean-output-sockets LCL=24,A=48` | opt-in, off by default: disconnect physical output sockets in those groups that the plan routes nothing to. A full apply already does this for the desk's own panel outputs (see [what apply changes](what-apply-changes.md#output-sockets-the-plan-does-not-patch-disconnected)); the flag is for the groups beyond it, such as a stage box's outputs, where whatever an earlier show patched stays unless you pass it. |
+| `--clean-output-sockets LCL=24,A=48` | disconnect physical output sockets in those groups that the plan routes nothing to. A full apply already does this by default for the desk's own panel outputs (see [what apply changes](what-apply-changes.md#output-sockets-the-plan-does-not-patch-disconnected)); the flag reaches the groups beyond it, such as a stage box's outputs, where whatever an earlier show patched stays unless you pass it. |
 | `--presets DIR` | Atoo's own `.chn` library. `apply` does not need it to write a preset -- `build` already put the preset's values into the plan -- and uses it only to say whether a preset changed since, or to name one the plan names and does not carry. A plan naming a preset it cannot find is a warning, never a block. |
 | `--skip-verify` | write a plan verification refused. See below. |
 | `--console-model` | check the plan for this model instead of the one recorded in it |
