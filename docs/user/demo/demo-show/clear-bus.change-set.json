@@ -1,0 +1,46 @@
+{
+  "change": "Clear bus 5 and 6 we are not using them. Add a stereo IEM bus (reuse bus 5) and output to LCL 3-4.",
+  "name": "Clear 5 and 6, add stereo IEM",
+  "add": {
+    "channels": [],
+    "busses": {
+      "IEM": {
+        "index": 5,
+        "mono": false,
+        "destination": {
+          "type": "dedicated_output",
+          "label": "IEM",
+          "patch": {
+            "group": "LCL",
+            "sockets": [
+              3,
+              4
+            ],
+            "stated": true
+          }
+        },
+        "inferred": [
+          {
+            "field": "mono",
+            "basis": "the change says stereo"
+          }
+        ]
+      }
+    },
+    "dcas": {},
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [
+      "Drums",
+      "Vocals"
+    ],
+    "dcas": [],
+    "mute_groups": [],
+    "outputs": []
+  },
+  "modify": [],
+  "notes": []
+}

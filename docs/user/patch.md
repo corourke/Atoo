@@ -172,8 +172,10 @@ A change can also edit what is running; see
 - **Add, remove, and edit only what is named.** A change adds channels,
   busses, DCAs, mute groups and outputs, drops channels, and sets the
   fields it names on anything already running — nothing else about a
-  running strip moves. Dropping a bus, DCA, mute group or output is shown
-  as `MODIFIED`, *not written*: nothing returns one of those to free yet.
+  running strip moves. **A bus you drop is cleared** (see
+  [Clearing a bus](#clearing-a-bus)). Dropping a DCA, mute group or output
+  is shown as `MODIFIED`, *not written*: nothing returns one of those to
+  free yet.
 - **A channel can move.** *"Move Playback to Aux 8"* builds the channel
   on its new strip and returns the old strip to free, leaving the input
   sockets alone. The review lists it twice, `ADDED` on the new strip and
@@ -267,6 +269,71 @@ A change can also edit what is running; see
   the plan patch starts from is refused, as above. Leave it out of the
   change, or add it in the change itself. Existing channels are safe
   either way: a new channel only ever lands on a free strip.
+
+## Clearing a bus
+
+*"Clear bus 5 and 6, we are not using them. Add a stereo IEM bus (reuse
+bus 5) and output to LCL 3-4."* is one change, and it is carried out as
+said: a bus you drop is **returned to free**, and the new bus can take its
+place.
+
+- **What a freed bus is** is the same on every WING (Compact, Full and
+  Rack): every setting on it reads as an initialized desk has it — name,
+  colour, icon, mono/stereo and width, fader and mute, EQ, dynamics,
+  inserts, DCA and mute-group tags, and its routes to the Mains and
+  matrices — taken from the initialized capture of your console model. The
+  output socket it fed is unpatched. Its fader goes to −∞ first, so it is
+  silent while the rest is cleared.
+- **Every send into it is switched off**, on every channel that had one,
+  and the send's level and mode go back to what an initialized desk reads.
+  The channels are otherwise left exactly as they are.
+- **A bus keeps its number for the new bus if you say so.** *"Reuse bus 5"*
+  puts the new bus on bus 5, the bus the same change returns to free; a
+  new bus with no number named takes the lowest free one. Either way an
+  INFO says which and why. A bus is mono or stereo on its own on a WING,
+  so a stereo IEM on bus 5 takes bus 5 alone — bus 6 is simply free — and
+  its output on `LCL 3-4` carries its left on socket 3 and its right on
+  4.
+- **A refusal is for a setting the desk cannot hold**: a bus number past
+  the desk's last bus, or a new channel whose send names a bus the same
+  change drops (a send to nothing). Each says which.
+- **Undo puts every address back**, as for a channel.
+
+The change set for those words, written by hand as a model would answer
+(`docs/user/demo/demo-show/clear-bus.change-set.json`; the Demo's buses 5
+and 6 are Drums and Vocals), run offline from the top of an Atoo checkout:
+
+```
+atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/clear-bus.change-set.json --state atoo/web/demo_states/before.json
+```
+
+```
+  INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
+
+Change: Clear 5 and 6, add stereo IEM
+  INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
+  this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
+  ...
+```
+
+The review's lines for the buses (the summary's first lines, then the INFOs
+that say what was chosen):
+
+```
+  RETURNED TO FREE bus 'Drums' -> bus:5: dropped by the change: bus 5 is returned to free -- every setting on it reads as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
+  RETURNED TO FREE bus 'Vocals' -> bus:6: dropped by the change: bus 6 is returned to free -- every setting on it reads as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
+  ADDED            bus 'IEM' -> bus:5: new bus
+  ...
+  INFO the change drops bus 'Drums' (bus 5): carried out -- the bus is returned to free, and every channel's send into it is switched off
+  INFO the change drops bus 'Vocals' (bus 6): carried out -- the bus is returned to free, and every channel's send into it is switched off
+  INFO bus 'IEM' is new, put on bus 5 as the change said -- the bus this change returns to free
+```
+
+Below what is shown, eight `EDITED` lines name the channels whose send into bus 5 or 6 is
+taken away (`bus_sends: Drums removed`). Nothing here asks the model; whether
+a given model words *"clear bus 5"* as a drop is the model's part, and the
+review above is what it is checked against before anything is written.
 
 ## Inserting a channel, and renumbering the strips after it
 
