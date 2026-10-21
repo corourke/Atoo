@@ -170,12 +170,11 @@ A change can also edit what is running; see
   typing the same change twice finds the horns already there and writes
   nothing.
 - **Add, remove, and edit only what is named.** A change adds channels,
-  busses, DCAs, mute groups and outputs, drops channels, and sets the
-  fields it names on anything already running — nothing else about a
-  running strip moves. **A bus you drop is cleared** (see
-  [Clearing a bus](#clearing-a-bus)). Dropping a DCA, a mute group or an
-  output is shown as `MODIFIED` and not written: clear it on the desk, or
-  rebuild without it and apply.
+  busses, DCAs, mute groups and outputs, drops channels, busses, DCAs, mute
+  groups and outputs, and sets the fields it names on anything already
+  running — nothing else about a running strip moves. **An object you drop
+  is cleared** (see [Clearing a bus](#clearing-a-bus) and
+  [Clearing a DCA, a mute group or an output](#clearing-a-dca-a-mute-group-or-an-output)).
 - **A channel can move.** *"Move Playback to Aux 8"* builds the channel
   on its new strip and returns the old strip to free, leaving the input
   sockets alone. The review lists it twice, `ADDED` on the new strip and
@@ -333,6 +332,62 @@ Below what is shown, eight `EDITED` lines name the channels whose send into bus 
 taken away (`bus_sends: Drums removed`). Nothing here asks the model; whether
 a given model words *"clear bus 5"* as a drop is the model's part, and the
 review above is what it is checked against before anything is written.
+
+## Clearing a DCA, a mute group or an output
+
+*"Get rid of the FX DCA and the FX mute group. Make a Horns DCA on DCA 5."*
+Dropping any of these is carried out the way dropping a bus is: the object
+is **returned to free**, the same on every WING (Compact, Full and Rack),
+from the initialized capture of your console model.
+
+- **A DCA or a mute group** reads as an initialized one — name, colour, icon,
+  fader and mute — and **every strip that was a member is taken off it**
+  (channels and buses alike; a strip's other DCAs and mute groups are kept,
+  and its tag is rebuilt without the dropped one). A DCA's fader goes to −∞
+  first.
+- **An output** (a Main or a Matrix, and the socket it fed) reads as an
+  initialized Main or Matrix, and its socket reads as an initialized desk's;
+  a Matrix is also taken off the Main or bus that fed it. Channels and
+  buses that still route to a dropped Main are left as they are, and the
+  review says so: that is a routing you did not ask to change.
+- **The number is free for a new one in the same change.** *"Make a Horns
+  DCA on DCA 5"* puts it on DCA 5, the DCA the same change returns to free;
+  a new DCA or mute group with no number named takes the lowest free one,
+  and a new output takes the lowest free Main or Matrix and may take the
+  socket the dropped one fed. An INFO says which and why.
+- **A refusal is for a setting the desk cannot hold**: a number past the
+  desk's last DCA or mute group, or a drop naming something not on the desk.
+- **Undo puts every address back.**
+
+The change set for those words
+(`docs/user/demo/demo-show/clear-groups.change-set.json`; the Demo's DCA 5
+and mute group 3 are both FX), run offline from the top of an Atoo checkout:
+
+```
+atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/clear-groups.change-set.json --state atoo/web/demo_states/before.json
+```
+
+```
+  INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
+
+Change: Drop FX groups, add Horns DCA
+  INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
+  this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
+
+1 added, 2 returned to free, 14 unchanged, 1 edited
+  RETURNED TO FREE dca 'FX' -> dca:5: dropped by the change: returned to free -- its fader, mute, name, colour and icon read as an initialized DCA's and its members are taken off it
+  RETURNED TO FREE mute group 'FX' -> mgrp:3: dropped by the change: returned to free -- its name and mute read as an initialized mute group's and its members are taken off it
+  ADDED            dca 'Horns' -> dca:5: new dca
+  EDITED           bus 'Vox Verb': only the field(s) the change names are written (dca, mute_group); nothing else on this bus is touched, and the rest of it is in the untouched proof
+  fields changed on objects already on the desk (only these; nothing else on them is written):
+    bus 'Vox Verb': dca ["FX"] -> []
+    bus 'Vox Verb': mute_group ["FX"] -> []
+  ...
+```
+
+Below what is shown, the `EDITED` line names the Vox Verb bus, the one member of both FX groups, so it is the one
+strip edited: its tags go to none.
 
 ## Inserting a channel, and renumbering the strips after it
 

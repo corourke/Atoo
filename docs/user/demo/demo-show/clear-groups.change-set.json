@@ -1,0 +1,28 @@
+{
+  "change": "Get rid of the FX DCA and the FX mute group. Make a Horns DCA on DCA 5.",
+  "name": "Drop FX groups, add Horns DCA",
+  "add": {
+    "channels": [],
+    "busses": {},
+    "dcas": {
+      "Horns": {
+        "index": 5
+      }
+    },
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [],
+    "dcas": [
+      "FX"
+    ],
+    "mute_groups": [
+      "FX"
+    ],
+    "outputs": []
+  },
+  "modify": [],
+  "notes": []
+}
