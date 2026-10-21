@@ -118,9 +118,15 @@ A preview, against the Demo's simulated desk:
   ...
   reading the desk: 2121 of 2121 addresses in 0.2s
   every address answered.
+  reading again the values a dump rounded 273/275 (99%) 0s -- /bus/7/fdr
+  reading again the values a dump rounded: 275 of 275 addresses in 0.0s
+  every address answered.
 ```
 
-and the reset's line in the summary says what that one read covered:
+The last step reads again, all together, the few numbers whose rounded
+readout could change whether the plan's value is already held (below).
+
+and the reset's line in the summary says what the first read covered:
 `reading the desk took 0.2s (2,121 requests; the plan's own settings: 1,582 from the node dumps, 83 read one by one)`.
 The plan's current values are read the way the rest of the desk is, by
 the node dump that covers them (a handful of requests for hundreds of
