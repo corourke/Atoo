@@ -138,5 +138,8 @@
  "/aux/8/clink": 1,
  "/aux/8/name": "AUX08",
  "/aux/8/in/conn/grp": "OFF",
- "/aux/8/in/conn/in": 0
+ "/aux/8/in/conn/in": 0,
+ "/$stat/A/dev": "",
+ "/$stat/B/dev": "",
+ "/$stat/C/dev": ""
 }
