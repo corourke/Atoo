@@ -114,16 +114,26 @@ stdout and the journal are the same either way.
 A preview, against the Demo's simulated desk:
 
 ```
-  reading the desk 184/3693 (4%) 0s -- /io/in/SC/8 (node)
+  reading the desk 105/2110 (4%) 0s -- /io/in/B/25 (node)
   ...
-  reading the desk: 3696 of 3696 addresses in 0.2s
+  reading the desk: 2121 of 2121 addresses in 0.2s
   every address answered.
 ```
 
 and the reset's line in the summary says what that one read covered:
-`reading the desk took 0.2s (3,696 requests, 1,665 of them for the plan's own settings)`.
-Each address is asked once. With `--no-init`, or on a console with no
-initialized capture, the one read is `reading the desk for the preview`.
+`reading the desk took 0.2s (2,121 requests; the plan's own settings: 1,582 from the node dumps, 83 read one by one)`.
+The plan's current values are read the way the rest of the desk is, by
+the node dump that covers them (a handful of requests for hundreds of
+settings), except a name or a tag, which are always asked one by one, and
+any setting a dump does not give. A dump prints the desk's rounded text, not the
+exact value, so the figure a preview shows as a setting's current value
+can be rounded; a number whose rounding could change whether the plan's
+value is already held is read again by itself, and the run says how many
+(`value(s) taken from a node dump were read again one by one`). A real apply
+never uses a dump: it reads each setting by itself just before it writes it,
+and the journal and Undo hold those exact values. Each address is asked
+once. With `--no-init`, or on a console with no initialized capture, the
+one read is `reading the desk for the preview`, one setting at a time.
 
 Steps 1 and 2 need no console: point `apply` at an address where nothing
 is listening and the verdict still prints first. Here it is on the Demo
