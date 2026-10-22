@@ -185,6 +185,13 @@ forward:
 generation failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead
 ```
 
+When the provider is reached and answers with an error (a rejected key,
+a rate or spend limit, a server error) or does not answer at all, the
+command says **The AI isn't responding.** and, on the next line, the
+provider's own reason. It is the same for Claude, an `api` host and
+Ollama. See [the build troubleshooting
+page](troubleshooting-build.md#the-ai-isnt-responding).
+
 The effort levels, token limits, thinking budget and timeouts are in the
 full table in the
 [CLI reference](cli-reference.md#choosing-and-tuning-the-model). You do

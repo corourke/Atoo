@@ -7,6 +7,7 @@ Find the symptom, then go to its page.
 | `atoo` cannot reach the console | [below](#atoo-cannot-reach-the-console) |
 | A command exited non-zero and I cannot tell why | [below](#a-command-exited-non-zero-and-i-cannot-tell-why) |
 | `atoo: command not found` | [below](#atoo-command-not-found) |
+| A command says "The AI isn't responding." | [build](troubleshooting-build.md#the-ai-isnt-responding) |
 | `build` says "generation failed" | [build](troubleshooting-build.md#build-says-generation-failed) |
 | A build seems stuck, or you want to stop it | [build](troubleshooting-build.md#a-build-seems-stuck) |
 | `build` says the reply "hit max_tokens and is truncated" | [build](troubleshooting-build.md#build-says-the-reply-hit-max_tokens-and-is-truncated) |

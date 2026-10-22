@@ -28,7 +28,8 @@ after the raw error. This one came from `patch`, which calls the same
 model; `build` prints the same words after `generation failed:`.
 
 ```
-the change could not be compiled: Claude provider call to 'https://api.anthropic.com' failed: <urlopen error [Errno 8] nodename nor servname provided, or not known> -- this machine could not look up api.anthropic.com, so it has no internet connection right now. On the desk's network, keep a second connection (Wi-Fi or a phone hotspot) for the internet and the desk on its own port, then try again.
+the change could not be compiled: The AI isn't responding.
+  Reason: the call to https://api.anthropic.com failed: <urlopen error [Errno 8] nodename nor servname provided, or not known> -- this machine could not look up api.anthropic.com, so it has no internet connection right now. On the desk's network, keep a second connection (Wi-Fi or a phone hotspot) for the internet and the desk on its own port, then try again.
 ```
 
 Keep the desk on Ethernet and the internet on Wi-Fi or a phone hotspot.
@@ -41,7 +42,8 @@ laptop, and fails if it is not there:
 
 ```
 llama3.1 (generator): sending, waiting for the first reply... (a progress line every 10-60s -- stderr is not a terminal)
-generation failed: Ollama provider call to 'http://localhost:11434' failed after 0 characters: <urlopen error [Errno 111] Connection refused>
+generation failed: The AI isn't responding.
+  Reason: the call to http://localhost:11434 failed after 0 characters: <urlopen error [Errno 111] Connection refused>
 ```
 
 Start Ollama (`ATOO_AI_BASE_URL` moves the address), or
@@ -59,6 +61,29 @@ If the build first restates your conventions as rules
 the same failure can appear twice: once as a WARNING for that step, which
 the build carries on past, and once as the `generation failed` line,
 which stops it.
+
+## The AI isn't responding
+
+Whenever the model's provider fails or
+refuses a call (an error status, a refused or empty reply, a dropped
+connection, a timeout, a rejected key), `build`, `patch` and the rest say
+that, then give the provider's own reason on the next line. The reason is
+the provider's, word for word; Atoo adds nothing to it and never prints
+your key. A spend limit on your account or workspace shows up as one of
+these, with the provider's words about the limit:
+
+```
+generation failed: The AI isn't responding.
+  Reason: https://api.anthropic.com answered HTTP 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified workspace API usage limits."}}
+  no plan was written; the build log keeps this attempt.
+```
+
+Read the reason, fix what it names (a key, a limit, a model name), and
+run the command again. A `build` writes no plan when this happens, and
+`patch` changes neither the desk nor the show. Atoo asks again only when
+a host refuses an optional setting or the reply format; it does not retry
+an error that asking again cannot clear. In the browser, step 04 shows
+the same line and reason as its Failed finding.
 
 ## A build seems stuck
 
