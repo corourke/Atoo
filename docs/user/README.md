@@ -13,22 +13,22 @@ In this order, the first time:
 
 | Page | For |
 |---|---|
-| [Why Atoo?](why.md) | whether it is worth your time, against what you already do |
-| [Installing Atoo](install.md) | on a Mac or Linux with uv, step by step, then `atoo init` and `atoo ui`; Homebrew and pipx, and Windows, too |
+| [Why Atoo?](why.md) | Whether Atoo is worth your time against what you already do |
+| [Installing Atoo](install.md) | Install on a Mac or Linux with `uv`, step by step, then `atoo init` and `atoo ui`; Homebrew and pipx, and Windows, too |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
-| [Testing on your desk](testing-on-your-desk.md) | your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and its undo |
-| [Configuring Atoo](configuration.md) | your house conventions, presets and desk, set once |
-| [Setting up an AI provider](ai-provider.md) | the model that writes your plans, and its API key |
-| [Change the Demo show](change-the-demo.md) | your first build, on a copy of the Demo, then a patch onto the desk |
+| [Testing on your desk](testing-on-your-desk.md) | On your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and undo |
+| [Configuring Atoo](configuration.md) | The config file and environment variables |
+| [Setting up an AI provider](ai-provider.md) | The model that writes your plans, and its API key |
+| [Change the Demo show](change-the-demo.md) | Your first build, on a copy of the Demo, then a patch onto the desk |
 
-## In the browser
+## Using Atoo in the browser
 
 | Page | For |
 |---|---|
-| [Build a show](build-a-show.md) | a new show: the input list, tonight's instructions, **Build plan**, and reading the findings |
-| [Apply a plan to the desk](apply-to-desk.md) | **Ping**, the four steps: the pre-flight, **Preview** (the desk as scribble strips), writing, reading the result, undo |
-| [Patch a show that is already on the desk](patch-a-show.md) | the horns at 6pm: a change typed in plain English, nothing else moved |
-| [Watch the desk during a show](watch-a-show.md) | live findings, and your own watch conditions |
+| [Build a show](build-a-show.md) | Show bundle files: the input list, your show-specific instructions, the **Build plan**, and the watch list |
+| [Apply a plan to the desk](apply-to-desk.md) | The four steps: the pre-flight, **Preview** (the desk as scribble strips), writing, undo |
+| [Patch a show that is already on the desk](patch-a-show.md) | Making a change typed in plain English |
+| [Watch the desk during a show](watch-a-show.md) | Live findings, and setting watch conditions |
 
 ## The files you write
 
