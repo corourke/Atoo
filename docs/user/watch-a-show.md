@@ -40,9 +40,16 @@ Beside the word is the first thing that is wrong, as the strip, a colon
 and the claim (*CH 10 "Lead Vox": is muted*), and on the right the three counts: errors, warnings and info.
 A count lights in its colour only when it is not zero. Before you press
 Start the word is a grey **NOT WATCHING**; until the first reading
-arrives, **STARTING**. The word and the table's column headings stay at
-the top of the window as you scroll down a long table, and let go when
-you have scrolled past its last row.
+arrives, **STARTING**.
+
+While a watch runs, the page is kept clean for the service. The Atoo
+header (the tabs and the theme switch) and the **Show bundle / Console**
+bar are hidden, and the **Watch** header (with **Stop**) and the verdict
+stay pinned at the top of the window, however far you scroll; the table's
+column headings stick just below them. **Stop** (or a lost console, or an
+error) brings the header and the bar back, so leave Watch with Stop first.
+On a phone-width window the pinned header is cut to the title, the state,
+**Stop** and the two switches, and the rest scrolls away with the page.
 
 A warning row is filled amber, an error row red, each with a thick bar of
 the same colour down its left edge and its severity in a solid tag. The
