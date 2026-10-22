@@ -163,6 +163,23 @@ and the single reads each took, how many requests were in flight, and how long
 one request takes on its own on that console, so that "the console answers
 slowly" can be told from "the requests are not going out side by side".
 
+A selector whose model the desk holds differently from the plan's gets one more
+line each, for every family a model decides: a gate, dynamics, EQ or filter model, a
+side-chain type, the delay mode, an FX slot. The plan's parameters that only exist under
+the plan's model do not exist on the desk until that model is set, so a preview does not ask
+for them (each would wait out the full timeout: a Preview of a show with a Vox Verb in an FX
+slot that held NONE, and a vocal gate set to PSE where the desk held GATE, took 20 s on a WING
+Rack). It asks the desk which leaves the node holds now, and says what it skipped:
+
+```
+- INFO 36 value(s) under /ch/1/gate, /ch/2/gate, /ch/3/gate and 3 more were not read: the desk holds PSE in /ch/1/gate/mdl (and 5 other selector(s) like it) and the plan sets GATE, and those parameters do not exist on the desk until the plan's value is set. The apply writes it first and then each of them, so the preview shows each as a change
+```
+
+(from a preview of the Demo show against the Demo's simulated desk with three channels' gates
+holding another model; an FX slot's line reads the same, with `/fx/5` and its model).
+The apply is not changed: it writes the model, then every parameter, each read back.
+The preview shows each skipped value as a change with no current value.
+
 The time estimates in the reset's line (for the read before a first
 preview, and for the writes) are given only for a console whose request rate
 has been measured, a WING Compact so far. For any other console they say "no
