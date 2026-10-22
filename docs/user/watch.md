@@ -174,6 +174,16 @@ flag; whatever is still on its alternate is then a warning in the baseline.
 On the [Watch page](watch-a-show.md#virtual-soundcheck) it is a switch that
 can be turned off without stopping.
 
+### Rebuilding the show while Watch is running
+
+Watch judges the desk against the show's plan as it was **when Watch started**.
+If you rebuild or apply the show afterwards, the plan on disk changes and Watch
+does not follow it: bus numbers and routes the new plan added can be reported
+as problems (a parallel bus the new plan asked for shows up as a signal split
+again, for example). When Watch sees the plan file change it adds an INFO,
+`W004` "The plan changed since Watch started", and says what to do: stop Watch
+and start it again.
+
 Everything else is the desk and your watch conditions.
 
 **Where your outputs go is read, wherever they are.** A watch reads the

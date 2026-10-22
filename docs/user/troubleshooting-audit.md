@@ -380,8 +380,8 @@ $ atoo audit --state split.state.json
 Audit findings: 2 warning.
 
 [WARNING] R012 Signal Splits And Recombines (2)
-  CH 1 "Kick" reaches MAIN 1 twice: directly, and through BUS 1 "Drums". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. If it is parallel processing, state every leg in the plan and this stays quiet; if not, switch one of the routes off.
-  CH 2 "Snare" reaches MAIN 1 twice: through BUS 1 "Drums", and through BUS 2 "Drums Comp". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. BUS 2 "Drums Comp" is muted, so the signal through it is silent now and joins the moment it is unmuted. If it is parallel processing, state every leg in the plan and this stays quiet; if not, switch one of the routes off.
+  CH 1 "Kick" reaches MAIN 1 twice: directly, and through BUS 1 "Drums". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. Atoo has no plan it could read for this show, so it cannot tell a parallel bus from a mistake: run it with the show's plan (open the show, or pass --show or --plan); if this is a mistake, switch one of the routes off.
+  CH 2 "Snare" reaches MAIN 1 twice: through BUS 1 "Drums", and through BUS 2 "Drums Comp". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. BUS 2 "Drums Comp" is muted, so the signal through it is silent now and joins the moment it is unmuted. Atoo has no plan it could read for this show, so it cannot tell a parallel bus from a mistake: run it with the show's plan (open the show, or pass --show or --plan); if this is a mistake, switch one of the routes off.
 ...
 ```
 
@@ -395,29 +395,36 @@ copies add up the moment it is unmuted.
 
 **Two busses into one Main is how parallel compression is built** (a "Drums"
 bus and a "Drums Comp" bus), so the check stands down when the plan asked for
-it. With `--plan` it is quiet for a channel and Main when the plan states
-**every leg** of the split: the channel's sends and Main routes, and the busses'
-own Main destinations. `R013` says it did, so a rule that went quiet is never
-silent about it:
+it. With `--plan` it is quiet for a channel and Main when the plan includes
+**every route** of the split: the channel's sends and Main routes, and the busses'
+own Main destinations. To ask for it, state the purpose of the parallel bus in your conventions or
+instructions and rebuild. When the plan includes every route, `R013` says so, so a rule that
+went quiet is never silent about it:
 
 ```
 $ atoo audit --state parallel.state.json --plan show.plan.json
 Audit findings: 1 info.
 
 [INFO] R013 Signal Split Asked For
-  CH 2 "Snare" reaches MAIN 1 by more than one route, and the plan states every leg of it, so it is read as asked for (parallel processing) and R012 is quiet about it.
+  CH 1 "Kick", CH 2 "Snare" reach MAIN 1 by more than one route, and the plan includes every one of those routes, so it is read as asked for (parallel processing) and R012 is quiet about it.
 ...
 ```
 
-If the plan states some legs but not all (the plan has the two busses and
-the conventions never gave the channel a direct Main route that is also on),
-`R012` still speaks and names the legs the plan does not state. With no plan,
+If the plan includes some of those routes but not all (the plan has the two
+busses, and the conventions never gave the channel a direct Main route that is
+also on), `R012` still speaks and names the routes the plan does not include,
+for example `the plan does not include the route CH 2 "Snare" to BUS 2 "Drums Comp"`. With no plan,
 nothing can have been asked for, so every split is reported, including a
 channel with a send to a reverb bus and another to a group bus when both
-reach Main 1. To make a split
-go away: switch one route off on the desk, or say it is meant in your
-conventions and rebuild. In Watch both rules run on every pass and need
-nothing extra from the desk.
+reach Main 1, and the finding says so: *Atoo has no plan it could read for this
+show*. That is the message to expect if you ran `audit` without `--plan` or
+`--show`, or started Watch without opening the show: run it again with the
+show's plan. If you rebuilt the show while Watch was
+running, Watch is still using the plan it started with; it says so in an INFO
+(`W004`), and the fix is to stop and start Watch. To make a split go away once the plan is in hand: switch one
+route off on the desk, or state the purpose of the parallel bus in your
+conventions or instructions and rebuild. In Watch both rules run on every pass
+and need nothing extra from the desk.
 
 ## A bus is heard on one side only, or is not the width the plan says: `R011`, `CV020`
 
