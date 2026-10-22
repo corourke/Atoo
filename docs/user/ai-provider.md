@@ -79,7 +79,11 @@ INFO the host at https://api.example.com refused `response_format` (Unknown fiel
 
 The fields that are retried this way are `response_format`,
 `stream_options`, `temperature` (a model that reasons may refuse it),
-`reasoning_effort` and `max_completion_tokens`. Any other 400, and any
+`reasoning_effort` and `max_completion_tokens`. A field the host refuses is
+remembered for the rest of the run (the INFO says "not sent again this run"),
+so later calls do not pay for a refused request; a model that rejects
+`reasoning_effort` (`grok-build-0.1` does) costs one refused request, not one
+per call. Any other 400, and any
 other error, is shown as it came; nothing is retried that might spend
 twice.
 
@@ -87,6 +91,7 @@ twice.
 |---|---|
 | `ATOO_AI_STRUCTURED` | `0` stops sending the reply format as `response_format` |
 | `ATOO_AI_REASONING_EFFORT` | sent as `reasoning_effort` (the host's own words: `low`, `medium`, `high`) to a model that reasons; unset sends nothing. A long wait with little output is usually a reasoning model thinking, and a lower effort shortens it |
+| `ATOO_AI_TIMEOUT` | seconds of silence before a call is given up on. **Atoo chose 600 for the `api` provider** (120 on Ollama): a reasoning model can think for minutes before its first token, and 120 s cut those calls off. Raise it for a slower model, lower it to fail faster |
 | `ATOO_AI_MAX_TOKENS` | sent as `max_completion_tokens`, which counts a reasoning model's hidden tokens too; unset sends none |
 
 **A reply that fails the format is sent back once.** When a change's reply
@@ -131,6 +136,28 @@ Setting only one of the two is refused, and so is a value that is not a
 number of dollars (`ATOO_AI_PRICE_IN and ATOO_AI_PRICE_OUT go together
 (dollars per million input and output tokens): set both, or neither`).
 The rates change nothing about which model runs or what is sent.
+
+Three things refine the figure, and the usage line says when one applies:
+
+- **A host that reports its own cost is believed.** xAI sends
+  `usage.cost_in_usd_ticks` (ticks of 1/10,000,000,000 of a dollar; that unit
+  is assumed from xAI's documentation, not yet checked against a live reply).
+  The `-- $x.xx` then ends `(host-reported cost)` and the build log and the live
+  eval's `report.json` carry it. Your prices stay the fallback for a host that
+  gives none.
+- **Reasoning tokens.** xAI's `completion_tokens` leaves out
+  `reasoning_tokens`, so counting only `completion_tokens` understates a
+  reasoning model. When the host's `total_tokens` shows they were kept out,
+  Atoo bills them as output and the line ends `(reasoning tokens counted as
+  output)`. OpenAI counts them inside `completion_tokens`; nothing is added
+  there.
+- **Cached input.** Set `ATOO_AI_PRICE_CACHED` (dollars per million cached
+  tokens) and input the host reports as cached
+  (`prompt_tokens_details.cached_tokens`) is priced at that rate. Atoo also
+  sends an `x-grok-conv-id` header, a random id that is the same for every
+  call of one run and is not derived from your key, so xAI can cache the
+  prompt prefix; a host that does not know it ignores it. Its name is not a
+  setting.
 
 ## Check it took
 

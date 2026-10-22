@@ -224,7 +224,7 @@ console and to none that do not.
 | `ATOO_AI_BASE_URL` | all | per provider |
 | `ATOO_AI_NUM_CTX` | ollama | unset = sized per prompt |
 | `ATOO_AI_NUM_PREDICT` | ollama | unset = unlimited (`-1`) |
-| `ATOO_AI_TIMEOUT` | ollama | `120` seconds |
+| `ATOO_AI_TIMEOUT` | ollama, api | `120` seconds on ollama, `600` on api (a reasoning model can think for minutes before its first token) |
 | `ATOO_AI_EFFORT` | claude | `medium` (`low`...`max`) -- the generator's |
 | `ATOO_AI_CRITIC_EFFORT` | claude | `medium` (`low`...`max`) -- the critic's (`--critic`) |
 | `ATOO_AI_WATCHLIST_EFFORT` | claude | `medium` (`low`...`max`) -- the watchlist draft's. None of the three is sent to Haiku 4.5, which takes no effort |
@@ -238,7 +238,8 @@ console and to none that do not.
 | `ATOO_AI_MAX_TOKENS` | claude | the model's output limit: `128000`, or `64000` on Haiku (thinking tokens count against it). A role on a model with a lower limit is sent that limit |
 | `ATOO_AI_THINKING_SUMMARIES` | claude | on -- `0` stops asking for the thinking summaries step 04 shows while the model thinks |
 | `ATOO_AI_STREAM` | api | on -- `0` asks the host for one reply instead of a stream (step 04 then has no live text) |
-| `ATOO_AI_PRICE_IN`, `ATOO_AI_PRICE_OUT` | api | unset = the usage line says `no price set`. Dollars per million input and output tokens; both or neither. They add the `-- $x.xx` a Claude call prints and the build log's cost |
+| `ATOO_AI_PRICE_IN`, `ATOO_AI_PRICE_OUT` | api | unset = the usage line says `no price set`. Dollars per million input and output tokens; both or neither. They add the `-- $x.xx` a Claude call prints and the build log's cost. A host that reports its own cost (xAI's `cost_in_usd_ticks`) is believed instead, and the line says so |
+| `ATOO_AI_PRICE_CACHED` | api | unset = cached input is priced as ordinary input. Dollars per million cached input tokens, used when the host reports them (`prompt_tokens_details.cached_tokens`) and the two prices above are set |
 | `ATOO_PROMPT_DIR` | generate, critic | the packaged `atoo/prompts` |
 | `ATOO_OSC_REPLY_MATCH` | apply, audit, watch, compare, ui | on -- set to `off` to disable reply matching |
 
