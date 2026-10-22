@@ -33,6 +33,53 @@ watch-conditions draft and the resolve step. `ATOO_AI_MODEL` changes the first;
 your home directory is fine. `~/.atoo.config` is the wrong place:
 it has no key setting, on purpose.
 
+### Prompt caching (Claude)
+
+Every Build, Patch, repair and review call sends a large prompt that is
+mostly the same each time: the audio knowledge, the format, your
+conventions, the desk as it stands. Atoo asks Anthropic to keep that part
+(its *prompt cache*), so the next call that starts with the same text is
+read back at a fraction of the price instead of paid for in full. **It needs
+nothing from you**: no setting, no key option, and the model's answers do not
+change, only what the call costs. It is on for every Claude model.
+
+The usage line shows what the cache did. `in` is every input token, and the
+brackets say where it went:
+
+```
+  claude-sonnet-5-5 (change, effort medium): 41,120 in (520 uncached, 40,600 cache write, 0 cache read), 3,400 out -- $0.14
+  claude-sonnet-5-5 (change, effort medium): 41,240 in (640 uncached, 0 cache write, 40,600 cache read), 3,100 out -- $0.04
+```
+
+- **uncached** is paid at the model's normal input price: the part that is
+  different on every call (your change request, the reply that was refused).
+- **cache write** is the part stored for next time. It costs 25% more than
+  normal input.
+- **cache read** is the part found already stored. It costs a tenth of normal
+  input, or a twentieth on Sonnet 5.5 and Opus 5.5.
+
+The dollar figure is what Anthropic bills for that mix, not the token count
+times one price. The second line above is the same show a moment later:
+nearly everything is read back, and the call costs less than a third of
+the first. A repair after a refused change, and the next fix-up round of a
+build, read what the call before them wrote in the same way.
+
+**The cache lasts five minutes** from the last call that used it, and each
+use renews it. Run something after a longer pause and that call writes the
+prefix again (its line shows a cache write and no read, and costs a little
+more than it would have without caching); the rest of that session reads it.
+A call that is the only one of its kind in five minutes, such as one review
+after one build, pays the write and reads nothing: that is the price of
+the reads elsewhere.
+
+If a call's prefix is shorter than the model can cache (512 tokens on Sonnet
+5.5, 1,024 on Sonnet 5, 4,096 on Haiku 4.5; Anthropic's published minimums),
+nothing is cached and the line says so, for example
+`300 in (prefix ~300 tokens, below the 512-token minimum, not cached)`. If the
+prefix is long enough and the API still reports nothing written or read, the
+line says that too. The Setup page's Build log shows the same split beside each
+call's cost.
+
 ## A local model with Ollama
 
 Claude is the default. With `ATOO_AI_PROVIDER=ollama`, `build` asks
