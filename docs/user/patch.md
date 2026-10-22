@@ -234,9 +234,14 @@ A change can also edit what is running; see
   lists 48 sockets on every AES50 port whatever is plugged in, so `A 17`
   on an S16 is accepted by the console and heard by nobody. Atoo asks
   the desk what is on each port; the S16 has 16 inputs and 8 outputs.
-  A socket the change leaves to Atoo is chosen within the box, and one
-  that is past its end, named or not, is refused by the pre-flight, naming
-  the box and its size (see [the pre-flight](amend.md#the-pre-flight-the-same-checks-as-apply)).
+  Whether you named a socket is read from your words, not from the
+  model's say-so: a socket your change writes ("on A 17") is yours, and
+  past the box it is refused by the pre-flight, naming the box and its
+  size; a socket the change leaves to Atoo ("add two choir mics") is
+  chosen within the box, and if the model picked one the box lacks, the
+  next free socket is used instead and an INFO says so. A stereo
+  channel needs two adjacent sockets; if the box has no free pair left, the
+  next free `LCL` pair is used and the INFO says why (see [the pre-flight](amend.md#the-pre-flight-the-same-checks-as-apply)).
   A box Atoo has no size for is reported, and its sockets are not checked.
 - **What the change leaves out is not a reason to refuse it.** A change
   that adds one channel and says nothing of busses, DCAs or outputs goes
