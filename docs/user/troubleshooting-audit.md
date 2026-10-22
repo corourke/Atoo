@@ -418,7 +418,8 @@ nothing can have been asked for, so every split is reported, including a
 channel with a send to a reverb bus and another to a group bus when both
 reach Main 1, and the finding says so: *Atoo has no plan it could read for this
 show*. That is the message to expect if you ran `audit` without `--plan` or
-`--show`, or started Watch without opening the show: run it again with the
+`--show`, or started Watch without opening the show (Watch also says so once, in an INFO,
+`W005`): run it again with the
 show's plan. If you rebuilt the show while Watch was
 running, Watch is still using the plan it started with; it says so in an INFO
 (`W004`), and the fix is to stop and start Watch. To make a split go away once the plan is in hand: switch one

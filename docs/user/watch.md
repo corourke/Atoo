@@ -184,6 +184,33 @@ again, for example). When Watch sees the plan file change it adds an INFO,
 `W004` "The plan changed since Watch started", and says what to do: stop Watch
 and start it again.
 
+### Watching without a plan
+
+Watch judges the desk against the show's plan: it stops R012 from reporting a
+parallel bus the plan asked for, and it adds the checks that compare the desk
+with the plan. With no plan, it still runs, on the checks that need none. It
+tells you so, once, at INFO, as `W005`:
+
+```bash
+atoo watch --console 192.0.2.16
+```
+
+```
+[INFO] W005 Watching without a plan
+  Watching without a plan: no show's plan was given. These run without it, so they can warn about what the plan would have allowed (a parallel bus it asks for, a strip it puts at the floor): L002 Active Strip Fader At Floor, R008 Strip Reaches Nothing, ... R012 Signal Splits And Recombines, R013 Signal Split Asked For. These are not run at all: CV015 FX Bus Effect Contradicts Plan, CV016 Planned Routes All Off, ... Stop Watch and start it with the show's plan (atoo watch --show DIR; on the Watch page, open the show first).
+```
+
+That is what you get from `atoo watch` without `--show`, and from the Watch page
+with no show open. If the show is given but its `plan.json` is missing or will
+not read, the same note names the file and the reason (*`show/plan.json` could
+not be read: not valid JSON: Expecting property name ...*). A show whose plan
+reads has no such note. On the Watch page it is under **This watch** as
+*Plan: no plan, plan checks off* (or *plan unreadable*), with the full sentence
+under Details. The list of checks is taken from the rules themselves, so it is
+always the checks this version of Atoo runs with a plan. To fix it, stop Watch,
+open the show (or mend `plan.json`; `atoo build` writes a fresh one) and start
+again.
+
 Everything else is the desk and your watch conditions.
 
 **Where your outputs go is read, wherever they are.** A watch reads the

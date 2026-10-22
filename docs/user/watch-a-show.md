@@ -96,6 +96,9 @@ at the top of each. Here on the [Demo show](demo.md):
   Demo, Lead Vox muted shows CV017 folded under the show's own
   condition (*Also CV017 Muted Against Plan*), and the Vox Verb bus is
   sometimes switched off to show CV015.
+- With no show open, or a plan that will not read, Watch has none of those
+  rules and says so once, in an INFO under **This watch**: *Plan: no plan, plan
+  checks off* (`W005`; [Watching without a plan](watch.md#watching-without-a-plan)).
 - Watch reads the output sockets the plan patches and the outputs of any
   AES50 stage box on the desk, so monitor busses patched to a stage box
   are not called unrouted. A Matrix the phones listen to is not
