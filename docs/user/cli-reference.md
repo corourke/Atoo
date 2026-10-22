@@ -784,8 +784,9 @@ are chosen, and each choice is said at INFO.
 Everything after that is amend's: new channels are placed on genuinely free
 strips (skipping occupied ones, never renumbering a running one unless the
 change says INSERT -- see below), a dropped
-channel's strip is RETURNED TO FREE where the desk still reads as the strip the
-show built, the pre-flight verifies the result and checks every socket written
+channel's strip is RETURNED TO FREE -- one the change names, even where the desk
+no longer reads it as the strip the show built (said at WARNING, and Undo puts
+it back), the pre-flight verifies the result and checks every socket written
 against the desk, the review shows what will and will NOT be written, and only
 --confirm writes -- reading every unrelated address before and after to prove
 none moved, and journalling the run with the change's text and short name.

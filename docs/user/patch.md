@@ -181,6 +181,12 @@ A change can also edit what is running; see
   `RELEASED` on the old one, with an INFO saying it was moved. If the
   strip you name is not free, the channel goes on a free one instead, and
   the review says which.
+- **A channel you drop is dropped, even if the desk has changed.** *"Lose
+  the MD vocal"* returns the strip to free whatever somebody has done to it
+  since the build — renamed or repatched. The review says so at `WARNING`:
+  what the strip holds now, and that it is not what the plan built. Undo
+  puts it back. (A rebuild with `amend` that merely leaves a channel out
+  never named it, so it still leaves a changed strip alone.)
 - **A channel can be inserted, and then the strips after it move.**
   *"Add HiHat after Snare"* puts HiHat on the next free strip and moves
   nothing; *"insert HiHat after Snare and renumber the channels after
