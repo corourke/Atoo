@@ -29,17 +29,16 @@ took for a monitor mix:
   on. *CH 2 "Click": plan lists no direct route from this channel to
   Main 1, live console reads on.*
 - `CV018 Send Or Route Not In Plan`: a send or route that is **on** and
-  that the plan does not have. A channel's send to a bus the plan does
-  not list for it, or to any Matrix, above the floor; or a bus routed to
-  a Main its plan entry does not list. *CH 2 "Click": a send to BUS 2
-  "Drums" is on at 0dB; the plan has no send from this channel to that
-  bus.* It is how a click or talk mic opened into the PA, or a wedge bus
-  summed into Main, is caught. A WARNING rather than an error, because
-  adding a send is an ordinary act at a desk: if you added it on purpose,
-  the row names it and you can leave it, or add it to your conventions
-  and rebuild. The plan has no way to say that a channel feeds a Matrix,
-  so a Matrix you feed from a strip on purpose stays a row until the
-  send is off.
+  that the plan does not have. A channel's send to any Matrix, above the
+  floor; or a bus routed to a Main its plan entry does not list. *CH 1
+  "Kick": a send to MTX 1 is on at -6dB; the plan has no send from this
+  channel to a Matrix.* It is how a wedge bus summed into Main is caught.
+  An INFO, not a warning, because adding a send is an ordinary act at a
+  desk: if you added it on purpose, the row only names it and you can
+  leave it. A channel's send to a bus is not checked at all, since the
+  plan listing it or not is not worth telling you. The plan has no way to
+  say that a channel feeds a Matrix, so a Matrix you feed from a strip on
+  purpose stays a row until the send is off.
 
 - `CV019 Phantom Contradicts Plan`: 48V on an input socket that is not
   what the plan states for the channel patched to it. *CH 1 "Kick": the
@@ -101,11 +100,11 @@ each send and route; `CV006` and `CV007` do not repeat them. A desk left
 exactly as `atoo apply` set it raises none of the three above, and
 a send or route that did not answer says nothing.
 
-For example, with a plan that sends Kick to the Drum IEM bus in pre-fader
-and Click to the same bus only, and a desk where Kick's IEM send goes
-post-fader and Click is opened to the Drums bus and to Main 1 (a capture of
-the desk as the plan left it, then one taken after those changes, then the
-first again):
+For example, with a plan that sends Snare to the Drum IEM bus in pre-fader
+and routes no Tom straight to Main 1 nor the Drum IEM bus to any Main, and a
+desk where Snare's IEM send goes post-fader, Rack Tom is opened to Main 1 and
+the Drum IEM bus is routed to Main 1 (a capture of the desk as the plan left
+it, then one taken after those changes, then the first again):
 
 ```
 atoo watch --show bundle --state-sequence ok.state.json,touched.state.json,ok.state.json --count 3 --interval 0.1
@@ -113,12 +112,13 @@ atoo watch --show bundle --state-sequence ok.state.json,touched.state.json,ok.st
 
 ```
 [2026-10-15T10:00:30+00:00] change detected:
-  NEW     [WARNING] CV006 Bus Send Contradicts Plan: CH 1 "Kick": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST.
-  NEW     [WARNING] CV007 Main Route Contradicts Plan: CH 2 "Click": plan lists no direct route from this channel to Main 1, live console reads on.
-  NEW     [WARNING] CV018 Send Or Route Not In Plan: CH 2 "Click": a send to BUS 2 "Drums" is on at 0dB; the plan has no send from this channel to that bus.
+  NEW     [WARNING] CV006 Bus Send Contradicts Plan: CH 2 "Snare": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST. (plan provenance: ...)
+  NEW     [WARNING] CV007 Main Route Contradicts Plan: CH 3 "Rack Tom": plan lists no direct route from this channel to Main 1, live console reads on. (plan provenance: ...)
+  NEW     [INFO] CV018 Send Or Route Not In Plan: BUS 4 "Drum IEM": routed to MAIN 1 on the desk; the plan lists no route from this bus to it.
+  ...
   Coverage: no input sockets read -- C001 and C007 could not be checked.
 [2026-10-15T10:00:30+00:00] change detected:
-  CLEARED [WARNING] CV006 Bus Send Contradicts Plan: CH 1 "Kick": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST.
+  CLEARED [WARNING] CV006 Bus Send Contradicts Plan: CH 2 "Snare": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST. (plan provenance: ...)
   ...
 ```
 

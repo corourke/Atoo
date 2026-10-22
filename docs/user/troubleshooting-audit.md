@@ -721,13 +721,14 @@ and says nothing.
 ## A send or route you did not plan: `CV018`, `CV006`, `CV007`
 
 With the plan, `audit` and Watch also check the desk's sends and Main
-routes against what the plan built. Three rules, all WARNINGs:
+routes against what the plan built. Three rules, two WARNINGs and an INFO:
 
-- **`CV018 Send Or Route Not In Plan`** is a send or route that is *on*
-  and that the plan does not have: a channel sending to a bus the plan
-  gave it no send to (or to any Matrix), above the floor, or a bus routed
-  to a Main its plan entry does not list. It is how a click mic opened
-  into a bus that feeds the PA, or a wedge summed into Main, is caught.
+- **`CV018 Send Or Route Not In Plan`**, the INFO, is a send or route that
+  is *on* and that the plan does not have: a channel sending to any
+  Matrix above the floor, or a bus routed to a Main its plan entry does
+  not list. It is how a wedge summed into Main is caught. A channel
+  sending to a bus the plan gave it no send to is not reported: adding a
+  send is an ordinary act.
 - **`CV006 Bus Send Contradicts Plan`** is a send the plan states that is
   off, in the other pre/post mode, or (in `audit` only) at another level.
 - **`CV007 Main Route Contradicts Plan`** is a channel's route to a Main
@@ -736,23 +737,25 @@ routes against what the plan built. Three rules, all WARNINGs:
 
 ```
 $ atoo audit --state touched.state.json --plan show.plan.json
-Audit findings: 3 warning.
+Audit findings: 8 warning, 3 info.
 
 [WARNING] CV006 Bus Send Contradicts Plan
-  CH 1 "Kick": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST.
+  CH 2 "Snare": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST. (plan provenance: ...)
 
 [WARNING] CV007 Main Route Contradicts Plan
-  CH 2 "Click": plan lists no direct route from this channel to Main 1, live console reads on.
+  CH 3 "Rack Tom": plan lists no direct route from this channel to Main 1, live console reads on. (plan provenance: ...)
 
-[WARNING] CV018 Send Or Route Not In Plan
-  CH 2 "Click": a send to BUS 2 "Drums" is on at 0dB; the plan has no send from this channel to that bus.
+[INFO] CV018 Send Or Route Not In Plan
+  BUS 4 "Drum IEM": routed to MAIN 1 on the desk; the plan lists no route from this bus to it.
 
-Physical sockets read: in none; out LCL 1-3.
+(the other findings are left out here)
+
+Physical sockets read: in AES50-A 1-15, LCL 1-9; out AES50-A 1-8, LCL 1-2.
 ...
 ```
 
 A desk left exactly as `atoo apply` set it raises none of them. If the
-send or route is what you want, leave the row (it is a WARNING and
+send or route is what you want, leave the row (a WARNING or an INFO, and
 `audit` exits `0`) or put it in your conventions and rebuild, so the
 plan has it. Two things to know:
 

@@ -297,7 +297,7 @@ planned send and Main route is off (CV016), a channel, bus, DCA,
 Main or Matrix the plan leaves unmuted that is muted on the desk
 (CV017), a planned send switched off or flipped between pre and post
 (CV006) or a Main route that disagrees with the plan (CV007), a send
-or route that is on although the plan does not have it (CV018), and 48V
+or route that is on although the plan does not have it, an info (CV018), and 48V
 on a socket that is not what the plan states (CV019), a bus that is mono or stereo where the plan
 states the other (CV020), and talkback that misses a monitor mix the plan builds
 ([CV021](troubleshooting-audit.md#talkback-that-misses-one-monitor-mix-cv021-cv022)). Watch

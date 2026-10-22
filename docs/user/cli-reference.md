@@ -1294,11 +1294,11 @@ you start watching isn't a change. --state-sequence plays a fixed list of JSON c
 in order (then repeats) instead of a live console, so a novice operator can see an alert
 fire with no hardware at all.
 
-With --show, the bundle's plan adds drift checks, each a WARNING that clears
-when the desk is put back: a channel whose every planned send and Main route is off
+With --show, the bundle's plan adds drift checks, each a WARNING (CV018 an
+INFO) that clears when the desk is put back: a channel whose every planned send and Main route is off
 (CV016), a planned send switched off or flipped between pre and post (CV006), a
 channel's Main route off that the plan lists or on that it does not (CV007), a send
-to a bus or Matrix, or a bus's route to a Main, that is on and the plan does not have
+to a Matrix, or a bus's route to a Main, that is on and the plan does not have
 (CV018), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted
 (CV017), 48V that is on where the plan has none or off where it has it (CV019), a bus that
 is mono or stereo where the plan states the other (CV020), talkback that reaches
