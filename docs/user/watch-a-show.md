@@ -223,6 +223,53 @@ later comes back, it is shown again as a new finding, and flashes if
 **Flash on new** is on: a fault that returns may be a new problem.
 **Start** clears every suppression; this browser does not keep them.
 
+### Save what it found
+
+To report a session, or to read it afterwards, have Watch write its findings
+to a file as it runs:
+
+```
+$ atoo watch --console 192.0.2.16 --findings-log tonight.jsonl
+```
+
+Each line of the file is one JSON object, appended and flushed every pass,
+so Ctrl-C or a crash loses nothing. Running again with the same file adds to
+it.
+
+- **`header`**, first: the Atoo version and where it runs from, the console
+  address and what the desk answered (model, firmware), the show's plan or
+  "no plan", the watch conditions in force and the start time.
+- **`pass`**, one per read: the time, the pass number, what **appeared** and
+  what **cleared** since the last pass, the meter and clip status, and
+  anything the desk did not answer, and, when the desk gave them, the raw
+  AES50 words every pass (`aes50`: `stat` and `dev` for each port, for
+  example `UPD` and `S32`), so a stage box link that flaps between words
+  shows as a timeline. The baseline and every pass that changed
+  something also carry **`findings`**, every finding standing, each as
+  `severity`, `code` (the rule id), `message`, `where` and `addresses`, the
+  same words as `--review-json`.
+- **`footer`**, last, when Watch stops cleanly (the count reached, or
+  Ctrl-C). A log with no footer was cut off.
+
+For example, two reads of a desk where a second channel gets the name `Vox`,
+then gets its own name back (`--state-sequence` plays saved states instead of
+a desk):
+
+```
+$ atoo watch --state-sequence before.json,after.json,before.json --interval 0 --count 3 --findings-log found.jsonl
+$ python3 -c "import json; [print(l['type'], l.get('pass'), [f['code'] for f in l.get('appeared', [])], [f['code'] for f in l.get('cleared', [])]) for l in map(json.loads, open('found.jsonl'))]"
+header None [] []
+pass 0 [] []
+pass 1 ['N001'] []
+pass 2 [] ['N001']
+footer None [] []
+```
+
+The file holds only what Watch read: nothing is written to the desk, and no
+key or password is in it. The console address is the one you typed, so look
+before you send it to someone. On the Watch page, **Save findings** under
+**This watch** downloads the same lines for the session so far.
+
 ## 3. Say what matters tonight: watch conditions
 
 The **Watch conditions** panel holds this show's own rules, saved in its
