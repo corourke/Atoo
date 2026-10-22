@@ -223,24 +223,25 @@ the rule says nothing for them rather than guess. A channel on its
 alternate input is reported by `C004` instead, the talkback strip is left out, and with no input sockets
 read the run says that `C007` could not be checked.
 
-## A stage box is on the patch but no audio comes from it: `C008`, `C009`
+## A stage box is on the patch but no audio comes from it: `C008`, `C009`, `C010`
 
 A WING reports the state of each AES50 port: nothing on it (`-`), linked
 (`OK`), a link error (`ERR`) or updating (`UPD`). A stage box whose link has
 failed silences every input on it and every output to it at once, and nothing
 on a channel shows it: the patch is as you set it, the fader is up and the
 meter is flat. `C008` says so for a port that something depends on, and
-`C009` for a stage box that is not settled.
+`C009` for a stage box in error that nothing is patched to. `C010` only
+reports the word `UPD`, because Atoo does not know what it means.
 
 ```
 $ atoo audit --state stagebox.state.json
-Audit findings: 1 error, 1 warning.
+Audit findings: 1 error, 1 info.
 
 [ERROR] C008 AES50 Port Cannot Carry Its Patch
   AES50-A reports a link error (ERR), and CH 1 "Kick" and CH 2 "Snare" take their input from it. No audio passes while the link is in error: check the cable and the stage box.
 
-[WARNING] C009 AES50 Stage Box Link Not OK
-  AES50-B reports UPD: the stage box on it is updating. Nothing is patched from it or to it yet.
+[INFO] C010 AES50 Port Reports UPD
+  AES50-B (S32) reports UPD, which the desk's list gives without saying what it means (a healthy stage box has been seen reading it). The meters are not being read, so Atoo cannot say whether it is passing audio.
 ...
 ```
 
@@ -252,21 +253,29 @@ cable and the stage box; for `-`, connect the stage box, or patch those
 channels and outputs somewhere else. A stage box that is simply not
 connected, with nothing patched to it, is not an error.
 
-**`C009` is a warning.** It says a stage box is updating (`UPD`), which
-passes no audio until it finishes and names the channels that wait for it,
-or that a stage box is in error with nothing patched from it or to it yet:
-nothing in the show is lost, but the link will not carry audio.
+**`C009` is a warning.** It says a stage box is in error with nothing
+patched from it or to it yet: nothing in the show is lost, but the link
+will not carry audio.
 
-In Watch both appear when the link drops or the box starts updating, and
-clear when it reads `OK`. A port that reads `OK` is silent, and so is a
+**`C010` is information, never a warning.** A healthy Behringer S32 on
+AES50-A, passing audio, reads `UPD` on a full-size WING, so Atoo does not
+treat `UPD` as a stage box that is updating and silent. `C010` says what
+the desk said and, in Watch, what the meters show: how many of the strips
+patched from that port are carrying signal, so the box is passing audio, or
+that none is just now, which may only be a quiet stage. It never lists
+every channel on the port as silent; that is for a port that is down
+(`C008`).
+
+In Watch `C008` and `C009` appear when the link drops, and `C010` while the
+desk reads `UPD`; each clears when it reads `OK`. A port that reads `OK` is silent, and so is a
 run that did not read the link: `audit` and Watch read it whenever they
-read the output sockets, and say that `C008` and `C009` could not be
+read the output sockets, and say that `C008`, `C009` and `C010` could not be
 checked when they did not. A channel on its alternate input is reported by
 `C004` instead.
 
 **What `ERR` and `UPD` mean.** The
-desk's own list has those words and Atoo reads them as they say: a link
-error, and an update. `R002` follows sockets, not links, so a bus patched to
+desk's own list has those words. Atoo reads `ERR` as a link error; what
+`UPD` means is not known (see `C010`). `R002` follows sockets, not links, so a bus patched to
 a dead stage box's output still counts as routed there; `C008` is the check
 that the link is up.
 
@@ -753,7 +762,7 @@ did not answer is not reported.
 ## `audit` or `watch` says rules "could not be checked"
 
 ```
-Coverage: no output sockets read -- R002, R003, R004, R005, R006, R011, CV009, C008 and C009 could not be checked.
+Coverage: no output sockets read -- R002, R003, R004, R005, R006, R011, CV009, C008, C009 and C010 could not be checked.
 ```
 
 That is `watch`'s one-line form; `audit` says the same in a sentence
@@ -762,7 +771,7 @@ either, C001 (phantom power on an unpatched socket) and C007 (a strip's input
 socket muted) join the list.
 
 Nothing is broken. The output rules are all about the **output patch** —
-which bus, Main or Matrix feeds which physical jack — and `C008` and `C009`
+which bus, Main or Matrix feeds which physical jack — and `C008`, `C009` and `C010`
 read each stage box's link along with it. This run never read it, so they
 declined to answer rather than guess.
 

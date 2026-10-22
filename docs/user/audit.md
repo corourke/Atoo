@@ -186,7 +186,7 @@ recognise — it names the rules that therefore did not run rather than
 leaving you to read their silence as an all-clear:
 
 ```
-Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On One Side), CV009 (Undeclared Physical Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's Input Socket Muted) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
+Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On One Side), CV009 (Undeclared Physical Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK), C010 (AES50 Port Reports UPD), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's Input Socket Muted) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.
 ```
 
 Those rules stand down only when no output socket was read at all. A

@@ -27,7 +27,7 @@ Find the symptom, then go to its page.
 | A channel feeds itself and howls, or could: `R009`, `R010` | [audit](troubleshooting-audit.md#a-channel-feeds-itself-and-howls-or-could-r009-r010) |
 | A channel is on and named, but nothing is patched to it: `C006` | [audit](troubleshooting-audit.md#a-channel-is-on-and-named-but-nothing-is-patched-to-it-c006) |
 | A channel is silent and nothing on it is muted: `C007` | [audit](troubleshooting-audit.md#a-channel-is-silent-and-nothing-on-it-is-muted-c007) |
-| A stage box is on the patch but no audio comes from it: `C008`, `C009` | [audit](troubleshooting-audit.md#a-stage-box-is-on-the-patch-but-no-audio-comes-from-it-c008-c009) |
+| A stage box is on the patch but no audio comes from it: `C008`, `C009`, `C010` | [audit](troubleshooting-audit.md#a-stage-box-is-on-the-patch-but-no-audio-comes-from-it-c008-c009-c010) |
 | A whole group of channels is silent and every one is up: `CH004` | [audit](troubleshooting-audit.md#a-whole-group-of-channels-is-silent-and-every-one-is-up-ch004) |
 | A channel reaches the same Main or Matrix by two routes: `R012`, `R013` | [audit](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013) |
 | A bus is heard on one side only, or is not the width the plan says: `R011`, `CV020` | [audit](troubleshooting-audit.md#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020) |
