@@ -56,6 +56,52 @@ export ATOO_AI_MODEL=gpt-4o-mini
 export ATOO_AI_BASE_URL=https://api.openai.com   # the host, without /v1
 ```
 
+### What an `api` call sends, and what happens when a host says no
+
+One code path serves every OpenAI-compatible host; nothing in it knows a
+vendor's name. A call sends the model, your system and user text,
+`temperature: 0`, `stream` (see `ATOO_AI_STREAM`), and **the reply format
+as `response_format`**: a strict `json_schema`, so a host that holds to it
+cannot return a reply of the wrong shape. Atoo derives that schema from
+its own reply format in code. Strict mode cannot describe an object whose
+keys are names you choose (the busses, DCAs, mute groups and outputs a
+change adds), so those travel as lists of `{key, value}` entries and are
+turned back into the objects Atoo reads; a field a reply may leave out is
+written `null`, and read as not stated. Atoo still checks every reply
+against its full format, whatever the host held to.
+
+A host that does not know one of these fields answers 400 and names it.
+Atoo asks again **once per field, without it**, and says so:
+
+```
+INFO the host at https://api.example.com refused `response_format` (Unknown field: response_format); asked again without it -- the reply is still checked against the full plan format here
+```
+
+The fields that are retried this way are `response_format`,
+`stream_options`, `temperature` (a model that reasons may refuse it),
+`reasoning_effort` and `max_completion_tokens`. Any other 400, and any
+other error, is shown as it came; nothing is retried that might spend
+twice.
+
+| Variable | Does |
+|---|---|
+| `ATOO_AI_STRUCTURED` | `0` stops sending the reply format as `response_format` |
+| `ATOO_AI_REASONING_EFFORT` | sent as `reasoning_effort` (the host's own words: `low`, `medium`, `high`) to a model that reasons; unset sends nothing. A long wait with little output is usually a reasoning model thinking, and a lower effort shortens it |
+| `ATOO_AI_MAX_TOKENS` | sent as `max_completion_tokens`, which counts a reasoning model's hidden tokens too; unset sends none |
+
+**A reply that fails the format is sent back once.** When a change's reply
+does not match the change-set format (a field of the wrong type, a missing
+key), or the desk refuses what it proposed (a bus that is not there), Atoo
+sends the same request again with the reply and the exact message, and
+asks for the corrected change set. It is one extra call, never more; both
+calls print their usage line (the second is labelled `change-repair`) and
+the second is said at INFO. The Claude provider does not do this.
+
+A `null` in a place where the format lets a reply say nothing is not
+refused: it is read as left out, and an INFO names the fields. A `null`
+48V (`source.phantom`) is read as off, and a `null` `patch.stated` as
+"chosen, not named"; both are said.
+
 ### Pricing a host
 
 Atoo knows what Claude models cost, so a Claude call ends its usage line
