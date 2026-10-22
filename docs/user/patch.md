@@ -187,6 +187,31 @@ A change can also edit what is running; see
   what the strip holds now, and that it is not what the plan built. Undo
   puts it back. (A rebuild with `amend` that merely leaves a channel out
   never named it, so it still leaves a changed strip alone.)
+- **A change never moves what you did not name.** If setting a field would
+  also change addresses on other objects — patching a strip onto a socket
+  another strip uses turns that strip's link off too — the change is
+  **refused, and the refusal is the question**: it names the other objects and
+  the addresses it would move, and says how to go ahead. Name those objects in
+  the change as well (say what you want done to each) and it is carried out,
+  like any instruction you state. Nothing is written with a warning instead.
+- **A channel can be made stereo, or mono again.** *"Make ch 5 stereo"*
+  puts a mono channel that is on an odd socket on that socket and the next
+  one, if nothing uses it, and says so at `INFO`; name the pair in the change
+  to choose it yourself. What cannot be done is refused with the reason: a
+  cable on an even socket cannot be one half of a pair where it is (a stereo
+  pair on a WING starts on an odd socket), and a second socket another
+  channel uses is not taken. Made mono again, the channel keeps its first
+  socket and the second is left as the desk has it. The other fields that say
+  *which* source a strip is (`source.input`, the strip number, an index) are
+  still refused: drop the channel and add it again.
+- **A channel's preset can be switched.** *"Use the Snare preset on the
+  Kick"* expands the new preset over the running channel as a build would:
+  the values that differ are written, a value the old preset set and the new
+  one does not goes back to what an initialized strip reads, and a field the
+  plan states itself (a high-pass you typed, say) stays as stated. A preset
+  the library does not have is refused, with that reason. Switching a *bus's*
+  preset is still shown as `MODIFIED`, not written (it has an effect engine
+  to allocate).
 - **A channel can be inserted, and then the strips after it move.**
   *"Add HiHat after Snare"* puts HiHat on the next free strip and moves
   nothing; *"insert HiHat after Snare and renumber the channels after
@@ -269,11 +294,16 @@ A change can also edit what is running; see
   on its strip, and a second patch would place a second copy of it. A
   change already promoted is still listed until the rebuilt show is
   applied, marked `(promoted)`.
-- **On a desk Atoo did not set up, a change can only name groups the
-  plan knows.** A DCA, mute group or bus that is on the desk but not in
-  the plan patch starts from is refused, as above. Leave it out of the
-  change, or add it in the change itself. Existing channels are safe
-  either way: a new channel only ever lands on a free strip.
+- **A bus, DCA or mute group the plan does not know is read off the desk.**
+  On a desk Atoo did not set up, or one set up by hand since, a change that
+  names one — *"clear bus Drums"*, *"put the sax in the Horns DCA"* — reads
+  just that object's name from the desk (never a sweep of it), and for a drop
+  also which strips send into the bus or belong to the group. It is then
+  carried out against what the desk holds, and an `INFO` says it was found
+  there (*"bus 'Drums' is not in the plan on the desk, but the desk holds it
+  as bus 5"*). A strip that sends into it or belongs to it but is not in the
+  plan is named in a `WARNING` and left as it is: the plan has no record of
+  it to edit. A name the desk does not hold either is still refused.
 
 ## Clearing a bus
 
@@ -459,9 +489,11 @@ What an insert does and does not do:
 - **Faders and mutes the plan does not state are not carried.** A moved
   strip's fader goes to -inf and it is unmuted, as an untouched strip
   reads: raise it again. One that the plan states is written as stated.
-- **A change inserts or edits a strip, not both**: an edit of a strip
-  the insert moves is refused (say it as a second change), and so is a
-  drop in the same change.
+- **An insert, an edit and a drop can share a change.** An edit of a strip
+  the insert moves is written with the move (the strip is rewritten whole on
+  its new number, and an INFO says so); a drop beside an insert is carried
+  out, and a strip the dropped channel leaves that a moved channel lands on
+  is written once, by the channel that lands.
 - **The input list is not edited.** `--promote` appends the new input at
   the end of `input.csv`; put the row where it belongs by hand before the
   next rebuild, or the rebuilt numbering will not match the desk.

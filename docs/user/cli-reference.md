@@ -827,11 +827,10 @@ problems: a refused change (a reference, field or value the plan cannot take),
 a channel with no free strip, a pre-flight refusal, a readback mismatch, or an
 unrelated address that moved.
 
-On a desk Atoo did not set up, a change can only name the groups its
-starting plan knows (the desk's journal, else plan.json, else an empty board):
-a DCA, mute group or bus that exists on the desk but not in that plan is
-REFUSED. Leave it out of the change, or add it in the change. Existing channels
-are safe either way -- a new channel only lands on a strip the desk reads free.
+A bus, DCA or mute group the starting plan does not know (a desk Atoo did
+not set up) is read off the desk when the change names it -- only that
+object, not a sweep -- and the change is carried out against what the desk
+holds. A name the desk does not hold either is REFUSED.
 ```
 
 | Option | What it does |

@@ -178,6 +178,13 @@ the desk re-read the delay, so the delay has to follow it. A value a
 restored selector governs is checked against the guard **before** the
 selector goes back, and written after it.
 
+**A model change drops the old model's own values, and undo brings them back.**
+When a gate, compressor or EQ model changes, the desk throws away what the
+model it leaves held (a PSE gate's depth and fast) and shows the new model's
+defaults. The apply reads those values just before the model is written and
+records them, so undo puts the model back and then those values — not the
+model's defaults.
+
 `--state` is a preview against a saved capture and can never be combined
 with `--confirm`: a file says nothing about what the desk holds now,
 which is the whole question the guard asks.
