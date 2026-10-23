@@ -201,7 +201,8 @@ A change can also edit what is running; see
   cable on an even socket cannot be one half of a pair where it is (a stereo
   pair on a WING starts on an odd socket), and a second socket another
   channel uses is not taken. Made mono again, the channel keeps its first
-  socket and the second is left as the desk has it. The other fields that say
+  socket and the second is left as the desk has it; the second input-list row
+  of the pair stays on the list, unused, and the change is not stopped for it. The other fields that say
   *which* source a strip is (`source.input`, the strip number, an index) are
   still refused: drop the channel and add it again.
 - **A channel's preset can be switched.** *"Use the Snare preset on the
