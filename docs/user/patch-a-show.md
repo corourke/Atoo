@@ -99,6 +99,17 @@ findings dock says why, and ends with the line saying which Atoo ran
 (*Ran as atoo 0.2.4 (…)*), so that the failure can be passed on as it
 stands; the footer of the page carries the same line.
 
+A reply that is **short of what you asked** is not written either. If the
+model's own note says the reply is not the answer ("superseded", "needs a
+rerun", "I could not ..."), or it adds fewer channels than your words name (a
+quoted name such as "Choir R" it left out, or a count such as "add three
+channels"), Atoo sends it back to the model once and uses the second reply.
+If that one is short too, the command stops with the reason, for example
+*the change names "Choir R"; the reply does not add it*, and nothing is
+written. Say the change again, or add the missing channel by hand. A quoted
+pair such as "Choir L" and "Choir R" built as one stereo "Choir" counts as
+both.
+
 ## Edge cases
 
 - **A strip someone else is using** is never written over. To reuse one
