@@ -29,7 +29,7 @@ reads it.
 
 Every command that reads or writes a desk or calls a model (`build`,
 `apply`, `patch`, `amend`, `undo`, `ping`, `audit`, `watch`, `resolve`)
-prints the same first line on stderr, `atoo 0.2.4 (running from ...)`, before it does
+prints the same first line on stderr, `atoo 0.2.5 (running from ...)`, before it does
 anything else, so the output of a run that went wrong always says which copy
 produced it.
 

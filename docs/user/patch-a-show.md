@@ -96,7 +96,7 @@ its short name and the words you typed.
 
 A model reply Atoo cannot use stops the preview with **Failed**. The
 findings dock says why, and ends with the line saying which Atoo ran
-(*Ran as atoo 0.2.4 (…)*), so that the failure can be passed on as it
+(*Ran as atoo 0.2.5 (…)*), so that the failure can be passed on as it
 stands; the footer of the page carries the same line.
 
 A reply that is **short of what you asked** is not written either. If the
