@@ -45,6 +45,25 @@ def _desk() -> SnapDesk:
     return initialized_desk()
 
 
+def _let_the_desk_catch_up(console, udp) -> None:
+    """The fake desk reads its socket on its own thread. When the client sent anything
+    again, some of those datagrams can still be queued when the test body ends and the desk
+    is closed, and would never be counted: wait until its count has stopped growing."""
+    if not getattr(console, "resends", 0):
+        return
+    import time
+
+    last, stable_since = -1, time.monotonic()
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        now = len(udp.requests)
+        if now != last:
+            last, stable_since = now, time.monotonic()
+        elif time.monotonic() - stable_since >= 0.15:
+            return
+        time.sleep(0.02)
+
+
 @contextlib.contextmanager
 def _wired(desk, *, window, timeout=0.5, **network):
     with UdpDesk(desk, **network) as udp:
@@ -52,6 +71,7 @@ def _wired(desk, *, window, timeout=0.5, **network):
         try:
             yield console, udp
         finally:
+            _let_the_desk_catch_up(console, udp)
             console.close()
 
 

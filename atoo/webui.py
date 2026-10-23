@@ -156,6 +156,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import hashlib
+import io
 import json
 import os
 import random
@@ -171,10 +172,11 @@ from typing import Callable, Optional
 import anyio
 import anyio.abc
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from atoo.ai_provider import AI_NOT_RESPONDING
 from atoo import report as report_module
 from atoo import build_log as build_log_module
 from atoo import bundle, config, console_facts, firstrun, install_info
@@ -193,7 +195,7 @@ from atoo.audit import (AuditRule, ConsoleState, DEFAULT_RULES, Finding,
 from atoo.diagnostics import Diagnostic, Severity
 from atoo.metering import ClipStatus, ClipTracker
 from atoo.watch import (WatchEvent, WatchNote, finding_key, present_findings,
-                        virtual_soundcheck_note, watch)
+                        plan_notes, virtual_soundcheck_note, watch)
 
 _STATIC_DIR = Path(__file__).parent / "web" / "static"
 _DEMO_DIR = Path(__file__).parent / "web" / "demo_states"
@@ -2829,6 +2831,8 @@ class WatchSession:
         self._subscribers: set[asyncio.Queue] = set()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._last_payload: dict | None = None
+        self._findings_sink: io.StringIO | None = None
+        self._findings = None
         self.running = False
         self.label = ""
         self.error: str | None = None
@@ -2845,6 +2849,7 @@ class WatchSession:
         # and a stopped session forgets it. `_base_rules` are the rules as
         # built, which the switch is applied to and lifted from.
         self.virtual_soundcheck = False
+        self._plan_changed: "Callable[[], list[WatchNote]] | None" = None
         self._base_rules: list[AuditRule] | None = None
 
     def subscribe(self, loop: asyncio.AbstractEventLoop) -> asyncio.Queue:
@@ -2888,6 +2893,7 @@ class WatchSession:
         label: str, rules: list[AuditRule] | None = None,
         notes: "list[WatchNote] | None" = None,
         virtual_soundcheck: bool = False,
+        plan_path: "str | Path | None" = None,
     ) -> None:
         """Stop whatever's running (FR-6.7: one session at a time), then
         start a new loop. `provider_factory` is called ON THE BACKGROUND
@@ -2907,9 +2913,24 @@ class WatchSession:
         reading's own -- the console window a live watch reads with,
         when `ATOO_CONSOLE_WINDOW` changed it.
 
-        `virtual_soundcheck` is the switch as the page had it at Start."""
+        `virtual_soundcheck` is the switch as the page had it at Start.
+
+        `plan_path` is the open show's plan, whose rules `rules` are bound to:
+        none, or one that cannot be read, is said at INFO (W005), and a
+        change to the file after Start is said at INFO (W004), since the
+        binding is made once and does not follow a rebuild."""
         self._halt()
+        self._plan_changed = plan_notes(plan_path)
         self._stop.clear()
+        # What this session finds, kept for "Save findings" (the
+        # same lines `atoo watch --findings-log` appends) until the next Start.
+        from atoo import findings_log, install_info
+
+        self._findings_sink = io.StringIO()
+        self._findings = findings_log.FindingsLog(
+            self._findings_sink, findings_log.header_line(
+                install=install_info.describe().payload(), console=label, identity=None,
+                plan=None, conditions=None, started=findings_log._now()))
         self._base_rules = list(DEFAULT_RULES) if rules is None else list(rules)
         self.virtual_soundcheck = bool(virtual_soundcheck)
         rules = self._effective_rules(self._base_rules)
@@ -2959,6 +2980,7 @@ class WatchSession:
         # Off again for the next Start: a switch left on must not carry a
         # forgotten Virtual soundcheck into a live show.
         self.virtual_soundcheck = False
+        self._plan_changed = None
         # After the join, so the stopped loop cannot write it back. A
         # stopped session's last event is not news to anyone: a page
         # opened (or a socket reconnecting) after Stop must not be handed
@@ -3001,8 +3023,12 @@ class WatchSession:
                 self._broadcast(presenter.payload(
                     event, coverage_caveat(latest[0]) if latest else None,
                     latest[0] if latest else None))
+                if self._findings is not None:
+                    self._findings.record(event, latest[0] if latest else None)
                 if self._stop.is_set():
                     break
+            if self._findings is not None:
+                self._findings.close_footer("stopped")
         except Exception as exc:
             # A console that answered the identity check but then drops
             # mid-session (network hiccup, powered off) surfaces here --
@@ -3016,10 +3042,16 @@ class WatchSession:
             self.running = False
             self.virtual_soundcheck = False
 
+    def findings_text(self) -> str | None:
+        """The findings log of the current or last session, or None before
+        any Start."""
+        return None if self._findings_sink is None else self._findings_sink.getvalue()
+
     def _session_notes(self) -> list[WatchNote]:
         """The notes about the watch itself that the switches call for,
         read every cycle."""
-        return [virtual_soundcheck_note()] if self.virtual_soundcheck else []
+        notes = self._plan_changed() if self._plan_changed is not None else []
+        return notes + ([virtual_soundcheck_note()] if self.virtual_soundcheck else [])
 
     def _broadcast(self, payload: dict) -> None:
         self._last_payload = payload
@@ -3463,15 +3495,28 @@ class BuildRun:
         because `build` indents the detail under a reason -- `  the 1,204
         characters that did arrive are in ...` -- and the reason is what
         the dock needs. The whole log stays on step 04."""
-        said = [line.rstrip() for line in self.log if line.strip() and not line[:1].isspace()]
+        lines = [line.rstrip() for line in self.log if line.strip()]
+        said = [line for line in lines if not line[:1].isspace()]
         message = self.error or (said[-1] if said else "the build stopped without a word")
+        # A provider that did not answer says so on one line and gives its
+        # own reason on the indented line after it; the reason is the part
+        # the dock needs, so it is kept with the message.
+        not_responding = AI_NOT_RESPONDING in message
+        if not_responding and not self.error:
+            after = lines[lines.index(said[-1]) + 1:] if said[-1] in lines else []
+            reason = next((ln.strip() for ln in after if ln.strip().startswith("Reason:")), "")
+            if reason:
+                message = f"{message} {reason}"
+        fix = ("read the build log on step 04. A build needs a model: "
+               "ATOO_AI_PROVIDER chooses one (Claude by default, which needs ANTHROPIC_API_KEY) "
+               "-- see https://docs.atoo.app/troubleshooting/troubleshooting/")
+        if not_responding:
+            fix = ("the reason is the AI provider's own. Nothing was written; the build log on "
+                   "step 04 keeps the attempt -- see https://docs.atoo.app/troubleshooting/troubleshooting/")
         return Diagnostic(
             severity=Severity.ERROR, code="build.failed",
             message=f"The build did not produce a plan (exit {self.exit_code}): {message}",
-            where="04 Plan", source="build",
-            fix="read the build log on step 04. A build needs a model: "
-                "ATOO_AI_PROVIDER chooses one (Claude by default, which needs ANTHROPIC_API_KEY) "
-                "-- see https://docs.atoo.app/troubleshooting/troubleshooting/",
+            where="04 Plan", source="build", fix=fix,
         ).to_dict()
 
 
@@ -6529,6 +6574,13 @@ def create_app(
             return list(rules)
         return with_plan_rules(rules, show.plan)
 
+    def _open_plan_path():
+        """The open bundle's plan file, or None with no bundle open: what Start
+        remembers so a rebuild afterwards is said (W004) and a missing or
+        unreadable plan is said at once (W005)."""
+        show = app.state.bundle
+        return show.plan if show is not None else None
+
     @app.post("/api/watch/start")
     async def api_start(req: ConnectRequest, request: Request):
         # async def, not sync -- FastAPI runs a sync path operation in a
@@ -6582,7 +6634,8 @@ def create_app(
                 status_code=400)
         if req.source == "console" and not req.console and bar_is_demo:
             session.start(loop, demo_provider_factory, req.interval, DEMO_CONSOLE_LABEL,
-                          rules=rules, virtual_soundcheck=req.virtual_soundcheck)
+                          rules=rules, virtual_soundcheck=req.virtual_soundcheck,
+                          plan_path=_open_plan_path())
             session.watch_path = req.watch_conditions_path or None
             return session.status()
         if req.source == "console":
@@ -6643,10 +6696,19 @@ def create_app(
             window = window_note()
             session.start(loop, factory, req.interval, f"{req.console}:{req.port}", rules=rules,
                           notes=[window] if window is not None else None,
-                          virtual_soundcheck=req.virtual_soundcheck)
+                          virtual_soundcheck=req.virtual_soundcheck,
+                          plan_path=_open_plan_path())
             session.watch_path = req.watch_conditions_path or None
             return session.status()
         return JSONResponse({"error": f"unknown source {req.source!r}"}, status_code=400)
+
+    @app.get("/api/watch/findings-log")
+    def api_findings_log():
+        text = session.findings_text()
+        if text is None:
+            return JSONResponse({"error": "No watch has been started yet."}, status_code=404)
+        return PlainTextResponse(text, media_type="application/x-ndjson", headers={
+            "Content-Disposition": 'attachment; filename="atoo-findings.jsonl"'})
 
     @app.post("/api/watch/stop")
     def api_stop():

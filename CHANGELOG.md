@@ -2,6 +2,81 @@
 
 What changed in each release, newest first.
 
+## 0.2.5 -- 2026-10-22
+
+Patch does what you plainly ask, the WING Rack is covered end to end, Watch is
+quieter and cleaner, and the AI steps cost a fraction as much.
+
+- **Patch carries out what you ask.** "Clear bus 5 and 6", and dropping a
+  bus, a DCA, a mute group or a Main or Matrix output, are done, and Undo puts
+  them back. An explicit drop of a channel wins over a strip the desk no
+  longer reads as the one the plan built (the review says what it found, at
+  WARNING). You can switch a running channel's preset, make a channel mono or
+  stereo, and insert a channel beside an edit or a drop in the same change. A
+  bus, DCA or mute group the plan does not know, because it was named by hand
+  at the desk, can be cleared. An edit that would also move or re-address
+  something you did not name is **refused with the objects listed, and asks
+  you to name them**; it never writes them for you. Undo now restores a strip's
+  settings under the model it replaced (a gate's PSE depth and fast, for
+  example), and the Preview count equals what is written when a stereo pair's
+  mode mirrors across.
+- **Patch no longer accepts half a change.** If the model's reply says it is
+  not the answer (a note that it is superseded or needs a rerun), or adds fewer
+  channels than your change names or counts ("add two choir mics", or two names
+  in quotes), Patch sends it back once for the whole change, and if it is still
+  short it refuses and says what is missing. Nothing is written for a short
+  reply.
+- **Patch chooses sockets from your words.** A socket you wrote after its
+  group ("A 5") is kept; one you did not name is chosen for you and said at
+  INFO. A pick past the stage box (an S16 has 16 inputs) goes to the next free
+  socket, and a stereo pick with no free adjacent pair goes to the first free
+  pair on LCL.
+- **The WING Rack is covered like the other two.** Apply's "Initialize the
+  console first" switch has the Rack's initialized state, and a Rack
+  Preview that took 23 s now takes about 8 s: Preview no longer asks for values
+  that a model selector says do not exist (a gate or an effect slot holding
+  another model) and says what it skipped. Every Preview ends with one line
+  of what it read: requests, node dumps, single reads and seconds.
+- **Watch.** A stage box on an AES50 port reading `UPD` is no longer a warning
+  that lists every channel as silent: it is an INFO naming the device the desk
+  reports and, while meters are being read, how many strips patched from the
+  port carry signal. While a watch runs on the Watch tab, the page hides the
+  app header and the show bar, and the Watch header and the TROUBLE or ALL OK
+  bar stay pinned at the top however far you scroll. Watch says once, at Start,
+  when it has no plan or one it cannot read and which checks that turns off,
+  and tells you when the plan changed after Start, so a Watch that has been
+  running since before a rebuild no longer judges the desk by the old routes.
+  `atoo watch --findings-log FILE` writes what a session found, one line per
+  pass, and the page's "Save findings" downloads the same lines. A parallel
+  bus the plan states is read as asked for, and a signal that splits and
+  recombines without being asked for says plainly what to change in your
+  conventions.
+- **Audit and Watch: a send you did not plan.** A channel's send to a bus is no
+  longer reported, since adding one is an ordinary act at a desk; a send to a
+  Matrix and a bus routed to a Main the plan does not list are reported at
+  INFO.
+- **The AI steps cost much less to repeat.** On Claude, the static part of each
+  prompt is cached, so a repeated Patch, a repair and a fix-up read it back at
+  a small fraction of the input price, and the desk and plan are sent in a more
+  compact form (about 13% fewer input tokens measured, 32% fewer characters).
+  On a live Patch corpus the cost fell from $1.72 to $0.32, with 94% of
+  the input read from cache; a real show pays the cache write again after
+  five idle minutes or after an apply changes the desk. Usage lines show the
+  cached tokens and price them as Anthropic bills them.
+- **A failed or refused AI call says so plainly.** "The AI isn't responding."
+  and the provider's own reason, on the command line and in the page, for any
+  failure (a spend limit, a bad key, a connection error), with the key never
+  shown.
+- **OpenAI-compatible hosts work properly.** `ATOO_AI_PROVIDER=api` asks the host
+  for strictly structured output, retries without a field the host refuses,
+  reads the host's own cost (reasoning tokens included) and cached-input
+  pricing, and allows a longer read timeout for reasoning models. Set
+  `ATOO_AI_PRICE_IN` and `ATOO_AI_PRICE_OUT` to see a dollar figure for a host
+  that does not report one.
+- **`atoo audit --dump-state` saves the stage box's device names**, and an
+  offline Patch warns when they are missing. Every page of the docs site says
+  which version of Atoo it describes.
+
 ## 0.2.4 -- 2026-10-21
 
 Fixes from the first runs of the installed 0.2.3, and a faster, clearer Apply.
@@ -131,7 +206,7 @@ the first run of the public tests.
 
 Still early. Full applies are proven on one WING Compact; a full-size
 WING has been read and watched, and a WING Rack is untested.
-[Where it needs work](docs/user/limitations.md) says what is not built
+[Where it needs work](https://github.com/corourke/Atoo/blob/v0.2.0/docs/user/limitations.md) says what is not built
 or not yet proven.
 
 - **Python 3.11 or newer.** 0.1.0's package accepted 3.9; this one
@@ -218,7 +293,7 @@ or not yet proven.
 
 ## 0.1.0 -- 2026-10-13
 
-Early. Tested on one WING Compact; [Where it needs work](docs/user/limitations.md)
+Early. Tested on one WING Compact; [Where it needs work](https://github.com/corourke/Atoo/blob/v0.1.0/docs/user/limitations.md)
 says what is not built or not yet proven.
 
 - **The name is Atoo.** The command is `atoo`, with

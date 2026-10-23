@@ -143,7 +143,10 @@ def test_the_plans_stretch_says_how_many_of_the_settings_it_looked_at_it_wrote(
     assert _apply(plan, "--confirm", "--journal", str(journal)) == 0
     captured = capsys.readouterr()
     rows = json.loads(journal.read_text())["writes"]
-    plan_rows = [r for r in rows if not r["description"].startswith("reset to initialized")]
+    # An orphaned row is a value the old model held, journalled so Undo can put
+    # it back: a record, not a setting the write phase looked at.
+    plan_rows = [r for r in rows if not r["description"].startswith("reset to initialized")
+                 and r["status"] != "orphaned_prior"]
     wrote = sum(1 for r in plan_rows if r["status"] in ("match", "mismatch", "unreadable"))
     looked_at = len(plan_rows)
     assert 0 < wrote < looked_at

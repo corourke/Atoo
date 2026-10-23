@@ -216,7 +216,6 @@ def test_a_change_that_restates_the_whole_source_sets_what_changed_in_it():
 
 @pytest.mark.parametrize("fields,words", [
     ({"source.input": "Bagpipes"}, "how a running strip is recognised"),
-    ({"source.stereo": True}, "mono to stereo changes how many sockets"),
     ({"source.pair_input": "Snare B"}, "second row of a stereo pair"),
     ({"source.from": "instructions"}, "the build's own record"),
     ({"source.quote": "snare on 2"}, "the build's own record"),
@@ -237,9 +236,9 @@ def test_the_refusal_names_the_parts_of_a_source_a_change_can_set():
         assert field in refused.reason
 
 
-def test_restating_the_whole_source_with_a_different_input_or_stereo_is_refused():
+def test_restating_the_whole_source_with_a_different_input_is_refused():
     plan = applied_plan()
-    for changed in ({"input": "Bagpipes"}, {"stereo": True}):
+    for changed in ({"input": "Bagpipes"},):
         source = dict(_channel(plan, "Snare")["source"], phantom=True, **changed)
         amendment, merge, _t = _review(plan, "Snare", {"source": source})
         [refused] = _refusals(amendment)

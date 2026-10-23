@@ -44,8 +44,10 @@ Emit exactly one JSON object, no prose and no fence:
             "mute_groups": {...}, "outputs": {...}}
            Each entry is the SAME shape as in the plan format above: a
            channel here is a full channel entry, a bus a full bus entry.
-           Leave `index` out of busses, DCAs, mute groups and outputs --
-           numbering them is the code's job.
+           Leave `index` out of outputs -- numbering them is the code's job.
+           A bus, DCA or mute group too, unless the change names its number
+           ("reuse bus 5", "put it on bus 7", "make DCA 3 Strings"): then
+           set that `index` on the new one, and nothing else decides it.
   drop     {"channels": [names], "busses": [names], "dcas": [names],
             "mute_groups": [names], "outputs": [names]}
            Names exactly as the plan on the desk spells them.
@@ -104,6 +106,12 @@ this change is the only new source of inputs.
                                      entry per horn channel)
      "move the bass to A 30"        {"patch": {"group": "A", "sockets": [30],
                                      "stated": true}}
+     "use the Snare preset on      {"processing.preset": "Snare"} -- a channel's
+      the Kick"                     preset by its library name; its values are
+                                    the code's job, never `preset_values`
+     "make ch 5 stereo"             {"source.stereo": true} -- the code takes the
+                                    odd socket pair; name the pair only if the
+                                    change does, as `patch` too
      "48V on the sax"               {"source.phantom": true}
      "the vocal mic is an SM58"     {"source.model": "SM58"}
      "48V on the keys" (a stereo   {"source.phantom": true} -- it switches both
@@ -112,7 +120,7 @@ this change is the only new source of inputs.
    A list is replaced whole, so copy it from the desk plan and change only
    what was asked. NEVER set `fader` unless the change says "fader" (or
    "mute" for `fader.muted`) -- a send level is not the fader. Never set
-   `channel`, `bank`, `source.input`, `source.stereo` or an `index`, and never rename a bus,
+   `channel`, `bank`, `source.input` or an `index`, and never rename a bus,
    DCA or mute group (its name is how everything refers to it). Never put a
    changed copy of a running object in `add`: it would be refused.
 
@@ -120,7 +128,9 @@ this change is the only new source of inputs.
    the cable is: patch to it and set `stated: true`. When the change names
    none, choose a socket the plan on the desk does not use and set
    `stated: false`; the code checks it against the desk and says what it
-   chose.
+   chose -- a pick the desk does not have (A 17 on a 16-input stage box) is
+   replaced there by the next free socket, so never set `stated: true` for
+   a socket the change's own words do not write.
 
 6. STEREO, AND THE FOUR DECIDED FIELDS, ARE AS FOR A BUILD. A channel's
    `source.stereo`, a new bus's `mono` and `destination`, and a send's
@@ -133,6 +143,30 @@ this change is the only new source of inputs.
 7. DROPPING. "Lose the MD vocal", "the keyboard player went home": name the
    channel(s) in `drop.channels`. The code returns each strip to free only
    if the desk still reads as the strip the show built.
+   BUSSES. "Clear bus 5 and 6", "get rid of the drum bus": name each bus
+   in `drop.busses`, exactly as the plan on the desk spells it -- by its
+   name, so "bus 5" is whatever name the plan gives its index 5. The code
+   returns each to free (a bus as an initialized desk has it, and every
+   send into it off), so never put a changed copy of it in `add`, and do
+   not edit its sends yourself. A drop is an instruction: it is carried
+   out, not a suggestion to be held back. "Clear bus 5 and 6 ... add a
+   stereo IEM bus (reuse bus 5) and output to LCL 3-4" is `drop.busses`
+   holding the names of buses 5 and 6, and `add.busses` holding the IEM
+   with `index: 5`, `mono: false` (stereo), and a `dedicated_output`
+   destination whose `patch` is group `LCL`, `sockets: [3, 4]`, `stated:
+   true` -- a stereo bus on a socket pair carries its left on the first
+   and its right on the second.
+   DCAS, MUTE GROUPS, OUTPUTS. "Get rid of the FX DCA", "clear mute group
+   2", "drop the delay speakers": name each in `drop.dcas`,
+   `drop.mute_groups` or `drop.outputs`, exactly as the plan on the desk
+   spells it. The code returns each to free (a DCA or mute group as an
+   initialized desk has it and every channel taken off it; an output as
+   its Main or Matrix and the socket it fed read when initialized), so
+   never edit the channels' DCA or mute-group lists yourself. A drop is
+   carried out, and a new DCA, mute group or bus in the same change may
+   name the number the dropped one held ("clear DCA 3 ... make DCA 3
+   Strings" is `drop.dcas` with the plan's name for DCA 3, and `add.dcas`
+   with `index: 3`).
    MOVING. "Move Playback to Aux 8" is a drop and an add: name the channel
    in `drop.channels`, and add it again on its new strip with the same name
    and source, and the same sockets unless the change names others. The

@@ -9,7 +9,8 @@ closed rather than arbitrary.
 
 Supported: type (single or list), properties, required,
 additionalProperties (bool or schema), items, enum, minimum, maximum,
-minLength, maxLength, minItems, maxItems, oneOf. Anything else in a schema
+minLength, maxLength, minItems, maxItems, oneOf, anyOf (read as oneOf: a
+value must match some branch). Anything else in a schema
 is IGNORED -- so if you add a keyword to plan_schema.py, add it here too
 or it silently stops being enforced. `test_schema_check.py` asserts the
 two stay in step.
@@ -37,7 +38,7 @@ _TYPES = {
 SUPPORTED_KEYWORDS = frozenset({
     "type", "properties", "required", "additionalProperties", "items",
     "enum", "minimum", "maximum", "minLength", "maxLength",
-    "minItems", "maxItems", "oneOf",
+    "minItems", "maxItems", "oneOf", "anyOf",
 })
 
 
@@ -57,8 +58,8 @@ def _type_ok(value, expected: str) -> bool:
 
 
 def _check(value, schema: dict, path: str, errors: list[str]) -> None:
-    if "oneOf" in schema:
-        branches = schema["oneOf"]
+    if "oneOf" in schema or "anyOf" in schema:
+        branches = schema.get("oneOf") or schema["anyOf"]
         if not any(not _collect(value, b, path) for b in branches):
             errors.append(f"{path}: matches none of the {len(branches)} allowed shapes")
         return
@@ -150,7 +151,7 @@ def unsupported_keywords(schema: dict) -> set[str]:
                     continue
                 if key in SUPPORTED_KEYWORDS:
                     found.add(key)
-                    if key in ("items", "additionalProperties", "oneOf"):
+                    if key in ("items", "additionalProperties", "oneOf", "anyOf"):
                         walk(child)
                 elif isinstance(child, (dict, list)):
                     found.add(key)

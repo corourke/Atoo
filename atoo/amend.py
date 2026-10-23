@@ -187,9 +187,10 @@ nearly free.
 the plan's 120Hz high-pass -- neither of which is what an untouched strip
 reads, and both of which the release's own success test ruled out.
 
-* The **mute is a bracket, not an end state**: written ON first so
-  nothing pops while the strip is taken apart, and OFF again last. An
-  untouched WING strip is unmuted.
+* The **mute is an end state, written once**: OFF, last (an untouched WING
+  strip is unmuted). It was a bracket, ON first; two writes to one address
+  cannot be counted by a preview, so the fader goes to -inf first instead
+  and silences the strip while the rest is cleared.
 * The **processing block is cleared**, and the set is derived from the
   build rather than listed, so the bound stays exactly "undo what this
   plan wrote, never more" -- a filter the plan never stated is never
@@ -1180,6 +1181,13 @@ class Amendment:
     #: cleared there where the new occupant states nothing
     #: (`shift_clear_targets`).
     shift_occupants: list[tuple[str, dict]] = field(default_factory=list)
+    #: `(name, index, the applied plan's entry)` of each bus a typed change
+    #: drops and the desk returns to free. Its addresses are
+    #: granted in `release_scope`.
+    freed_busses: list[tuple[str, int, dict]] = field(default_factory=list)
+    #: `(plan key, name, index, the applied plan's entry)` of each DCA, mute
+    #: group or output a typed change drops and the desk returns to free.
+    freed_objects: list[tuple[str, str, int | None, dict]] = field(default_factory=list)
 
     @property
     def blocked(self) -> list[Change]:
@@ -1204,6 +1212,13 @@ class Amendment:
         entry = self.scope.journal_entry(self.strips)
         if self.released:
             entry["released"] = list(self.released)
+            entry["grants"] = {**entry["grants"], **self.release_scope.grants}
+        if self.freed_busses:
+            entry["freed_busses"] = [f"bus:{i} (was {n!r})" for n, i, _e in self.freed_busses]
+            entry["grants"] = {**entry["grants"], **self.release_scope.grants}
+        if self.freed_objects:
+            entry["freed_objects"] = [f"{_FREED_WORD[k]} {n!r}" + (f" ({i})" if i else "")
+                                      for k, n, i, _e in self.freed_objects]
             entry["grants"] = {**entry["grants"], **self.release_scope.grants}
         if self.edited:
             # Which running objects this run changed, and exactly which of
@@ -1297,7 +1312,10 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                    edits: list[FieldEdit] | None = None,
                    moved: set[str] | None = None,
                    renumbered: dict[str, str] | None = None,
-                   inserted: dict[str, str] | None = None) -> Amendment:
+                   inserted: dict[str, str] | None = None,
+                   freed_busses: list[str] | None = None,
+                   freed_objects: list[tuple[str, str]] | None = None,
+                   explicit_drops: set[str] | None = None) -> Amendment:
     """Work out the delta between an applied plan and a rebuilt one, place
     the new objects on free strips, decide which dropped channels may be
     returned to free, and return the lot for review.
@@ -1355,6 +1373,25 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     each inserted one is built on the strip the move vacated. A strip they
     land on that nothing stood on must be free on the desk, or the channel
     landing there is UNPLACEABLE and the whole change is blocked.
+
+    `freed_busses` are the names of busses of the applied plan that a typed
+    change drops: each is returned to free -- every leaf of
+    it reads as an initialized bus (`apply.release_bus_write_targets`) --
+    and its index, which the amended plan may give to a new bus, is not
+    taken by it. Only a typed change names any; a rebuild that leaves a
+    bus out writes nothing for it.
+
+    `explicit_drops` are the source keys of channels the engineer's typed
+    change drops by name. Such a drop is carried out even where
+    `release_refusal` finds the desk no longer reads the strip as the one the
+    plan built: what the strip holds now is said at WARNING, and Undo puts it
+    back. A rebuild that merely leaves a channel out is a guard's business
+    still -- it never names one.
+
+    `freed_objects` are `(plan key, name)` of the DCAs, mute groups and
+    outputs of the applied plan that a typed change drops: each is returned to free the same way
+    (`apply.release_object_write_targets`), and its index -- and an output's
+    sockets -- may be taken by a new one in the same change.
     """
     allow_strips = set(allow_strips or ())
     renumbered = dict(renumbered or {})
@@ -1595,6 +1632,21 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         label = _slot_label(slot)
         refusal = release_refusal(channel, by_label.get(label), shared_sockets=shared_applied,
                                   console_model=console_model)
+        found_there = None
+        if refusal is not None and key in (explicit_drops or ()):
+            # "Lose the MD vocal" is an instruction. The guard exists for a
+            # rebuild that leaves a channel out; here the engineer named it.
+            found_there = refusal
+            status = by_label.get(label)
+            held = (f"name {status.name!r}, patch "
+                    f"{status.patch[0]} {status.patch[1]}" if status and status.patch
+                    else f"name {status.name!r}, no patch" if status else "nothing read")
+            warnings.append(
+                f"WARNING: channel {where} on {label} was dropped by {by} and is returned to free, "
+                f"although the desk no longer reads that strip as the one this plan built: "
+                f"{refusal}. What it holds now ({held}) is cleared with the rest; Undo puts it "
+                "back.")
+            refusal = None
         if refusal is not None:
             changes.append(Change(
                 ChangeKind.REMOVED, "channel", where,
@@ -1602,9 +1654,13 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                 "written to this strip -- go and look at it.",
                 slot=label))
             continue
+        reads_as = ("the desk still reads as the strip this plan built"
+                    if found_there is None else
+                    f"the desk does NOT read it as the strip this plan built ({found_there}), "
+                    "and it is cleared because the change named it")
         changes.append(Change(
             ChangeKind.RELEASED, "channel", where,
-            f"dropped by {by}, and the desk still reads as the strip this plan built -- "
+            f"dropped by {by}, and {reads_as} -- "
             "unpatched (OFF), left unmuted, and its name, "
             "colour, icon, DCA/mute-group tags, bus sends and this plan's own processing "
             "cleared, on the source socket as well as the strip, so the next person to "
@@ -1643,10 +1699,77 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             "processing this plan set are all cleared -- the reading an untouched strip gives. "
             "Its direct Main routing goes back to the factory's too: Main 1 on, the other "
             "Mains off. "
-            "It is muted for the clear and UNMUTED again at the end, because an untouched strip "
-            "is not a muted one. Its FADER goes to -inf first, as an untouched strip reads, so a "
-            "stray source on that socket is not heard; the head-amp gain on its source is left "
+            "Its FADER goes to -inf first, as an untouched strip reads, so a stray source on "
+            "that socket is not heard while the rest is cleared, and it ends UNMUTED, because an "
+            "untouched strip is not a muted one; the head-amp gain on its source is left "
             "alone: that belongs to the socket and is shared on a split.")
+
+    freed: list[tuple[str, int, dict]] = []
+    applied_busses = applied_plan.get("busses") if isinstance(applied_plan.get("busses"), dict) else {}
+    for name in freed_busses or ():
+        entry = applied_busses.get(name)
+        index = entry.get("index") if isinstance(entry, dict) else None
+        if not isinstance(index, int):
+            continue
+        freed.append((name, index, entry))
+        changes.append(Change(
+            ChangeKind.RELEASED, "bus", repr(name),
+            f"dropped by {by}: bus {index} is returned to free -- every setting on it reads "
+            "as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, "
+            "inserts, tags, routes to the Mains and matrices), the output it fed is "
+            "unpatched, and the channels' sends into it are switched off",
+            slot=f"bus:{index}"))
+        release_scope.grant(f"/bus/{index}", f"returning bus {name!r} (bus {index}) to free")
+        for group, socket in _bus_output_sockets(entry):
+            # Granted even where a bus that stays (or a new one) feeds the
+            # socket: `release_targets` leaves out what is written for it.
+            release_scope.grant(f"/io/out/{group}/{socket}",
+                                f"the output socket bus {name!r} fed")
+        infos.append(
+            f"bus {name!r} (bus {index}) was dropped by {by} and is returned to free: the "
+            "bus reads as an initialized one on every WING model -- the values come from the "
+            "initialized capture of this console model, and a bus strip reads the same in "
+            "every capture measured. Its fader goes to -inf first, so it is silent by level "
+            "while the rest is cleared. Undo puts every address back.")
+
+    freed_other: list[tuple[str, str, int | None, dict]] = []
+    for key, name in freed_objects or ():
+        entry = (applied_plan.get(key) or {}).get(name)
+        if not isinstance(entry, dict):
+            continue
+        index = entry.get("index") if isinstance(entry.get("index"), int) else None
+        freed_other.append((key, name, index, entry))
+        word = _FREED_WORD[key]
+        root = {"dcas": "/dca", "mute_groups": "/mgrp"}.get(key)
+        if key == "outputs" and index is not None and entry.get("kind") in ("main", "matrix"):
+            root = "/main" if entry["kind"] == "main" else "/mtx"
+        what = {"dcas": "its fader, mute, name, colour and icon read as an initialized DCA's and "
+                        "its members are taken off it",
+                "mute_groups": "its name and mute read as an initialized mute group's and its "
+                               "members are taken off it",
+                "outputs": "the Main or Matrix behind it reads as an initialized one and the "
+                           "socket it fed read as an initialized desk's"}[key]
+        changes.append(Change(
+            ChangeKind.RELEASED, word, repr(name),
+            f"dropped by {by}: returned to free -- {what}"
+            + (f" ({entry['kind']} {index})" if key == "outputs" and root else ""),
+            slot=(f"{root.lstrip('/')}:{index}" if root and index else None)))
+        if root and index is not None:
+            release_scope.grant(f"{root}/{index}", f"returning {word} {name!r} to free")
+        if key == "outputs":
+            for group, socket in apply_module._output_entry_sockets(entry):
+                release_scope.grant(f"/io/out/{group}/{socket}",
+                                    f"the output socket {name!r} fed")
+            fed_by = entry.get("fed_by")
+            source = _fed_by_base(fed_by, applied_plan) if (
+                isinstance(fed_by, dict) and entry.get("kind") == "matrix") else None
+            if source and index is not None:
+                release_scope.grant(f"{source}/send/MX{index}",
+                                    f"the feed from {source} into dropped matrix {index}")
+        infos.append(
+            f"{word} {name!r} was dropped by {by} and is returned to free: it reads as an "
+            "initialized one on every WING model -- the values come from the initialized "
+            "capture of this console model. Undo puts every address back.")
 
     meta = effective_plan.get("meta")
     if placements:
@@ -1656,16 +1779,21 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     elif isinstance(meta, dict):
         meta.pop(PLACEMENTS_META, None)
 
-    _plan_new_groups(applied_plan, amended_plan, scope, changes, infos)
-    _plan_new_busses(applied_plan, amended_plan, scope, changes, warnings, infos)
-    _plan_new_outputs(applied_plan, amended_plan, scope, changes, warnings, infos)
+    freed_names = {(k, n) for k, n, _i, _e in freed_other}
+    _plan_new_groups(applied_plan, amended_plan, scope, changes, infos, freed=freed_names)
+    _plan_new_busses(applied_plan, amended_plan, scope, changes, warnings, infos,
+                     freed={name for name, _i, _e in freed})
+    _plan_new_outputs(applied_plan, amended_plan, scope, changes, warnings, infos,
+                      freed={n for k, n, _i, _e in freed_other if k == "outputs"})
 
     edit_scope = AmendScope()
     edit_extra: list = []
     edited: list[str] = []
     if edits:
         edits, edit_extra, edited = _plan_edits(
-            effective_plan, edits, occupancy, edit_scope, changes, warnings, infos)
+            effective_plan, edits, occupancy, edit_scope, changes, warnings, infos,
+            freed_busses={n: e for n, _i, e in freed}, console_model=console_model,
+            freed_objects={(k, n): e for k, n, _i, e in freed_other})
 
     shifted.sort(key=lambda row: int(row[2].partition(":")[2]))
     return Amendment(
@@ -1676,7 +1804,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         keep_sockets=keep_sockets, console_model=console_model,
         edits=edits, edit_scope=edit_scope,
         edit_extra=edit_extra, edited=edited, shifted=shifted, shift_scope=shift_scope,
-        shift_occupants=shift_occupants)
+        shift_occupants=shift_occupants, freed_busses=freed, freed_objects=freed_other)
 
 
 # --------------------------------------------------------------------------
@@ -1737,9 +1865,40 @@ def edit_label(edit: FieldEdit) -> str:
     return edit.slot if edit.key == "channels" and edit.slot else f"{edit.word} {edit.name!r}"
 
 
+def _stray_owners(addresses: list[str], plan: dict) -> list[str]:
+    """The objects the `addresses` belong to, in words: `channel 'Kick' (ch:1)`,
+    `bus 'Drums' (bus 5)`, or the console base when the plan has no name for it."""
+    owners: list[str] = []
+    for address in addresses:
+        parts = address.split("/")
+        base = "/".join(parts[:3])
+        kind = parts[1] if len(parts) > 2 else ""
+        number = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else None
+        who = None
+        if kind in ("ch", "aux") and number is not None:
+            channel = next((c for c in plan.get("channels") or []
+                            if isinstance(c, dict) and str(c.get("bank", "ch")) == kind
+                            and c.get("channel") == number), None)
+            who = f"channel {channel.get('name')!r} ({kind}:{number})" if channel else \
+                f"{kind}:{number}"
+        elif kind in ("bus", "dca", "mgrp") and number is not None:
+            key = {"bus": "busses", "dca": "dcas", "mgrp": "mute_groups"}[kind]
+            name = next((n for n, e in (plan.get(key) or {}).items()
+                         if isinstance(e, dict) and e.get("index") == number), None)
+            word = {"bus": "bus", "dca": "DCA", "mgrp": "mute group"}[kind]
+            who = f"{word} {name!r} ({kind} {number})" if name else f"{word} {number}"
+        else:
+            who = base
+        if who not in owners:
+            owners.append(who)
+    return owners
+
+
 def _own_bases(plan: dict, edit: FieldEdit) -> list[str]:
     """The console bases the edited object owns. An edit writing anywhere
-    else, bar a socket (`/io/...`, checked separately), is refused."""
+    else, bar a socket (`/io/...`, checked separately), is a consequence of
+    the named field: refused, naming those objects, unless the change names them
+    too (decided)."""
     if edit.key == "channels":
         return [f"/{edit.slot.replace(':', '/')}"] if edit.slot else []
     obj = edited_object(plan, edit) or {}
@@ -1782,11 +1941,51 @@ def _target_map(plan: dict) -> dict[str, object]:
 _ENABLE_LEAVES = frozenset({"on", "lc", "hc", "tf", "inv"})
 
 
-def _vanished_target(address: str, before, edit: FieldEdit, label: str):
+_SEND_TO = re.compile(r"^/(?:ch|aux)/\d+/send/(\d+)/\w+$")
+
+
+def _vanished_target(address: str, before, edit: FieldEdit, label: str,
+                     freed_indices: frozenset = frozenset(), console_model: str | None = None):
     """The write that takes away what an edit removed, or None when there is
     nothing safe to write (a frequency whose filter is now off, a socket's
-    old name) -- which is said at INFO instead."""
+    old name) -- which is said at INFO instead. A send into a bus the change
+    returns to free (`freed_indices`) is cleared whole: its level, mode, pan
+    and the rest read as an initialized desk has them, not only its switch."""
     leaf = address.rsplit("/", 1)[-1]
+    if edit.path.endswith("preset_values"):
+        # A leaf the old preset set and the new one does not:
+        # the reading an initialized strip gives it -- unless the model
+        # selector that governs it changes in the same edit. Then the desk
+        # drops the old model's leaves itself (a write would find nothing
+        # there), and the run journals their values so Undo can put them back.
+        from atoo import initialize
+        from atoo import preset_expand
+        relative = "/".join(address.split("/")[3:])
+        old_leaves = (edit.old or {}).get("leaves") if isinstance(edit.old, dict) else None
+        new_leaves = (edit.new or {}).get("leaves") if isinstance(edit.new, dict) else None
+        for selector in {k for k in {**(old_leaves or {}), **(new_leaves or {})}
+                         if k.endswith("/mdl")}:
+            if ((old_leaves or {}).get(selector) != (new_leaves or {}).get(selector)
+                    and preset_expand.governs(selector, relative)):
+                return None
+        as_strip_1 = re.sub(r"^/(\w+)/\d+/", r"/\1/1/", address)
+        cleared = [x for candidate in (address, as_strip_1)
+                   for x in initialize.freed_leaves(console_model, candidate)
+                   if x.address == candidate][:1]
+        if cleared:
+            return apply_module.WriteTarget(
+                address, cleared[0].value_type,
+                f"{label}: the old preset's {leaf} -> as initialized (the new preset sets none)",
+                apply_module._const(cleared[0].value), before.stage)
+    match = _SEND_TO.match(address)
+    if match and int(match.group(1)) in freed_indices:
+        from atoo import initialize
+        cleared = initialize.freed_leaves(console_model, address)
+        if len(cleared) == 1 and cleared[0].address == address:
+            return apply_module.WriteTarget(
+                address, cleared[0].value_type,
+                f"{label}: send into a bus returned to free -> {leaf} as initialized",
+                apply_module._const(cleared[0].value), before.stage)
     if leaf in _ENABLE_LEAVES and before.value_type == "i":
         return apply_module.WriteTarget(
             address, "i", f"{label}: {before.description} -> off ({edit.path} changed by "
@@ -1800,7 +1999,9 @@ def _vanished_target(address: str, before, edit: FieldEdit, label: str):
 
 def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[StripStatus],
                 edit_scope: AmendScope, changes: list[Change], warnings: list[str],
-                infos: list[str]) -> tuple[list[FieldEdit], list, list[str]]:
+                infos: list[str], freed_busses: dict[str, dict] | None = None,
+                console_model: str | None = None,
+                freed_objects: dict[tuple[str, str], dict] | None = None) -> tuple[list[FieldEdit], list, list[str]]:
     """Grant each edit the exact addresses its value changes, and return
     `(edits written, extra write targets, labels of the edited objects)`.
 
@@ -1813,6 +2014,20 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
     or object uses. The socket's own name, colour, phantom and gain are that
     strip's, exactly as for a new channel on a taken socket."""
     reverted = copy.deepcopy(effective_plan)
+    # A bus the change drops is not in the effective plan, but a send into it
+    # that the change takes away is a send to a bus that was there: with the
+    # bus put back, the edit's difference is the send's own addresses.
+    freed_indices = frozenset(e["index"] for e in (freed_busses or {}).values()
+                              if isinstance(e.get("index"), int))
+    if freed_busses:
+        reverted["busses"] = {**{n: e for n, e in freed_busses.items()
+                                 if n not in (reverted.get("busses") or {})},
+                              **(reverted.get("busses") or {})}
+    for (key, name), entry in (freed_objects or {}).items():
+        # Likewise a DCA or mute group the change drops: a strip's tag naming
+        # it is a tag that was written, and the edit that takes it away is
+        # the difference with the group put back.
+        reverted[key] = {**{name: entry}, **(reverted.get(key) or {})}
     present: list[FieldEdit] = []
     for edit in edits:
         obj = edited_object(reverted, edit)
@@ -1825,6 +2040,24 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
         set_path(obj, edit.path, edit.old)
         present.append(edit)
     base = _target_map(reverted)
+    # What the change names: every edited object, and every bus, DCA, mute
+    # group or output it drops. Their addresses are the engineer's own words.
+    named_bases: set[str] = set()
+    for named_edit in present:
+        named_bases.update(_own_bases(reverted, named_edit))
+    for freed_name, freed_entry in (freed_busses or {}).items():
+        if isinstance(freed_entry.get("index"), int):
+            named_bases.add(f"/bus/{freed_entry['index']}")
+    for (freed_key, _n), freed_entry in (freed_objects or {}).items():
+        index = freed_entry.get("index")
+        root = {"dcas": "/dca", "mute_groups": "/mgrp"}.get(freed_key)
+        if freed_key == "outputs":
+            root = "/main" if freed_entry.get("kind") == "main" else "/mtx"
+        if root and isinstance(index, int):
+            named_bases.add(f"{root}/{index}")
+
+    def named(address: str) -> bool:
+        return any(address == b or address.startswith(b + "/") for b in named_bases)
 
     input_users: dict[tuple[str, int], list[tuple[str | None, str]]] = {}
     for channel in reverted.get("channels") or []:
@@ -1862,7 +2095,6 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
 
     extra: dict[str, object] = {}
     written: list[FieldEdit] = []
-    refused: set[str] = set()
     for edit in present:
         label = edit_label(edit)
         variant = copy.deepcopy(reverted)
@@ -1879,15 +2111,20 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
                     or any(address == b or address.startswith(b + "/") for b in own)
                     or bool(feed and feed.search(address)))
 
-        stray = [a for a in changed + vanished if not owned(a)]
+        stray = [a for a in changed + vanished if not owned(a) and not named(a)]
         if stray:
-            more = f" and {len(stray) - 4} more" if len(stray) > 4 else ""
+            # Decision of 2026-10-22: an edit that would also move
+            # or re-address objects the engineer did not name is REFUSED and
+            # the refusal is the question; it never writes with a warning.
+            # A change that names those objects too is the instruction.
+            owners = _stray_owners(stray, reverted)
+            shown = ", ".join(stray[:4]) + (f" and {len(stray) - 4} more" if len(stray) > 4 else "")
             changes.append(Change(
                 ChangeKind.REFUSED, edit.word, repr(edit.name),
-                f"setting its {edit.path} would also rewrite {', '.join(stray[:4])}{more} -- "
-                "addresses of objects the change does not name. A change edits only the "
-                "fields it names, so this one needs a rebuild", slot=edit.slot))
-            refused.add(label)
+                f"setting its {edit.path} would also change {shown} -- {len(stray)} address(es) "
+                f"on {', '.join(owners)}, which the change does not name. Nothing is moved that "
+                f"you did not name: to go ahead, name {', '.join(owners)} in the change as well "
+                "(say what you want done to each), and it is carried out", slot=edit.slot))
             continue
         held: dict[str, list[str]] = {}
         for address in changed:
@@ -1905,7 +2142,8 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
         for address in vanished:
             if socket_clash(address, edit):
                 continue
-            target = _vanished_target(address, base[address], edit, label)
+            target = _vanished_target(address, base[address], edit, label, freed_indices,
+                                      console_model)
             if target is None:
                 infos.append(
                     f"{label}: with {edit.path} changed, the plan no longer states {address} "
@@ -1941,14 +2179,14 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
             continue
         mine = next((e for e in present
                      if reason.startswith(f"{edit_label(e)}: {e.path},")), present[0])
-        target = _vanished_target(address, base[address], mine, edit_label(mine))
+        target = _vanished_target(address, base[address], mine, edit_label(mine),
+                                  freed_indices, console_model)
         if target is None:
             infos.append(f"{reason}: the changed plan no longer states {address} "
                          f"({base[address].description}) -- left exactly as the desk has it")
             continue
         extra[address] = target
 
-    written = [e for e in written if edit_label(e) not in refused]
     labels: list[str] = []
     for edit in written:
         label = edit_label(edit)
@@ -1971,15 +2209,20 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
 #: are nothing but a name and an index.
 _GROUP_KINDS = (("dcas", "/dca", "dca"), ("mute_groups", "/mgrp", "mute group"))
 
+#: What a freed DCA, mute group or output is called in a change's review.
+_FREED_WORD = {"dcas": "dca", "mute_groups": "mute group", "outputs": "output"}
+
 
 def _plan_new_groups(applied_plan: dict, amended_plan: dict, scope: AmendScope,
-                     changes: list[Change], infos: list[str]) -> None:
-    """DCAs and mute groups the rebuild added."""
+                     changes: list[Change], infos: list[str], *,
+                     freed: set[tuple[str, str]] | frozenset = frozenset()) -> None:
+    """DCAs and mute groups the rebuild added. `freed` are the `(key, name)`
+    this run returns to free: their indices are free for a new one to take."""
     for key, root, word in _GROUP_KINDS:
         applied = _indexed_names(applied_plan, key)
-        taken = {idx: name for name, idx in applied.items()}
+        taken = {idx: name for name, idx in applied.items() if (key, name) not in freed}
         for name, index in _indexed_names(amended_plan, key).items():
-            if name in applied:
+            if name in applied and (key, name) not in freed:
                 continue
             if index in taken:
                 changes.append(Change(
@@ -1997,12 +2240,17 @@ def _plan_new_groups(applied_plan: dict, amended_plan: dict, scope: AmendScope,
 
 
 def _plan_new_busses(applied_plan: dict, amended_plan: dict, scope: AmendScope,
-                     changes: list[Change], warnings: list[str], infos: list[str]) -> None:
+                     changes: list[Change], warnings: list[str], infos: list[str], *,
+                     freed: set[str] | frozenset = frozenset()) -> None:
+    """`freed` are the busses this run returns to free: their indices, and the
+    output sockets they fed, are free for a new bus to take."""
     applied = _indexed_names(applied_plan, "busses")
-    taken = {idx: name for name, idx in applied.items()}
-    declared_out = _declared_output_sockets(applied_plan)
+    taken = {idx: name for name, idx in applied.items() if name not in freed}
+    declared_out = _declared_output_sockets(
+        {**applied_plan, "busses": {n: e for n, e in (applied_plan.get("busses") or {}).items()
+                                    if n not in freed}})
     for name, index in _indexed_names(amended_plan, "busses").items():
-        if name in applied:
+        if name in applied and name not in freed:
             continue
         if index in taken:
             changes.append(Change(
@@ -2049,7 +2297,8 @@ def _plan_new_busses(applied_plan: dict, amended_plan: dict, scope: AmendScope,
 
 
 def _plan_new_outputs(applied_plan: dict, amended_plan: dict, scope: AmendScope,
-                      changes: list[Change], warnings: list[str], infos: list[str]) -> None:
+                      changes: list[Change], warnings: list[str], infos: list[str], *,
+                      freed: set[str] | frozenset = frozenset()) -> None:
     """Outputs the rebuild added -- the delay-speakers case.
 
     An output entry is two things at once: a physical socket, and an
@@ -2058,14 +2307,18 @@ def _plan_new_outputs(applied_plan: dict, amended_plan: dict, scope: AmendScope,
     often is not -- a second pair of delay speakers off Main 1 must not
     give this amendment the run of Main 1.
     """
+    # An output this run returns to free (`freed`) is not on the desk any more:
+    # its Main or Matrix and its sockets are free for a new output to take.
     applied_outputs = {
         str(name): entry for name, entry in (applied_plan.get("outputs") or {}).items()
-        if isinstance(entry, dict)
+        if isinstance(entry, dict) and str(name) not in freed
     }
     applied_internal = {
         (entry.get("kind"), entry.get("index")) for entry in applied_outputs.values()
     }
-    declared_out = _declared_output_sockets(applied_plan)
+    declared_out = _declared_output_sockets(
+        {**applied_plan, "outputs": {n: e for n, e in (applied_plan.get("outputs") or {}).items()
+                                     if str(n) not in freed}})
     for name, entry in (amended_plan.get("outputs") or {}).items():
         if not isinstance(entry, dict) or str(name) in applied_outputs:
             continue
@@ -2245,6 +2498,11 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
                 or amendment.shift_scope.allows(target))
 
     shift_clears = shift_clear_targets(amendment, targets, warnings)
+    # A strip a dropped channel leaves and another channel lands on in the
+    # same change (an insert beside a drop) is written once, by
+    # the channel that lands: the landing's own value is the clear.
+    landed = {t.address for t in targets if owned(t)}
+    releases = [t for t in releases if t.address not in landed]
 
     # An edit's addresses are the effective plan's own targets at exactly
     # the addresses `_plan_edits` granted, plus the writes that take away
@@ -2295,7 +2553,25 @@ def release_targets(amendment: Amendment, *, warnings: list[str] | None = None) 
     confirmed is still ours.
     """
     applied = amendment.applied_plan
-    return apply_module.release_write_targets(
+    freed: list = []
+    if amendment.freed_busses:
+        # What the same run writes for another object -- a new bus reusing
+        # the index -- is that object's, not a reset.
+        built, _said = apply_module._build_write_targets(
+            amendment.effective_plan, set_fader_levels=True)
+        freed = apply_module.release_bus_write_targets(
+            amendment.freed_busses, console_model=amendment.console_model,
+            written={t.address for t in built},
+            keep_outputs=_declared_output_sockets(amendment.effective_plan))
+    if amendment.freed_objects:
+        built, _said = apply_module._build_write_targets(
+            amendment.effective_plan, set_fader_levels=True)
+        freed += apply_module.release_object_write_targets(
+            amendment.freed_objects, console_model=amendment.console_model,
+            written={t.address for t in built},
+            keep_outputs=_declared_output_sockets(amendment.effective_plan),
+            plan=amendment.applied_plan)
+    return freed + apply_module.release_write_targets(
         amendment.releases,
         # The APPLIED plan's indices, not the rebuild's: these have to be
         # the numbers this strip was actually written with, and a rebuild

@@ -197,8 +197,7 @@ def test_a_plan_that_states_every_leg_stands_r012_down_and_r013_says_so():
 def test_a_plan_that_leaves_one_leg_out_still_reports_and_says_which_it_does_not_state():
     state, plan = _parallel_state(), _parallel_plan(with_comp_destination=False)
     [finding] = _split(state, plan=plan)
-    assert 'the plan was applied and does not state BUS 2 "Drums Comp" to MAIN 1'.lower() \
-        in finding.message.lower()
+    assert 'the plan does not include the route BUS 2 "Drums Comp" to MAIN 1' in finding.message
     assert _split(state, "R013", plan=plan) == []
 
 
@@ -207,7 +206,31 @@ def test_a_direct_route_the_plan_never_lists_is_not_asked_for():
                    _main(1))
     plan = _parallel_plan()
     [finding] = _split(state, plan=plan)
-    assert "does not state" in finding.message
+    assert "the plan does not include the route" in finding.message
+
+
+def test_with_no_plan_in_hand_the_message_says_so_and_does_not_tell_the_user_to_rebuild():
+    [finding] = _split(_parallel_state())
+    assert "Atoo has no plan it could read for this show" in finding.message
+    assert "run it with the show's plan" in finding.message
+    assert "rebuild" not in finding.message
+    assert "leg" not in finding.message.lower()
+
+
+def test_with_a_plan_that_lacks_a_route_the_advice_is_the_chosen_wording_and_names_the_route():
+    [partial] = _split(_parallel_state(), plan=_parallel_plan(with_comp_destination=False))
+    assert ("If this is intended, state the purpose of the parallel bus in your conventions "
+            "or instructions and rebuild; if not, switch one of the routes off.") in partial.message
+    assert "no plan" not in partial.message
+    assert "leg" not in partial.message.lower()
+    [note] = _split(_parallel_state(), "R013", plan=_parallel_plan())
+    assert "leg" not in note.message.lower()
+
+
+def test_watch_rules_for_a_plan_that_cannot_be_read_leave_r012_with_the_no_plan_message(tmp_path):
+    rules = with_plan_rules(DEFAULT_RULES, tmp_path / "missing.plan.json")
+    [finding] = [f for rule in rules for f in rule.check(_parallel_state()) if rule.id == "R012"]
+    assert "has no plan it could read" in finding.message
 
 
 def test_planned_routing_legs_are_the_strips_sends_and_routes_busses_destinations_and_matrix_feeds():
@@ -262,3 +285,77 @@ def test_a_full_desk_of_48_strips_by_16_busses_costs_well_under_a_second():
     elapsed = time.perf_counter() - start
     assert len(findings) >= 48
     assert elapsed < 1.0
+
+
+# --------------------------------------------------------------------------
+# A plan rebuilt under a running Watch is noticed
+# --------------------------------------------------------------------------
+
+
+def test_a_plan_changed_on_disk_after_start_is_said_at_info_and_a_touch_is_not(tmp_path):
+    import os
+
+    from atoo.watch import PLAN_CHANGED_RULE_ID, plan_changed_watcher
+
+    path = tmp_path / "plan.json"
+    path.write_text(json.dumps(_parallel_plan(with_comp_destination=False)), encoding="utf-8")
+    notes = plan_changed_watcher(path)
+    assert notes() == []
+    stat = path.stat()
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    assert notes() == []
+    path.write_text(json.dumps(_parallel_plan()), encoding="utf-8")
+    [note] = notes()
+    assert note.rule_id == PLAN_CHANGED_RULE_ID and note.severity is Severity.INFO
+    assert "Stop Watch and start it again" in note.message
+    assert len(notes()) == 1
+
+
+def test_a_plan_that_is_deleted_or_appears_after_start_is_said_too(tmp_path):
+    from atoo.watch import plan_changed_watcher
+
+    path = tmp_path / "plan.json"
+    absent = plan_changed_watcher(path)
+    assert absent() == []
+    path.write_text("{}", encoding="utf-8")
+    assert len(absent()) == 1
+    present = plan_changed_watcher(path)
+    assert present() == []
+    path.unlink()
+    assert len(present()) == 1
+
+
+def test_watch_carries_the_plan_changed_note_every_pass_from_the_session_notes(tmp_path):
+    from atoo.watch import PLAN_CHANGED_RULE_ID, plan_changed_watcher, watch
+
+    path = tmp_path / "plan.json"
+    path.write_text("{}", encoding="utf-8")
+    notes = plan_changed_watcher(path)
+    cycle = iter(range(3))
+
+    def provider():
+        if next(cycle) == 1:
+            path.write_text('{"changed": true}', encoding="utf-8")
+        return _parallel_state()
+
+    events = list(watch(provider, rules=list(DEFAULT_RULES), max_iterations=3,
+                        sleep=lambda _s: None, session_notes=notes))
+    seen = [any(f.rule_id == PLAN_CHANGED_RULE_ID for f in e.all_findings) for e in events]
+    assert seen == [False, True, True]
+    assert [f.rule_id for f in events[1].new_findings].count(PLAN_CHANGED_RULE_ID) == 1
+
+
+def test_the_watch_page_session_carries_the_note_once_started_against_a_plan(tmp_path):
+    from atoo.watch import PLAN_CHANGED_RULE_ID, plan_changed_watcher
+    from atoo.webui import WatchSession
+
+    path = tmp_path / "plan.json"
+    path.write_text("{}", encoding="utf-8")
+    session = WatchSession()
+    assert session._session_notes() == []
+    session._plan_changed = plan_changed_watcher(path)
+    assert session._session_notes() == []
+    path.write_text('{"rebuilt": true}', encoding="utf-8")
+    assert [n.rule_id for n in session._session_notes()] == [PLAN_CHANGED_RULE_ID]
+    session._halt()
+    assert session._session_notes() == []

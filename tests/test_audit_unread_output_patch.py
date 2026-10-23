@@ -184,7 +184,8 @@ def test_watch_leads_with_the_coverage_caveat(unread_output_state, capsys):
     # in the coverage text, never as a `[WARNING]`/`[ERROR]` line.
     assert "[WARNING] R002" not in out
     assert "[ERROR] R005" not in out
-    assert "baseline -- 1 finding(s)" in out
+    # (W005, watching without a plan, is the second: no --show here)
+    assert "baseline -- 2 finding(s)" in out
 
 
 def test_watch_repeats_the_caveat_with_a_change_event(tmp_path, capsys):

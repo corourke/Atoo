@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atoo"
-version = "0.2.4"
+version = "0.2.5"
 description = "Compile console conventions into a plan, apply it, prove it landed."
 readme = "README.md"
 requires-python = ">=3.11"

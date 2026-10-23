@@ -151,6 +151,7 @@ from datetime import datetime, timezone
 
 from atoo import preset_expand
 from atoo.apply import (
+    ORPHANED_STATUS,
     ApplyResult,
     WriteRecord,
     WriteTarget,
@@ -764,9 +765,23 @@ def undo_from_journal(
     governed_by: dict[str, WriteRecord] = {}
     # Old-journal rows: skipped by the apply, but under a selector it wrote.
     skipped_governed: set[int] = set()
+    # Values the OLD model of a selector held that the apply did not write,
+    # journalled before the selector changed: put back after it.
+    orphans: set[int] = set()
     for record in records:
         in_scope = roots is None or address_under(record.address, roots)
         selector = governing(record) if in_scope else None
+        if record.status == ORPHANED_STATUS:
+            # In scope when the selector that dropped it is: the run granted
+            # the selector, not the leaves the old model took with it.
+            selector = governing(record)
+            if selector is None:
+                result.never_written += 1
+                continue
+            governed_by[record.address] = selector
+            orphans.add(id(record))
+            candidates.append(record)
+            continue
         if record.status not in WRITTEN_STATUSES:
             if record.status == "skipped_no_change" and selector is not None:
                 skipped_governed.add(id(record))
@@ -793,7 +808,8 @@ def undo_from_journal(
     # restored, because restoring its selector changes what it reads.
     early: dict[str, tuple[object, str | None]] = {}
     early_wanted = [r for r in candidates
-                    if r.address in governed_by and r.prior_value is not None]
+                    if r.address in governed_by and r.prior_value is not None
+                    and id(r) not in orphans]
     phase = phases.start(EARLY_PHASE, len(early_wanted)) if early_wanted else None
     for record in early_wanted:
         phase.start_address(record.address)
@@ -828,6 +844,16 @@ def undo_from_journal(
         selector_step = steps_by_address.get(selector.address) if selector is not None else None
         after_selector = selector_step is not None and selector_step.verdict in (
             WOULD_REVERSE, REVERSED, REVERSAL_MISMATCH, REVERSAL_UNREADABLE)
+        if id(record) in orphans:
+            if not after_selector:
+                # Its selector is not being put back: nothing took it away.
+                result.never_written += 1
+                continue
+            _restore_orphan(record, selector, console, dry_run, result, pending)
+            if result.aborted:
+                abort_reason = result.abort_reason
+                break
+            continue
         if id(record) in skipped_governed and not after_selector:
             # Its selector is not being put back (refused, already back,
             # or out of the selection), so nothing re-reads this value:
@@ -968,6 +994,53 @@ def undo_from_journal(
     return result
 
 
+#: What an unreversible step says when its value existed only under the model
+#: the run set -- restoring the model removes it.
+GONE_WITH_MODEL = "gone with the model the run set,"
+
+
+def _restore_orphan(record: WriteRecord, selector: WriteRecord, console, dry_run: bool,
+                    result: UndoResult, pending: list) -> None:
+    """Put back a value the selector's old model held, after the selector is
+    back: the desk dropped it when the model changed, so there is no current
+    value to guard on -- the journal's prior is all that is left, and it is
+    written whatever the desk reads now."""
+    step = UndoStep(
+        address=record.address, description=record.description,
+        value_type=record.value_type, restore_value=record.prior_value,
+        applied_value=record.intended_value, journal_status=record.status,
+        verdict=UNREVERSIBLE_NO_PRIOR,
+    )
+    result.steps.append(step)
+    if record.prior_value is None:
+        return
+    step.detail = f"put back after its selector {selector.address}"
+    if dry_run:
+        step.verdict = WOULD_REVERSE
+        return
+    if console is not None:
+        current_reply = console.get(record.address)
+        current, error = _extract_reply_value(current_reply, record.value_type, record.address)
+        step.current_value = current
+        if error is None and _values_equal(record.value_type, current, record.prior_value,
+                                           record.address):
+            step.verdict = ALREADY_RESTORED      # a leaf both models have: nothing moved it
+            return
+    target = WriteTarget(
+        address=record.address, value_type=record.value_type,
+        description=f"undo: {record.description}",
+        compute_value=_const(record.prior_value), stage=0,
+    )
+    _written, pend, abort_reason = _restore(console, target, record, step)
+    if abort_reason is not None:
+        result.steps.remove(step)
+        result.aborted = True
+        result.abort_reason = abort_reason
+        return
+    if pend is not None:
+        pending.append(pend)
+
+
 def _restore_governed(record: WriteRecord, selector: WriteRecord, early, console,
                       dry_run: bool, result: UndoResult, pending: list,
                       restored_after_selector: list[str], *, skipped: bool) -> None:
@@ -988,6 +1061,9 @@ def _restore_governed(record: WriteRecord, selector: WriteRecord, early, console
     )
     result.steps.append(step)
     if record.prior_value is None:
+        # It did not exist under the model the run changed: the selector's
+        # restore takes it away again, so there is nothing left to put back.
+        step.detail = GONE_WITH_MODEL + f" {selector.address}"
         return
     current, read_error = early
     step.current_value = current

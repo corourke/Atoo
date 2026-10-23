@@ -684,9 +684,9 @@ def test_returned_to_free_means_muted_unpatched_and_blank():
     """
     channel = _mld_vox()
     targets = amendment_targets(removal_scenario())
-    # A LIST of pairs, not a dict: `mute` is written twice on purpose
-    # (on first, off last) and a dict keyed by address
-    # would hide exactly the half this test now exists to pin.
+    # A LIST of pairs, not a dict: a repeated address would be hidden by a
+    # dict, and `mute` is written once now (the fader goes to
+    # -inf first instead of a mute bracket).
     wrote = [(t.address, t.compute_value(None)) for t in targets.releases]
     group, socket = MLD_VOX_SOCKET
     applied = applied_plan()
@@ -702,7 +702,6 @@ def test_returned_to_free_means_muted_unpatched_and_blank():
         (c["patch"]["group"], s) for c in plan_without("MLD VOX")["channels"]
         for s in c["patch"]["sockets"]}
     assert sorted(wrote) == sorted([
-        (f"{MLD_VOX_BASE}/mute", 1),
         (f"/io/in/{group}/{socket}/vph", 0),
         (f"/io/in/{group}/{socket}/name", ""),
         (f"/io/in/{group}/{socket}/col", _facts.FACTORY_SOURCE_COLOUR_INDEX),
@@ -726,11 +725,12 @@ def test_returned_to_free_means_muted_unpatched_and_blank():
         (f"{MLD_VOX_BASE}/mute", 0),
     ])
 
-    # Muted first, unpatched only after the socket has been dealt with,
-    # and unmuted last of all.
+    # Silent by level first (the fader to -inf), unpatched only after the
+    # socket has been dealt with, and unmuted last of all -- the mute once.
     order = [t.address for t in targets.releases]
-    assert order[0] == f"{MLD_VOX_BASE}/mute"
+    assert order[0] == f"{MLD_VOX_BASE}/fdr"
     assert order[-1] == f"{MLD_VOX_BASE}/mute"
+    assert order.count(f"{MLD_VOX_BASE}/mute") == 1
     assert order.index(f"/io/in/{group}/{socket}/name") < order.index(
         f"{MLD_VOX_BASE}/in/conn/grp")
 
@@ -762,9 +762,9 @@ def test_a_release_pulls_the_fader_to_the_factory_reading_and_nothing_else():
     a level chosen for a strip no plan is building is still the mixing
     `apply.py` must never do.
 
-    And it lands BEFORE the closing unmute: the strip is silent by level
-    before it stops being silent by mute. Reversed, there is a window in
-    which a stray source is live at the plan's level."""
+    And it lands FIRST, with no mute bracket (two writes to one
+    address cannot be counted by a preview): the strip is silent by level
+    while the rest is cleared, and the one mute write is the closing unmute."""
     targets = amendment_targets(removal_scenario())
     releases = targets.releases
     faders = [t for t in releases if t.address.endswith("/fdr")]
@@ -773,9 +773,9 @@ def test_a_release_pulls_the_fader_to_the_factory_reading_and_nothing_else():
         assert fader.compute_value(None) == _facts.FACTORY_STRIP_FADER_DB == -144.0
         base = fader.address.rsplit("/", 1)[0]
         mutes = [i for i, t in enumerate(releases) if t.address == f"{base}/mute"]
-        assert mutes, "the release is bracketed by mute writes"
-        assert mutes[0] < releases.index(fader) < mutes[-1], (
-            "fader must come after the opening mute and before the closing unmute")
+        assert len(mutes) == 1, "the mute is written once, as the closing unmute"
+        assert releases.index(fader) < mutes[0]
+        assert releases[mutes[0]].compute_value(None) == 0
 
 
 def test_the_colour_written_back_is_a_value_the_console_has():
@@ -1241,7 +1241,7 @@ def test_a_released_strip_reads_unmuted_afterwards():
     assert reply.value("i") == (0, None)
 
     mutes = [w for w in result.writes if w.address == f"{MLD_VOX_BASE}/mute"]
-    assert [w.intended_value for w in mutes] == [1, 0]
+    assert [w.intended_value for w in mutes] == [0]
     # ...and the unmute is the very last thing the run does to that strip,
     # so nothing after it can put audio through an unmuted one.
     strip_rows = [w.address for w in result.writes
@@ -1648,7 +1648,7 @@ def test_cli_returns_a_dropped_channel_to_free_offline():
     assert "3 added, 1 returned to free, 10 unchanged" in out
     assert "RETURNED TO FREE channel 'BG Vox 1' -> ch:10" in out
     assert "returns to free: ch:10" in out
-    assert "24 of them RETURN A STRIP TO FREE" in out
+    assert "23 of them RETURN A STRIP TO FREE" in out
     for address in ("/ch/10/mute", "/ch/10/in/conn/grp", "/ch/10/name",
                     "/ch/10/tags", "/io/in/LCL/10/name", "/io/in/LCL/10/vph",
                     # The filter this plan set, and the unmute.

@@ -243,7 +243,7 @@ def _wait(predicate, what, timeout=10.0):
 class _Session:
     """A `WatchSession` over a fixed desk, with its payloads collected."""
 
-    def __init__(self, base_rules=None):
+    def __init__(self, base_rules=None, plan_path=None):
         from atoo.webui import WatchSession
 
         self.session = WatchSession()
@@ -251,10 +251,11 @@ class _Session:
         self.payloads: list[dict] = []
         self.queue = self.session.subscribe(self.loop)
         self.base_rules = base_rules
+        self.plan_path = plan_path
 
     def start(self, **kwargs):
         self.session.start(self.loop, lambda: (lambda: _desk(), None), 0.05, "test",
-                           rules=self.base_rules, **kwargs)
+                           rules=self.base_rules, plan_path=self.plan_path, **kwargs)
 
     def events(self):
         while True:
@@ -275,8 +276,10 @@ class _Session:
 
 
 @pytest.fixture
-def live():
-    s = _Session()
+def live(tmp_path):
+    plan = tmp_path / "plan.json"  # a show with a plan: no W005
+    plan.write_text("{}", encoding="utf-8")
+    s = _Session(plan_path=plan)
     yield s
     s.close()
 

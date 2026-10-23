@@ -85,7 +85,7 @@ From real desks. `console-runs/` keeps its original sub-folder names.
 
 | Files | What | Read by |
 |---|---|---|
-| `console-runs/Initialized-Compact.snap`, `Initialized-Full.snap` | the factory state of a Compact and of a full-size WING | `test_audit_in_use.py`, `test_initialize.py`, `test_apply.py`, `test_alternate_input_plan.py` |
+| `console-runs/Initialized-Compact.snap`, `Initialized-Full.snap`, `Initialized-Rack.snap` | the factory state of a Compact, of a full-size WING and of a Rack (the Rack's from WING Edit 3.3.1, firmware 3.1-0-g9f314617, exported 2026-10-21; byte for byte `atoo/initialized/wing-rack.snap`; its `creator_name` is scrubbed to `WING-PP-SERIAL01` like the Compact's, nothing else in the file differs from the desk's export) | `test_audit_in_use.py`, `test_initialize.py`, `test_apply.py`, `test_alternate_input_plan.py` |
 | `console-runs/Church-Full.snap` | a full-size WING with a house mix on it | `test_alternate_input_plan.py` |
 | `console-runs/2026-09-21/` | raw log and OSC captures of channel 1 with and without alternate inputs | `test_readback_index_base.py`, `test_alternate_input_plan.py`, `test_audit_alternate_input.py` |
 | `console-runs/2026-09-21-2100/`, `2026-09-22-2136/` | apply journals of two real runs | `test_undo.py` |

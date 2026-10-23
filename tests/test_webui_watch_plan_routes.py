@@ -34,7 +34,7 @@ from atoo.webui import create_app  # noqa: E402
 SET_UP_AS_PLANNED = {"/ch/2/send/4/mode": "PRE"}
 #: Three things done at the desk the plan does not have or says otherwise.
 TOUCHED = {
-    "/ch/1/send/1/on": 1, "/ch/1/send/1/lvl": -6.0,   # Kick opened to the Vox Wedge
+    "/ch/1/send/MX1/on": 1, "/ch/1/send/MX1/lvl": -6.0,   # Kick opened to Matrix 1
     "/ch/2/send/4/mode": "POST",                      # Snare's IEM send post-fader
     "/ch/3/main/1/on": 1,                             # Rack Tom straight to Main 1
 }
@@ -123,13 +123,13 @@ def test_the_page_draws_the_rows_and_drops_them(home, demo_copy, monkeypatch):
                 page.wait_for_function("document.body.classList.contains('is-demo-show')")
                 page.fill("#interval", "0.5")
                 page.click("#start-btn")
-                for rule_id, words in (
-                        ("CV018", 'CH 1 "Kick": a send to BUS 1 "Vox Wedge" is on at -6dB'),
-                        ("CV006", 'CH 2 "Snare": plan says send to Drum IEM mode is'),
-                        ("CV007", 'CH 3 "Rack Tom": plan lists no direct route')):
+                for rule_id, words, level in (
+                        ("CV018", 'CH 1 "Kick": a send to MTX 1 is on at -6dB', "INFO"),
+                        ("CV006", 'CH 2 "Snare": plan says send to Drum IEM mode is', "WARNING"),
+                        ("CV007", 'CH 3 "Rack Tom": plan lists no direct route', "WARNING")):
                     page.wait_for_selector(f"#alert-body tr:has-text('{rule_id}')", timeout=30000)
                     row = page.locator("#alert-body tr", has_text=rule_id).first
-                    assert "WARNING" in row.inner_text().upper()
+                    assert level in row.inner_text().upper()
                     assert words in row.inner_text()
                 # The desk is put back: the rows go.
                 page.wait_for_function(

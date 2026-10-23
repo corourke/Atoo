@@ -182,18 +182,19 @@ def test_the_expanded_values_of_a_bus_are_not_a_setting_either():
     assert "the build's own record" in refused.reason
 
 
-def test_switching_a_running_preset_is_reported_not_written():
-    """The plan would name one preset and carry the values of another, and
-    nothing on the desk would move."""
+def test_switching_a_running_bus_preset_is_still_reported_not_written():
+    """A bus preset carries an FX engine that has to be allocated; until that
+    is built the plan would name one preset and carry the values of another,
+    and nothing on the desk would move. (A channel's preset is switched:
+    `test_patch_preset_switch.py`, an earlier change.)"""
     plan = preset_plan()
-    for obj, name, path in (("channel", "Snare", "processing.preset"), ("bus", "Drums", "preset")):
-        amendment, merge = _review(plan, _change_set(_modify(name, {path: "Vocal"}, obj=obj)))
-        assert _refusals(amendment) == [] and merge.edits == []
-        [held] = [c for c in amendment.changes if c.kind is ChangeKind.MODIFIED]
-        assert "not written" in held.reason and "carrying the values of another" in held.reason
-        assert merge.plan["channels"] == plan["channels"]
-        for field in ("preset", "preset_values"):
-            assert merge.plan["busses"]["Drums"][field] == plan["busses"]["Drums"][field]
+    amendment, merge = _review(plan, _change_set(_modify("Drums", {"preset": "Vocal"}, obj="bus")))
+    assert _refusals(amendment) == [] and merge.edits == []
+    [held] = [c for c in amendment.changes if c.kind is ChangeKind.MODIFIED]
+    assert "not written" in held.reason and "carrying the values of another" in held.reason
+    assert merge.plan["channels"] == plan["channels"]
+    for field in ("preset", "preset_values"):
+        assert merge.plan["busses"]["Drums"][field] == plan["busses"]["Drums"][field]
 
 
 # ======================================================================

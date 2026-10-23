@@ -578,7 +578,7 @@ def test_usage_summary_carries_model_effort_and_cost_and_leaves_unknowns_none():
     progress.finish(ok=True, usage={"input_tokens": 10, "output_tokens": 20})
     usage = progress.usage_summary(cost=0.42)
     assert usage == {
-        "input": 10, "output": 20, "reasoning_tokens_as_reported": None,
+        "input": 10, "cache_write": None, "cache_read": None, "output": 20, "reasoning_tokens_as_reported": None,
         "thinking": 20, "thinking_source": "estimated",
         "model": "claude-sonnet-5", "effort": "high", "cost": 0.42,
     }
@@ -634,3 +634,43 @@ def test_fake_provider_with_summarized_thinking_produces_a_build_log():
     texts = [n["text"] for n in entry["notes"]]
     assert "Considering sockets." in texts and "Patching LCL first." in texts
     assert entry["usage"]["model"] == "claude-sonnet-5"
+
+
+def _host_reply(monkeypatch, prompt_tokens=1_000_000, completion_tokens=500_000):
+    raw = _sse({"choices": [{"delta": {"content": "{}"}}]},
+               {"choices": [], "usage": {"prompt_tokens": prompt_tokens,
+                                         "completion_tokens": completion_tokens}})
+    monkeypatch.setattr("atoo.ai_provider.urllib.request.urlopen",
+                        lambda req, timeout=None: _Response(raw + b"data: [DONE]\n\n"))
+
+
+def test_a_priced_api_call_prints_its_dollar_cost_and_logs_it(monkeypatch, capsys):
+    """The same `-- $x.xx` suffix a Claude call prints, from
+    the rates in ATOO_AI_PRICE_IN/OUT -- which is what the live eval's cap
+    counts. 1M in at $0.20 + 0.5M out at $0.50 = $0.45."""
+    _host_reply(monkeypatch)
+    provider = ApiKeyProvider(api_key="k", model="grok-x", base_url="https://api.x.ai",
+                              price_in=0.2, price_out=0.5)
+    provider.complete(system="s", user="u", label="generator")
+    err = capsys.readouterr().err
+    assert "grok-x (generator): 1,000,000 in, 500,000 out" in err
+    assert err.rstrip().endswith("-- $0.45")
+    assert provider.build_log["generator"]["usage"]["cost"] == 0.45
+    assert provider.build_log["generator"]["usage"]["input"] == 1_000_000
+
+
+def test_an_unpriced_api_call_says_no_price_set_and_invents_none(monkeypatch, capsys):
+    _host_reply(monkeypatch)
+    provider = ApiKeyProvider(api_key="k", model="grok-x")
+    provider.complete(system="s", user="u", label="generator")
+    err = capsys.readouterr().err
+    assert err.rstrip().endswith("-- no price set") and "$" not in err
+    assert provider.build_log["generator"]["usage"]["cost"] is None
+
+
+def test_a_free_price_prints_zero_dollars(monkeypatch, capsys):
+    """0 and 0 is a price (a local host); it is not 'no price set'."""
+    _host_reply(monkeypatch)
+    ApiKeyProvider(api_key="k", model="m", price_in=0.0, price_out=0.0).complete(
+        system="s", user="u", label="generator")
+    assert capsys.readouterr().err.rstrip().endswith("-- $0.00")

@@ -283,22 +283,59 @@ def test_an_insert_past_the_last_strip_is_refused():
     assert refused and "ch 40" in refused[0].reason
 
 
-def test_an_insert_and_a_drop_in_one_change_is_refused():
+@pytest.mark.parametrize("dropped", ["Keys", "Tom1", "Kick"])
+def test_an_insert_and_a_drop_in_one_change_are_both_carried_out(dropped):
+    """A strip a dropped channel leaves, which a moved channel
+    then lands on, is written once -- by the channel that lands."""
+    change_set = _change(_hihat())
+    change_set["drop"]["channels"] = [dropped]
+    amendment, merge = patch.plan_patch(applied_plan(), change_set, _desk(), text=INSERT,
+                                        console_model="wing-compact")
+    assert not amendment.blocked, [c.line() for c in amendment.blocked]
+    assert [c for c in amendment.changes if c.kind is ChangeKind.RELEASED
+            and c.where == repr(dropped)]
+    assert merge.inserted == {"hihat": "ch:3"}
+    targets = amend.amendment_targets(amendment)
+    assert not targets.collisions
+    addresses = [t.address for t in targets.to_write if not t.address.endswith("/mute")]
+    assert len(addresses) == len(set(addresses)), "an address is written twice"
+
+
+def test_an_insert_beside_a_drop_is_written_and_undo_puts_every_address_back(tmp_path):
     change_set = _change(_hihat())
     change_set["drop"]["channels"] = ["Keys"]
     amendment, _ = patch.plan_patch(applied_plan(), change_set, _desk(), text=INSERT,
                                     console_model="wing-compact")
-    assert any("two changes" in c.reason for c in _kinds(amendment, ChangeKind.REFUSED))
+    console = DeskConsole(full_console_state())
+    before = dict(console.state)
+    journal = tmp_path / "insert-drop.journal.json"
+    result = amend.apply_amendment(amendment, console, dry_run=False, journal_path=str(journal))
+    assert not result.aborted
+    assert console.state["/ch/3/name"][0] == "HiHat"
+    assert console.state["/ch/9/name"][0] == "EG 1"      # moved onto the strip Keys left
+    undone = undo.undo_from_journal(json.loads(journal.read_text()), console, dry_run=False)
+    assert not undone.aborted
+    assert {a for a in set(before) | set(console.state)
+            if console.state.get(a) != before.get(a)} == set()
 
 
-def test_an_edit_of_a_strip_the_insert_moves_is_refused():
+def test_an_edit_of_a_strip_the_insert_moves_rides_with_the_move(tmp_path):
+    """The moved strip is rewritten whole on its new number, so
+    the edit is in that write -- not refused, not written twice."""
     change_set = _change(_hihat())
     change_set["modify"] = [{"object": "channel", "name": "Tom1", "change": "HPF 90",
                              "fields": {"processing.hpf_hz": 90}}]
-    amendment, _ = patch.plan_patch(applied_plan(), change_set, _desk(), text=INSERT,
-                                    console_model="wing-compact")
-    [bad] = _kinds(amendment, ChangeKind.REFUSED)
-    assert "second change" in bad.reason and bad.where == "'Tom1'"
+    amendment, merge = patch.plan_patch(applied_plan(), change_set, _desk(), text=INSERT,
+                                        console_model="wing-compact")
+    assert not amendment.blocked, [c.line() for c in amendment.blocked]
+    assert next(c for c in merge.plan["channels"]
+                if c["name"] == "Tom1")["processing"]["hpf_hz"] == 90
+    assert any("Tom1" in i and "moves with the insert" in i for i in amendment.infos)
+    targets = amend.amendment_targets(amendment)
+    written = {t.address: t.compute_value("") for t in targets.to_write}
+    assert written["/ch/5/flt/lcf"] == 90.0
+    addresses = [t.address for t in targets.to_write if not t.address.endswith("/mute")]
+    assert len(addresses) == len(set(addresses))
 
 
 def test_an_edit_of_a_strip_it_leaves_alone_is_fine_beside_an_insert():

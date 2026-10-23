@@ -769,6 +769,9 @@ class WingConsole:
         self.window = (min(MAX_WINDOW, max(1, int(window))) if window is not None
                        else window_setting()[0])
         self.request_count = 0
+        #: Sends beyond the first of a request: it was not answered in time and went out
+        #: again. Real traffic the desk receives, counted apart from `request_count`.
+        self.resends = 0
         self.bytes_sent = 0
         self.bytes_received = 0
         # Datagrams drained by _request because they answered some other
@@ -853,6 +856,8 @@ class WingConsole:
                   f"expect={'|'.join(expected)} hex={packet.hex()}")
         self.request_count += 1
         for attempt in range(retries + 1):
+            if attempt:
+                self.resends += 1
             try:
                 self.sock.sendto(packet, self.addr)
                 self.bytes_sent += len(packet)
@@ -1127,6 +1132,7 @@ class WingConsole:
                         land(flight, None)
                         continue
                     flight.attempt += 1
+                    self.resends += 1
                     self._log(f"RESEND addr={flight.address!r} hex={flight.packet.hex()}")
                     try:
                         send(flight)

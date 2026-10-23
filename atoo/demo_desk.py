@@ -6,7 +6,7 @@ already ran on a simulated rig (`webui.demo_provider_factory`, over
 `web/demo_states/before.json`), so the Demo could be watched but not
 previewed. This module lets it be previewed **through the real command**:
 `atoo apply` (or `patch`) is pointed at `127.0.0.1` and a port this
-module answers on, so the preview read -- `apply._prefetch_baselines`, the
+module answers on, so the preview read -- `initialize.read_desk`, the
 reset read, the occupancy read, the windowed `console.read_in_windows`,
 the readback index correction -- is the same code a real desk gets. A
 preview path that read a Python dict instead would be a second opinion

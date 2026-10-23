@@ -350,3 +350,89 @@ def test_an_info_rows_tag_in_the_table_is_the_same_blue_as_in_suppressed(assets)
     assert "color: var(--text-dim)" in _rule(css, "#alert-table tr.sev-row-info :is(.row-where, .row-claim)")
     assert "var(--alarm-solid)" in _rule(css, ".sev.solid.sev-error")
     assert "var(--caution-solid)" in _rule(css, ".sev.solid.sev-warning")
+
+# ---- A clean screen while watching ----------------------------
+
+
+def test_the_watch_header_and_verdict_are_pinned_and_the_bars_above_are_hidden(assets):
+    css, js, html = assets["css"], assets["js"], assets["html"]
+    # The verdict is the box's head, but a sibling of it, so it can pin for
+    # the whole page rather than only while the table is on screen.
+    panel = _watch_panel(html)
+    assert panel.index('id="watch-verdict"') < panel.index('aria-label="Alerts"')
+    head = re.search(r"\.watch-shell > \.watch-head \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in head and "top: 0" in head
+    verdict = re.search(r"\.watch-shell > \.verdict-bar \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in verdict and "var(--watch-head-h" in verdict
+    heads = re.search(r"#alert-table thead th \{([^}]*)\}", css).group(1)
+    assert "var(--watch-head-h" in heads and "var(--verdict-h" in heads
+    assert '"--watch-head-h"' in js and '"--verdict-h"' in js
+    # Hidden only on the Watch tab while a watch runs; Stop (running false) shows them.
+    assert "body.is-watching:has(#mode-watch.is-active) :is(.topbar, #bundle-chrome) { display: none; }" in css
+    assert 'document.body.classList.toggle("is-watching", !!running)' in js
+    # Stop stays in the pinned header at phone width; Start is only dropped while watching.
+    assert "body.is-watching .watch-shell > .watch-head :is(" in css
+    assert "#stop-btn" not in re.search(r"body\.is-watching \.watch-shell > \.watch-head :is\(([^)]*)\)", css).group(1)
+
+
+def test_the_pinned_header_and_verdict_stay_in_view_in_the_real_page(tmp_path, monkeypatch):
+    import os
+    import socket
+    import threading
+    import time
+    from pathlib import Path
+
+    sync_api = pytest.importorskip("playwright.sync_api")
+    uvicorn = pytest.importorskip("uvicorn")
+    chromium = os.environ.get("ATOO_TEST_CHROMIUM", "/opt/pw-browsers/chromium")
+    if not Path(chromium).exists():
+        pytest.skip(f"no Chromium at {chromium} (set ATOO_TEST_CHROMIUM)")
+    from atoo import webui
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setenv("HOME", str(home))
+    for name in ("ATOO_CONSOLE", "ATOO_CONSOLE_PORT"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(webui, "DEMO_CLIP_CHANCE", 1.0)
+    monkeypatch.setenv("ATOO_DEMO_SEED", "703")
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(webui.create_app(), host="127.0.0.1", port=port,
+                                           log_level="warning"))
+    threading.Thread(target=server.run, daemon=True).start()
+    while not server.started:
+        time.sleep(0.05)
+    url = f"http://127.0.0.1:{port}/"
+    top = "(s) => document.querySelector(s).getBoundingClientRect().top"
+    shown = "(s) => getComputedStyle(document.querySelector(s)).display !== 'none'"
+    with sync_api.sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=chromium)
+        try:
+            for width in (1280, 920, 390):
+                page = browser.new_page(viewport={"width": width, "height": 500})
+                page.add_init_script("try { localStorage.setItem('atoo.demoPopupSeen', '1'); } catch (e) {}")
+                page.goto(url + "#watch")
+                assert page.request.post(url + "api/console", data={"demo": True}).ok
+                page.reload()
+                page.wait_for_function("document.body.classList.contains('is-demo-show')")
+                assert page.evaluate(shown, ".topbar") and page.evaluate(shown, "#bundle-chrome")
+                page.click("#start-btn")
+                page.wait_for_selector("#alert-body tr:has-text('Clipped')", timeout=30000)
+                assert not page.evaluate(shown, ".topbar") and not page.evaluate(shown, "#bundle-chrome")
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                assert page.evaluate("scrollY") > 0
+                assert page.evaluate(top, "#panel") == 0
+                head_h = page.evaluate("document.getElementById('panel').offsetHeight")
+                assert abs(page.evaluate(top, "#watch-verdict") - head_h) <= 1
+                assert page.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect();"
+                                     " return r.top >= 0 && r.bottom <= innerHeight; }", "#stop-btn")
+                # Stop brings the bars back.
+                page.click("#stop-btn")
+                page.wait_for_function("!document.body.classList.contains('is-watching')")
+                assert page.evaluate(shown, ".topbar") and page.evaluate(shown, "#bundle-chrome")
+                page.close()
+        finally:
+            browser.close()

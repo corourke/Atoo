@@ -1,5 +1,5 @@
 """The Watch page shows a stage box whose link fails (C008, an error), then one
-that is updating (C009, a warning), and drops the row when the link reads OK.
+that is updating (C010, an INFO: UPD is the desk's unexplained word), and drops the row when the link reads OK.
 
 The Python suite cannot see the browser, and these rows add no wire field --
 they ride the findings the page already draws -- so what is pinned is that the
@@ -80,14 +80,14 @@ def test_the_demo_desk_with_a_channel_on_a_stage_box_has_the_link_in_each_state(
     plan = Path(webui.DEMO_SHOW_DIR) / "plan.json"
     rules = with_plan_rules(DEFAULT_RULES, plan)
     built = run_audit(ConsoleState(webui._load_demo_base()), rules)
-    assert not {f.rule_id for f in built} & {"C008", "C009"}     # the Demo as built has no link to report
+    assert not {f.rule_id for f in built} & {"C008", "C009", "C010"}     # the Demo as built has no link to report
     ids = []
     provider, _ = _provider_factory()
     for _ in range(24):
         state = provider()
         ids.append(sorted(f.rule_id for f in run_audit(state, rules)
-                          if f.rule_id in {"C008", "C009"}))
-    assert ids == [[]] * 6 + [["C008"]] * 8 + [["C009"]] * 8 + [[]] * 2
+                          if f.rule_id in {"C008", "C009", "C010"}))
+    assert ids == [[]] * 6 + [["C008"]] * 8 + [["C010"]] * 8 + [[]] * 2
 
 
 def test_the_page_draws_the_row_and_drops_it(home, demo_copy, monkeypatch):
@@ -128,16 +128,16 @@ def test_the_page_draws_the_row_and_drops_it(home, demo_copy, monkeypatch):
                 assert "AES50-A reports a link error (ERR)" in row.inner_text()
                 assert 'CH 1 "Kick"' in row.inner_text()
                 assert "6 more take their input from it" in row.inner_text()
-                page.wait_for_selector("#alert-body tr:has-text('C009')", timeout=30000)
-                row = page.locator("#alert-body tr", has_text="C009").first
-                assert "WARNING" in row.inner_text().upper()
+                page.wait_for_selector("#alert-body tr:has-text('C010')", timeout=30000)
+                row = page.locator("#alert-body tr", has_text="C010").first
+                assert "INFO" in row.inner_text().upper()
                 assert "AES50-A reports UPD" in row.inner_text()
                 # The error leaves the table when the warning replaces it.
                 page.wait_for_function(
                     "!/C008/.test(document.getElementById('alert-body').innerText)",
                     timeout=30000)
                 page.wait_for_function(
-                    "!/C008|C009/.test(document.getElementById('alert-body').innerText)",
+                    "!/C008|C009|C010/.test(document.getElementById('alert-body').innerText)",
                     timeout=30000)
                 page.click("#stop-btn")
             finally:

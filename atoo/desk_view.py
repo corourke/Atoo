@@ -76,13 +76,13 @@ def face_read_plan() -> list[tuple[str, str]]:
     return plan
 
 
-def read_faces(console, *, progress=None) -> dict[str, object]:
-    """Read `face_read_plan` over a connected console, the same windowed
-    way the occupancy read does (`console.read_in_windows`). An address
-    that does not answer is absent -- never a default."""
+def read_addresses(console, pairs, *, progress=None) -> dict[str, object]:
+    """Read `(address, OSC type)` pairs over a connected console, windowed as
+    the occupancy read is (`console.read_in_windows`). An address that does
+    not answer is absent -- never a default."""
     from atoo import console as osc
 
-    pairs = face_read_plan()
+    pairs = list(pairs)
     values: dict[str, object] = {}
 
     def on_start(address: str) -> None:
@@ -99,6 +99,12 @@ def read_faces(console, *, progress=None) -> dict[str, object]:
         if error is None:
             values[address] = facts.correct_readback_index(address, value)
     return values
+
+
+def read_faces(console, *, progress=None) -> dict[str, object]:
+    """Read `face_read_plan` over a connected console. An address that does
+    not answer is absent -- never a default."""
+    return read_addresses(console, face_read_plan(), progress=progress)
 
 
 def colour_name(index: object) -> "str | None":

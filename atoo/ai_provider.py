@@ -29,11 +29,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
-from typing import Mapping, Protocol
+from typing import ClassVar, Mapping, Protocol
 
-from atoo import schema_check
-from atoo.progress import (BuildStopped, ModelCallProgress, StopSignal,
+from atoo import schema_check, strict_schema
+from atoo.progress import (BuildStopped, ModelCallProgress, StopSignal, input_total,
                                 _shutdown_socket, current_stop_signal)
 
 
@@ -184,6 +185,23 @@ class AIProviderError(RuntimeError):
     def __init__(self, *args, partial_text: str = ""):
         super().__init__(*args)
         self.partial_text = partial_text
+
+
+#: What a failed or refused provider call says first, in ONE place so it can
+#: be reworded by editing this string. The provider's own reason follows on
+#: its own line (`not_responding`). Nothing here is specific to a spend limit
+#: or to any one failure: a spend limit is a provider error with a reason.
+AI_NOT_RESPONDING = "The AI isn't responding."
+
+
+def not_responding(reason: str, *secrets: str) -> str:
+    """`AI_NOT_RESPONDING`, then `reason` -- the provider's own words, the
+    status, the connection error -- on its own line. A key the provider
+    echoed back is blanked: it is never shown."""
+    for secret in secrets:
+        if secret and len(secret) >= 8:
+            reason = reason.replace(secret, "[key hidden]")
+    return f"{AI_NOT_RESPONDING}\n  Reason: {reason.strip()}"
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +377,162 @@ class AIProvider(Protocol):
                  response_schema: dict | None = None, label: str = "") -> str: ...
 
 
+PRICE_IN_ENV = "ATOO_AI_PRICE_IN"
+PRICE_OUT_ENV = "ATOO_AI_PRICE_OUT"
+PRICE_CACHED_ENV = "ATOO_AI_PRICE_CACHED"
+#: xAI reports what a call cost in ticks of 1e-10 USD (`usage.cost_in_usd_ticks`;
+#: assumed from xAI's documentation, not confirmed against a live response here).
+USD_PER_TICK = 1e-10
+#: The api provider's read timeout: a reasoning model can think for minutes
+#: before its first token. ATOO_AI_TIMEOUT overrides it.
+API_TIMEOUT = 600.0
+#: Lets xAI cache the prompt prefix across the calls of one run; a host that
+#: does not know it ignores it.
+CONV_ID_HEADER = "x-grok-conv-id"
+
+
+class Prompt(str):
+    """A user message that knows where its cacheable parts end.
+
+    It IS the message: as a `str` it is the plain concatenation of its
+    groups and its tail, so every provider that sends one string sends
+    exactly the text it always did. Only the Claude provider reads the
+    structure, to put `cache_control` breakpoints after each group.
+
+    `groups` run from the part that changes least to the part that changes
+    most, and each ends with the separator that follows it, so the pieces
+    join to the same bytes the old single f-string produced:
+
+    * the TRUE-STATIC group first: the same on every command and every show
+      (the domain knowledge), or empty where the call sends none. Behind
+      the system prompt, which is static too, it is the widest prefix any
+      two calls of this role share;
+    * the SHOW-STABLE group: the conventions, the same for every command in
+      a show until the engineer edits them;
+    * the CALL-STABLE group: what one command re-sends on a repair or a
+      fix-up round (the desk as it stands, the input list, the plan).
+
+    `tail` is what is different on every call (the request, the reply that
+    was refused). Nothing in a group may carry a timestamp, a counter or an
+    unordered collection: a byte that moves before a breakpoint is a cache
+    miss on everything after it.
+    """
+
+    groups: tuple[str, ...]
+    tail: str
+
+    def __new__(cls, groups, tail: str = ""):
+        groups = tuple(groups)
+        if len(groups) > MAX_USER_BREAKPOINTS:
+            raise ValueError(f"at most {MAX_USER_BREAKPOINTS} cached groups in a prompt, "
+                             f"got {len(groups)}")
+        self = super().__new__(cls, "".join(groups) + tail)
+        self.groups = groups
+        self.tail = tail
+        return self
+
+    def with_tail(self, more: str) -> "Prompt":
+        """The same cached groups with `more` after the tail: a repair call
+        re-sends the original prompt and adds what was wrong with the
+        reply, and must read the original from cache."""
+        return Prompt(self.groups, self.tail + more)
+
+
+#: Prompt caching, from Anthropic's documentation, read 2026-10-22:
+#: platform.claude.com, "Prompt caching" (Build with Claude)
+#: * a cache entry is written at each `cache_control` breakpoint, up to FOUR
+#:   in a request; the prefix is built in the order tools, system, messages;
+#: * the default lifetime is 5 minutes, refreshed by each hit; a 1-hour
+#:   lifetime costs 2x to write. Atoo uses the 5-minute one (no
+#:   measurement says a pause of 5 to 60 minutes between calls is the usual
+#:   case; `cache_control` without `ttl` is it);
+#: * a write costs 1.25x the input price (5-minute), a read a MODEL-SPECIFIC
+#:   fraction of it: 0.1x, but 0.05x on Sonnet 5.5 and Opus 5.5 (the page's
+#:   price table: Sonnet 5.5 $2 input, $0.10 read);
+#: * `usage.input_tokens` counts only what is AFTER the last breakpoint;
+#:   the total input is it plus `cache_creation_input_tokens` plus
+#:   `cache_read_input_tokens`;
+#: * a prefix below the model's minimum is silently not cached, no error;
+#: * a changed thinking or effort setting, or a changed tool or output
+#:   format, misses; each role keeps its own constant, so a role's repeats hit.
+CACHE_WRITE_MULTIPLIER = 1.25
+#: (cache read as a multiple of the input price, minimum cacheable prefix in
+#: tokens), per model. Not listed = the 0.1x read of the page's default and
+#: no minimum known, so no "below the minimum" claim is made for it.
+CACHE_TERMS = {
+    "claude-opus-5": (0.1, 512),
+    "claude-opus-5-5": (0.05, 512),
+    "claude-sonnet-5": (0.1, 1024),
+    "claude-sonnet-5-5": (0.05, 512),
+    "claude-haiku-4-5": (0.1, 4096),
+}
+#: Anthropic allows four breakpoints; the system prompt's takes one when the
+#: prompt has no true-static group to carry it, so the user message may
+#: have three groups.
+MAX_USER_BREAKPOINTS = 3
+_CACHE = {"type": "ephemeral"}
+
+
+def claude_cost(model: str, usage: dict, prices: dict) -> float | None:
+    """What Anthropic bills for one call, in dollars, or None for a model
+    with no listed price: uncached input at the input price, cache writes at
+    1.25x (2x for any the API says went to the 1-hour cache), cache reads at
+    the model's read multiple, output at the output price."""
+    price = prices.get(_undated(model))
+    if price is None:
+        return None
+    read_x = CACHE_TERMS.get(_undated(model), (0.1, 0))[0]
+    written = usage.get("cache_creation_input_tokens") or 0
+    hour = min(written, ((usage.get("cache_creation") or {}).get("ephemeral_1h_input_tokens")) or 0)
+    return ((usage.get("input_tokens") or 0) * price[0]
+            + (written - hour) * price[0] * CACHE_WRITE_MULTIPLIER
+            + hour * price[0] * 2.0
+            + (usage.get("cache_read_input_tokens") or 0) * price[0] * read_x
+            + (usage.get("output_tokens") or 0) * price[1]) / 1e6
+
+
+def _usage_line(who: str, usage: dict, text_chars: int,
+                price: tuple[float, float] | None, *, unpriced: str = "",
+                cost: tuple[float, str] | None = None, cache_note: str = "") -> str:
+    """The one-line spend report every provider that prints one shares:
+    `who: N in, M out (~K of it thinking, not returned) -- $x.xx`.
+    `price` is (dollars per million input tokens, per million output); with
+    none, `unpriced` is appended instead (an empty string appends nothing),
+    so a missing price is said, never filled in. `cost` is a (dollars,
+    source) the caller worked out itself (`ApiKeyProvider._cost`,
+    `ClaudeProvider._cost`); it replaces `price` and the source is said
+    after the figure.
+
+    `N` is every input token. Where the call wrote to or read from the
+    prompt cache (Claude), the split follows it --
+    `N in (U uncached, W cache write, R cache read)` -- and `cache_note` is
+    what the caller has to say about a cache that did nothing."""
+    sent = input_total(usage)
+    got = usage.get("output_tokens") or 0
+    line = f"  {who}: {sent:,} in"
+    written = usage.get("cache_creation_input_tokens") or 0
+    read = usage.get("cache_read_input_tokens") or 0
+    if written or read:
+        line += (f" ({(usage.get('input_tokens') or 0):,} uncached, "
+                 f"{written:,} cache write, {read:,} cache read)")
+    elif cache_note:
+        line += f" ({cache_note})"
+    line += f", {got:,} out"
+    # A character count is not a token count, but the ratio is stable
+    # enough (CHARS_PER_TOKEN) to say whether the answer or the
+    # reasoning ate the budget, which is the decision this informs.
+    hidden = got - int(text_chars / CHARS_PER_TOKEN)
+    if got and hidden > got * 0.25:
+        line += f" (~{hidden:,} of it thinking, not returned)"
+    if cost:
+        line += f" -- ${cost[0]:.2f}" + (f" ({cost[1]})" if cost[1] else "")
+    elif price:
+        line += f" -- ${sent / 1e6 * price[0] + got / 1e6 * price[1]:.2f}"
+    elif unpriced:
+        line += f" -- {unpriced}"
+    return line
+
+
 @dataclass
 class ApiKeyProvider:
     """The default: a user-supplied API key against an OpenAI-compatible
@@ -382,63 +556,212 @@ class ApiKeyProvider:
     api_key: str
     model: str
     base_url: str = "https://api.openai.com"
-    timeout: float = 120.0
+    timeout: float = API_TIMEOUT
     stream: bool = True
     show_progress: bool = True
+    # Dollars per million tokens, from ATOO_AI_PRICE_IN / ATOO_AI_PRICE_OUT.
+    # Both or neither: a host's rates are not in any table here, so unset
+    # means the usage line says "no price set" and the build log's cost is
+    # None -- never a guess.
+    price_in: float | None = None
+    price_out: float | None = None
+    # Dollars per million CACHED input tokens (ATOO_AI_PRICE_CACHED); unset
+    # prices them as ordinary input. Only used with price_in/price_out.
+    price_cached: float | None = None
+    # Sent as `x-grok-conv-id` so a host that caches the prompt prefix (xAI)
+    # can; one id per provider (a run), random, never derived from the key.
+    conv_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    # Send the reply schema as `response_format` (ATOO_AI_STRUCTURED=0 turns
+    # it off for a host that does something worse than refuse it).
+    structured: bool = True
+    # ATOO_AI_REASONING_EFFORT: sent as `reasoning_effort` to a host whose
+    # model reasons (xAI, OpenAI); unset sends nothing. ATOO_AI_MAX_TOKENS:
+    # `max_completion_tokens`, which bounds hidden reasoning tokens too.
+    reasoning_effort: str | None = None
+    max_tokens: int | None = None
+    #: A reply that fails the change-set format is sent back once with the
+    #: validator's message (`patch.compile_change`). The Claude provider
+    #: does not: its decoder holds the format and its model rarely needs it.
+    repairs_replies: ClassVar[bool] = True
     # This build's own record of each call's thinking-summary notes and
     # usage, keyed by `label`. Populated after every call that names a
     # label; `cli.py` folds it into `plan["meta"]["build_log"]`. Never read back by any
     # provider -- it is the human reviewer's record, not the model's.
     build_log: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+    # Optional request fields this host has refused in this run: later calls
+    # leave them out at once instead of paying for a refused request.
+    refused: set = field(default_factory=set, init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if (self.price_in is None) != (self.price_out is None):
+            raise AIProviderError(
+                f"{PRICE_IN_ENV} and {PRICE_OUT_ENV} go together (dollars per million "
+                "input and output tokens): set both, or neither")
+        for name, value in ((PRICE_IN_ENV, self.price_in), (PRICE_OUT_ENV, self.price_out),
+                            (PRICE_CACHED_ENV, self.price_cached)):
+            if value is not None and not value >= 0:
+                raise AIProviderError(f"{name} must be a number of dollars, 0 or more, "
+                                      f"got {value!r}")
+
+    @property
+    def price(self) -> tuple[float, float] | None:
+        if self.price_in is None or self.price_out is None:
+            return None
+        return (self.price_in, self.price_out)
+
+    def _cost(self, usage: dict) -> tuple[float, str] | None:
+        """(dollars, a note of where it came from when it is not the plain
+        price settings) for one call, or None.
+        The host's own cost (`cost_in_usd_ticks`) wins; else the price
+        settings, with cached input at ATOO_AI_PRICE_CACHED when set and
+        reasoning tokens counted as output when the host keeps them out of
+        `completion_tokens` (xAI does: total = prompt + completion +
+        reasoning); with neither, None -- never a guess."""
+        ticks = usage.get("cost_ticks")
+        if isinstance(ticks, (int, float)) and not isinstance(ticks, bool):
+            return ticks * USD_PER_TICK, "host-reported cost"
+        price = self.price
+        if not price or not usage:
+            return None
+        sent = usage.get("input_tokens", 0)
+        out = usage.get("output_tokens", 0)
+        notes = []
+        reasoning = usage.get("reasoning_tokens") or 0
+        total = usage.get("total_tokens")
+        if reasoning and (total is None or total - sent - out >= reasoning):
+            out += reasoning
+            notes.append("reasoning tokens counted as output")
+        cached = min(usage.get("cached_tokens") or 0, sent)
+        if cached and self.price_cached is not None:
+            fresh = (sent - cached) / 1e6 * price[0] + cached / 1e6 * self.price_cached
+            notes.append("cached input at the cached price")
+        else:
+            fresh = sent / 1e6 * price[0]
+        return fresh + out / 1e6 * price[1], ", ".join(notes)
+
+    def _report_usage(self, usage: dict, text_chars: int, label: str) -> None:
+        if not self.show_progress or not usage:
+            return
+        who = f"{self.model} ({label})" if label else self.model
+        print(_usage_line(who, usage, text_chars, None, unpriced="no price set",
+                          cost=self._cost(usage)), file=sys.stderr, flush=True)
 
     def complete(self, *, system: str, user: str,
                  response_schema: dict | None = None, label: str = "") -> str:
-        # No constrained decoding here: "OpenAI-compatible" hosts vary in
-        # whether they support response_format and in what they call it,
-        # and guessing wrong is a 400 on every request. The caller still
-        # validates.
+        """One call. The reply schema goes as `response_format` (strict
+        `json_schema`) in the wire form `strict_schema` derives from it, and
+        the reply is turned back into the shape the caller reads. Every
+        optional field of the request (`_OPTIONAL_FIELDS`) is one a host may
+        not know: a 400 that names it is asked again without it, once per
+        field, and said at INFO. The reply is validated by the caller
+        either way."""
         halt = current_stop_signal()
         progress = ModelCallProgress(label, self.model, enabled=self.show_progress,
                                      streams=self.stream, chars_per_token=CHARS_PER_TOKEN)
+        wire = (strict_schema.strict_wire(response_schema)
+                if response_schema is not None and self.structured
+                and "response_format" not in self.refused else None)
         payload = {
             "model": self.model,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "messages": [{"role": "system", "content": system + (strict_schema.WIRE_NOTE if wire else "")},
+                         {"role": "user", "content": user}],
             "temperature": 0,
         }
+        if wire is not None:
+            payload["response_format"] = {"type": "json_schema", "json_schema": {
+                "name": "reply", "strict": True, "schema": wire}}
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        if self.max_tokens:
+            payload["max_completion_tokens"] = self.max_tokens
         if self.stream:
             payload["stream"] = True
             payload["stream_options"] = {"include_usage": True}
+        for name in self.refused:
+            payload.pop(name, None)
         chunks: list[str] = []
         usage: dict = {}
         ok = False
         try:
-            try:
-                text = self._request(payload, halt, progress, chunks, usage)
-            except urllib.error.HTTPError as exc:
-                detail = exc.read().decode(errors="replace")[:400]
-                if exc.code != 400 or "stream_options" not in detail \
-                        or "stream_options" not in payload:
-                    raise AIProviderError(
-                        f"API-key provider call to {self.base_url!r} failed: "
-                        f"HTTP {exc.code} {detail}") from exc
-                # A host that streams but does not know this field.
-                payload.pop("stream_options")
-                text = self._request(payload, halt, progress, chunks, usage)
+            while True:
+                try:
+                    text = self._request(payload, halt, progress, chunks, usage)
+                    break
+                except urllib.error.HTTPError as exc:
+                    detail = exc.read().decode(errors="replace")[:400]
+                    field_ = self._refused_field(exc.code, detail, payload)
+                    if field_ is None:
+                        raise AIProviderError(not_responding(
+                            f"{self.base_url} answered HTTP {exc.code} {detail}",
+                            self.api_key)) from exc
+                    payload.pop(field_)
+                    self.refused.add(field_)
+                    if field_ == "response_format":
+                        payload["messages"][0]["content"] = system
+                        wire = None
+                    self._info(f"the host at {self.base_url} refused `{field_}` ({detail.strip()[:160]}); "
+                               "asked again without it, and not sent again this run"
+                               + (" -- the reply is still checked against "
+                               "the full plan format here" if field_ == "response_format" else ""))
             ok = True
-            return text
+            if wire is None:
+                return text
+            return self._unwrap(text, response_schema)
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode(errors="replace")[:400]
-            raise AIProviderError(
-                f"API-key provider call to {self.base_url!r} failed: HTTP {exc.code} {detail}"
-            ) from exc
+            raise AIProviderError(not_responding(
+                f"{self.base_url} answered HTTP {exc.code} {detail}", self.api_key)) from exc
         except (urllib.error.URLError, TimeoutError, OSError, KeyError, IndexError,
                 TypeError, json.JSONDecodeError) as exc:
-            raise AIProviderError(f"API-key provider call to {self.base_url!r} failed: {exc}",
-                                  partial_text="".join(chunks)) from exc
+            raise AIProviderError(not_responding(
+                f"the call to {self.base_url} failed: {exc}", self.api_key),
+                partial_text="".join(chunks)) from exc
         finally:
             progress.finish(ok=ok, usage=usage)
+            self._report_usage(usage, len("".join(chunks)), label)
             if label:
-                self.build_log[label] = progress.build_log_entry()
+                priced = self._cost(usage)
+                self.build_log[label] = progress.build_log_entry(
+                    cost=priced[0] if priced else None)
+
+    def _info(self, message: str) -> None:
+        if self.show_progress:
+            print(f"INFO {message}", file=sys.stderr, flush=True)
+
+    @staticmethod
+    def _refused_field(code: int, detail: str, payload: dict) -> str | None:
+        """The optional request field a 400 is about, if it is one the
+        payload still carries; None for any other failure (which is not
+        retried: a second call costs money)."""
+        if code != 400:
+            return None
+        low = detail.lower()
+        squashed = re.sub(r"[^a-z]", "", low)    # reasoningEffort, reasoning-effort
+        for name in _OPTIONAL_FIELDS:
+            if name in payload and (name in low or re.sub(r"[^a-z]", "", name) in squashed):
+                return name
+        if "response_format" in payload and _schema_refused("http 400 " + detail):
+            return "response_format"
+        return None
+
+    def _unwrap(self, text: str, schema: dict) -> str:
+        """The strict-mode reply as the JSON the caller reads (arrays back
+        into the maps they stand for), the fields the host said `null` for
+        and the schema lets a reply leave out removed -- "not stated" -- and
+        said at INFO. Text that is not that JSON is returned as it came; the
+        caller's own parsing and validation say what is wrong with it."""
+        try:
+            reply = json.loads(text)
+            dropped: list[str] = []
+            plain = strict_schema.from_wire(reply, schema, dropped)
+        except (TypeError, ValueError):
+            return text
+        if dropped:
+            names = sorted({re.sub(r"\[\d+\]", "[]", d) for d in dropped})
+            self._info(f"{len(dropped)} field(s) came back null and were read as not stated, "
+                       f"as if left out: {', '.join(names[:12])}"
+                       + (f" and {len(names) - 12} more" if len(names) > 12 else ""))
+        return json.dumps(plain)
 
     def _request(self, payload: dict, halt, progress: ModelCallProgress,
                  chunks: list[str], usage: dict) -> str:
@@ -446,7 +769,8 @@ class ApiKeyProvider:
             f"{self.base_url.rstrip('/')}/v1/chat/completions",
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json",
-                     "Authorization": f"Bearer {self.api_key}"},
+                     "Authorization": f"Bearer {self.api_key}",
+                     CONV_ID_HEADER: self.conv_id},
         )
         body: list[bytes] = []
         streamed = False
@@ -473,23 +797,11 @@ class ApiKeyProvider:
                     continue
                 if event.get("error"):
                     err = event["error"]
-                    raise AIProviderError(
-                        "API-key provider stream failed: "
-                        f"{err.get('message') if isinstance(err, dict) else err}",
+                    raise AIProviderError(not_responding(
+                        f"the stream failed: "
+                        f"{err.get('message') if isinstance(err, dict) else err}", self.api_key),
                         partial_text="".join(chunks))
-                reported = event.get("usage") or {}
-                for ours, theirs in (("input_tokens", "prompt_tokens"),
-                                     ("output_tokens", "completion_tokens")):
-                    if isinstance(reported.get(theirs), int):
-                        usage[ours] = reported[theirs]
-                # A host that separates reasoning out of the total (OpenAI's
-                # `completion_tokens_details.reasoning_tokens`, on the
-                # models that think): recorded honestly as the provider's
-                # OWN count, for the build log's `reasoning_tokens_as_
-                # reported` -- never estimated when this is absent.
-                details = reported.get("completion_tokens_details") or {}
-                if isinstance(details.get("reasoning_tokens"), int):
-                    usage["reasoning_tokens"] = details["reasoning_tokens"]
+                _read_usage(event.get("usage") or {}, usage)
                 for choice in event.get("choices") or []:
                     delta = choice.get("delta") or {}
                     thought = delta.get("reasoning_content") or delta.get("reasoning")
@@ -504,17 +816,34 @@ class ApiKeyProvider:
         progress.streams = False
         data = json.loads(b"".join(body))
         text = data["choices"][0]["message"]["content"]
-        reported = data.get("usage") or {}
-        usage.update({k: v for k, v in (("input_tokens", reported.get("prompt_tokens")),
-                                        ("output_tokens", reported.get("completion_tokens")))
-                      if isinstance(v, int)})
-        details = reported.get("completion_tokens_details") or {}
-        if isinstance(details.get("reasoning_tokens"), int):
-            usage["reasoning_tokens"] = details["reasoning_tokens"]
+        _read_usage(data.get("usage") or {}, usage)
         if isinstance(text, str):
             progress.add_text(len(text), text)
         return text
 
+
+
+def _read_usage(reported: dict, usage: dict) -> None:
+    """Fold one `usage` object of a chat completion into `usage`: tokens in
+    and out, the total, and what a host adds -- reasoning tokens, cached
+    input tokens and (xAI) its own `cost_in_usd_ticks` -- each recorded only
+    when the host reports it, never estimated."""
+    for ours, theirs in (("input_tokens", "prompt_tokens"), ("output_tokens", "completion_tokens"),
+                         ("total_tokens", "total_tokens"), ("cost_ticks", "cost_in_usd_ticks")):
+        if isinstance(reported.get(theirs), (int, float)) and not isinstance(reported.get(theirs), bool):
+            usage[ours] = reported[theirs]
+    for ours, group, theirs in (("reasoning_tokens", "completion_tokens_details", "reasoning_tokens"),
+                                ("cached_tokens", "prompt_tokens_details", "cached_tokens")):
+        value = (reported.get(group) or {}).get(theirs)
+        if isinstance(value, int):
+            usage[ours] = value
+
+
+#: The request fields an OpenAI-compatible host may not know, in the order a
+#: 400's text is checked for them. A host that names one is asked again
+#: without it (`ApiKeyProvider.complete`); no host is named anywhere.
+_OPTIONAL_FIELDS = ("stream_options", "response_format", "reasoning_effort",
+                    "max_completion_tokens", "temperature")
 
 
 # What a 400 about the reply schema ITSELF says (review 2026-09-28, R22).
@@ -782,7 +1111,59 @@ class ClaudeProvider:
         inner = ", ".join(p for p in (label, f"effort {effort}" if effort else "") if p)
         return f"{model} ({inner})" if inner else model
 
-    def _report_usage(self, usage: dict, text_chars: int, label: str) -> None:
+    @staticmethod
+    def _cached_request(system: str, user: str) -> tuple[list, object, int, int]:
+        """`(system blocks, user content, characters before the last
+        breakpoint, characters after it)`: the request's text with Anthropic's `cache_control`
+        breakpoints on it (see `CACHE_TERMS` for the rules).
+
+        One path for every role and every model. A `Prompt` user message
+        gets one breakpoint after each of its groups; the system prompt
+        (static, and sent first) carries the first breakpoint itself when
+        the prompt has no true-static group of its own, and is otherwise
+        covered by the first group's. A plain string user message (a call
+        that has not been split into groups) gets the system breakpoint
+        alone, so the system prompt is still cached. At most four are
+        used: the system's or the first group's, then up to two more.
+        Empty groups are left out (the API refuses an empty text block)."""
+        groups = [g for g in getattr(user, "groups", ()) if g.strip()]
+        system_block = {"type": "text", "text": system}
+        if not groups or not getattr(user, "groups", ())[0].strip():
+            system_block["cache_control"] = dict(_CACHE)
+        if not groups:
+            return [system_block], str(user), len(system), len(user)
+        blocks = [{"type": "text", "text": g, "cache_control": dict(_CACHE)} for g in groups]
+        tail = getattr(user, "tail", "")
+        if tail.strip():
+            blocks.append({"type": "text", "text": tail})
+        return ([system_block], blocks, len(system) + sum(len(g) for g in groups), len(tail))
+
+    def _cache_note(self, usage: dict, model: str, cached_chars: int, tail_chars: int) -> str:
+        """What to say, beside the token count, when a call that asked for
+        caching neither wrote nor read anything: the prefix is below the
+        model's minimum (said with the size and the minimum), or nothing was
+        reported although it was long enough. Empty when there is cache
+        traffic or the model's minimum is not known."""
+        if usage.get("cache_creation_input_tokens") or usage.get("cache_read_input_tokens"):
+            return ""
+        minimum = CACHE_TERMS.get(_undated(model), (0, 0))[1]
+        if not minimum:
+            return ""
+        tail_tokens = int(tail_chars / CHARS_PER_TOKEN)
+        prefix = max(0, input_total(usage) - tail_tokens) if input_total(usage) \
+            else int(cached_chars / CHARS_PER_TOKEN)
+        if prefix < minimum:
+            return f"prefix ~{prefix:,} tokens, below the {minimum:,}-token minimum, not cached"
+        # Long enough, and the API said so with zeros: nothing was written
+        # either (a changed thinking or effort setting, or a host in
+        # between that drops the field). A usage object with no cache keys
+        # at all is not a claim, so it prints nothing.
+        if "cache_creation_input_tokens" in usage or "cache_read_input_tokens" in usage:
+            return "prefix long enough, but nothing written to or read from the cache"
+        return ""
+
+    def _report_usage(self, usage: dict, text_chars: int, label: str, *,
+                      cached_chars: int = 0, tail_chars: int = 0) -> None:
         """One line per call: what it spent, and where it went.
 
         The where matters more than the total. Thinking is billed as output
@@ -799,21 +1180,11 @@ class ClaudeProvider:
         """
         if not self.show_progress or not usage:
             return
-        sent = usage.get("input_tokens") or 0
-        got = usage.get("output_tokens") or 0
-        line = f"  {self._who(label)}: {sent:,} in, {got:,} out"
-
-        # A character count is not a token count, but the ratio is stable
-        # enough (CHARS_PER_TOKEN) to say whether the answer or the
-        # reasoning ate the budget, which is the decision this informs.
-        returned = int(text_chars / CHARS_PER_TOKEN)
-        hidden = got - returned
-        if got and hidden > got * 0.25:
-            line += f" (~{hidden:,} of it thinking, not returned)"
-
-        price = self.PRICES.get(_undated(self.model_for(label)))
-        if price:
-            line += f" -- ${sent / 1e6 * price[0] + got / 1e6 * price[1]:.2f}"
+        model = self.model_for(label)
+        cost = claude_cost(model, usage, self.PRICES)
+        line = _usage_line(self._who(label), usage, text_chars, None,
+                           cost=(cost, "") if cost is not None else None,
+                           cache_note=self._cache_note(usage, model, cached_chars, tail_chars))
         print(line, file=sys.stderr, flush=True)
 
     def _announce_thinking(self, model: str, *, summaries: bool, budget: int | None,
@@ -908,11 +1279,12 @@ class ClaudeProvider:
             if constrained is not None:
                 output_config["format"] = {"type": "json_schema",
                                            "schema": constrained}
+        system_blocks, content, cached_chars, tail_chars = self._cached_request(system, user)
         payload = {
             "model": model,
             "max_tokens": max_tokens,
-            "system": system,
-            "messages": [{"role": "user", "content": user}],
+            "system": system_blocks,
+            "messages": [{"role": "user", "content": content}],
             # Streaming, for the same reason the Ollama provider streams.
             # A plan is minutes of work: thinking is on by default on these
             # models, and a touringband plan is ~6k tokens of JSON after
@@ -1023,7 +1395,8 @@ class ClaudeProvider:
                         # the whole answer.
                         err = event.get("error") or {}
                         raise AIProviderError(
-                            f"Claude stream failed: {err.get('type')}: {err.get('message')}",
+                            not_responding(f"the stream failed: {err.get('type')}: "
+                                           f"{err.get('message')}", self.api_key),
                             partial_text="".join(text_parts),
                         )
             completed = True
@@ -1032,36 +1405,33 @@ class ClaudeProvider:
             # parameter this model rejects); a bare "HTTP 400" would send
             # the reader to the wrong place entirely.
             detail = exc.read().decode(errors="replace")[:400]
-            raise AIProviderError(
-                f"Claude provider call to {self.base_url!r} failed: HTTP {exc.code} {detail}"
-            ) from exc
+            raise AIProviderError(not_responding(
+                f"{self.base_url} answered HTTP {exc.code} {detail}", self.api_key)) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             # Whatever arrived before the break is worth keeping: on a long
             # generation it is most of a plan, and throwing it away makes
             # the failure unexaminable.
             raise AIProviderError(
-                f"Claude provider call to {self.base_url!r} failed: {exc}"
-                + _unreachable_hint(exc, self.base_url),
+                not_responding(f"the call to {self.base_url} failed: {exc}"
+                               + _unreachable_hint(exc, self.base_url), self.api_key),
                 partial_text="".join(text_parts),
             ) from exc
         finally:
             # Before the usage line, so a redraw can never land on top of it.
             progress.finish(ok=completed and stop not in ("refusal", "max_tokens"),
                             usage=usage)
-            self._report_usage(usage, len("".join(text_parts)), label)
+            self._report_usage(usage, len("".join(text_parts)), label,
+                               cached_chars=cached_chars, tail_chars=tail_chars)
             if label:
-                price = self.PRICES.get(_undated(model))
-                cost = (usage.get("input_tokens", 0) / 1e6 * price[0]
-                        + usage.get("output_tokens", 0) / 1e6 * price[1]) if price else None
+                cost = claude_cost(model, usage, self.PRICES)
                 self.build_log[label] = progress.build_log_entry(
                     model=model, effort=effort or None, cost=cost)
 
         if stop == "refusal":
-            raise AIProviderError(
+            raise AIProviderError(not_responding(
                 "Claude declined this request "
                 f"(category {stop_details.get('category')!r}): "
-                f"{stop_details.get('explanation')}"
-            )
+                f"{stop_details.get('explanation')}", self.api_key))
         if stop == "max_tokens":
             # Silence here would be genuinely misleading: the caller
             # (extract.py / the generator) would receive a truncated JSON
@@ -1078,11 +1448,9 @@ class ClaudeProvider:
 
         text = "".join(text_parts)
         if not text.strip():
-            raise AIProviderError(
+            raise AIProviderError(not_responding(
                 f"Claude returned no text (stop_reason {stop!r}, "
-                f"{thinking_chars} characters of thinking). "
-                "Nothing to parse."
-            )
+                f"{thinking_chars} characters of thinking)", self.api_key))
         return text
 
 
@@ -1297,11 +1665,10 @@ class OllamaProvider:
                     try:
                         event = json.loads(line)
                     except json.JSONDecodeError as exc:
-                        raise AIProviderError(
-                            f"Ollama sent a line that isn't JSON: {line[:200]!r}"
-                        ) from exc
+                        raise AIProviderError(not_responding(
+                            f"Ollama sent a line that isn't JSON: {line[:200]!r}")) from exc
                     if event.get("error"):
-                        raise AIProviderError(f"Ollama reported: {event['error']}")
+                        raise AIProviderError(not_responding(f"Ollama reported: {event['error']}"))
                     message = event.get("message") or {}
                     content = message.get("content", "") or ""
                     chunks.append(content)
@@ -1332,15 +1699,15 @@ class OllamaProvider:
             # applies. HTTPError is a URLError subclass, so this must
             # come before the generic except below to be reached at all.
             detail = exc.read().decode(errors="replace")[:400]
-            raise AIProviderError(
-                f"Ollama provider call to {self.base_url!r} failed after "
-                f"{sum(len(c) for c in chunks)} characters: HTTP {exc.code} {detail}",
+            raise AIProviderError(not_responding(
+                f"{self.base_url} answered HTTP {exc.code} {detail} "
+                f"(after {sum(len(c) for c in chunks)} characters)"),
                 partial_text="".join(chunks),
             ) from exc
         except (urllib.error.URLError, TimeoutError, KeyError) as exc:
-            raise AIProviderError(
-                f"Ollama provider call to {self.base_url!r} failed after "
-                f"{sum(len(c) for c in chunks)} characters: {exc}",
+            raise AIProviderError(not_responding(
+                f"the call to {self.base_url} failed after "
+                f"{sum(len(c) for c in chunks)} characters: {exc}"),
                 partial_text="".join(chunks),
             ) from exc
         finally:
@@ -1350,9 +1717,8 @@ class OllamaProvider:
 
         text = "".join(chunks)
         if not text.strip():
-            raise AIProviderError(
-                f"Ollama returned an empty reply from model {self.model!r}"
-            )
+            raise AIProviderError(not_responding(
+                f"Ollama returned an empty reply from model {self.model!r}"))
         if done_reason == "length":
             # The context window (num_ctx bounds prompt + reply together) or
             # num_predict ran out mid-generation, not the model choosing to
@@ -1467,6 +1833,22 @@ class FakeProvider:
                 self.build_log[label] = progress.build_log_entry(model=self.model)
 
 
+def _price(env: Mapping[str, str], name: str) -> float | None:
+    """A dollars-per-million-tokens setting: None when unset, an
+    AIProviderError naming the variable when it is not a number >= 0."""
+    raw = (env.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        value = float("nan")
+    if not value >= 0 or value == float("inf"):
+        raise AIProviderError(
+            f"{name} must be a number of dollars per million tokens, 0 or more, got {raw!r}")
+    return value
+
+
 def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
     """Build a provider from environment variables -- the CLI's (and any
     other caller's) default way to configure one, so no call site has to
@@ -1514,7 +1896,7 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
                                generator on a model that thinks only when
                                given a budget (Haiku 4.5); default 16000,
                                0 turns it off. The adaptive models ignore it
-      ATOO_AI_MAX_TOKENS  "claude" only; default the model's own
+      ATOO_AI_MAX_TOKENS  "claude": default the model's own
                                output limit: 128000 (64000 on Haiku). A
                                role on a model with a lower limit is sent
                                that limit
@@ -1526,6 +1908,40 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
       ATOO_AI_STREAM      "api" only: on by default; 0 asks the host
                                for one JSON body instead of a stream, and
                                step 04 then has no live text to show
+      ATOO_AI_STRUCTURED  "api" only: on by default; 0 stops sending the
+                               reply schema as `response_format` (strict
+                               `json_schema`). A host that refuses it is
+                               asked again without it either way, at INFO
+      ATOO_AI_REASONING_EFFORT
+                               "api" only: sent as `reasoning_effort` (low,
+                               medium, high -- the host's own words) to a
+                               model that reasons; unset sends nothing. A
+                               host that does not know it is asked again
+                               without it, at INFO
+      ATOO_AI_MAX_TOKENS  "api": sent as `max_completion_tokens`, which a
+                               reasoning model counts its hidden tokens
+                               in; unset sends none
+      ATOO_AI_TIMEOUT     "api": seconds of silence before a call is given up on
+                               (default 600, a reasoning model can think for
+                               minutes); "ollama": default 120
+      ATOO_AI_PRICE_CACHED
+                               "api" only: dollars per million CACHED input
+                               tokens, used when the host reports them
+                               (`prompt_tokens_details.cached_tokens`) and
+                               the other two prices are set. A host that
+                               reports its own cost (xAI's
+                               `cost_in_usd_ticks`) is believed instead
+      ATOO_AI_PRICE_IN, ATOO_AI_PRICE_OUT
+                               "api" only: the host's rates in dollars per
+                               million input and output tokens, BOTH or
+                               NEITHER (one alone is an AIProviderError, as
+                               is a value that is not a number >= 0). They
+                               turn the usage line into `... -- $x.xx` and
+                               fill the build log's `cost`, which is what
+                               the live eval's --cap counts. With neither,
+                               the line says `no price set` and the cost is
+                               None: the rates of a host are not known here
+                               and are never guessed
 
     **Claude is the default** (changed 2026-10-01). It was
     Ollama from 2026-09-10, so a build would work offline -- but a build
@@ -1642,9 +2058,31 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
             "ATOO_AI_API_KEY is required for the 'api' provider -- unset "
             "ATOO_AI_PROVIDER to use the default, Claude, instead"
         )
+    price_in, price_out = (_price(env, PRICE_IN_ENV), _price(env, PRICE_OUT_ENV))
+    try:
+        raw_timeout = env.get("ATOO_AI_TIMEOUT", "").strip()
+        api_timeout = float(raw_timeout) if raw_timeout else API_TIMEOUT
+    except ValueError as exc:
+        raise AIProviderError(
+            f"ATOO_AI_TIMEOUT must be a number of seconds, got {env.get('ATOO_AI_TIMEOUT')!r}"
+        ) from exc
+    try:
+        raw_max = env.get("ATOO_AI_MAX_TOKENS")
+        api_max_tokens = int(raw_max) if raw_max and raw_max.strip() else None
+    except ValueError as exc:
+        raise AIProviderError(
+            f"ATOO_AI_MAX_TOKENS must be an integer, got {env.get('ATOO_AI_MAX_TOKENS')!r}"
+        ) from exc
     return ApiKeyProvider(
         api_key=api_key,
         model=model or "gpt-4o-mini",
         base_url=env.get("ATOO_AI_BASE_URL", "https://api.openai.com"),
         stream=_flag(env.get("ATOO_AI_STREAM")),
+        structured=_flag(env.get("ATOO_AI_STRUCTURED")),
+        reasoning_effort=(env.get("ATOO_AI_REASONING_EFFORT", "").strip() or None),
+        max_tokens=api_max_tokens,
+        price_in=price_in,
+        price_out=price_out,
+        price_cached=_price(env, PRICE_CACHED_ENV),
+        timeout=api_timeout,
     )

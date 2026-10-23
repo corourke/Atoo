@@ -227,45 +227,29 @@ def test_a_listed_main_route_cv016_names_is_said_once():
 # --------------------------------------------------------------------------
 
 
-def test_a_send_to_a_bus_the_plan_does_not_list_is_a_warning():
-    crowd, entry = _index("Crowd")
-    name, n = _unlisted_bus(entry)
-    [finding] = _found(_state(**{f"{crowd}/send/{n}/on": 1, f"{crowd}/send/{n}/lvl": -6.0}), "CV018")
-    assert finding.severity == Severity.WARNING
-    assert finding.message == (
-        f'CH {entry["channel"]} "Crowd": a send to BUS {n} "{name}" is on at -6dB; '
-        "the plan has no send from this channel to that bus.")
-    assert finding.addresses == (f"{crowd}/send/{n}/on",)
+MODELS = ["wing-compact", "wing", "wing-rack"]
 
 
-def test_the_click_opened_to_the_pa_bus_is_the_case_it_exists_for():
-    """A send into a bus that feeds Main 1: not a Main route of the strip,
-    so CV007 cannot see it."""
-    kick, entry = _index("Kick")
-    inst = PLAN["busses"]["INST Reverb"]["index"]
-    state = _state(**{f"{kick}/send/{inst}/on": 1, f"{kick}/send/{inst}/lvl": 0.0})
-    assert [f.rule_id for f in _found(state, "CV018")] == ["CV018"]
-    assert _found(state, "CV007") == []
-
-
-@pytest.mark.parametrize("change", [
-    {"on": 1, "lvl": FLOOR},        # on, but pulled to the floor: passes nothing
-    {"on": 0, "lvl": -6.0},         # a level left behind a switch that is off
-])
-def test_a_send_that_passes_nothing_is_not_a_finding(change):
-    crowd, entry = _index("Crowd")
-    _name, n = _unlisted_bus(entry)
-    state = _state(**{f"{crowd}/send/{n}/on": change["on"], f"{crowd}/send/{n}/lvl": change["lvl"]})
-    assert _found(state, "CV018") == []
-
-
-def test_a_send_whose_level_was_not_read_is_not_a_finding():
+@pytest.mark.parametrize("model", MODELS)
+def test_a_send_to_a_bus_the_plan_does_not_list_raises_nothing(model):
+    """Decided 2026-10-22: CV018 is not needed for sends to a bus."""
     crowd, entry = _index("Crowd")
     _name, n = _unlisted_bus(entry)
     values = _desk()
-    values[f"{crowd}/send/{n}/on"] = 1
-    del values[f"{crowd}/send/{n}/lvl"]
-    assert _found(ConsoleState(values), "CV018") == []
+    values.update({f"{crowd}/send/{n}/on": 1, f"{crowd}/send/{n}/lvl": -6.0})
+    state = ConsoleState(values, console_model=model)
+    assert _found(state, "CV018") == []
+    assert unplanned_route_findings(state, PLAN) == []
+
+
+def test_the_click_opened_to_the_pa_bus_is_no_longer_a_finding():
+    """A send into a bus that feeds Main 1 is not a Main route of the strip,
+    so CV007 cannot see it either; the engineer added it and knows."""
+    kick, entry = _index("Kick")
+    inst = PLAN["busses"]["INST Reverb"]["index"]
+    state = _state(**{f"{kick}/send/{inst}/on": 1, f"{kick}/send/{inst}/lvl": 0.0})
+    assert _found(state, "CV018") == []
+    assert _found(state, "CV007") == []
 
 
 def test_a_planned_send_is_never_cv018_whatever_its_level():
@@ -274,17 +258,27 @@ def test_a_planned_send_is_never_cv018_whatever_its_level():
     assert _found(_state(**{f"{kick}/send/{mon1}/lvl": 0.0}), "CV018") == []
 
 
-def test_a_send_to_a_matrix_is_a_warning_and_the_floor_is_not():
+@pytest.mark.parametrize("model", MODELS)
+def test_a_send_to_a_matrix_is_an_info_and_the_floor_is_not(model):
     kick, _ = _index("Kick")
-    [finding] = _found(_state(**{f"{kick}/send/MX2/on": 1, f"{kick}/send/MX2/lvl": -3.0}), "CV018")
+    values = _desk()
+    values.update({f"{kick}/send/MX2/on": 1, f"{kick}/send/MX2/lvl": -3.0})
+    [finding] = _found(ConsoleState(values, console_model=model), "CV018")
+    assert finding.severity == Severity.INFO
     assert finding.message == ('CH 1 "Kick": a send to MTX 2 is on at -3dB; '
                                "the plan has no send from this channel to a Matrix.")
+    assert finding.addresses == (f"{kick}/send/MX2/on",)
     assert _found(_state(**{f"{kick}/send/MX2/on": 1}), "CV018") == []
+    assert _found(_state(**{f"{kick}/send/MX2/on": 1, f"{kick}/send/MX2/lvl": FLOOR}), "CV018") == []
 
 
-def test_a_wedge_bus_summed_into_main_is_a_warning():
+@pytest.mark.parametrize("model", MODELS)
+def test_a_wedge_bus_summed_into_main_is_an_info(model):
     mon3 = PLAN["busses"]["MON3"]["index"]
-    [finding] = _found(_state(**{f"/bus/{mon3}/main/1/on": 1}), "CV018")
+    values = _desk()
+    values[f"/bus/{mon3}/main/1/on"] = 1
+    [finding] = _found(ConsoleState(values, console_model=model), "CV018")
+    assert finding.severity == Severity.INFO
     assert finding.message == (f'BUS {mon3} "MON3": routed to MAIN 1 on the desk; '
                                "the plan lists no route from this bus to it.")
     assert finding.addresses == (f"/bus/{mon3}/main/1/on",)
@@ -368,11 +362,11 @@ def test_a_plan_with_no_channels_and_no_busses_adds_none_of_them():
 def test_audit_with_a_plan_reports_the_twin_and_scope_withholds_nothing_of_it():
     from atoo.audit import apply_plan_scope
 
-    crowd, entry = _index("Crowd")
-    _name, n = _unlisted_bus(entry)
-    state = _state(**{f"{crowd}/send/{n}/on": 1, f"{crowd}/send/{n}/lvl": -6.0,
+    kick, _ = _index("Kick")
+    state = _state(**{f"{kick}/send/MX2/on": 1, f"{kick}/send/MX2/lvl": -3.0,
                       "/bus/9/main/2/on": 1})
-    assert [f.rule_id for f in diff_against_plan(state, PLAN) if f.rule_id == "CV018"] == ["CV018", "CV018"]
+    found = [f for f in diff_against_plan(state, PLAN) if f.rule_id == "CV018"]
+    assert [f.severity for f in found] == [Severity.INFO, Severity.INFO]
     scoped = apply_plan_scope(state, run_audit(state, _rules()), PLAN, _rules())
     assert [f.rule_id for f in scoped.findings if f.rule_id == "CV018"] == ["CV018", "CV018"]
     assert not [w for w in scoped.withheld if w.finding.rule_id in ROUTE_IDS]
@@ -397,12 +391,11 @@ def test_watch_raises_a_flipped_send_and_clears_it_when_put_back():
     assert [f.rule_id for f in events[2].cleared_findings] == ["CV006"]
 
 
-def test_watch_raises_the_click_in_the_pa_and_clears_it():
+def test_watch_raises_a_matrix_send_as_an_info_and_clears_it():
     kick, _ = _index("Kick")
-    inst = PLAN["busses"]["INST Reverb"]["index"]
-    opened = {f"{kick}/send/{inst}/on": 1, f"{kick}/send/{inst}/lvl": 0.0}
+    opened = {f"{kick}/send/MX2/on": 1, f"{kick}/send/MX2/lvl": 0.0}
     events = _run([_state(), _state(**opened), _state()])
-    assert [f.rule_id for f in events[1].new_findings] == ["CV018"]
+    assert [(f.rule_id, f.severity) for f in events[1].new_findings] == [("CV018", Severity.INFO)]
     assert [f.rule_id for f in events[2].cleared_findings] == ["CV018"]
 
 

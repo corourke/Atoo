@@ -1014,8 +1014,14 @@
       const usage = entry.usage || {};
       const usageBits = [];
       if (usage.input != null || usage.output != null) {
-        usageBits.push(`${esc(usage.input != null ? usage.input : "?")} in, ` +
-          `${esc(usage.output != null ? usage.output : "?")} out`);
+        // Claude's prompt cache. "in" is every input token;
+        // what was read from and written to the cache follows it.
+        const cacheBits = [];
+        if (usage.cache_read) cacheBits.push(`${esc(usage.cache_read)} read from cache`);
+        if (usage.cache_write) cacheBits.push(`${esc(usage.cache_write)} written to cache`);
+        usageBits.push(`${esc(usage.input != null ? usage.input : "?")} in` +
+          (cacheBits.length ? ` (${cacheBits.join(", ")})` : "") +
+          `, ${esc(usage.output != null ? usage.output : "?")} out`);
       }
       // "~" marks an estimate (Claude reports no separate count).
       if (usage.thinking) {

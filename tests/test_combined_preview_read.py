@@ -29,9 +29,8 @@ from tests.test_pipelined_reads import _wired
 
 CHANGES = {"/ch/30/fdr": -6.0, "/ch/30/name": "Old show", "/bus/3/mute": 1}
 
-# The same assertions run against every WING model. The Rack has no initialized
-# capture, so its fake desk is the Compact's initialized values: the request
-# pattern is what is under test there, not the Rack's own settings.
+# The same assertions run against every WING model. The fake desk is the
+# model's own initialized capture (the Compact's for a model with none).
 MODELS = ["wing-compact", "wing-full", "wing-rack"]
 CAPTURED = [m for m in MODELS if init.load_capture(m) is not None]
 
@@ -69,13 +68,14 @@ def test_the_preview_is_one_read_under_one_phase(model):
 
 
 def test_the_models_without_a_capture_are_still_one_read_under_one_phase_with_the_warning():
-    """Today that is the Rack: no reset, so the one read is the preview's own."""
-    assert "wing-rack" not in CAPTURED
-    result, _udp, text = _preview(8, model="wing-rack")
+    """A desk whose model cannot be told has no capture: no reset, so the one
+    read is the preview's own."""
+    assert init.load_capture(None) is None
+    result, _udp, text = _preview(8, model=None)
     assert len(_phase_lines(text, apply_module.PREVIEW_PHASE)) == 1
     assert _phase_lines(text, init.COMBINED_READ_PHASE) == []
     assert _phase_lines(text, init.READ_PHASE) == []
-    assert init.no_capture_warning("wing-rack") in result.warnings
+    assert init.no_capture_warning(None) in result.warnings
 
 
 @pytest.mark.parametrize("model", MODELS)

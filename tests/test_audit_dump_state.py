@@ -124,3 +124,18 @@ def test_the_model_the_file_cannot_carry_is_named(live, tmp_path, capsys):
     assert f"Saved {len(live[0])} addresses" in err
     assert "wing-compact" in err
     assert "--plan" in err
+
+
+def test_the_dump_reads_what_is_on_each_aes50_port(live, tmp_path):
+    """Without /$stat/{A,B,C}/dev a saved state cannot tell an
+    offline patch how big the stage box is."""
+    _, calls = live
+    main(_live_args("--dump-state", str(tmp_path / "d.json")))
+    assert [a for a in calls[0]["extra"] if a[0].startswith("/$stat/")] == [
+        ("/$stat/A/dev", "s"), ("/$stat/B/dev", "s"), ("/$stat/C/dev", "s")]
+
+
+def test_an_audit_without_a_dump_does_not_ask_for_them(live):
+    _, calls = live
+    main(_live_args())
+    assert [a for a in calls[0]["extra"] if a[0].startswith("/$stat/")] == []

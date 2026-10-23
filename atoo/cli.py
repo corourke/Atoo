@@ -862,6 +862,8 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     except (AIProviderError, generate.GenerationError, generate.PromptError) as exc:
         print(f"generation failed: {exc}", file=sys.stderr)
         print(f"  {install_info.describe().summary()}", file=sys.stderr)
+        if isinstance(exc, AIProviderError):
+            print("  no plan was written; the build log keeps this attempt.", file=sys.stderr)
         # Whatever the model wrote before it failed is the only evidence
         # of WHY, and it was paid for. Throwing it away leaves "it hit
         # max_tokens" with nothing to read -- was it thinking, or was it
@@ -1451,7 +1453,8 @@ def _gain_texts(args: argparse.Namespace, show, base: dict) -> tuple[str, ...]:
 def _aes50_devices(console, state) -> dict | None:
     """What is on each AES50 port, asked of the desk (`apply.read_aes50_devices`)
     or, offline, read from the saved capture when it carries them; None when
-    nothing says."""
+    nothing says (an offline capture without them also warns: an empty record
+    is a record, a missing one is not)."""
     from atoo.apply import read_aes50_devices
 
     if console is not None:
@@ -1459,7 +1462,15 @@ def _aes50_devices(console, state) -> dict | None:
     values = getattr(state, "values", None) or {}
     found = {port: values.get(facts.aes50_device_address(port)) for port in facts.AES50_PORTS}
     found = {port: (device if isinstance(device, str) else None) for port, device in found.items()}
-    return found if any(isinstance(d, str) for d in found.values()) else None
+    if not any(isinstance(d, str) for d in found.values()):
+        # Checking nothing quietly makes an offline run differ
+        # from the live desk, which refuses a socket past the box's size.
+        print("WARNING: this saved state has no stage-box device names "
+              "(/$stat/A/dev, B, C); a socket past the box's size cannot be "
+              "checked. Save it again with `atoo audit --dump-state`.",
+              file=sys.stderr)
+        return None
+    return found
 
 
 def _load_state_file(path: str):
@@ -2337,6 +2348,12 @@ def audit_cmd(args: argparse.Namespace) -> int:
                 # head-amp gain, filters, EQ), for CV008: only `audit`
                 # compares them, so only it reads them.
                 read_kwargs["extra"] = plan_processing_read_addresses(plan)
+                if args.dump_state:
+                    # What is on each AES50 port, so an offline
+                    # patch of the saved reading can check a socket against
+                    # the box's size as the live desk does.
+                    read_kwargs["extra"] += [(facts.aes50_device_address(port), "s")
+                                             for port in facts.AES50_PORTS]
                 progress = _read_progress(args, read_kwargs)
                 if not read_kwargs.get("bulk"):
                     print(PER_LEAF_BANNER, file=sys.stderr, flush=True)
@@ -2566,22 +2583,25 @@ def watch_cmd(args: argparse.Namespace) -> int:
         start_names = start_name_addresses(conditions)
     # The bundle's plan: FX busses' effects as planned (CV015), channels cut off from every planned route (CV016),
     # mutes the plan does not have (CV017), sends and Main routes
-    # against the plan (CV006, CV007), those it does not have (CV018)
+    # against the plan (CV006, CV007), a Matrix send or Main route it does not have, an INFO (CV018)
     # 48V and a bus's width against the plan (CV019, CV020), talkback that
     # misses a monitor mix the plan builds (CV021, CV022); and L002 quiet
     # on a fader the plan itself puts at the floor.
     if show is not None:
         from atoo.audit import with_plan_rules
         rules = with_plan_rules(rules, show.plan)
+    from atoo.watch import plan_notes, virtual_soundcheck_note
+
+    # W004/W005: the plan as Watch started with it, or that it has none.
+    session_notes = plan_notes(show.plan if show is not None else None)
     # --virtual-soundcheck: the alternate inputs are on purpose (C004 and
     # C005 at INFO), and a note says so for as long as the watch runs.
-    session_notes = None
     if args.virtual_soundcheck:
         from atoo.audit import virtual_soundcheck_rules
-        from atoo.watch import virtual_soundcheck_note
 
         rules = virtual_soundcheck_rules(rules)
-        session_notes = lambda: [virtual_soundcheck_note()]  # noqa: E731
+        plan_notes_fn = session_notes
+        session_notes = lambda: plan_notes_fn() + [virtual_soundcheck_note()]  # noqa: E731
 
     console = None
     stop_listening = None
@@ -2656,6 +2676,32 @@ def watch_cmd(args: argparse.Namespace) -> int:
         max_iterations = args.count
         label = f"{args.console}:{args.port}"
 
+    # The findings log, opened once the desk has identified
+    # itself and before the first read, so a header exists even if the
+    # first pass never finishes.
+    findings_log = None
+    if args.findings_log:
+        from atoo import findings_log as findings_log_module
+
+        try:
+            findings_log = findings_log_module.FindingsLog.open(
+                args.findings_log, findings_log_module.header_line(
+                    install=install_info.describe().payload(),
+                    console=args.console,
+                    identity=getattr(args, "console_identity", None),
+                    plan=(str(show.directory / bundle.PLAN) if show is not None else None),
+                    conditions={"file": watch_conditions_path,
+                                "rules": [r.id for r in rules if r not in DEFAULT_RULES]}
+                    if watch_conditions_path else None,
+                    started=findings_log_module._now()))
+        except OSError as exc:
+            print(f"--findings-log {args.findings_log}: {exc}", file=sys.stderr)
+            if stop_listening is not None:
+                stop_listening()
+            if console is not None:
+                console.close()
+            return 1
+
     # flush= on every print in this command, not as a style: `watch` is a
     # long-running live monitor, and Python block-buffers stdout when it
     # is redirected to a file. Running `watch --console --count 8`
@@ -2692,6 +2738,8 @@ def watch_cmd(args: argparse.Namespace) -> int:
         for event in watch(state_provider, rules=rules, interval=args.interval,
                            max_iterations=max_iterations, session_notes=session_notes):
             last_findings = event.all_findings
+            if findings_log is not None:
+                findings_log.record(event, latest_state[0] if latest_state else None)
             # The coverage paragraph has been printed at the
             # baseline, but it arrived AFTER the findings it
             # qualifies and never again -- so a bare ERROR on pass 47 of
@@ -2726,13 +2774,23 @@ def watch_cmd(args: argparse.Namespace) -> int:
                     # prints nothing on the expected result is
                     # indistinguishable from one that has died.
                     print(f"[{event.at}] pass {event.iteration}: no change.", flush=True)
+        stop_reason = "finished"
     except KeyboardInterrupt:
         print("\nStopped watching.")
+        stop_reason = "Ctrl-C"
+    except BaseException:
+        # Not a clean stop: no footer, so the log says it was cut off.
+        if findings_log is not None:
+            findings_log.abandon()
+            findings_log = None
+        raise
     finally:
         if stop_listening is not None:
             stop_listening()
         if console is not None:
             console.close()
+    if findings_log is not None:
+        findings_log.close(stop_reason)
 
     return 1 if any(f.severity == Severity.ERROR for f in last_findings) else 0
 
@@ -3816,12 +3874,23 @@ def _undo_run(args, show, journal_file, link, journal_stack, undo_engine) -> int
         # it never held, and nothing here was refused or failed. The first
         # write of a setting the earlier state did not carry has no earlier
         # value to restore.
-        addresses = ", ".join(step.address for step in result.unreversible[:6])
-        more = len(result.unreversible) - 6
-        print(f"  INFO {len(result.unreversible)} address(es) had no earlier value on the "
-              f"desk (the run wrote them for the first time), so there is nothing to put "
-              f"back: {addresses}{f', and {more} more' if more > 0 else ''}. "
-              "They stay as the run left them.")
+        from atoo.undo import GONE_WITH_MODEL
+        gone = [step for step in result.unreversible
+                if (step.detail or "").startswith(GONE_WITH_MODEL)]
+        first_time = [step for step in result.unreversible if step not in gone]
+        if first_time:
+            addresses = ", ".join(step.address for step in first_time[:6])
+            more = len(first_time) - 6
+            print(f"  INFO {len(first_time)} address(es) had no earlier value on the "
+                  f"desk (the run wrote them for the first time), so there is nothing to put "
+                  f"back: {addresses}{f', and {more} more' if more > 0 else ''}. "
+                  "They stay as the run left them.")
+        if gone:
+            addresses = ", ".join(step.address for step in gone[:6])
+            more = len(gone) - 6
+            print(f"  INFO {len(gone)} address(es) existed only under the model the run set "
+                  f"and are gone with it now that the model is back: "
+                  f"{addresses}{f', and {more} more' if more > 0 else ''}.")
     if result.failed or result.refused:
         # Exit 2, the "it ran and found problems" code apply/build/verify
         # use: a reversal that did not land, or an address somebody else has
@@ -4186,6 +4255,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
 
     model_s = None
     compiled_by = None
+    repair_with = None
     if mode == "patch" and change_set is None:
         conventions, conventions_name, instructions, instructions_name, conv_infos = \
             _change_conventions(args, show, applied)
@@ -4207,16 +4277,23 @@ def patch_cmd(args: argparse.Namespace) -> int:
         try:
             provider = provider_from_env()
             compiled_by = getattr(provider, "model", None) or type(provider).__name__
-            change_set = patch_engine.compile_change(
-                change_text, applied, provider=provider, console_model=console_model,
+            compile_args = dict(
+                provider=provider, console_model=console_model,
                 conventions=conventions, conventions_name=conventions_name,
                 instructions=instructions, instructions_name=instructions_name,
-                constrain=not args.no_constrain, infos=compile_infos)
+                constrain=not args.no_constrain)
+            change_set = patch_engine.compile_change(
+                change_text, applied, infos=compile_infos, **compile_args)
+            if getattr(provider, "repairs_replies", False):
+                repair_with = compile_args
         except (AIProviderError, patch_engine.ChangeError, generate.PromptError) as exc:
             if console is not None:
                 console.close()
             print(f"the change could not be compiled: {exc}", file=sys.stderr)
             print(f"  {install_info.describe().summary()}", file=sys.stderr)
+            if isinstance(exc, AIProviderError):
+                print("  nothing was changed: the desk and the show are as they were.",
+                      file=sys.stderr)
             partial = getattr(exc, "partial_text", "")
             if partial:
                 where = _partial_path(
@@ -4282,11 +4359,45 @@ def patch_cmd(args: argparse.Namespace) -> int:
         aes50_devices = _aes50_devices(console, state)
         gain_texts = _gain_texts(args, show, applied) if mode == "patch" else ()
         if mode == "patch":
-            amendment, _merge = patch_engine.plan_patch(
-                applied, change_set, occupancy, allow_strips=set(args.allow_strip or []),
-                console_model=state.console_model or getattr(args, "console_model", None),
-                presets=preset_library, text=change_text, aes50_devices=aes50_devices,
-                gain_texts=gain_texts)
+            def plan_this():
+                # A bus, DCA or mute group the change names that
+                # the plan on the desk does not know is read off the desk --
+                # only that object, never a sweep -- and carried out against.
+                # Read again for a repaired change set, which may name others.
+                nonlocal read_count
+                desk_objects = None
+                if patch_engine.unknown_names(applied, change_set):
+                    desk_objects = {**state.values, **faces}
+                    for find_reads in (patch_engine.name_reads, patch_engine.member_reads):
+                        reads = find_reads(applied, change_set, desk_objects)
+                        if reads and console is not None:
+                            desk_objects.update(desk_view.read_addresses(console, reads))
+                            read_count += len(reads)
+                return patch_engine.plan_patch(
+                    applied, change_set, occupancy, allow_strips=set(args.allow_strip or []),
+                    console_model=state.console_model or getattr(args, "console_model", None),
+                    presets=preset_library, text=change_text, aes50_devices=aes50_devices,
+                    gain_texts=gain_texts, desk_objects=desk_objects)
+            amendment, _merge = plan_this()
+            if amendment.blocked and repair_with is not None:
+                # The desk refused what the model proposed: a provider that
+                # repairs replies is asked once more, with the refusal in
+                # front of it (a socket that is not free, a name that is not
+                # there). One more call, never a loop.
+                problem = "\n".join(c.line() for c in amendment.blocked)
+                try:
+                    change_set = patch_engine.repair_change_set(
+                        change_text, applied, change_set, problem, infos=compile_infos,
+                        **repair_with)
+                except (AIProviderError, patch_engine.ChangeError) as exc:
+                    print(f"  INFO the desk refused the first reply and asking again did not help: {exc}")
+                else:
+                    for info in compile_infos[-1:]:
+                        print(f"  INFO {info}")
+                    saved = patch_engine.saved_change_set(change_set, change_text)
+                    change = patch_engine.change_block(change_text, change_set, None)
+                    print(f"\nChange: {change['name']}")
+                    amendment, _merge = plan_this()
         else:
             amendment = amend_engine.plan_amendment(
                 applied, amended, occupancy, allow_strips=set(args.allow_strip or []),
@@ -4317,7 +4428,10 @@ def patch_cmd(args: argparse.Namespace) -> int:
         for info in amendment.infos:
             print(f"  INFO {info}")
         for warning in amendment.warnings:
-            print(f"  note: {warning}", file=sys.stderr)
+            # A warning that states its own level (an explicit drop of a strip
+            # the desk changed) is printed as one, not as a note.
+            print(warning if warning.startswith("WARNING: ") else f"  note: {warning}",
+                  file=sys.stderr)
 
         targets = amend_engine.amendment_targets(amendment)
         print("\n" + targets.summary())
@@ -4759,9 +4873,9 @@ def _add_patch_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument(
         "--no-constrain", action="store_true",
         help="Do not constrain the model's reply to the change-set format (the same escape "
-             "as `build --no-constrain`). The reply is still checked against it. Only the "
-             "claude and ollama providers constrain decoding; on ATOO_AI_PROVIDER=api "
-             "the schema is never sent, so this changes nothing there.")
+             "as `build --no-constrain`). The reply is still checked against it. The claude, "
+             "ollama and api providers constrain decoding (the api provider sends it as "
+             "`response_format`; ATOO_AI_STRUCTURED=0 also stops that).")
     ap.add_argument(
         "--prompt-dir", default=None, metavar="DIR",
         help="Read change_compile.md from DIR instead of the packaged prompts (sets "
@@ -4813,8 +4927,9 @@ PATCH_DESCRIPTION = (
     "Everything after that is amend's: new channels are placed on genuinely free\n"
     "strips (skipping occupied ones, never renumbering a running one unless the\n"
     "change says INSERT -- see below), a dropped\n"
-    "channel's strip is RETURNED TO FREE where the desk still reads as the strip the\n"
-    "show built, the pre-flight verifies the result and checks every socket written\n"
+    "channel's strip is RETURNED TO FREE -- one the change names, even where the desk\n"
+    "no longer reads it as the strip the show built (said at WARNING, and Undo puts\n"
+    "it back), the pre-flight verifies the result and checks every socket written\n"
     "against the desk, the review shows what will and will NOT be written, and only\n"
     "--confirm writes -- reading every unrelated address before and after to prove\n"
     "none moved, and journalling the run with the change's text and short name.\n"
@@ -4854,11 +4969,10 @@ PATCH_DESCRIPTION = (
     "a channel with no free strip, a pre-flight refusal, a readback mismatch, or an\n"
     "unrelated address that moved.\n"
     "\n"
-    "On a desk Atoo did not set up, a change can only name the groups its\n"
-    "starting plan knows (the desk's journal, else plan.json, else an empty board):\n"
-    "a DCA, mute group or bus that exists on the desk but not in that plan is\n"
-    "REFUSED. Leave it out of the change, or add it in the change. Existing channels\n"
-    "are safe either way -- a new channel only lands on a strip the desk reads free."
+    "A bus, DCA or mute group the starting plan does not know (a desk Atoo did\n"
+    "not set up) is read off the desk when the change names it -- only that\n"
+    "object, not a sweep -- and the change is carried out against what the desk\n"
+    "holds. A name the desk does not hold either is REFUSED."
 )
 
 
@@ -5205,6 +5319,8 @@ def _add_audit_arguments(ap: argparse.ArgumentParser) -> None:
              "JSON --state takes, so this exact reading can be audited again offline -- "
              "with a different --plan, after a fix to a rule, or by someone who was not at "
              "the desk. Written before the audit runs. Live reads only: refused with --state. "
+             "It also records what is on each AES50 port (/$stat/A/dev, B, C; empty when nothing is "
+             "connected), so an offline `patch` can check a socket against the stage box's size. "
              "The file does not record the console model; replay it with --plan to supply one.",
     )
     ap.add_argument(
@@ -5288,6 +5404,15 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
              "reads names every time. Between refreshes each read carries the last names "
              "read, so every rule still runs; a rename shows up at the next refresh, and "
              "the findings say so at INFO (W001).",
+    )
+    ap.add_argument(
+        "--findings-log", default=None, metavar="FILE",
+        help="Save what the watch finds to FILE as it runs (appended, flushed every pass, so "
+             "Ctrl-C or a crash loses nothing): a header (atoo version and where it runs from, "
+             "the console address and what the desk answered, the plan, the conditions, the "
+             "start time), one JSON line per pass (findings standing, what appeared and what "
+             "cleared, the meters, anything the desk did not answer) and a footer on a clean "
+             "stop. Read-only: nothing is written to the desk, and no key is ever in it.",
     )
     ap.add_argument(
         "--watch-conditions", default=None,
@@ -5512,11 +5637,11 @@ WATCH_DESCRIPTION = (
     "in order (then repeats) instead of a live console, so a novice operator can see an alert\n"
     "fire with no hardware at all.\n"
     "\n"
-    "With --show, the bundle's plan adds drift checks, each a WARNING that clears\n"
-    "when the desk is put back: a channel whose every planned send and Main route is off\n"
+    "With --show, the bundle's plan adds drift checks, each a WARNING (CV018 an\n"
+    "INFO) that clears when the desk is put back: a channel whose every planned send and Main route is off\n"
     "(CV016), a planned send switched off or flipped between pre and post (CV006), a\n"
     "channel's Main route off that the plan lists or on that it does not (CV007), a send\n"
-    "to a bus or Matrix, or a bus's route to a Main, that is on and the plan does not have\n"
+    "to a Matrix, or a bus's route to a Main, that is on and the plan does not have\n"
     "(CV018), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted\n"
     "(CV017), 48V that is on where the plan has none or off where it has it (CV019), a bus that\n"
     "is mono or stereo where the plan states the other (CV020), talkback that reaches\n"
@@ -6146,10 +6271,10 @@ def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
         help="Don't constrain decoding to the reply schema (the shorter form the model "
              "writes, which build expands into the plan). "
              "Constrained decoding makes a malformed or off-schema reply impossible on "
-             "the providers that support it (claude, ollama), but a grammar can degrade "
+             "the providers that support it (claude, ollama, api), but a grammar can degrade "
              "the content it shapes and slows local generation -- this exists so that "
              "trade-off can be measured rather than argued about. The api provider "
-             "(OpenAI-compatible) never sends a schema, so this changes nothing there.")
+             "(OpenAI-compatible) sends it as `response_format`, and stops with this.")
     ap.add_argument(
         "--prompt-dir",
         help="Read the generator and critic prompts from here instead of the packaged "
@@ -6328,8 +6453,8 @@ APPLY_DESCRIPTION = (
     "initialized capture of the desk's model, every setting that differs -- except the\n"
     "ones the plan sets itself, and a skip-list (network, clock, expansion cards,\n"
     "meter/RTA display, monitor/solo listening). One INFO line counts it by area and\n"
-    "says how long it took; every write is journalled, so undo reverses it. The WING\n"
-    "Rack has no capture yet: a WARNING says so and the plan is applied without the\n"
+    "says how long it took; every write is journalled, so undo reverses it. A desk whose\n"
+    "model Atoo has no capture for gets a WARNING and the plan is applied without the\n"
     "reset. --no-init skips it, for a desk already initialized by hand.\n"
     "\n"
     "A plan may state a strip's parametric EQ: a channel's\n"

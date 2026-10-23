@@ -340,6 +340,10 @@ class ConsoleState:
     # captured state are untouched, and L003 says nothing about them.
     clips: tuple = ()
     clip_status: object = None
+    # The strips (`/ch/3`) the console's meters show carrying
+    # signal just now, or None when no meter stream is being listened to
+    # (every state but a live watch's): None is "not known", never "silent".
+    live_strips: frozenset | None = None
 
     def get(self, address: str, default=None):
         return self.values.get(address, default)
@@ -2045,6 +2049,16 @@ def _split_unstated(split: SplitPath, planned: frozenset) -> list[_Leg]:
     return [leg for leg in split.legs if (leg.source, leg.target) not in planned]
 
 
+_SPLIT_ADVICE = ("If this is intended, state the purpose of the parallel bus in your "
+                 "conventions or instructions and rebuild; if not, switch one of the routes off.")
+# With no plan in hand nothing can have been asked for, so the advice is to give
+# Atoo the plan, not to change the conventions.
+_SPLIT_ADVICE_NO_PLAN = ("Atoo has no plan it could read for this show, so it cannot tell a "
+                         "parallel bus from a mistake: run it with the show's plan (open the "
+                         "show, or pass --show or --plan); if this is a mistake, switch one of "
+                         "the routes off.")
+
+
 def _rule_signal_split(state: ConsoleState, planned: "frozenset | None" = None) -> list[Finding]:
     """R012. `planned` is the legs a plan states (`planned_routing_legs`), or
     None with no plan. A split whose every leg is stated was asked for and is
@@ -2056,17 +2070,17 @@ def _rule_signal_split(state: ConsoleState, planned: "frozenset | None" = None) 
             continue
         notes = _split_muted(state, split)
         if unstated:
-            notes.append("The plan was applied and does not state "
-                         + "; ".join(f"{_node_text(state, leg.source)} to "
-                                     f"{_node_text(state, leg.target)}" for leg in unstated)
-                         + ", so this is not read as asked for")
+            routes = "; ".join(f"{_node_text(state, leg.source)} to "
+                               f"{_node_text(state, leg.target)}" for leg in unstated)
+            notes.append(f"The plan was applied and the plan does not include the "
+                         f"route{'s' if len(unstated) > 1 else ''} {routes}, so this is not "
+                         f"read as asked for")
         findings.append(Diagnostic.audit(
             "R012", Severity.WARNING, "routing", "Signal Splits And Recombines",
             f"{_split_text(state, split)}. The copies sum there, so level builds up, and if one "
             f"route adds more latency than the other (an insert, a delay) they comb-filter. "
             + "".join(f"{note}. " for note in notes)
-            + "If it is parallel processing, state every leg in the plan and this stays "
-            "quiet; if not, switch one of the routes off.",
+            + (_SPLIT_ADVICE_NO_PLAN if planned is None else _SPLIT_ADVICE),
             _split_addresses(split),
         ))
     return findings
@@ -2089,7 +2103,7 @@ def _rule_signal_split_asked_for(state: ConsoleState,
         findings.append(Diagnostic.audit(
             "R013", Severity.INFO, "routing", "Signal Split Asked For",
             f"{strips} reach{'es' if len(splits) == 1 else ''} {_node_text(state, destination)} "
-            f"by more than one route, and the plan states every leg of it, so it is read as "
+            f"by more than one route, and the plan includes every one of those routes, so it is read as "
             f"asked for (parallel processing) and R012 is quiet about it.",
             addresses,
         ))
@@ -2694,37 +2708,69 @@ def _rule_aes50_cannot_carry_patch(state: ConsoleState) -> list[Finding]:
 
 
 def _rule_aes50_link_not_ok(state: ConsoleState) -> list[Finding]:
-    """C009: a stage box on an AES50 port whose link is not `OK` and which
-    C008 does not already report: one reading `UPD` (updating), or one in
-    error (`ERR`) that nothing is patched from or to.
+    """C009: a stage box on an AES50 port in error (`ERR`) that nothing is
+    patched from or to and which C008 therefore does not report.
 
-    WARNING: neither is a setting that cannot work. An update finishes on
-    its own, and a link in error with nothing on it loses nothing yet; but
-    a stage box that passes no audio is worth knowing about before doors,
-    and the strips patched to one that is updating are silent until it is
-    done. What `ERR` and `UPD` mean is the desk's own wording, read from
-    the status list and not yet confirmed against a stage box. Silent when
-    the status was never read and for a port that reads `OK` or `-`.
+    WARNING: not a setting that cannot work, since nothing in the show is
+    lost yet, but a link that will not carry audio is worth knowing about
+    before doors. Silent when the status was never read and for a port that
+    reads anything else. `UPD` is C010's.
     """
     findings = []
     dependents = aes50_port_dependents(state)
     for port in console_facts.AES50_PORTS:
-        link = _aes50_link(state, port)
-        if link not in ("UPD", "ERR") or (link == "ERR" and port in dependents):
+        if _aes50_link(state, port) != "ERR" or port in dependents:
             continue
-        name = f"AES50-{port}"
-        what = _dependents_text(state, *dependents.get(port, ([], [])))
-        if link == "UPD":
-            message = (f"{name} reports UPD: the stage box on it is updating"
-                       + (f", and {what}. Those carry no audio until it finishes."
-                          if what else ". Nothing is patched from it or to it yet."))
-        else:
-            message = (f"{name} reports a link error (ERR) on a stage box that nothing is "
-                       f"patched from or to. Nothing in the show is lost yet, but the link "
-                       f"will not carry audio: check the cable and the stage box.")
         findings.append(Diagnostic.audit(
             "C009", Severity.WARNING, "configuration", "AES50 Stage Box Link Not OK",
-            message, (console_facts.aes50_status_address(port),),
+            f"AES50-{port} reports a link error (ERR) on a stage box that nothing is "
+            f"patched from or to. Nothing in the show is lost yet, but the link "
+            f"will not carry audio: check the cable and the stage box.",
+            (console_facts.aes50_status_address(port),),
+        ))
+    return findings
+
+
+def _rule_aes50_reports_upd(state: ConsoleState) -> list[Finding]:
+    """C010: an AES50 port whose status reads `UPD`.
+
+    INFO, never a hazard. The status list's words are the desk's own and
+    what `UPD` means is **not confirmed**: a healthy Behringer S32 on
+    AES50-A, passing audio, was read as `UPD` on a full-size WING. A word
+    whose meaning is unknown does not warn against a stage box that may be
+    passing audio, and it does not list every channel on the port as silent;
+    it says what the desk said (with the device the desk names on the port,
+    `/$stat/{port}/dev`), and what the meters show of the strips
+    patched from the port when they are being listened to. A port that is
+    actually down is C008's (`-`, `ERR`).
+    """
+    findings = []
+    dependents = aes50_port_dependents(state)
+    for port in console_facts.AES50_PORTS:
+        if _aes50_link(state, port) != "UPD":
+            continue
+        strips = dependents.get(port, ([], []))[0]
+        live = state.live_strips
+        device = state.text(console_facts.aes50_device_address(port))
+        name = f"AES50-{port}" + (f" ({device})" if device else "")
+        message = (f"{name} reports UPD, which the desk's list gives without saying what "
+                   f"it means (a healthy stage box has been seen reading it).")
+        if not strips:
+            message += " Nothing is patched from it."
+        elif live is None:
+            message += " The meters are not being read, so Atoo cannot say whether it is passing audio."
+        else:
+            carrying = [b for b in strips if b in live]
+            if carrying:
+                message += (f" {len(carrying)} of the {len(strips)} strips patched from it "
+                            f"{'is' if len(carrying) == 1 else 'are'} carrying signal, so it is "
+                            f"passing audio.")
+            else:
+                message += (f" None of the {len(strips)} strips patched from it is carrying "
+                            f"signal just now; that may only be a quiet stage.")
+        findings.append(Diagnostic.audit(
+            "C010", Severity.INFO, "configuration", "AES50 Port Reports UPD", message,
+            (console_facts.aes50_status_address(port),),
         ))
     return findings
 
@@ -3268,11 +3314,11 @@ DEFAULT_RULES: list[AuditRule] = [
     # product owner set. `judges` names a parameter no plan states: only the leg-by-leg test
     # against the plan, bound by `split_path_rules`, stands R012 down.
     AuditRule("R012", Severity.WARNING, "routing", "Signal Splits And Recombines",
-              "A strip in use reaches one Main or Matrix by two or more routes, every leg on "
-              "and above the floor, unless the plan states every leg.",
+              "A strip in use reaches one Main or Matrix by two or more routes, every one on "
+              "and above the floor, unless the plan includes every one of those routes.",
               _rule_signal_split, scope=RuleScope.HAZARD, judges=("split-path",)),
     AuditRule("R013", Severity.INFO, "routing", "Signal Split Asked For",
-              "The splits R012 stood down for because the plan states every leg of them.",
+              "The splits R012 stood down for because the plan includes every route of them.",
               _rule_signal_split_asked_for, scope=RuleScope.HAZARD, judges=("split-path",)),
     # 48V does not care whose strip it is -- the issue's own example of
     # why this is not simply "filter by plan membership".
@@ -3328,8 +3374,13 @@ DEFAULT_RULES: list[AuditRule] = [
               "while the port reads '-' or ERR.",
               _rule_aes50_cannot_carry_patch, scope=RuleScope.HAZARD),
     AuditRule("C009", Severity.WARNING, "configuration", "AES50 Stage Box Link Not OK",
-              "A stage box reads UPD, or ERR with nothing patched to it.",
+              "A stage box reads ERR with nothing patched to it.",
               _rule_aes50_link_not_ok, scope=RuleScope.HAZARD),
+    # UPD's meaning is unconfirmed (a healthy S32 reads it), so
+    # it is said, at INFO, and never raised.
+    AuditRule("C010", Severity.INFO, "configuration", "AES50 Port Reports UPD",
+              "An AES50 port's status reads UPD, a word whose meaning the desk does not give.",
+              _rule_aes50_reports_upd, scope=RuleScope.HAZARD),
     # Hazards, because a lit insert doing nothing and a loaded
     # effect nobody hears do not care whose strip it is. No plan states an
     # insert, so nothing stands either down.
@@ -4422,6 +4473,14 @@ def fx_insert_findings(state: ConsoleState, plan: dict) -> list[Finding]:
 # `audit --plan`, `atoo watch` and the Watch page when the show has
 # one. Both are WARNINGs -- see each function for why not an ERROR.
 
+# CV006, CV007 and CV018 keep their id and title as literals in the rule: the
+# catalogue test reads them from there. The registry's copies are checked against it.
+BUS_SEND_DRIFT_RULE_ID = "CV006"
+BUS_SEND_DRIFT_TITLE = "Bus Send Contradicts Plan"
+MAIN_ROUTE_DRIFT_RULE_ID = "CV007"
+MAIN_ROUTE_DRIFT_TITLE = "Main Route Contradicts Plan"
+UNPLANNED_ROUTE_RULE_ID = "CV018"
+UNPLANNED_ROUTE_TITLE = "Send Or Route Not In Plan"
 ROUTE_DRIFT_RULE_ID = "CV016"
 ROUTE_DRIFT_TITLE = "Planned Routes All Off"
 MUTE_DRIFT_RULE_ID = "CV017"
@@ -4989,26 +5048,6 @@ def main_route_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
     return findings
 
 
-def _planned_send_indices(state: ConsoleState, plan: dict, entry: dict) -> set[int]:
-    """The busses a plan channel lists a send to, as live indices: the
-    plan's own `index` for the bus, and whatever its name resolves to on
-    the desk. Both, as `plan_scope` takes both -- an ambiguity keeps a
-    send out of CV018 rather than putting it in."""
-    busses = plan.get("busses") or {}
-    found: set[int] = set()
-    for send in entry.get("bus_sends") or []:
-        name = send.get("bus") if isinstance(send, dict) else None
-        if not name:
-            continue
-        bus = busses.get(name)
-        if isinstance(bus, dict) and isinstance(bus.get("index"), int):
-            found.add(bus["index"])
-        live = _resolve_single_index_by_name(state, name, bus_indices(state), "/bus/{}")
-        if live is not None:
-            found.add(live)
-    return found
-
-
 def _live_send_level(state: ConsoleState, send_base: str) -> float | None:
     """The level of a send that is on and above the floor; None when it is
     off, at the floor, or either leaf was not read."""
@@ -5030,39 +5069,29 @@ def planned_bus_mains(entry: dict) -> set[int]:
 
 
 def unplanned_route_findings(state: ConsoleState, plan: dict) -> list[Finding]:
-    """CV018: a send or route that is on, which the plan does
-    not have. A planned channel's send to a bus its `bus_sends` does not
-    name, or to any Matrix (the plan states no strip-to-Matrix send), that
-    is on and above the floor; and a planned bus's route to a Main its
-    destinations do not list. A channel's unlisted Main route is CV007's.
+    """CV018: a send or route that is on, which the plan does not have. A
+    planned channel's send to any Matrix (the plan states no strip-to-Matrix
+    send) that is on and above the floor; and a planned bus's route to a Main
+    its destinations do not list. A channel's unlisted Main route is CV007's.
 
-    A WARNING, a judgement: the engineer may have added the send on
-    purpose after the build, and a row costs nothing when it was meant. It
-    is not an INFO because a send nobody listed is how a click reaches the
-    PA, and not an ERROR because adding a send is an ordinary act. Silent
-    for whatever was not read."""
+    A channel's send to a bus the plan does not list is NOT a finding.
+    Decided 2026-10-22: "CV018 is not needed for sends to a bus, it should
+    be an INFO otherwise." Adding a send to a bus is an ordinary act at a
+    desk and the engineer does not need telling.
+
+    An INFO, not a WARNING: what is left is the engineer's own addition to
+    the desk, which may well be meant, and the row only names it. Silent for
+    whatever was not read."""
     findings: list[Finding] = []
     for entry, base in _plan_strips(plan):
         label = strip_label(state, base)
-        planned = _planned_send_indices(state, plan, entry)
-        for idx in send_targets(state, base):
-            send_base = f"{base}/send/{idx}"
-            level = _live_send_level(state, send_base)
-            if idx in planned or level is None:
-                continue
-            findings.append(Diagnostic.audit(
-                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
-                f"{label}: a send to {strip_label(state, f'/bus/{idx}')} is on at {level:g}dB; "
-                "the plan has no send from this channel to that bus.",
-                (f"{send_base}/on",),
-            ))
         for idx in matrix_send_targets(state, base):
             send_base = f"{base}/send/MX{idx}"
             level = _live_send_level(state, send_base)
             if level is None:
                 continue
             findings.append(Diagnostic.audit(
-                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+                "CV018", Severity.INFO, "conventions", "Send Or Route Not In Plan",
                 f"{label}: a send to {position_label(f'/mtx/{idx}')} is on at {level:g}dB; "
                 "the plan has no send from this channel to a Matrix.",
                 (f"{send_base}/on",),
@@ -5079,7 +5108,7 @@ def unplanned_route_findings(state: ConsoleState, plan: dict) -> list[Finding]:
             if main_index in planned_mains or not state.flag(f"{base}/main/{main_index}/on"):
                 continue
             findings.append(Diagnostic.audit(
-                "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
+                "CV018", Severity.INFO, "conventions", "Send Or Route Not In Plan",
                 f"{label}: routed to {position_label(f'/main/{main_index}')} on the desk; "
                 "the plan lists no route from this bus to it.",
                 (f"{base}/main/{main_index}/on",),
@@ -5142,15 +5171,28 @@ def dca_muted_rule(plan: dict) -> AuditRule:
     return replace(base, check=lambda state: _rule_dca_muted_with_members(state, planned))
 
 
-def _read_plan(plan_path) -> "dict | None":
+def read_plan(plan_path) -> "tuple[dict | None, str | None]":
+    """`plan_path`'s plan and None, or None and why it could not be read
+    (the OS's words for a missing or unreadable file, the parser's for bad
+    JSON)."""
     import json as _json
     from pathlib import Path as _Path
 
     try:
         plan = _json.loads(_Path(plan_path).read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        return None
-    return plan if isinstance(plan, dict) else None
+    except OSError as exc:
+        return None, exc.strerror or str(exc)
+    except ValueError as exc:
+        return None, f"not valid JSON: {exc}"
+    except TypeError as exc:
+        return None, str(exc)
+    if not isinstance(plan, dict):
+        return None, "the file is not a JSON object"
+    return plan, None
+
+
+def _read_plan(plan_path) -> "dict | None":
+    return read_plan(plan_path)[0]
 
 
 def with_plan_rules(rules, plan_path) -> list[AuditRule]:
@@ -5164,12 +5206,8 @@ def with_plan_rules(rules, plan_path) -> list[AuditRule]:
     plan = _read_plan(plan_path)
     if plan is None:
         return list(rules)
-    bound = [fader_floor_rule(plan) if rule.id == "L002"
-             else strip_reaches_nothing_rule(plan) if rule.id == "R008"
-             else phantom_unpatched_rule(plan) if rule.id == "C001"
-             else stereo_one_side_rule(plan) if rule.id == "R011"
-             else dca_muted_rule(plan) if rule.id == "CH004"
-             else rule for rule in rules]
+    bound = [PLAN_REBOUND_RULES[rule.id](plan) if rule.id in PLAN_REBOUND_RULES else rule
+             for rule in rules]
     return split_path_rules(bound, plan) + plan_watch_rules(plan_path)
 
 
@@ -5190,10 +5228,7 @@ def plan_watch_rules(plan_path) -> list[AuditRule]:
         return []
     if not isinstance(plan, dict):
         return []
-    rules = [fx_insert_rule(plan), route_drift_rule(plan), mute_drift_rule(plan),
-             bus_send_drift_rule(plan), main_route_drift_rule(plan),
-             unplanned_route_rule(plan), phantom_drift_rule(plan), bus_width_rule(plan),
-             talkback_monitor_rule(plan), talkback_monitors_note_rule(plan)]
+    rules = [factory(plan) for _id, _title, factory in PLAN_ADDED_RULES]
     return [rule for rule in rules if rule is not None]
 
 
@@ -5310,9 +5345,8 @@ def unplanned_route_rule(plan: dict) -> AuditRule | None:
     if not any(True for _ in _plan_strips(plan)) and not plan.get("busses"):
         return None
     return AuditRule(
-        "CV018", Severity.WARNING, "conventions", "Send Or Route Not In Plan",
-        "A send to a bus or Matrix, or a bus's route to a Main, is on and the plan does not "
-        "have it.",
+        "CV018", Severity.INFO, "conventions", "Send Or Route Not In Plan",
+        "A send to a Matrix, or a bus's route to a Main, is on and the plan does not have it.",
         lambda state: unplanned_route_findings(state, plan), scope=RuleScope.CONVENTION)
 
 
@@ -5326,6 +5360,46 @@ def fx_insert_rule(plan: dict) -> AuditRule | None:
         "An FX bus whose insert is off, names another engine, or whose engine holds another "
         "model than its bus preset planned.",
         lambda state: fx_insert_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
+#: The rules Watch binds to a plan, in one place so that `with_plan_rules`,
+#: `plan_watch_rules` and the Watch note for a missing plan (W005) cannot
+#: disagree about which rules need one.
+#:
+#: Rules in `DEFAULT_RULES` that run on their own but judge against the plan
+#: when they have it (each factory takes the plan and returns the rule).
+PLAN_REBOUND_RULES: "dict[str, Callable[[dict], AuditRule]]" = {
+    "L002": fader_floor_rule,
+    "R008": strip_reaches_nothing_rule,
+    "C001": phantom_unpatched_rule,
+    "R011": stereo_one_side_rule,
+    "CH004": dca_muted_rule,
+}
+#: Rules in `DEFAULT_RULES` that `split_path_rules` tells which legs the plan states.
+PLAN_SPLIT_PATH_RULE_IDS = ("R012", "R013")
+#: Rules that exist only with a plan: (id, title, factory), the factory
+#: returning None when the plan gives the rule nothing to check.
+PLAN_ADDED_RULES: "tuple[tuple[str, str, Callable[[dict], AuditRule | None]], ...]" = (
+    (FX_INSERT_RULE_ID, FX_INSERT_TITLE, fx_insert_rule),
+    (ROUTE_DRIFT_RULE_ID, ROUTE_DRIFT_TITLE, route_drift_rule),
+    (MUTE_DRIFT_RULE_ID, MUTE_DRIFT_TITLE, mute_drift_rule),
+    (BUS_SEND_DRIFT_RULE_ID, BUS_SEND_DRIFT_TITLE, bus_send_drift_rule),
+    (MAIN_ROUTE_DRIFT_RULE_ID, MAIN_ROUTE_DRIFT_TITLE, main_route_drift_rule),
+    (UNPLANNED_ROUTE_RULE_ID, UNPLANNED_ROUTE_TITLE, unplanned_route_rule),
+    (PHANTOM_RULE_ID, PHANTOM_TITLE, phantom_drift_rule),
+    (BUS_WIDTH_RULE_ID, BUS_WIDTH_TITLE, bus_width_rule),
+    (TALKBACK_MONITOR_RULE_ID, TALKBACK_MONITOR_TITLE, talkback_monitor_rule),
+    (TALKBACK_MONITORS_NOTE_RULE_ID, TALKBACK_MONITORS_NOTE_TITLE, talkback_monitors_note_rule),
+)
+
+
+def rules_needing_a_plan() -> "tuple[list[tuple[str, str]], list[tuple[str, str]]]":
+    """What Watch loses without a plan, as (id, title) pairs: the rules that
+    still run but cannot judge against the plan, then the rules that are not
+    run at all."""
+    titles = {rule.id: rule.title for rule in DEFAULT_RULES}
+    judged = [(rid, titles[rid]) for rid in (*PLAN_REBOUND_RULES, *PLAN_SPLIT_PATH_RULE_IDS)]
+    return judged, [(rid, title) for rid, title, _factory in PLAN_ADDED_RULES]
 
 
 def _diff_bus_sends(
@@ -6113,14 +6187,14 @@ def render_coverage(state: ConsoleState, *, from_capture: bool = False) -> str:
             "R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On "
             "One Side), CV009 (Undeclared Physical "
             "Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 "
-            "Stage Box Link Not OK), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's "
+            "Stage Box Link Not OK), C010 (AES50 Port Reports UPD), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's "
             "Input Socket Muted) could not be checked -- with no output patch in hand, "
             "\"reaches no physical output\" is a question nobody asked rather than an "
             "answer.\n" + how])
     lines = [f"Physical sockets read: in {read_in or 'none'}; out {read_out or 'none'}."]
     if not read_out:
         lines.append("With no output sockets read, R002, R003, R004, R005, "
-                     "R006, R011, CV009, C008 and C009 could not be checked. " + how)
+                     "R006, R011, CV009, C008, C009 and C010 could not be checked. " + how)
     elif not read_in:
         lines.append("With no input sockets read, C001 and C007 could not be checked. " + how)
     return "\n".join(bay_note + lines)
@@ -6129,7 +6203,7 @@ def render_coverage(state: ConsoleState, *, from_capture: bool = False) -> str:
 # Every rule whose verdict is read off `/io/out/*`. R002 and R005
 # are in here: they were the two that fired anyway.
 # R006 was born with the same guard.
-OUTPUT_SIDE_RULE_IDS = ("R002", "R003", "R004", "R005", "R006", "R011", "CV009", "C008", "C009")
+OUTPUT_SIDE_RULE_IDS = ("R002", "R003", "R004", "R005", "R006", "R011", "CV009", "C008", "C009", "C010")
 
 
 def unanswerable_rule_ids(state: ConsoleState) -> tuple[str, ...]:

@@ -56,7 +56,7 @@ import re
 import sys
 from pathlib import Path
 
-from atoo.ai_provider import AIProvider
+from atoo.ai_provider import AIProvider, Prompt
 from atoo.allocate import allocate_console_indices
 from atoo.json_repair import extract_json_object as _extract_json_object, loads_with_repair
 from atoo import plan_compat
@@ -348,6 +348,14 @@ this section is silent, the conventions above still apply in full.
 {instructions}"""
 
 
+def prompt_json(value: object) -> str:
+    """`value` as the model reads JSON in a prompt: no indentation and no
+    space after `,` or `:` (about 31% fewer tokens for the
+    desk), keys in the order the object holds them, which is fixed for one
+    plan, so the same desk is the same bytes on every call."""
+    return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+
+
 def generator_user(conventions: str, input_csv: str, *, conventions_name: str, input_name: str,
                    instructions: str | None = None,
                    instructions_name: str | None = None,
@@ -362,14 +370,20 @@ def generator_user(conventions: str, input_csv: str, *, conventions_name: str, i
 ---
 
 """
-    return f"""\
-{domain}{_conventions_section(conventions, conventions_name, instructions, instructions_name,
+    # Cache groups: the domain knowledge is true of every
+    # show; the conventions are a show's; the input list is this build's.
+    return Prompt((
+        domain,
+        f"""\
+{_conventions_section(conventions, conventions_name, instructions, instructions_name,
                       resolved, resolved_name,
                       _code_notes(category_table, instructed_strips, input_csv)
                       if resolved else None)}
 
 ---
 
+""",
+        f"""\
 # The input list for this show ({input_name})
 
 ```csv
@@ -378,7 +392,8 @@ def generator_user(conventions: str, input_csv: str, *, conventions_name: str, i
 
 ---
 
-Lay out this show. Emit the plan JSON and nothing else."""
+""",
+    ), "Lay out this show. Emit the plan JSON and nothing else.")
 
 
 def _plan_for_prompt(plan: dict) -> dict:
@@ -444,17 +459,22 @@ def critic_user(conventions: str, input_csv: str, plan: dict, *,
                 conventions_name: str, input_name: str,
                 instructions: str | None = None,
                 instructions_name: str | None = None) -> str:
-    return f"""\
+    return Prompt((
+        f"""\
 # Domain knowledge
 
 {_domain_knowledge()}
 
 ---
 
+""",
+        f"""\
 {_conventions_section(conventions, conventions_name, instructions, instructions_name)}
 
 ---
 
+""",
+        f"""\
 # The input list for this show ({input_name})
 
 ```csv
@@ -463,15 +483,17 @@ def critic_user(conventions: str, input_csv: str, plan: dict, *,
 
 ---
 
+""",
+    ), f"""\
 # The plan to review
 
 ```json
-{json.dumps(_plan_for_critic(plan), indent=None)}
+{prompt_json(_plan_for_critic(plan))}
 ```
 
 ---
 
-Review it. Emit the findings JSON and nothing else."""
+Review it. Emit the findings JSON and nothing else.""")
 
 
 # ---------------------------------------------------------------------------
@@ -886,7 +908,13 @@ def fixup_user(conventions: str, input_csv: str, reply: str, errors: list[str], 
     conventions in place of the raw file when the generator read them),
     then the model's own reply and what `checker` refused in it."""
     listed = "\n".join(f"- {e}" for e in errors)
-    return f"""\
+    # No true-static group (the generator's system prompt, which this
+    # call's system prompt starts with, carries the first breakpoint); the
+    # conventions and the input list are what every fix-up round of one
+    # build re-sends, ahead of the reply and the errors that change.
+    return Prompt((
+        "",
+        f"""\
 {_conventions_section(conventions, conventions_name, instructions, instructions_name,
                       resolved, resolved_name,
                       _code_notes(category_table, instructed_strips, input_csv)
@@ -894,6 +922,8 @@ def fixup_user(conventions: str, input_csv: str, reply: str, errors: list[str], 
 
 ---
 
+""",
+        f"""\
 # The input list for this show ({input_name})
 
 ```csv
@@ -902,6 +932,8 @@ def fixup_user(conventions: str, input_csv: str, reply: str, errors: list[str], 
 
 ---
 
+""",
+    ), f"""\
 # Your reply
 
 ```json
@@ -916,7 +948,7 @@ def fixup_user(conventions: str, input_csv: str, reply: str, errors: list[str], 
 
 ---
 
-Return the whole corrected reply. Emit the reply JSON and nothing else."""
+Return the whole corrected reply. Emit the reply JSON and nothing else.""")
 
 
 def fixup_plan(
@@ -1121,20 +1153,25 @@ def watchlist_system() -> str:
 def watchlist_user(plan: dict, conventions: str, *, conventions_name: str,
                    instructions: str | None = None,
                    instructions_name: str | None = None) -> str:
-    return f"""\
+    return Prompt((
+        "",
+        f"""\
 {_conventions_section(conventions, conventions_name, instructions, instructions_name)}
 
 ---
 
+""",
+        f"""\
 # The plan, already built and verified
 
 ```json
-{json.dumps(_plan_for_prompt(plan), indent=None)}
+{prompt_json(_plan_for_prompt(plan))}
 ```
 
 ---
 
-Draft the watchlist for this show. Emit the JSON object and nothing else."""
+""",
+    ), "Draft the watchlist for this show. Emit the JSON object and nothing else.")
 
 
 def draft_watch_conditions(

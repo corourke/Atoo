@@ -59,10 +59,11 @@ differs from the desk's in the named fields only; the back half
 change. That is the enforcement -- in code, not in the prompt. A fader
 or mute is set only when the change's own words name it. What is still
 **not written**, as `ChangeKind.MODIFIED`: a running object restated
-whole in `add`, a `modify` said in words with no fields, and dropping a
-bus, DCA, mute group or output (nothing returns one of those to free
-yet). The merged plan keeps the base's version of anything it did not
-write, so the plan journalled as "on the desk" stays true.
+whole in `add` and a `modify` said in words with no fields. Dropping a bus,
+a DCA, a mute group or an output is carried out:
+`_drop_bus`, `_drop_group`, `_drop_output`. The merged plan keeps the base's
+version of anything it did not write, so the plan journalled as "on the
+desk" stays true.
 
 Keeping a change for good -- its text into `instructions.md`, its new
 inputs into `input.csv` -- is `atoo/promote.py` (slice 3).
@@ -83,6 +84,7 @@ from atoo import generate
 from atoo import inferred
 from atoo import journal_stack
 from atoo import plan_schema
+from atoo import strict_schema
 from atoo.allocate import (CONSOLE_BUS_CAPACITY, CONSOLE_DCA_CAPACITY,
                                 CONSOLE_MAIN_CAPACITY, CONSOLE_MATRIX_CAPACITY,
                                 CONSOLE_MUTE_GROUP_CAPACITY, allocate_console_indices)
@@ -91,6 +93,7 @@ from atoo.json_repair import extract_json_object, loads_with_repair
 from atoo import plan_compat
 from atoo.schema_check import validate as validate_schema
 from atoo import verify_plan
+from atoo.ai_provider import Prompt
 from atoo.verify_plan import PASSIVE_RIBBON_MODELS, resolve_console_model
 
 #: How long a change's short name may be. "A few words" -- it is a row in
@@ -241,34 +244,45 @@ def change_user(base: dict, change_text: str, *, conventions: str | None,
     else:
         desk = ("The desk holds NO channels yet -- this change builds on an initialized "
                 "board. Add whatever the change needs, busses and groups included.")
-    return f"""\
+    # Cache groups: the domain knowledge is true of every
+    # show; the conventions are a show's; the desk is what a repair of this
+    # change re-sends and what a second patch re-sends only if nothing was
+    # applied in between. The change itself is last.
+    return Prompt((
+        f"""\
 # Domain knowledge
 
 {generate._domain_knowledge()}
 
 ---
 
+""",
+        f"""\
 {conventions_part}
 
 ---
 
+""",
+        f"""\
 # The plan currently on the desk
 
 {desk}
 
 ```json
-{json.dumps(_base_for_prompt(base), indent=2)}
+{generate.prompt_json(_base_for_prompt(base))}
 ```
 
 ---
 
+""",
+    ), f"""\
 # The change
 
 {change_text.strip()}
 
 ---
 
-Compile this change. Emit the change set JSON and nothing else."""
+Compile this change. Emit the change set JSON and nothing else.""")
 
 
 def parse_change_set(raw: str, *, infos: list[str] | None = None) -> dict:
@@ -357,6 +371,71 @@ def _cut_cosmetic_names(change_set: dict, infos: list[str] | None) -> None:
                 cut(channel, "the new channel's name", facts.NAME_MAX_CHARS)
 
 
+#: Required booleans a reply may write as `null` and be read as `false`: the
+#: safe state, said at INFO. A 48V switch left off breaks nothing (a
+#: condenser stays silent until the engineer says so), and `stated: false`
+#: only means the code checks the socket against the desk.
+_NULL_READ_AS_OFF = {"phantom": "48V is not switched on; say \"phantom on\" in the change if the mic needs it",
+                     "stated": "the socket is treated as chosen, not named, and checked against the desk"}
+
+
+def _read_nulls(node, schema: dict, path: str, unstated: list[str], off: list[tuple[str, str]]) -> None:
+    """Walk a reply with its schema and settle every `null` the format does
+    not allow, in place. A property the schema lets a reply leave out is
+    removed (it is "not stated", the same as omitted); a required boolean in
+    `_NULL_READ_AS_OFF` becomes `false`. Anything else is left for the
+    schema to report -- a null where a real setting is needed is a reply
+    that does not say."""
+    options = strict_schema.branches(schema)
+    branch = strict_schema.pick(node, options)
+    kind = strict_schema.kind_of(branch)
+    if kind == "array" and isinstance(node, list):
+        for i, item in enumerate(node):
+            _read_nulls(item, branch["items"], f"{path}[{i}]", unstated, off)
+    elif kind == "object" and isinstance(node, dict):
+        required = set(branch.get("required") or [])
+        for name, sub in branch["properties"].items():
+            if name not in node:
+                continue
+            where = f"{path}.{name}" if path else name
+            if node[name] is None and not strict_schema.accepts_null(strict_schema.branches(sub)):
+                if name not in required:
+                    del node[name]
+                    unstated.append(where)
+                elif name in _NULL_READ_AS_OFF:
+                    node[name] = False
+                    off.append((where, _NULL_READ_AS_OFF[name]))
+            else:
+                _read_nulls(node[name], sub, where, unstated, off)
+    elif kind == "map" and isinstance(node, dict):
+        for name, item in node.items():
+            _read_nulls(item, branch["additionalProperties"], f"{path}.{name}", unstated, off)
+
+
+def _read_nulls_as_unstated(change_set: dict, infos: list[str] | None) -> None:
+    """`null` for a field the format lets a reply leave out is not a setting
+    that cannot work, only a reply that does not say: it is read as not stated,
+    and the INFO says which fields."""
+    unstated: list[str] = []
+    off: list[tuple[str, str]] = []
+    for section in ("add", "modify"):
+        if section in change_set:
+            _read_nulls(change_set[section], CHANGE_SET_SCHEMA["properties"][section],
+                        section, unstated, off)
+    if infos is None:
+        return
+    def shape(paths):
+        return sorted({re.sub(r"\[\d+\]", "[]", p) for p in paths})
+    if unstated:
+        infos.append(f"{len(unstated)} field(s) were null where the format lets a reply leave them "
+                     f"out; each is read as not stated: {', '.join(shape(unstated))}")
+    for field_ in shape(w for w, _ in off):
+        why = next(r for w, r in off if re.sub(r"\[\d+\]", "[]", w) == field_)
+        count = sum(1 for w, _ in off if re.sub(r"\[\d+\]", "[]", w) == field_)
+        infos.append(f"{field_} was null on {count} entr{'y' if count == 1 else 'ies'}; read as "
+                     f"false -- {why}")
+
+
 def validate_change_set(change_set, *, partial_text: str = "",
                         infos: list[str] | None = None) -> dict:
     if not isinstance(change_set, dict):
@@ -388,6 +467,7 @@ def validate_change_set(change_set, *, partial_text: str = "",
         add = change_set["add"] = plan_compat.normalise_plan(add)
         inferred.tag_model_markers(add)
     _cut_cosmetic_names(change_set, infos)
+    _read_nulls_as_unstated(change_set, infos)
     violations = validate_schema(change_set, CHANGE_SET_SCHEMA)
     if violations:
         shown = "\n  ".join(violations[:10])
@@ -397,21 +477,197 @@ def validate_change_set(change_set, *, partial_text: str = "",
     return change_set
 
 
+def _repair_user(user: str, reply: str, problem: str) -> str:
+    """The user message of a repair call: the original, then the reply that
+    was not accepted and exactly why, so the model changes what the message
+    names and nothing else."""
+    more = f"""
+
+---
+
+# Your previous reply was not accepted
+
+```json
+{reply.strip()}
+```
+
+It was refused for this reason:
+
+{problem}
+
+Return the corrected change set: the whole JSON object, and nothing else. Change only what the
+reason names; keep everything the reason does not name."""
+    # A Prompt keeps its cached groups, so the repair reads the original
+    # request from the cache; a plain string just grows.
+    return user.with_tail(more) if isinstance(user, Prompt) else f"{user}{more}"
+
+
+#: Phrases that mean a reply's own note says it is not the answer. Short and
+#: conservative: a note that merely says "supersedes the factory name" is a
+#: description of the change, not a retraction of the reply.
+_RETRACTION = re.compile(
+    r"\b(?:(?:this|the)\s+(?:reply|response|change set|answer|change)\s+(?:is\s+)?"
+    r"(?:superseded|retracted|incomplete|void|invalid)"
+    r"|(?:is|was|been|are)\s+(?:retracted|withdrawn)"
+    r"|(?:reply|response|answer)\s+(?:is|was)\s+superseded"
+    r"|need(?:s|ed|ing)?\s+(?:a\s+)?re-?run|please\s+re-?run|re-?run\s+(?:this|the)\s+(?:change|request)"
+    r"|treat\s+this\s+(?:change|reply|response)\s+as"
+    r"|(?:entry|reply|response|answer|change\s+set)(?:\s+above)?\s+is\s+incorrect"
+    r"|see\s+the\s+corrected\s+(?:set|change|reply)|not\s+possible\s+in\s+this\s+format"
+    r"|ignore\s+(?:this|the)\s+(?:reply|response|change set|answer|change)"
+    r"|incomplete\s+(?:reply|response|change set|answer)"
+    r"|(?:i|we)\s+(?:could\s*not|couldn't|cannot|can't|was\s+unable\s+to|am\s+unable\s+to)\b"
+    r"|will\s+not\s+apply|not\s+the\s+(?:final|complete)\s+(?:answer|change|reply))"
+    r"|^\W*superseded\b|\bsuperseded\b.*\b(?:re-?run|retry|redo|corrected|incorrect)\b",
+    re.IGNORECASE | re.DOTALL)
+
+_COUNT_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve".split())}
+_COUNT_NOUN = (r"(?:channels?|mics?|microphones?|inputs?|strips?|dis?|di\s+boxes|sources?|"
+               r"players?|vocals?|singers?)")
+_COUNT_ASK = re.compile(
+    r"\b(?:add|adding|insert|new|put\s+in|patch)\s+(\d+|" + "|".join(_COUNT_WORDS) + r")\s+"
+    r"(?:[\w-]+\s+){0,2}?" + _COUNT_NOUN + r"\b", re.IGNORECASE)
+_ADD_WORD = re.compile(r"\b(?:add|adding|new|insert|create)\b", re.IGNORECASE)
+_QUOTED = re.compile(r"[\"\u201c]([^\"\u201d]{1,%d})[\"\u201d](?!\s*preset)" % CHANGE_NAME_MAX)
+_SIDE = re.compile(r"^(.*\S)[\s-]+[LR]$")
+
+
+def _object_names(section: dict) -> set[str]:
+    """The names of the objects a plan or an `add` section holds -- the only
+    places a quoted name counts as written. A title, a note or an
+    explanation that echoes it counts for nothing."""
+    names = {_norm(c.get("name")) for c in section.get("channels") or [] if isinstance(c, dict)}
+    for key in _NAMED_KINDS:
+        group = section.get(key)
+        if isinstance(group, dict):
+            names |= {_norm(k) for k in group}
+            names |= {_norm(v.get("name")) for v in group.values() if isinstance(v, dict)}
+    return names - {""}
+
+
+def retraction_note(change_set: dict) -> str | None:
+    """The first of the reply's notes that says the reply is not the answer."""
+    for note in change_set.get("notes") or []:
+        if isinstance(note, str) and _RETRACTION.search(note):
+            return note
+    return None
+
+
+def reply_shortfall(change_text: str, base: dict, change_set: dict) -> str | None:
+    """Why a parsed reply is not the whole change, or None. Two readings,
+    both conservative -- this never invents an expectation: a note that
+    retracts the reply, and fewer additions than the words name (quoted
+    names, or a count the words state). A quoted name the reply writes
+    anywhere, or that is already on the desk, is not missing, and an L/R
+    pair merged into one stereo "Choir" counts as both."""
+    note = retraction_note(change_set)
+    if note:
+        return (f'the reply\'s own note says it is not the answer: "{note.strip()}". '
+                "Return the complete change.")
+    text = change_text or ""
+    if not _ADD_WORD.search(text):
+        return None
+    channels = (change_set.get("add") or {}).get("channels") or []
+    seen = _object_names(base) | _object_names(change_set.get("add") or {}) | {
+        _norm(m.get(k)) for m in change_set.get("modify") or [] if isinstance(m, dict)
+        for k in ("name",)} | {
+        _norm((m.get("fields") or {}).get("name")) for m in change_set.get("modify") or []
+        if isinstance(m, dict) and isinstance(m.get("fields"), dict)}
+    missing = []
+    quotes = list(dict.fromkeys(q.strip() for q in _QUOTED.findall(text)))
+    for quoted in quotes:
+        name = _norm(quoted)
+        if not name or name in seen:
+            continue
+        side = _SIDE.match(quoted)
+        if side and any(_norm(c.get("name")) == _norm(side.group(1)) for c in channels):
+            continue
+        missing.append(quoted)
+    if missing:
+        return ("the change names " + ", ".join(f'"{m}"' for m in missing)
+                + "; the reply does not add it. Return the complete change.")
+    if quotes:      # names given: they decide, a count beside them may be a stereo pair
+        return None
+    counts = [_COUNT_WORDS[w] if w in _COUNT_WORDS else int(w)
+              for w in (m.group(1).lower() for m in _COUNT_ASK.finditer(text))]
+    wanted = sum(counts)
+    width = sum(2 if _stereo_sockets(c) else 1 for c in channels)
+    if wanted and len(channels) < wanted and width < wanted:
+        return (f"the change asks for {wanted} channels; the reply adds {len(channels)}. "
+                "Return the complete change.")
+    return None
+
+
 def compile_change(change_text: str, base: dict, *, provider, console_model: str,
                    conventions: str | None = None, conventions_name: str | None = None,
                    instructions: str | None = None, instructions_name: str | None = None,
                    constrain: bool = True, infos: list[str] | None = None) -> dict:
     """The typed change -> a change set, by one model call. Anything
-    decided while reading the reply is appended to `infos`."""
-    raw = provider.complete(
-        system=change_system(console_model),
-        user=change_user(base, change_text, conventions=conventions,
-                         conventions_name=conventions_name, instructions=instructions,
-                         instructions_name=instructions_name),
-        response_schema=CHANGE_SET_SCHEMA if constrain else None,
-        label="change",
-    )
-    return parse_change_set(raw, infos=infos)
+    decided while reading the reply is appended to `infos`.
+
+    A provider that says `repairs_replies` (the api provider) gets ONE more
+    call when the reply fails the format: the same request, then the reply
+    and the validator's message (`_repair_user`). Both calls are counted in
+    the usage lines (the second is labelled `change-repair`), the second is
+    said at INFO, and a second failure is the error."""
+    system = change_system(console_model)
+    user = change_user(base, change_text, conventions=conventions,
+                       conventions_name=conventions_name, instructions=instructions,
+                       instructions_name=instructions_name)
+    schema = CHANGE_SET_SCHEMA if constrain else None
+    raw = provider.complete(system=system, user=user, response_schema=schema, label="change")
+    def shortfall(change_set: dict) -> str | None:
+        return reply_shortfall(change_text, base, change_set)
+
+    try:
+        change_set = parse_change_set(raw, infos=infos)
+        problem = shortfall(change_set)
+        if problem is None:
+            return change_set
+        first = ChangeError(problem, partial_text=raw)
+    except ChangeError as exc:
+        first = exc
+    if not getattr(provider, "repairs_replies", False):
+        raise first
+    return _repair(provider, system, user, schema, raw, str(first), infos, check=shortfall)
+
+
+def repair_change_set(change_text: str, base: dict, change_set: dict, problem: str, *, provider,
+                      console_model: str, conventions: str | None = None,
+                      conventions_name: str | None = None, instructions: str | None = None,
+                      instructions_name: str | None = None, constrain: bool = True,
+                      infos: list[str] | None = None) -> dict:
+    """A change set that parsed but that the desk REFUSED (`problem` says
+    why: the review's blocked lines), compiled once more with that message
+    in front of the model. Same bound and the same accounting as the repair
+    in `compile_change`."""
+    system = change_system(console_model)
+    user = change_user(base, change_text, conventions=conventions,
+                       conventions_name=conventions_name, instructions=instructions,
+                       instructions_name=instructions_name)
+    return _repair(provider, system, user, CHANGE_SET_SCHEMA if constrain else None,
+                   generate.prompt_json(change_set), problem, infos)
+
+
+def _repair(provider, system: str, user: str, schema, reply: str, problem: str,
+            infos: list[str] | None, *, check=None) -> dict:
+    first_line = problem.strip().splitlines()[0] if problem.strip() else "no reason given"
+    raw = provider.complete(system=system, user=_repair_user(user, reply, problem),
+                            response_schema=schema, label="change-repair")
+    try:
+        change_set = parse_change_set(raw, infos=infos)
+        again = check(change_set) if check else None
+        if again:
+            raise ChangeError(again, partial_text=raw)
+    except ChangeError as second:
+        raise ChangeError(f"{second} (the first reply failed too -- {first_line} -- and was "
+                          "sent back once with that message)", partial_text=second.partial_text) from second
+    if infos is not None:
+        infos.append(f"the first reply was not accepted ({first_line}); it was sent back once with "
+                     "that message and the second reply is the one used -- both calls are in the "
+                     "usage lines above, the second labelled 'change-repair'")
+    return change_set
 
 
 def load_change_set(path: str | Path, *,
@@ -466,6 +722,18 @@ class MergeResult:
     #: `{source key: strip label}` for each channel put in the room made.
     renumbered: dict = field(default_factory=dict)
     inserted: dict = field(default_factory=dict)
+    #: Names of the busses the change drops and the desk returns to free, handed to `amend.plan_amendment`.
+    freed_busses: list = field(default_factory=list)
+    freed_indices: set = field(default_factory=set)
+    #: `(plan key, name)` of the DCAs, mute groups and outputs the change
+    #: drops and the desk returns to free, and the
+    #: indices they held, per plan key.
+    freed_objects: list = field(default_factory=list)
+    freed_object_indices: dict = field(default_factory=dict)
+    #: Source keys of the channels the change drops by name: an
+    #: explicit drop is carried out even where the desk no longer reads the
+    #: strip as the one the plan built (`amend.plan_amendment`).
+    explicit_drops: set = field(default_factory=set)
     #: Channels the change put "after Snare" without saying insert, that
     #: went on a free strip instead: `[(name, position asked for, wording
     #: that would renumber)]`. `plan_patch` says where each landed.
@@ -547,10 +815,47 @@ def _choose_sockets(group: str, count: int, used, console_model: str | None,
     return None
 
 
+_NUMBER_LIST = r"\d+(?:\s*(?:,|and|&|/|\+|-|to)\s*\d+)*"
+
+
+def _numbers_after(text: str, group: str) -> set[int]:
+    """Every socket number `text` writes after `group` ("on A 5 and 6",
+    "LCL 21-22", "A5/6"); a range of two is both ends and what lies between."""
+    found: set[int] = set()
+    for match in re.finditer(rf"(?<![A-Za-z0-9]){re.escape(group)}\s*({_NUMBER_LIST})",
+                             text, re.I):
+        numbers = [int(n) for n in re.findall(r"\d+", match.group(1))]
+        found.update(numbers)
+        if len(numbers) == 2 and re.search(r"-|to", match.group(1)) and numbers[0] < numbers[1]:
+            found.update(range(numbers[0], numbers[1] + 1))
+    return found
+
+
+def _stated_by_text(patch: dict, sockets: list[int], missing: list[int],
+                    text: str | None) -> bool:
+    """Whether the engineer's words name these sockets. The model's `stated`
+    flag is a claim; the words are the evidence, and which sockets are the
+    engineer's and which are Atoo's to choose must not turn on a draw. A socket the words write after its group is named, whatever the
+    flag says; a flag of true on a socket that does not exist, with no such
+    number anywhere in the words, is the model's invention, not an instruction."""
+    if text is None:
+        return bool(patch.get("stated"))
+    group = patch.get("group")
+    if group and all(s in _numbers_after(text, group) for s in sockets):
+        return True
+    if patch.get("stated") and missing:
+        written = {int(n) for n in re.findall(r"\d+", text)}
+        return any(s in written for s in missing)
+    return bool(patch.get("stated")) and not missing
+
+
 def _settle_socket(channel: dict, used: dict, console_model: str | None,
-                   infos: list[str], warnings: list[str], boxes: dict | None = None) -> None:
+                   infos: list[str], warnings: list[str], boxes: dict | None = None,
+                   words: str | None = None) -> None:
     """Decision 5: a socket the change named is honoured; one it did not
-    name is chosen, and the choice announces itself at INFO."""
+    name is chosen, and the choice announces itself at INFO. Whether it was
+    named is read from the change's words (`_stated_by_text`), not taken from
+    the model's flag alone."""
     where = repr(channel.get("name"))
     patch = channel.get("patch") or {}
     group = patch.get("group")
@@ -560,7 +865,9 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
     text = f"{group} {'+'.join(str(s) for s in sockets)}"
     limit = _socket_limit(group, console_model, boxes)
     clash = [used[(group, s)] for s in sockets if (group, s) in used]
-    if patch.get("stated"):
+    missing = [s for s in sockets if s > limit]
+    patch["stated"] = _stated_by_text(patch, sockets, missing, words)
+    if patch["stated"]:
         if clash:
             warnings.append(
                 f"channel {where}: the change names {text}, which {clash[0]} already uses -- "
@@ -569,7 +876,6 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
         else:
             infos.append(f"channel {where}: patched to {text}, the socket the change named")
         return
-    missing = [s for s in sockets if s > limit]
     if not clash and not missing:
         infos.append(
             f"channel {where}: the change named no socket, so {text} was chosen -- the first "
@@ -584,18 +890,27 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
         why = f"the {device} on AES50-{group} has {inputs} inputs, so there is no {group} {missing[0]}"
     else:
         why = f"this console has no {group} {missing[0]}"
+    what = "stereo pair" if len(sockets) == 2 else "socket"
+    place = group
+    if chosen is None and group != "LCL":
+        # The box has no room; the desk's own local inputs are always there.
+        chosen = _choose_sockets("LCL", len(sockets), used, console_model, boxes)
+        place = "LCL"
     if chosen is None:
         warnings.append(
             f"channel {where}: the change named no socket, and {text} was picked -- but {why}, "
-            f"and no free {group} socket is left to choose instead. Left as picked; name the "
-            "socket in the change.")
+            f"and no free {what} is left on {group} or LCL to choose instead. Left as picked; "
+            "name the socket in the change.")
         return
+    patch["group"] = place
     patch["sockets"] = chosen
-    new = f"{group} {'+'.join(str(s) for s in chosen)}"
+    new = f"{place} {'+'.join(str(s) for s in chosen)}"
+    elsewhere = f" -- {group} has no free {what}, so on the desk's own inputs" \
+        if place != group else ""
     infos.append(
         f"channel {where}: the change named no socket; {text} was picked, but {why}, so "
-        f"{new} was chosen instead -- the first free {group} socket. Say the socket in the "
-        "change to choose it yourself.")
+        f"{new} was chosen instead -- the first free {what} on {place}{elsewhere}. Say the "
+        "socket in the change to choose it yourself.")
 
 
 def _references(obj: dict) -> list[tuple[str, str]]:
@@ -615,6 +930,155 @@ def _references(obj: dict) -> list[tuple[str, str]]:
 
 
 _WORD = dict(OBJECT_KINDS)
+
+# ----------------------------------------------------------------------
+# Objects the plan does not know
+# ----------------------------------------------------------------------
+
+#: The console root of each kind of named object the desk holds a name for.
+_DESK_ROOT = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
+_DESK_CAPACITY = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
+_TAG_OF = {"dcas": "D", "mute_groups": "M"}
+
+
+def unknown_names(base: dict, change_set: dict) -> dict[str, list[str]]:
+    """The busses, DCAs and mute groups the change names (drops, edits, and the
+    references of the channels it adds or edits) that the plan on the desk
+    does not know: `{plan key: [names]}`. A desk Atoo did not set up holds
+    them anyway; `adopt_desk_objects` reads what it holds."""
+    wanted: dict[str, list[str]] = {}
+
+    def want(key: str, name: object) -> None:
+        if key in _DESK_ROOT and name is not None and str(name) not in (base.get(key) or {}):
+            if str(name) not in wanted.setdefault(key, []):
+                wanted[key].append(str(name))
+
+    for key in _DESK_ROOT:
+        for name in (change_set.get("drop") or {}).get(key) or []:
+            want(key, name)
+    for channel in (change_set.get("add") or {}).get("channels") or []:
+        for key, name in _references(channel):
+            want(key, name)
+    for request in change_set.get("modify") or []:
+        if not isinstance(request, dict):
+            continue
+        kind = _KEY_OF.get(str(request.get("object")))
+        if kind in _DESK_ROOT:
+            want(kind, request.get("name"))
+        fields = request.get("fields")
+        if isinstance(fields, dict):
+            for key, name in _references(fields):
+                want(key, name)
+    return {key: names for key, names in wanted.items() if names}
+
+
+def name_reads(base: dict, change_set: dict, known: dict) -> list[tuple[str, str]]:
+    """The names to read first, as `(address, OSC type)`: every name of the
+    kinds the change names an unknown object of, unless `known` has it."""
+    reads: list[tuple[str, str]] = []
+    for key in unknown_names(base, change_set):
+        root = _DESK_ROOT[key]
+        reads.extend((f"/{root}/{n}/name", "s") for n in range(1, facts.CAPACITY[root] + 1)
+                     if f"/{root}/{n}/name" not in known)
+    return reads
+
+
+def member_reads(base: dict, change_set: dict, known: dict) -> list[tuple[str, str]]:
+    """Then, once the names are in `known`: for an unknown bus the change drops,
+    which strips send into it, and for an unknown DCA or mute group it drops,
+    every strip's tags. Only these objects, never a sweep."""
+    reads: list[tuple[str, str]] = []
+    dropped = change_set.get("drop") or {}
+    strips = [(bank, n) for bank in ("ch", "aux") for n in range(1, facts.CAPACITY[bank] + 1)]
+    for key, names in _found_on_desk(unknown_names(base, change_set), known).items():
+        for name, index in names.items():
+            if name not in (dropped.get(key) or []):
+                continue
+            for bank, n in strips:
+                pair = ((f"/{bank}/{n}/send/{index}/on", "i") if key == "busses"
+                        else (f"/{bank}/{n}/tags", "s"))
+                if pair[0] not in known and pair not in reads:
+                    reads.append(pair)
+    return reads
+
+
+def _found_on_desk(unknown: dict[str, list[str]], known: dict) -> dict[str, dict[str, int]]:
+    """`{plan key: {name asked for: desk index}}` for each unknown name the desk
+    holds under that name (case aside; the lowest index when two hold it)."""
+    found: dict[str, dict[str, int]] = {}
+    for key, names in unknown.items():
+        root = _DESK_ROOT[key]
+        held = {n: known.get(f"/{root}/{n}/name") for n in range(1, facts.CAPACITY[root] + 1)}
+        for name in names:
+            index = next((n for n, held_name in held.items()
+                          if isinstance(held_name, str) and held_name.strip().casefold()
+                          == name.strip().casefold()), None)
+            if index is not None:
+                found.setdefault(key, {})[name] = index
+    return found
+
+
+def adopt_desk_objects(base: dict, change_set: dict, known: dict) -> tuple[dict, list[str], list[str]]:
+    """The plan on the desk, with each bus, DCA or mute group the change names
+    that the plan does not know but the desk holds put in as the desk has it: `(plan, infos, warnings)`.
+
+    The entry is the desk's index and nothing the desk was not asked: a bus
+    the change drops then goes through the same road as one the plan built --
+    returned to free from the model's capture -- and the strips of the plan
+    that send into it, or belong to a DCA or mute group it drops, are given
+    that membership so the change takes it away. A strip the plan does not
+    hold that does the same is named in a WARNING and left as it is: the
+    plan has no record of it to edit."""
+    unknown = unknown_names(base, change_set)
+    found = _found_on_desk(unknown, known)
+    if not found:
+        return base, [], []
+    plan = copy.deepcopy(base)
+    infos: list[str] = []
+    warnings: list[str] = []
+    dropped = change_set.get("drop") or {}
+    for key, names in found.items():
+        word = _WORD[key]
+        plan.setdefault(key, {})
+        for name, index in names.items():
+            plan[key][name] = {"index": index, "adopted": "read from the desk"}
+            infos.append(
+                f"{word} {name!r} is not in the plan on the desk, but the desk holds it as "
+                f"{word} {index} ({known.get(f'/{_DESK_ROOT[key]}/{index}/name')!r}), so the "
+                "change is carried out against that")
+            if name not in (dropped.get(key) or []):
+                continue
+            by_slot = {(str(c.get("bank", "ch")), c.get("channel")): c
+                       for c in plan.get("channels") or [] if isinstance(c, dict)}
+            unrecorded = []
+            for bank in ("ch", "aux"):
+                for n in range(1, facts.CAPACITY[bank] + 1):
+                    if key == "busses":
+                        on = known.get(f"/{bank}/{n}/send/{index}/on")
+                        held = bool(on) and on not in (0, "0", "OFF")
+                    else:
+                        tags = str(known.get(f"/{bank}/{n}/tags") or "")
+                        held = f"#{_TAG_OF[key]}{index}" in [t.strip() for t in tags.split(",")]
+                    if not held:
+                        continue
+                    channel = by_slot.get((bank, n))
+                    if channel is None:
+                        unrecorded.append(f"{bank} {n}")
+                    elif key == "busses":
+                        channel.setdefault("bus_sends", []).append(
+                            {"bus": name, "mode": None, "level_db": None})
+                    else:
+                        field_name = "dca" if key == "dcas" else "mute_group"
+                        channel.setdefault(field_name, []).append(name)
+            if unrecorded:
+                warnings.append(
+                    f"{word} {name!r}: "
+                    + ("a send into it" if key == "busses" else "membership of it")
+                    + f" on {', '.join(unrecorded[:8])}"
+                    + (f" and {len(unrecorded) - 8} more" if len(unrecorded) > 8 else "")
+                    + " is on the desk but not in the plan, which has no record of those strips "
+                    "to edit, so it is left as the desk has it")
+    return plan, infos, warnings
 
 
 def _restated(what: str) -> str:
@@ -671,9 +1135,106 @@ def _pair_phantom_problems(original: dict, edited: dict, paths: list[str], infos
     return []
 
 
-def _drop_not_built(word: str, name: str) -> str:
-    return (f"the change drops {word} {name!r} -- not written: only a channel's strip can be "
-            f"returned to free; nothing returns a {word} to free yet")
+def _take_out_of(merged: dict, result: MergeResult, path: str, keep) -> None:
+    """Take what a dropped object was to every running channel and bus out of
+    their `path` field: `keep(old list)` is what is left. Each owner that
+    changes gets ONE edit of that field -- from what the desk has to what is
+    left, even where two dropped objects were in it -- which the back half
+    writes as the thing switched off."""
+    for key in ("channels", "busses"):
+        owners = merged["channels"] if key == "channels" else [
+            n for n, e in merged["busses"].items() if isinstance(e, dict)]
+        for owner in owners:
+            obj = owner if key == "channels" else merged["busses"][owner]
+            old = obj.get(path) or []
+            kept = keep(old)
+            if len(kept) == len(old):
+                continue
+            edited = copy.deepcopy(obj)
+            edited[path] = kept
+            if key == "channels":
+                merged["channels"] = [edited if c is obj else c for c in merged["channels"]]
+                who, slot = str(obj.get("name")), f"{obj.get('bank', 'ch')}:{obj.get('channel')}"
+            else:
+                merged["busses"][owner] = edited
+                who, slot = str(owner), None
+            prior = next((i for i, e in enumerate(result.edits)
+                          if (e.key, e.name, e.path) == (key, who, path)), None)
+            was = old if prior is None else result.edits[prior].old
+            edit = amend_engine.FieldEdit(key=key, name=who, path=path, old=was,
+                                          new=kept, slot=slot)
+            if prior is None:
+                result.edits.append(edit)
+            else:
+                result.edits[prior] = edit
+
+
+def _drop_bus(merged: dict, name: str, result: MergeResult) -> None:
+    """A change that drops a bus returns it to free: the bus is
+    taken out of the merged plan, so the back half reads it as freed
+    (`amend.plan_amendment`'s `freed_busses`), and what pointed at it goes
+    with it -- every running channel's send into it is taken out of that
+    channel's `bus_sends` as an edit, which the back half writes as the send
+    switched off, and a matrix it fed no longer names it. The engineer said
+    "clear bus 5"; nothing here is a reason to refuse."""
+    index = (merged["busses"][name] or {}).get("index")
+    del merged["busses"][name]
+    result.freed_busses.append(name)
+    if isinstance(index, int):
+        result.freed_indices.add(index)
+    _take_out_of(merged, result, "bus_sends", lambda sends: [
+        x for x in sends if not (isinstance(x, dict) and x.get("bus") == name)])
+    for out_name, out in merged["outputs"].items():
+        fed = out.get("fed_by") if isinstance(out, dict) else None
+        if isinstance(fed, dict) and fed.get("type") == "bus" and fed.get("name") == name:
+            out["fed_by"] = None
+            result.infos.append(
+                f"output {out_name!r} was fed by bus {name!r}; the bus's send to it is cleared "
+                "with the bus, so the matrix now has no source named -- feed it from something "
+                "else in a later change")
+    result.infos.append(
+        f"the change drops bus {name!r}"
+        + (f" (bus {index})" if index else "")
+        + ": carried out -- the bus is returned to free, and every channel's send into it is "
+        "switched off")
+
+
+def _drop_group(merged: dict, key: str, name: str, result: MergeResult) -> None:
+    """A change that drops a DCA or a mute group returns it to free: taken out of the merged plan, so the back half
+    reads it as freed, and every running channel and bus that was a member
+    has it taken out of its `dca` / `mute_group` list as an edit, which the
+    back half writes as that strip's tags rebuilt without it."""
+    word, field_name = _WORD[key], ("dca" if key == "dcas" else "mute_group")
+    index = (merged[key][name] or {}).get("index")
+    del merged[key][name]
+    result.freed_objects.append((key, name))
+    if isinstance(index, int):
+        result.freed_object_indices.setdefault(key, set()).add(index)
+    members = [str(c.get("name")) for c in merged["channels"] if name in (c.get(field_name) or [])]
+    _take_out_of(merged, result, field_name, lambda names: [n for n in names if n != name])
+    result.infos.append(
+        f"the change drops {word} {name!r}" + (f" ({word} {index})" if index else "")
+        + ": carried out -- it is returned to free"
+        + (f", and {', '.join(members)} no longer belong" if members else "")
+        + (" to it" if members else ""))
+
+
+def _drop_output(merged: dict, name: str, result: MergeResult) -> None:
+    """A change that drops an output returns it to free: the
+    Main or Matrix behind it and the socket it fed read as initialized."""
+    out = merged["outputs"][name] or {}
+    kind, index = out.get("kind"), out.get("index")
+    del merged["outputs"][name]
+    result.freed_objects.append(("outputs", name))
+    still_fed = [n for n, o in merged["outputs"].items() if isinstance(o, dict)
+                 and isinstance(o.get("fed_by"), dict) and o["fed_by"].get("type") == kind
+                 and o["fed_by"].get("index") == index and kind == "main"]
+    result.infos.append(
+        f"the change drops output {name!r}"
+        + (f" ({kind} {index})" if kind and index else "")
+        + ": carried out -- the output is returned to free and its socket reads as an initialized desk's"
+        + (f"; {', '.join(map(repr, still_fed))} is fed from that Main and keeps its own settings"
+           if still_fed else ""))
 
 
 #: Why a change cannot set the values a preset was expanded into.
@@ -700,8 +1261,6 @@ _FROZEN_FIELDS = {
                         "source.phantom, source.model and source.type",
         "source.pair_input": "the second row of a stereo pair is how its strip is recognised "
                              "-- drop the channel and add the new source",
-        "source.stereo": "mono to stereo changes how many sockets and strips the channel "
-                         "takes -- drop it and add it again",
         "source.from": SOURCE_RECORD,
         "source.quote": SOURCE_RECORD,
         "source.condition": SOURCE_RECORD,
@@ -742,6 +1301,92 @@ def _preset_record(key: str, obj: dict) -> dict | None:
     record = (obj.get("processing") or {}).get("preset_values") if key == "channels" \
         else obj.get("preset_values") if key == "busses" else None
     return record if isinstance(record, dict) else None
+
+
+def _switch_channel_preset(edited: dict, new, presets, name, word: str, slot,
+                           changes: list, infos: list, warnings: list):
+    """Expand `new` over a running channel's `edited` copy, in place, and
+    return the new `preset_values` (None for a channel left with no preset),
+    or False with a REFUSED/MODIFIED change appended when it cannot be done:
+    the preset is not in the library, or there is no library to read."""
+    from atoo import preset_expand
+    edited["processing"]["preset"] = new
+    if not new:
+        edited["processing"].pop("preset_values", None)
+        infos.append(f"{word} {name!r}: the preset is taken off -- what the old preset set "
+                     "goes back to what an initialized strip reads")
+        return None
+    if presets is None:
+        changes.append(Change(
+            ChangeKind.MODIFIED, word, repr(name),
+            f"processing.preset -> {new!r} -- not written: no preset library is loaded to "
+            "read the preset's values from", slot=slot))
+        return False
+    for finding in preset_expand.expand_channel(edited, presets):
+        (infos if finding.severity == "info" else warnings).append(finding.message)
+    values = preset_expand.preset_values(edited)
+    if values is None:
+        changes.append(Change(
+            ChangeKind.REFUSED, word, repr(name),
+            f"the change gives it the preset {new!r}, and the preset library has no preset of "
+            "that name -- there are no values to write", slot=slot))
+        return False
+    infos.append(
+        f"{word} {name!r}: the preset {values['preset']!r} ({values['file']}) replaces the "
+        f"old one's {len(values['leaves'])} processing values; what the old preset set and "
+        "this one does not goes back to what an initialized strip reads, and fields the "
+        "plan states itself stay as the plan states them")
+    return values
+
+
+def _settle_stereo(original: dict, edited: dict, used: dict, console_model: str | None,
+                   boxes: dict | None, infos: list, name) -> str | None:
+    """Mono to stereo and back. Returns the reason it cannot be
+    done, or None with `edited`'s patch settled and the choice said at INFO.
+
+    A stereo channel takes two consecutive sockets starting on an odd one
+    (`facts.STEREO_PAIR_RULE`): a mono channel on an odd socket takes the next
+    one, if nothing else uses it; one on an even socket has no pair to form,
+    and a second socket another channel uses is not the engineer's to take.
+    A change that also names the two sockets is held to the same rule. Stereo
+    to mono keeps the first socket; the second is left as the desk has it."""
+    was, now = bool((original.get("source") or {}).get("stereo")), \
+        bool((edited.get("source") or {}).get("stereo"))
+    if was == now:
+        return None
+    patch = edited.setdefault("patch", {}) if isinstance(edited.get("patch"), dict) else {}
+    group = patch.get("group")
+    sockets = [s for s in patch.get("sockets") or [] if isinstance(s, int)]
+    if not isinstance(group, str) or group == "OFF" or not sockets:
+        return ("it has no input socket to make a pair of or to take one from; give the "
+                "socket(s) in the same change")
+    if not now:
+        if len(sockets) == 2:
+            patch["sockets"] = sockets[:1]
+            infos.append(f"channel {name!r}: made mono on {group} {sockets[0]}; {group} "
+                         f"{sockets[1]}, its other half, is left exactly as the desk has it")
+        return None
+    if len(sockets) == 2:
+        problem = facts.stereo_pair_problem(sockets)
+        return (f"{group} {sockets[0]}+{sockets[1]} cannot be a stereo pair: {problem}"
+                if problem else None)
+    first = sockets[0]
+    if first % 2 == 0:
+        return (f"it is on {group} {first}, and a stereo pair on a WING starts on an odd "
+                f"socket (a pair is {group} {first - 1}+{first}), so this cable cannot become "
+                "one half of a pair where it is -- name the odd pair to patch it to")
+    limit = _socket_limit(group, console_model, boxes)
+    if first + 1 > limit:
+        return f"there is no {group} {first + 1} to be its other half on this console"
+    taken = used.get((group, first + 1))
+    if taken:
+        return (f"{group} {first + 1}, the other half of the pair, is used by {taken} -- "
+                "a stereo pair cannot be formed without it; name a free odd pair to patch to")
+    patch["sockets"] = [first, first + 1]
+    infos.append(f"channel {name!r}: made stereo on {group} {first}+{first + 1} -- the socket "
+                 f"after the one it is on, which nothing uses (a stereo pair starts on an odd "
+                 "socket). Say the pair in the change to choose it yourself.")
+    return None
 
 
 def _frozen_reason(frozen: dict, path: str) -> str | None:
@@ -830,7 +1475,8 @@ def _find_object(merged: dict, key: str, ref: str, on_desk: dict):
 
 def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: list,
                   infos: list, warnings: list, occupancy, on_desk: dict,
-                  renumbered_ids: frozenset | set = frozenset()) -> list:
+                  renumbered_ids: frozenset | set = frozenset(), presets=None,
+                  console_model: str | None = None, boxes: dict | None = None) -> list:
     """Slice 2: set the fields a change names on objects already on the
     desk, and ONLY those, returning an `amend.FieldEdit` per leaf that moved.
 
@@ -864,13 +1510,10 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                 ChangeKind.REFUSED, word, repr(ref),
                 f"the change edits it ({asked}), and no {word} of that name is on the desk"))
             continue
-        if key == "channels" and id(found) in renumbered_ids:
-            changes.append(Change(
-                ChangeKind.REFUSED, word, repr(found.get("name") or ref),
-                f"the change edits it ({asked}), and the same change inserts a channel above it, "
-                "which moves its strip -- a strip is moved or edited in one change, not both; "
-                "say the edit as a second change"))
-            continue
+        # A strip the same change's insert moves is rewritten whole on its new
+        # number from the merged entry, so an edit of it needs no write of its
+        # own: it is set on the entry and rides with the move.
+        rides = key == "channels" and id(found) in renumbered_ids
         if key == "channels":
             original = found
             name = str(original.get("name") or ref)
@@ -897,6 +1540,16 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                     problems.append(f"{path}: {path.rsplit('.', 1)[0]} is not an object")
                     continue
             amend_engine.set_path(edited, path, value)
+        if not problems and key == "channels" and "source.stereo" in paths:
+            others = [c for c in merged["channels"] if c is not original]
+            problem = _settle_stereo(
+                original, edited, _occupied_sockets(
+                    {"channels": others}, [s for s in occupancy or () if s.label != slot]),
+                console_model, boxes, infos, name)
+            if problem:
+                problems.append(problem)
+            elif edited.get("patch") != original.get("patch") and "patch" not in paths:
+                paths.append("patch")
         if not problems and key == "channels" and isinstance(edited.get("source"), dict) \
                 and any(p.split(".")[0] == "source" for p in paths):
             ribbon = _ribbon_with_phantom(edited["source"])
@@ -940,6 +1593,21 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                                   amend_engine.get_path(edited, path)))
         kept: list[tuple[str, object, object]] = []
         for path, old, new in leaves:
+            if record is not None and path == _PRESET_NAME_PATH[key] and key == "channels":
+                # Switching a running channel's preset: the new
+                # preset is expanded over the channel as a build does, the
+                # leaves it sets are written, and what the old preset set and
+                # the new one does not is returned to what an initialized
+                # strip reads (`amend._vanished_target`).
+                values = _switch_channel_preset(edited, new, presets, name, word, slot,
+                                                changes, infos, warnings)
+                if values is False:
+                    amend_engine.set_path(edited, path, old)
+                    edited["processing"]["preset_values"] = copy.deepcopy(record)
+                    continue
+                kept.append((path, old, new))
+                kept.append(("processing.preset_values", record, values))
+                continue
             if record is not None and path == _PRESET_NAME_PATH[key]:
                 amend_engine.set_path(edited, path, old)
                 changes.append(Change(
@@ -996,6 +1664,11 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
             merged["channels"] = [edited if c is original else c for c in merged["channels"]]
         else:
             merged[key][name] = edited
+        if rides:
+            infos.append(f"{word} {name!r}: {asked} -- this strip moves with the insert and is "
+                         "rewritten whole on its new number, so the edit "
+                         f"({', '.join(p for p, _o, _n in kept)}) is written with it")
+            continue
         for path, old, new in kept:
             edits.append(amend_engine.FieldEdit(key=key, name=str(name), path=path,
                                                 old=old, new=new, slot=slot))
@@ -1050,7 +1723,7 @@ def _gain_named(text: str | None, channel: dict, texts=()) -> bool:
     return inferred.gain_stated_for(channel, (text, *texts))
 
 
-def _plan_insert(merged: dict, kept: list[dict], text: str | None, dropped: bool,
+def _plan_insert(merged: dict, kept: list[dict], text: str | None,
                  changes: list, infos: list, result: MergeResult) -> set[int]:
     """An explicit insert: the channels after the new one move down.
 
@@ -1100,13 +1773,6 @@ def _plan_insert(merged: dict, kept: list[dict], text: str | None, dropped: bool
     point = spoken[0] if spoken is not None and colliding is new else colliding[0]["channel"]
     inserts = colliding
     count = len(inserts)
-    if dropped:
-        for c in inserts:
-            changes.append(Change(
-                ChangeKind.REFUSED, "channel", repr(c.get("name")),
-                "the change inserts it and drops a channel as well -- the strips they touch "
-                "overlap, so say the drop and the insert as two changes"))
-        return set()
     moves: dict[int, int] = {}
     cursor = point + count
     for channel in sorted((c for c in base if c["channel"] >= point), key=lambda c: c["channel"]):
@@ -1170,9 +1836,12 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     1. **Drops.** A dropped channel is taken out of the merged plan, so the
        back half returns its strip to free -- if the desk still reads as
        the strip this show built (`amend.release_refusal`). A drop naming
-       nothing on the desk is REFUSED. A dropped bus, DCA, mute group or
-       output is NOT written in this slice (nothing can return one to free
-       yet) and is reported as MODIFIED, with the base's copy kept.
+       nothing on the desk is REFUSED. A dropped bus is carried out
+       (`_drop_bus`): taken out of the merged plan, so the back
+       half returns it to free, and the sends into it taken out of the
+       channels that had them. A dropped DCA, mute group or output is the
+       same (`_drop_group`, `_drop_output`); a DCA or
+       mute group's members have it taken out of their tags.
     2. **Named objects** (busses, DCAs, mute groups, outputs). New ones are
        added with a free console index; one that already exists under that
        name is the existing object -- identical, it is simply referred to;
@@ -1237,6 +1906,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                 "to remove, so the change is refused rather than guessed at"))
             continue
         merged["channels"] = [c for c in merged["channels"] if c is not found]
+        result.explicit_drops.add(amend_engine._source_key(found))
         dropped_keys[amend_engine._source_key(found)] = amend_engine._slot_label(
             amend_engine._channel_slot(found)) if isinstance(found.get("channel"), int) else ""
     for key in _NAMED_KINDS:
@@ -1247,8 +1917,12 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                     ChangeKind.REFUSED, word, repr(name),
                     f"the change drops it, and no {word} of that name is on the desk"))
                 continue
-            changes.append(Change(
-                ChangeKind.MODIFIED, word, repr(name), _drop_not_built(word, name)))
+            if key == "busses":
+                _drop_bus(merged, name, result)
+            elif key == "outputs":
+                _drop_output(merged, name, result)
+            else:
+                _drop_group(merged, key, name, result)
 
     # 2. Named objects.
     capacities = {
@@ -1270,7 +1944,9 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                         _restated(f"the change restates {word} {name!r} with different "
                                   "settings")))
                 continue
-            entry.pop("index", None)
+            named = entry.pop("index", None)
+            if key == "outputs":
+                named = None  # an output's number is its Main or Matrix, decided below
             if key == "outputs":
                 kind = entry.get("kind")
                 if kind in ("main", "matrix"):
@@ -1289,6 +1965,29 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
             else:
                 taken = {o.get("index") for o in merged[key].values() if isinstance(o, dict)}
                 index = _free_index(taken, capacities[key])
+                if isinstance(named, int) and not isinstance(named, bool):
+                    # "reuse bus 5": the engineer named the number.
+                    if not 1 <= named <= capacities[key]:
+                        changes.append(Change(
+                            ChangeKind.REFUSED, word, repr(name),
+                            f"the change puts it on {word} {named}, and this console has "
+                            f"{word}s 1 to {capacities[key]} -- there is no {word} {named}"))
+                        continue
+                    if named not in taken:
+                        index = named
+                        infos.append(f"{word} {name!r} is new, put on {word} {named} as the "
+                                     "change said"
+                                     + (f" -- the {word} this change returns to free"
+                                        if named in (result.freed_indices if key == "busses"
+                                                     else result.freed_object_indices.get(key, ()))
+                                        else ""))
+                        entry["index"] = index
+                        merged[key][name] = entry
+                        added_busses.append(name)
+                        continue
+                    infos.append(f"the change puts {word} {name!r} on {word} {named}, which "
+                                 "a running bus the change does not drop already holds, so it "
+                                 "was put on the lowest free index instead")
                 if index is None:
                     changes.append(Change(
                         ChangeKind.REFUSED, word, repr(name),
@@ -1359,7 +2058,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                     "by this change"))
 
     # 4b. An explicit insert -- the channels after a new one move down.
-    renumbered_ids = _plan_insert(merged, kept, text, bool(dropped_keys), changes, infos, result)
+    renumbered_ids = _plan_insert(merged, kept, text, changes, infos, result)
 
     # 5. Sockets. A socket past the end of a stage box is not one it has: the
     #    desk lists every AES50 port at 48 whatever is on it, so the box's own
@@ -1368,7 +2067,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     used = _occupied_sockets(
         merged, occupancy, leaving=frozenset(dropped_keys[key] for key in result.moved))
     for channel in kept:
-        _settle_socket(channel, used, model, infos, warnings, boxes)
+        _settle_socket(channel, used, model, infos, warnings, boxes, text)
         said = inferred.settle_line_gain(
             channel, stated=_gain_named(text, channel, gain_texts))
         if said:
@@ -1403,8 +2102,10 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     #    a send the edit adds with no mode gets one, as a build's would --
     #    and each edit's new value is read again after them (below), so the
     #    review's old -> new is what is written.
-    pending = _merge_modify(merged, change_set, text, changes, infos, warnings, occupancy,
-                            on_desk, renumbered_ids)
+    drop_edits, result.edits = result.edits, []
+    pending = drop_edits + _merge_modify(merged, change_set, text, changes, infos, warnings,
+                                         occupancy, on_desk, renumbered_ids, presets,
+                                         model, boxes)
 
     # 6. Decisions, and the remaining index defaults (a new bus routed to
     #    "main" with no number) -- every index is already set, so this
@@ -1431,7 +2132,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
 
 def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
                console_model: str | None = None, presets=None, text: str | None = None,
-               aes50_devices: dict | None = None, gain_texts=()):
+               aes50_devices: dict | None = None, gain_texts=(), desk_objects: dict | None = None):
     """The whole review of one change: `(amendment, merge)`.
 
     `amend.plan_amendment` over `(base, merged)` -- the back half -- with
@@ -1445,16 +2146,22 @@ def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
     lets a later `--amended-plan` rebuild recognise a channel an amend put
     somewhere other than where the build numbered it, and a change that
     did not touch that channel must not forget it."""
+    adopted_infos: list[str] = []
+    adopted_warnings: list[str] = []
+    if desk_objects is not None:
+        base, adopted_infos, adopted_warnings = adopt_desk_objects(base, change_set, desk_objects)
     merge = merge_change(base, change_set, occupancy=occupancy, console_model=console_model,
                          presets=presets, text=text, aes50_devices=aes50_devices,
                          gain_texts=gain_texts)
     amendment = amend_engine.plan_amendment(
         base, merge.plan, occupancy, allow_strips=allow_strips, console_model=console_model,
         by="the change", edits=merge.edits, moved=merge.moved,
-        renumbered=merge.renumbered, inserted=merge.inserted)
+        renumbered=merge.renumbered, inserted=merge.inserted, freed_busses=merge.freed_busses,
+        freed_objects=merge.freed_objects,
+        explicit_drops=merge.explicit_drops)
     amendment.changes = merge.changes + amendment.changes
-    amendment.infos = merge.infos + amendment.infos
-    amendment.warnings = merge.warnings + amendment.warnings
+    amendment.infos = adopted_infos + merge.infos + amendment.infos
+    amendment.warnings = adopted_warnings + merge.warnings + amendment.warnings
 
     # "Add X after Snare" with no word asking for room: said where it went,
     # and the exact words that would have moved the strips after it.

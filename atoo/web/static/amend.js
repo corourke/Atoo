@@ -55,12 +55,14 @@
     released: "Clears this strip on the desk: back on its factory input patch (or OFF -- " +
       "the INFO below says which, and why), name, colour and icon cleared on the strip " +
       "AND its source socket, the processing this plan set undone, and its fader pulled to " +
-      "-inf -- as an untouched strip reads -- before it is unmuted.",
+      "-inf -- as an untouched strip reads -- before it is unmuted. A bus returned to free " +
+      "reads as an initialized bus, and every send into it is switched off.",
     removed: "Dropped from the rebuild, but the desk no longer reads as the strip this " +
       "plan built (or did not answer) -- so it is reported and nothing on it is touched.",
     modified: "Already on the desk and running, and this part was not written: a running " +
       "object changes only in the fields a change names, and this one was restated whole, " +
-      "said in words only, or is a fader the change did not name.",
+      "said in words only, is a fader the change did not name, or is a DCA, mute group or " +
+      "output the change drops (not yet built).",
     edited: "Already on the desk and running. Only the fields the change names are written " +
       "(listed below, old -> new); every other address of it is in the untouched proof.",
     refused: "The change asks for something the plan or the desk cannot take: an object " +

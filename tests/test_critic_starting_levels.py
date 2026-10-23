@@ -96,7 +96,7 @@ def test_a_convention_the_default_does_not_meet_is_still_a_mismatch_the_critic_c
     generate.critique_plan("Start every channel muted.", "name\nKick\n", plan, provider=provider)
     user = provider.calls[0]["user"]
     assert "Start every channel muted." in user
-    assert '"muted": false' in user
+    assert '"muted":false' in user
     assert '"muted": null' not in user
 
 

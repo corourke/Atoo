@@ -59,16 +59,16 @@ def test_ollama_constrains_to_the_schema_and_only_when_asked(monkeypatch):
     assert "format" not in chats[1]
 
 
-def test_the_api_provider_never_sends_a_schema(monkeypatch):
-    """OpenAI-compatible hosts differ in whether they take
-    `response_format` and what they call it; guessing wrong is a 400 on
-    every call. So the schema is never sent, and the request is identical
-    with and without one -- which is why `--no-constrain` changes nothing
-    on this provider, and `--help` says so."""
+def test_the_api_provider_sends_the_schema_as_strict_response_format(monkeypatch):
+    """The reply schema goes as `response_format` (strict
+    `json_schema`), in the form `strict_schema` derives; a call with no schema
+    sends none. `tests/test_api_structured.py` covers a host that refuses it."""
     body = json.dumps({"choices": [{"message": {"content": '{"a": "ok"}'}}]}).encode()
     sent = _capture(monkeypatch, body)
     provider = ApiKeyProvider(api_key="k", model="m", stream=False, show_progress=False)
-    provider.complete(system="s", user="u", response_schema=SCHEMA)
+    assert provider.complete(system="s", user="u", response_schema=SCHEMA) == '{"a": "ok"}'
     provider.complete(system="s", user="u")
-    assert sent[0] == sent[1]
-    assert not {"response_format", "format", "output_config"} & set(sent[0])
+    fmt = sent[0]["response_format"]["json_schema"]
+    assert fmt["strict"] is True and fmt["schema"]["required"] == ["a"]
+    assert "response_format" not in sent[1]
+    assert not {"format", "output_config"} & set(sent[0])

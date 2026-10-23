@@ -142,6 +142,14 @@ RELEASE_THRESHOLD_DB = -3.0
 RELEASE_THRESHOLD = round(RELEASE_THRESHOLD_DB * UNITS_PER_DB)
 RELEASE_SECONDS = 0.2
 
+#: A strip is carrying signal when a level word reads at or above this
+#: (-60 dBFS: an open mic's noise floor on a WING is well above it, a
+#: dead input reads far below) within the last `LIVE_WINDOW` seconds. What lets Watch tell a stage box that passes audio from one that
+#: does not, whatever word the desk's link status shows.
+LIVE_THRESHOLD_DB = -60.0
+LIVE_THRESHOLD = round(LIVE_THRESHOLD_DB * UNITS_PER_DB)
+LIVE_WINDOW = 5.0
+
 #: The desk drops a meter request not renewed within 5 s; renew well inside.
 RENEW_SECONDS = 2.0
 
@@ -236,6 +244,18 @@ def clipped_strips(strips: Sequence[str], words: Sequence[int],
     return hit
 
 
+def live_strips(strips: Sequence[str], words: Sequence[int],
+                threshold: int = LIVE_THRESHOLD) -> set[str]:
+    """The strips of one packet carrying signal: any level word at or above
+    `threshold` (see `clipped_strips` for the layout)."""
+    hit = set()
+    for i, base in enumerate(strips):
+        block = words[i * WORDS_PER_STRIP:(i + 1) * WORDS_PER_STRIP]
+        if any(block[w] >= threshold for w in LEVEL_WORDS):
+            hit.add(base)
+    return hit
+
+
 # --- the timer -------------------------------------------------------------
 
 
@@ -280,6 +300,7 @@ class ClipTracker:
     def __init__(self, hold: float = HOLD_SECONDS) -> None:
         self.hold = hold
         self._episodes: dict[str, _Episode] = {}
+        self._live_at: dict[str, float] = {}
         self._last_packet_at: float | None = None
         self._interval: float | None = None
         self.packets = 0
@@ -320,6 +341,17 @@ class ClipTracker:
                 ep = self._episodes.get(base)
                 if ep is not None:
                     ep.last_loud = now
+
+    def observe_live(self, now: float, live: Iterable[str]) -> None:
+        """The strips of one meter packet carrying signal."""
+        with self._lock:
+            for base in live:
+                self._live_at[base] = now
+
+    def live(self, now: float, window: float = LIVE_WINDOW) -> frozenset[str]:
+        """Every strip that carried signal within the last `window` seconds."""
+        with self._lock:
+            return frozenset(b for b, t in self._live_at.items() if now - t <= window)
 
     def _expire(self, now: float) -> None:
         for base in [b for b, ep in self._episodes.items() if now - ep.last_at >= self.hold]:
@@ -412,6 +444,13 @@ class ClipMonitor:
 
     def snapshot(self) -> tuple[StripClip, ...]:
         return self.tracker.snapshot(self.clock())
+
+    def live(self) -> frozenset[str] | None:
+        """The strips carrying signal just now, or None while no meter
+        packet has come (nothing is known, which is not the same as silent)."""
+        if self._first_packet_at is None:
+            return None
+        return self.tracker.live(self.clock())
 
     def status(self) -> ClipStatus:
         with self._lock:
@@ -556,6 +595,7 @@ class ClipMonitor:
             self._last_packet_at = now
         self.tracker.observe(now, clipped_strips(self._strips, words),
                              clipped_strips(self._strips, words, RELEASE_THRESHOLD))
+        self.tracker.observe_live(now, live_strips(self._strips, words))
 
 
 def with_clip_detection(provider: Callable[[], object], host: str,
@@ -572,7 +612,8 @@ def with_clip_detection(provider: Callable[[], object], host: str,
     monitor.start()
 
     def detecting():
-        return replace(provider(), clips=monitor.snapshot(), clip_status=monitor.status())
+        return replace(provider(), clips=monitor.snapshot(), clip_status=monitor.status(),
+                       live_strips=monitor.live())
 
     return detecting, monitor.close
 

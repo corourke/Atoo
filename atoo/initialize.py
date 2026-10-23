@@ -27,9 +27,10 @@ describing its own parameters) by a script in the development repository.
 A capture leaf with no entry in that table has no address we know how to
 set, and is skipped and counted (`unsettable`).
 
-The WING Rack has no capture. A full apply on a Rack, or on a desk whose
-model cannot be told, says so at WARNING and goes on to write the plan
-without resetting (`no_capture_warning`).
+A full apply on a desk whose model has no capture (the WING Compact,
+full-size WING and Rack each have one), or whose model cannot be told, says
+so at WARNING and goes on to write the plan without resetting
+(`no_capture_warning`).
 
 ## What is reset, and what is not
 
@@ -123,6 +124,11 @@ CAPTURES: dict[str, tuple[str, str]] = {
         "wing-full.snap",
         "a full-size WING, initialized and exported 2026-09-23 "
         "(frozen copy: tests/fixtures/Initialized-Full.snap)"),
+    "wing-rack": (
+        "wing-rack.snap",
+        "a WING Rack, initialized and exported 2026-10-21 from WING Edit 3.3.1, "
+        "firmware 3.1-0-g9f314617 "
+        "(frozen copy: tests/fixtures/Initialized-Rack.snap)"),
 }
 
 #: How a desk with no capture gets one -- said in the WARNING. A capture is
@@ -288,6 +294,37 @@ def load_capture(model: str | None) -> Capture | None:
     return Capture(model, file, source, tuple(leaves_from_snapshot(data["ae_data"])))
 
 
+#: Which model's capture a strip is freed from when its own has none.
+#: A bus strip's initialized values are the same on every WING model measured
+#: (all 16 buses of the Compact and the Full read leaf for leaf alike,
+#: `tests/test_freed_bus.py`), so a model with no capture of its own (the
+#: Rack) is freed from the Compact's.
+STRIP_CAPTURE_FALLBACK = "wing-compact"
+
+
+def freed_leaves(model: str | None, prefix: str, *, like: str | None = None) -> list[CaptureLeaf]:
+    """What an object reads when it is returned to free: every settable leaf
+    of the initialized capture under `prefix` (`/bus/5/`), the reading an
+    initialized desk gives it, in the order a reset writes them (selectors,
+    values, switches, mutes). `like` names an object of the same kind whose
+    leaves stand in when the capture has none under `prefix`. The capture is
+    the model's own, else `STRIP_CAPTURE_FALLBACK`'s. The skip list applies,
+    as it does to a reset: nothing here is the desk's environment."""
+    capture = load_capture(model) or load_capture(STRIP_CAPTURE_FALLBACK)
+    if capture is None:
+        return []
+
+    def under(root: str) -> list[CaptureLeaf]:
+        return [leaf for leaf in capture.leaves if leaf.address.startswith(root)
+                and leaf.value_type is not None and skip_rule(leaf.address) is None]
+
+    leaves = under(prefix)
+    if not leaves and like:
+        leaves = [CaptureLeaf(prefix + leaf.address[len(like):], leaf.value_type, leaf.value)
+                  for leaf in under(like)]
+    return sorted(leaves, key=lambda leaf: _order(leaf.address))
+
+
 def no_capture_warning(model: str | None, desk_token: str | None = None) -> str:
     """The WARNING a full apply gives when it cannot reset the desk first."""
     if model is None:
@@ -345,10 +382,20 @@ class DeskRead:
     #: The dump's own text for each of `plan_values`: a float in it is the
     #: desk's display text, so it carries a rounding (`console.dump_text_rounding_band`).
     plan_texts: dict[str, str] = field(default_factory=dict)
+    #: address -> (its selector, what the desk holds in the selector now) for an
+    #: `extra` address a selector governs that the node dump does not list: the
+    #: desk does not hold it under the selector's present value, so it is not asked for.
+    plan_absent: dict[str, tuple[str, str | None]] = field(default_factory=dict)
     #: The dump's own text for each float of `values` that came from a dump.
     dump_texts: dict[str, str] = field(default_factory=dict)
     #: How many of `gets` were for `extra` addresses.
     extra_gets: int = 0
+    #: How many of those got no answer, and which.
+    extra_unanswered: int = 0
+    extra_unanswered_addresses: list[str] = field(default_factory=list)
+    #: How long the node-dump pass and the single-read pass each took.
+    dump_seconds: float = 0.0
+    get_seconds: float = 0.0
     dumps: int = 0
     gets: int = 0
     seconds: float = 0.0
@@ -360,7 +407,8 @@ class DeskRead:
 
 
 def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
-              extra: list[tuple[str, str]] | None = None) -> DeskRead:
+              extra: list[tuple[str, str]] | None = None,
+              governed_by: dict[str, str] | None = None) -> DeskRead:
     """The desk's value at every `(address, type)` in `wanted`, by node dump
     where a node covers it (`audit.bulk_node_for`, A11's measured fast path)
     and by GET otherwise -- names and tags, which a dump is never
@@ -380,6 +428,11 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
     says which request it is waiting on, and its summary counts the
     requests that went unanswered (each one the full timeout and its
     retries), which is where a slow read's time usually goes.
+
+    `governed_by` maps an `extra` address to the selector that governs it (a gate
+    model, an FX model). One a parsed dump does not list is not read singly -- the
+    desk does not hold it under the selector's present value, and asking would cost
+    the full timeout -- but recorded in `plan_absent`.
 
     `extra` is `(address, type)` pairs a caller wants read in the same pass
     (a preview reads the plan's own current values here, so the desk is
@@ -419,6 +472,7 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
     # Up to the console's window of dumps, and below of GETs,
     # in flight at once; `osc.node_dumps`/`osc.read_in_windows` are the
     # serial loop this was for a window of 1.
+    dump_started = time.monotonic()
     dumps = osc.node_dumps(console, nodes,
                            on_start=lambda node: progress.start_address(node + " (node)"))
     for node in nodes:
@@ -458,6 +512,10 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
                 progress.add_total()
         for address, value_type in plan_pairs:
             text = parsed.get(address)
+            if text is None and governed_by and address in governed_by:
+                selector = governed_by[address]
+                out.plan_absent[address] = (selector, parsed.get(selector))
+                continue
             value, error = (None, "not in the dump") if text is None else \
                 osc.value_from_dump_text(text, value_type)
             if error is None:
@@ -467,6 +525,8 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
                 # Not in the dump, or not a value of its type: read singly.
                 get_extra.append(address)
                 progress.add_total()
+
+    out.dump_seconds = time.monotonic() - dump_started
 
     def alive(address: str) -> bool:
         progress.add_total()
@@ -484,6 +544,7 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
     progress.add_total(len(deduped) - len(get_extra))
     get_extra = deduped
     asks = list(alone) + [(address, None) for address in get_extra]
+    get_started = time.monotonic()
     replies = osc.read_in_windows(console, [address for address, _ in asks],
                                   should_ask=families.should_ask,
                                   on_start=progress.start_address)
@@ -505,6 +566,9 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
         if value_type is None:
             out.replies[address] = reply
             out.extra_gets += 1
+            if reply is None or reply.is_transport_error:
+                out.extra_unanswered += 1
+                out.extra_unanswered_addresses.append(address)
             families.record(address, reply is not None and reply.error is None
                             and not reply.is_transport_error)
             continue
@@ -519,6 +583,7 @@ def read_desk(console, wanted: list[tuple[str, str]], *, progress=None,
             out.values[address] = value
         else:
             out.unanswered.add(address)
+    out.get_seconds = time.monotonic() - get_started
     out.seconds = time.monotonic() - started
     return out
 
@@ -606,6 +671,9 @@ class InitReset:
     read: DeskRead = field(default_factory=DeskRead)
     #: Floats to be written whose prior was read exactly, for the journal.
     exact_priors: int = 0
+    #: How many single reads that took, and how long.
+    exact_requests: int = 0
+    exact_seconds: float = 0.0
 
     @property
     def abort_reason(self) -> str | None:
@@ -636,7 +704,8 @@ def _governors(addresses: list[str]) -> dict[str, list[str]]:
 
 
 def plan_reset(console, capture: Capture, run_targets: list, *, phases=None,
-               also_read: list[tuple[str, str]] | None = None) -> InitReset:
+               also_read: list[tuple[str, str]] | None = None,
+               also_governed_by: dict[str, str] | None = None) -> InitReset:
     """Read the desk and decide the reset's writes. `run_targets` is every
     other write this run makes (the plan's, and the full apply's own), so
     no leaf is written twice. `phases` (a `progress.Phases`)
@@ -675,12 +744,26 @@ def plan_reset(console, capture: Capture, run_targets: list, *, phases=None,
         return leaves[selector].value
 
     run_selectors = {s for gov in governors.values() for s in gov if s in run}
+
+    def skipped_without_reading(address: str) -> bool:
+        """A leaf the loop below skips whatever the desk holds: held by a
+        selector the run leaves on, or under a selector the plan sets to another
+        model. Its value is never used, so the desk is not asked for it -- on a
+        console whose FX slot holds another model those leaves do not exist and
+        each costs the full timeout."""
+        governing = governors.get(address, [])
+        return (any(_held_key(s) is not None and _is_on(final(s)) for s in governing)
+                or any(_held_key(s) is None and not equal("s", final(s), leaves[s].value, s)
+                       for s in governing))
+
     wanted = [(leaf.address, leaf.value_type) for leaf in in_scope
-              if leaf.address not in run or leaf.address in run_selectors]
+              if (leaf.address not in run or leaf.address in run_selectors)
+              and not skipped_without_reading(leaf.address)]
     extra = also_read or None
     phase = None if phases is None else phases.start(
         COMBINED_READ_PHASE if extra else READ_PHASE, len(wanted))
-    reset.read = read_desk(console, wanted, progress=phase, extra=extra)
+    reset.read = read_desk(console, wanted, progress=phase, extra=extra,
+                           governed_by=also_governed_by)
     if phase is not None:
         phase.finish()
     if reset.read.abort_reason is not None:
@@ -743,6 +826,8 @@ def plan_reset(console, capture: Capture, run_targets: list, *, phases=None,
         from atoo import console as osc
 
         exact_phase = None if phases is None else phases.start(EXACT_PHASE, len(exact))
+        exact_started = time.monotonic()
+        reset.exact_requests = len(exact)
         for address, reply in osc.read_in_windows(
                 console, exact, on_start=None if exact_phase is None else exact_phase.start_address):
             if exact_phase is not None:
@@ -755,6 +840,7 @@ def plan_reset(console, capture: Capture, run_targets: list, *, phases=None,
             if error is None:
                 reset.known[address] = (value, None)
                 reset.exact_priors += 1
+        reset.exact_seconds = time.monotonic() - exact_started
         if exact_phase is not None:
             exact_phase.finish()
         if reset.read.abort_reason is not None:
@@ -803,6 +889,12 @@ def _seconds(value: float) -> str:
     return f"{value / 60:.1f} min"
 
 
+#: The consoles whose request rate has been measured on hardware (A11, a
+#: Compact, 2026-09-24). A time estimate is given only for these: another model
+#: is said to have no measured rate, never quoted at the Compact's.
+MEASURED_RATE_MODELS = ("wing-compact",)
+
+
 def _rates() -> tuple[float, float]:
     from atoo.cli import NODE_DUMP_SECONDS_PER_REQUEST, PER_LEAF_SECONDS_PER_REQUEST
 
@@ -814,6 +906,24 @@ def estimate_write_seconds(writes: int) -> float:
     measured per-leaf rate."""
     per_leaf, _ = _rates()
     return writes * 2 * per_leaf
+
+
+def rate_measured(model: str | None) -> bool:
+    return model in MEASURED_RATE_MODELS
+
+
+def no_rate_words(model: str | None) -> str:
+    label = facts.CONSOLE_MODELS.get(model or "", {}).get("label")
+    return f"no measured request rate for the {label}" if label else "no measured request rate for this console"
+
+
+def write_estimate_words(writes: int, model: str | None) -> str:
+    """"about 5.2s at the rate measured on a WING Compact", or, for a console
+    nobody has measured, that there is no measured rate."""
+    if not rate_measured(model):
+        return no_rate_words(model)
+    return (f"about {_seconds(estimate_write_seconds(writes))} at the rate measured on a "
+            f"{facts.CONSOLE_MODELS[model]['label']}")
 
 
 def by_area(addresses) -> str:
@@ -855,8 +965,7 @@ def run_notes(reset: InitReset, records: list, *, dry_run: bool,
         requests += f"; {reset.exact_priors:,} read exactly for the journal"
     timing = f"reading the desk took {_seconds(read.seconds)} ({requests})"
     if dry_run:
-        timing += (f"; writing would take about {_seconds(estimate_write_seconds(len(moving)))} "
-                   "at the rate measured on a WING Compact")
+        timing += f"; writing would take {write_estimate_words(len(moving), reset.capture.model)}"
     elif write_seconds is not None:
         timing += (f", writing {_seconds(write_seconds)}: "
                    f"{_seconds(read.seconds + write_seconds)} in all")
@@ -897,12 +1006,17 @@ def preflight_note(plan: dict, model: str | None) -> tuple[str, str]:
     by_node, alone = audit.group_plan_by_node([(leaf.address, leaf.value_type)
                                                for leaf in candidates])
     per_leaf, per_dump = _rates()
-    read_seconds = len(by_node) * per_dump + len(alone) * per_leaf
+    if rate_measured(capture.model):
+        read_words = f"about {_seconds(len(by_node) * per_dump + len(alone) * per_leaf)}"
+        write_words = f"takes about {_seconds(estimate_write_seconds(len(candidates)))}"
+    else:
+        read_words = no_rate_words(capture.model)
+        write_words = f"has {no_rate_words(capture.model)}"
     return ("apply.init", (
         f"INFO before writing the plan, a full apply resets the desk to the {capture.label}'s "
-        f"initialized state: it reads the desk (about {_seconds(read_seconds)}) and writes back "
+        f"initialized state: it reads the desk ({read_words}) and writes back "
         f"only what differs from the initialized capture, among up to {len(candidates):,} "
         f"settings the plan does not set itself ({skipped_words(skipped)} are left alone). "
         f"A desk already initialized costs only the read; at the very most, every one of "
-        f"them differing, writing takes about {_seconds(estimate_write_seconds(len(candidates)))}"
+        f"them differing, writing {write_words}"
         f". `atoo apply --no-init` skips it"))

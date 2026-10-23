@@ -71,7 +71,7 @@ def wire(monkeypatch):
 
     def fake_urlopen(req, timeout=None):
         body = json.loads(req.data)
-        role, text = replies.get(body["system"], ("generator", json.dumps(plan)))
+        role, text = replies.get(body["system"][0]["text"], ("generator", json.dumps(plan)))
         sent[role] = body
         return _Response(_sse(text))
 

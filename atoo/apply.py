@@ -425,6 +425,11 @@ class WriteRecord:
     # written, which is what undo must put back. None for every other
     # write, and absent from every journal written before the fix.
     forced_by: str | None = None
+    #: The address whose write the desk mirrors onto this one: a stereo
+    #: pair's `/io/in/{group}/{n}/mode` -- writing one socket sets both. A
+    #: preview counts the pair once; the real run reads this address after
+    #: the first write, finds it held and skips it. Preview only.
+    mirrored_by: str | None = None
 
     @property
     def would_change(self) -> bool:
@@ -448,6 +453,8 @@ class WriteRecord:
 
         Only meaningful before the write: for a record the apply loop has
         already resolved, `status` is the answer."""
+        if self.mirrored_by is not None:
+            return False
         if self.forced_by is not None:
             return True
         return not _values_equal(self.value_type, self.prior_value, self.intended_value,
@@ -550,7 +557,8 @@ class ApplyResult:
             ]
         else:
             lines = [
-                f"APPLIED: {len(self.writes)} address(es) evaluated, "
+                f"APPLIED: {len([w for w in self.writes if w.status != 'orphaned_prior'])} "
+                "address(es) evaluated, "
                 f"{len(self.changed)} written, {len(self.mismatches)} mismatch(es).",
             ]
         for w in self.mismatches:
@@ -2686,8 +2694,8 @@ def release_write_targets(channels: list[dict], *,
     that BUILT them -- to the reading an untouched strip gives.
 
     Ordered within each strip rather than by `stage`, because the order is
-    the safety: mute before anything else so the strip is silent for the
-    rest of it, phantom down while the patch still says which socket it is
+    the safety: the fader to -inf before anything else so the strip is silent
+    for the rest of it, phantom down while the patch still says which socket it is
     on, the source label cleared next, and only then the patch goes back
     to what the factory left there.
 
@@ -2696,22 +2704,17 @@ def release_write_targets(channels: list[dict], *,
     reads the same however it was freed. `.grp` alone, since WING treats OFF
     as fully disconnected.
 
-    **The mute is a bracket, not an end state**. `mute` is
-    written ON first and OFF again as the strip's very last address, so
-    nothing pops on the way out and nothing is left behind: an untouched
-    WING strip is UNMUTED, and a muted one is not what the next person
-    allocating a strip expects to find. Its sends are off and its patch
-    is the factory's (or OFF), which is exactly how an initialized strip
-    arrives. Two records for
-    one address is deliberate and `undo.py` reverses them correctly,
-    because it reverses in reverse journal order and reads the desk
-    afresh at each step.
-
-    **`fdr` goes to -inf, the factory reading, just before the closing
-    unmute**. Never to any other value: picking a
-    level for a strip no plan is building is still the one thing this
-    module must never do. See the module docstring for why the factory fader
-    is necessary.
+    **The mute is an end state, written once**.
+    An untouched WING strip is UNMUTED, and a muted one is not what the next
+    person allocating a strip expects to find, so `mute` is written OFF as
+    the strip's very last address. It used to be a bracket (ON first, OFF
+    last); two writes to one address cannot be counted by a preview that
+    reads the desk once, so the silence comes from the fader instead: `fdr`
+    goes first, to -inf, the factory reading. Never to any other value:
+    picking a level for a strip no plan is building is still the one thing
+    this module must never do. See the module docstring for why the factory
+    fader is necessary. Its sends are off and its patch is the factory's (or
+    OFF), which is exactly how an initialized strip arrives.
 
     **The processing block is cleared too** (from the first
     hardware run: a strip "returned to free" came back still carrying the
@@ -2756,10 +2759,15 @@ def release_write_targets(channels: list[dict], *,
         label = f"{bank}:{n}"
         was = f"{label} (was {name!r})"
 
-        # 1. Silent first.
+        # 1. Silent first -- by level, not by a mute bracket: the fader goes
+        # to the factory reading, -inf, before anything else, so a stray
+        # source on the socket is not heard while the rest is cleared. (A
+        # bracket, mute ON then OFF, is two writes to one address, which a
+        # preview that reads the desk once cannot count.)
         targets.append(WriteTarget(
-            f"{base}/mute", "i", f"returned to free: {was} muted",
-            _const(1), STAGE_FADER_MUTE))
+            f"{base}/fdr", "f",
+            f"returned to free: {was} fader to -inf, as an untouched strip reads",
+            _const(facts.FACTORY_STRIP_FADER_DB), STAGE_FADER_MUTE))
 
         patch = channel.get("patch") or {}
         group, sockets = patch.get("group"), [
@@ -2890,25 +2898,168 @@ def release_write_targets(channels: list[dict], *,
             channel, was, dca_index=dca_index, mute_group_index=mute_group_index,
             bus_index=bus_index, shared_sockets=shared_sockets, warnings=warnings))
 
-        # 8. The fader to the factory reading, -inf -- BEFORE the unmute,
-        # so the strip is silent by level before it stops being silent by
-        # mute. A strip left unmuted at the plan's level would carry a stray
-        # source on its socket to Main 1. This is not a level chosen for a
-        # show; it is the reading an untouched strip gives, like every
-        # other value this function writes.
-        targets.append(WriteTarget(
-            f"{base}/fdr", "f",
-            f"returned to free: {was} fader to -inf, as an untouched strip reads",
-            _const(facts.FACTORY_STRIP_FADER_DB), STAGE_FADER_MUTE))
-
-        # 9. And out of mute, last. See this function's docstring: the
-        # mute at step 1 is a bracket around the clear, not part of what
-        # "free" means. An untouched WING strip is unmuted.
+        # 8. And unmuted, last: an untouched WING strip is unmuted, and the
+        # mute is written once, here, at the reading a strip gives.
         targets.append(WriteTarget(
             f"{base}/mute", "i",
             f"returned to free: {was} unmuted -- an untouched strip is not a muted one",
             _const(0), STAGE_FADER_MUTE))
     return targets
+
+
+def release_bus_write_targets(busses: list[tuple[str, int, dict]], *,
+                              console_model: str | None = None,
+                              written: set[str] | frozenset[str] = frozenset(),
+                              keep_outputs: set[tuple[str, int]] | frozenset = frozenset(),
+                              ) -> list[WriteTarget]:
+    """The writes that return each of `busses` -- `(name, index, entry)` of
+    the applied plan that built them -- to free.
+
+    **A freed bus reads as an initialized one**, on every model: each settable
+    leaf under `/bus/{n}/` takes the value the initialized capture holds
+    (`initialize.freed_leaves`) -- name, colour, icon, mono/stereo and width,
+    fader, mute, EQ, dynamics, inserts, DCA/mute-group tags, its routes to
+    the Mains and matrices, its pre/post and its send to every other bus.
+    The physical output it fed is returned the same way (`/io/out/{group}/{n}`,
+    so the socket reads as one nobody patched). Its fader goes first, to the
+    capture's -inf, so it is silent by level while the rest is cleared; there
+    is no mute bracket, because a preview cannot count two writes to one
+    address. The sends INTO the bus are not
+    here: they are the channels' own fields, taken away as edits
+    (`patch.merge_change`).
+
+    `written` are addresses the same run writes for another object (a new bus
+    reusing the index): the plan's own value is the reset, so they are left
+    out. `keep_outputs` are sockets a bus or output that stays still feeds."""
+    from atoo import initialize
+
+    targets: list[WriteTarget] = []
+    for name, index, entry in busses:
+        was = f"bus {index} (was {name!r})"
+        leaves = [leaf for leaf in initialize.freed_leaves(
+            console_model, f"/bus/{index}/", like="/bus/1/") if leaf.address not in written]
+        # Silent first by level, not by a mute bracket: the fader goes to the
+        # capture's -inf before anything else, and the mute lands last at the
+        # capture's value. A bracket (mute ON, then OFF) is two writes to one
+        # address, which a preview cannot count: it reads the desk once.
+        leaves.sort(key=lambda leaf: not leaf.address.endswith("/fdr"))
+        for leaf in leaves:
+            targets.append(WriteTarget(
+                leaf.address, leaf.value_type,
+                f"returned to free: {was} {leaf.address.rpartition('/')[2]} as initialized",
+                _const(leaf.value),
+                STAGE_FADER_MUTE if leaf.address.endswith("/mute") else STAGE_NAMES))
+        for group, socket in _freed_bus_outputs(entry):
+            if (group, socket) in keep_outputs:
+                continue
+            root = f"/io/out/{group}/{socket}/"
+            targets.extend(
+                WriteTarget(
+                    leaf.address, leaf.value_type,
+                    f"returned to free: {group} {socket}, fed by {was}, "
+                    f"{leaf.address.rpartition('/')[2]} as initialized",
+                    _const(leaf.value), STAGE_PATCH)
+                for leaf in initialize.freed_leaves(console_model, root)
+                if leaf.address not in written)
+    return targets
+
+
+def release_object_write_targets(objects: list[tuple[str, str, int, dict]], *,
+                                 console_model: str | None = None,
+                                 written: set[str] | frozenset[str] = frozenset(),
+                                 keep_outputs: set[tuple[str, int]] | frozenset = frozenset(),
+                                 plan: dict | None = None) -> list[WriteTarget]:
+    """The writes that return a DCA, a mute group or an output to free, the same way `release_bus_write_targets`
+    returns a bus: each of `objects` -- `(plan key, name, index, entry)` of
+    the applied plan that built it -- reads as an initialized one, every
+    settable leaf under its address taking the value the model's initialized
+    capture holds (`initialize.freed_leaves`).
+
+    A DCA is `/dca/{n}/`, a mute group `/mgrp/{n}/`. An output is the Main
+    (`/main/{n}/`) or Matrix (`/mtx/{n}/`) behind it, and the physical socket
+    it fed (`/io/out/{group}/{socket}/`, which reads as one nobody patched);
+    a Matrix is also taken off whatever fed it (`/main/{m}/send/MX{n}/`,
+    found in `plan`). The members are not here: a strip's tag is that
+    strip's own field, taken away as an edit (`patch._drop_group`). A fader
+    goes first, to the capture's -inf, with no mute bracket (a preview
+    cannot count two writes to one address). `written` and `keep_outputs`
+    are as for a bus."""
+    from atoo import initialize
+
+    targets: list[WriteTarget] = []
+    roots = {"dcas": ("/dca", "DCA"), "mute_groups": ("/mgrp", "mute group")}
+    for key, name, index, entry in objects:
+        was = f"output {name!r}"
+        paths: list[tuple[str, str | None, str]] = []
+        if key in roots:
+            root, word = roots[key]
+            was = f"{word} {index} (was {name!r})"
+            paths.append((f"{root}/{index}/", f"{root}/1/", STAGE_NAMES))
+        elif key == "outputs":
+            kind = entry.get("kind")
+            if kind in ("main", "matrix") and isinstance(index, int):
+                root = "/main" if kind == "main" else "/mtx"
+                was = f"{kind} {index} (was output {name!r})"
+                paths.append((f"{root}/{index}/", f"{root}/1/", STAGE_NAMES))
+            fed_by = entry.get("fed_by")
+            if kind == "matrix" and isinstance(fed_by, dict) and isinstance(plan, dict):
+                source = None
+                if fed_by.get("type") == "main" and isinstance(fed_by.get("index"), int):
+                    source = f"/main/{fed_by['index']}"
+                elif fed_by.get("type") == "bus":
+                    bus = (plan.get("busses") or {}).get(fed_by.get("name")) or {}
+                    if isinstance(bus.get("index"), int):
+                        source = f"/bus/{bus['index']}"
+                if source is not None:
+                    paths.append((f"{source}/send/MX{index}/", None, STAGE_SENDS))
+        for prefix, like, stage in paths:
+            leaves = [leaf for leaf in initialize.freed_leaves(console_model, prefix, like=like)
+                      if leaf.address not in written]
+            leaves.sort(key=lambda leaf: not leaf.address.endswith("/fdr"))
+            for leaf in leaves:
+                targets.append(WriteTarget(
+                    leaf.address, leaf.value_type,
+                    f"returned to free: {was} {leaf.address.rpartition('/')[2]} as initialized",
+                    _const(leaf.value),
+                    STAGE_FADER_MUTE if leaf.address.endswith("/mute") else stage))
+        if key == "outputs":
+            for group, socket in _output_entry_sockets(entry):
+                if (group, socket) in keep_outputs:
+                    continue
+                for leaf in initialize.freed_leaves(console_model, f"/io/out/{group}/{socket}/"):
+                    if leaf.address in written:
+                        continue
+                    targets.append(WriteTarget(
+                        leaf.address, leaf.value_type,
+                        f"returned to free: {group} {socket}, fed by {was}, "
+                        f"{leaf.address.rpartition('/')[2]} as initialized",
+                        _const(leaf.value), STAGE_PATCH))
+    return targets
+
+
+def _output_entry_sockets(entry: dict) -> list[tuple[str, int]]:
+    """`(group, socket)` of every physical socket an output entry feeds."""
+    out: list[tuple[str, int]] = []
+    for clause in plan_compat.output_patches(entry):
+        if isinstance(clause, dict) and isinstance(clause.get("group"), str):
+            out.extend((clause["group"], s) for s in clause.get("sockets") or []
+                       if isinstance(s, int))
+    return out
+
+
+def _freed_bus_outputs(entry: dict) -> list[tuple[str, int]]:
+    """`(group, socket)` of every physical output a bus entry routes to."""
+    out: list[tuple[str, int]] = []
+    destinations = entry.get("destinations") or (
+        [entry["destination"]] if isinstance(entry.get("destination"), dict) else [])
+    for destination in destinations:
+        if not isinstance(destination, dict) or destination.get("type") != "dedicated_output":
+            continue
+        for clause in plan_compat.output_patches(destination):
+            if isinstance(clause, dict) and isinstance(clause.get("group"), str):
+                out.extend((clause["group"], s) for s in clause.get("sockets") or []
+                           if isinstance(s, int))
+    return out
 
 
 def _release_processing_targets(channel: dict, was: str, *,
@@ -3391,6 +3542,99 @@ def _dump_verdict_is_certain(target: WriteTarget, prior: object, intended: objec
     return _dump_value_is_decisive(target.value_type, target.address, prior, intended, text)
 
 
+def _plan_read_pairs(targets: list[WriteTarget], skip=()) -> list[tuple[str, str]]:
+    """`(address, type)` for every address a preview reads the baseline of, once, but
+    for `skip`. An address two targets read as different types is left to the loop."""
+    types: dict[str, set] = {}
+    for target in targets:
+        if target.address not in skip:
+            types.setdefault(target.address, set()).add(target.value_type)
+    return [(address, next(iter(kinds))) for address, kinds in types.items() if len(kinds) == 1]
+
+
+#: A preview's read that takes longer than this says where the time went.
+SLOW_READ_SECONDS = 3.0
+
+
+@dataclass
+class ReadStats:
+    """What a preview asked the desk for, on whichever path it read: the one
+    line every Preview prints (`ReadStats.line`)."""
+
+    dumps: int = 0
+    singles: int = 0
+    seconds: float = 0.0
+    unanswered: int = 0
+    dump_seconds: float = 0.0
+    single_seconds: float = 0.0
+    unanswered_addresses: list[str] = field(default_factory=list)
+    #: Sends beyond the first of a request, when the console counts them: real traffic
+    #: the desk received besides `dumps + singles`.
+    resends: int = 0
+
+    def add(self, *, dumps: int = 0, singles: int = 0, seconds: float = 0.0,
+            unanswered: int = 0, dump_seconds: float = 0.0, single_seconds: float = 0.0,
+            unanswered_addresses=()) -> None:
+        self.dumps += dumps
+        self.singles += singles
+        self.seconds += seconds
+        self.unanswered += unanswered
+        self.dump_seconds += dump_seconds
+        self.single_seconds += single_seconds
+        self.unanswered_addresses.extend(unanswered_addresses)
+
+    def line(self, path: str, *, window: int = 1, lone_request: float | None = None) -> str:
+        from atoo import audit
+
+        requests = self.dumps + self.singles
+        text = (f"INFO the preview read the desk with {requests:,} requests "
+                f"({self.dumps:,} node dumps, {self.singles:,} single reads) in "
+                f"{self.seconds:.1f}s: {path}")
+        if self.resends:
+            text += (f"; {self.resends:,} more sent again because a request was not answered in "
+                     "time (the desk received requests plus these)")
+        if self.unanswered:
+            families = list(dict.fromkeys(
+                audit.address_family(a) for a in self.unanswered_addresses))[:3]
+            text += (f"; {self.unanswered:,} address(es) did not answer, each one costing the "
+                     "full timeout and its retries"
+                     + (f" (for example {', '.join(families)})" if families else ""))
+        if self.seconds > SLOW_READ_SECONDS:
+            text += (f"; slow: the node dumps took {self.dump_seconds:.1f}s and the single "
+                     f"reads {self.single_seconds:.1f}s, with {window} requests at a time")
+            if lone_request:
+                together = requests * lone_request / max(window, 1)
+                text += (f"; one request on its own took about {lone_request * 1000:.0f} ms, so "
+                         f"{requests:,} of them {window} at a time should take about "
+                         f"{together:.1f}s")
+                if self.seconds > 3 * together:
+                    text += ("; this read took much longer, so the console is answering "
+                             "slowly or one request at a time, not several together")
+        return text
+
+
+def _lone_request_seconds(console, plan_read) -> float | None:
+    """How long one request takes on its own, on this console: the median of a few
+    single reads of an address that answered. Only asked for after a slow read,
+    to say whether the window of requests is doing its work."""
+    answered = [a for a, r in (plan_read.replies if plan_read is not None else {}).items()
+                if r is not None and not getattr(r, "is_transport_error", False)
+                and getattr(r, "error", None) is None]
+    answered += list((plan_read.values if plan_read is not None else {}))
+    if not answered:
+        return None
+    address = answered[0]
+    took = []
+    for _ in range(5):
+        began = time.monotonic()
+        reply = console.get(address)
+        if reply is None or getattr(reply, "is_transport_error", False):
+            return None
+        took.append(time.monotonic() - began)
+    took.sort()
+    return took[len(took) // 2]
+
+
 def _dump_values_to_reread(targets: list[WriteTarget], dumped: dict, texts: dict) -> list[str]:
     """The addresses, in target order, whose baseline a node dump gave but whose
     verdict the dump's rounding could change (`_dump_verdict_is_certain`)."""
@@ -3530,36 +3774,6 @@ def _adopt_reply(pending: _PendingCheck, value, source: str) -> bool:
     pending.record.status = "match"
     pending.record.readback_source = source
     return True
-
-
-def _prefetch_baselines(console, targets: list[WriteTarget], known: dict,
-                        phase) -> dict[str, object]:
-    """`{address: reply}` for every preview target's baseline the reset's
-    read did not already give (`known`), read with up to the console's
-    window of requests in flight (`console.read_in_windows`).
-
-    Only for a preview: it writes nothing, so a value read now is the
-    value the loop would have read when it reached the target. Each
-    address is asked once, and `phase` counts every target that reads it
-    as its reply comes in -- so the progress line moves while the read
-    does, and names an address that goes unanswered."""
-    from atoo import console as osc
-
-    wanted: dict[str, list[WriteTarget]] = {}
-    for target in targets:
-        if target.address not in known:
-            wanted.setdefault(target.address, []).append(target)
-    out: dict[str, object] = {}
-    for address, reply in osc.read_in_windows(console, list(wanted),
-                                              on_start=phase.start_address):
-        out[address] = reply
-        for target in wanted[address]:
-            phase.start_address(address)
-            _, error = _extract_reply_value(reply, target.value_type, address)
-            phase.finish_address(answered=error is None)
-        if reply is not None and reply.is_socket_error:
-            break
-    return out
 
 
 def _recheck_disagreements(console, pending: list[_PendingCheck], *,
@@ -3825,7 +4039,7 @@ def apply_plan(
     reset the desk to `init_model`'s initialized capture -- read it by node
     dump, write only what differs, never a leaf the run writes itself, and
     never anything on `initialize.SKIP_LIST`. See `atoo/initialize.py`.
-    Only with `full_apply`. A model with no capture (the WING Rack), or an
+    Only with `full_apply`. A model with no capture, or an
     unresolved desk (`init_model` None; `init_token` is what it called
     itself), is a WARNING, and the plan is written without the reset. The
     reset's writes go through this same loop -- baseline (taken from the
@@ -3882,6 +4096,12 @@ def apply_plan(
     reset_phase = 0
     known: dict[str, tuple[object, str | None]] = {}
     combined_read = False
+    # What a preview must not ask the desk for: plan values under a selector (an FX
+    # slot's model) that the desk holds at another value, which do not exist yet.
+    resends_at_start = getattr(console, "resends", None)
+    preview_reads = bool(dry_run and targets and getattr(console, "window", 1) > 1)
+    absent = _absent_governed_values(console, targets) if preview_reads else AbsentGoverned()
+    governed_by = _governing_selectors(targets) if preview_reads else {}
     if initialize is False and full_apply:
         from atoo import initialize as init
 
@@ -3896,16 +4116,10 @@ def apply_plan(
             # A preview that can read several at once asks for the plan's own
             # baselines in the reset's read, one pass under one phase. A real
             # run reads each one just before its write, as it always has.
-            also_read = None
-            if dry_run and targets and getattr(console, "window", 1) > 1:
-                types: dict[str, set] = {}
-                for t in targets:
-                    types.setdefault(t.address, set()).add(t.value_type)
-                # An address two targets read as different types is left to the loop.
-                also_read = [(address, next(iter(kinds)))
-                             for address, kinds in types.items() if len(kinds) == 1]
+            also_read = (_plan_read_pairs(targets, absent.selector_of)
+                         if dry_run and targets and getattr(console, "window", 1) > 1 else None)
             reset = init.plan_reset(console, capture, targets, phases=phases,
-                                    also_read=also_read)
+                                    also_read=also_read, also_governed_by=governed_by)
             combined_read = also_read is not None
             if reset.abort_reason is not None:
                 return _finish(ApplyResult(
@@ -3916,6 +4130,44 @@ def apply_plan(
                     scope=journal_scope, desk=desk, model_check=model_check))
             targets, reset_phase = init.combine(reset, targets)
             known = reset.known
+    plan_read = reset.read if combined_read else None
+    if reset is None and dry_run and targets and getattr(console, "window", 1) > 1:
+        # No reset (it is off, or this console has no capture): the plan's own
+        # baselines are read by the same pass the reset's read is -- node
+        # dumps where a dump is trusted, a cut-off for a family the desk does
+        # not answer -- under one phase.
+        from atoo import initialize as init
+
+        read_phase = phases.start(PREVIEW_PHASE, len(targets))
+        plan_read = init.read_desk(console, [], progress=read_phase,
+                                  extra=_plan_read_pairs(targets, absent.selector_of),
+                                  governed_by=governed_by)
+        read_phase.finish()
+        if plan_read.abort_reason is not None:
+            return _finish(ApplyResult(
+                dry_run=dry_run, writes=[], journal_path=journal_path, warnings=warnings,
+                aborted=True, abort_reason=plan_read.abort_reason,
+                replies_discarded=getattr(console, "replies_discarded", 0),
+                replies_used=getattr(console, "replies_used", 0),
+                scope=journal_scope, desk=desk, model_check=model_check))
+        combined_read = True
+    if plan_read is not None:
+        # What the read found a selector's value does not hold on the desk: not read,
+        # shown as a change with no prior, said at INFO (as an FX slot's are).
+        absent.merge(plan_read.plan_absent,
+                     {t.address: t.compute_value(None) for t in targets if t.address in
+                      set(governed_by.values())})
+    stats = ReadStats()
+    for read in (plan_read, reset.read if reset is not None and plan_read is None else None):
+        if read is not None:
+            stats.add(dumps=read.dumps, singles=read.gets, seconds=read.seconds,
+                      unanswered=len(read.unanswered) + read.extra_unanswered,
+                      dump_seconds=read.dump_seconds, single_seconds=read.get_seconds,
+                      unanswered_addresses=[*read.unanswered, *read.extra_unanswered_addresses])
+    stats.add(dumps=absent.dumps, seconds=absent.seconds, dump_seconds=absent.seconds)
+    if reset is not None:
+        stats.add(singles=reset.exact_requests, seconds=reset.exact_seconds,
+                  single_seconds=reset.exact_seconds)
     reset_started = time.monotonic()
     reset_seconds: float | None = None
 
@@ -3927,6 +4179,9 @@ def apply_plan(
     # forces each one to be written (address -> selector address).
     pre_read: dict[str, object] = {}
     forced_by: dict[str, str] = {}
+    # Preview: the partner of a stereo pair's mode a write would also set
+    # (`_mirrored_partner`), so the pair is counted once.
+    mirrored: dict[str, tuple[str, object]] = {}
 
     # What the run is doing, phase by phase. A target is done
     # when the next one starts (or the loop ends): the loop body has a
@@ -3941,22 +4196,23 @@ def apply_plan(
     # just before its write, as it always has.
     prefetched = None
     # What a node dump gave for the plan's own addresses, in the same pass.
-    dumped = reset.read.plan_values if combined_read else {}
+    dumped = plan_read.plan_values if combined_read else {}
     dump_rereads = 0
     if combined_read:
-        # The reset's read already asked for them (above), under its own
-        # phase. The loop below asks for any it did not get, such as one in a
-        # family the desk does not answer, itself, in a phase of its own.
-        prefetched = dict(reset.read.replies)
+        # The read above already asked for them, under its own phase. The loop
+        # below asks for any it did not get, such as one in a family the desk
+        # does not answer, itself, in a phase of its own.
+        prefetched = dict(plan_read.replies)
         dumped = dict(dumped)
         # The dump values whose rounding could change a verdict are read again
         # now, all together with the window of requests in flight, not one at
         # a time as the loop below reaches them (each a round trip).
-        again = _dump_values_to_reread(targets, dumped, reset.read.plan_texts)
+        again = _dump_values_to_reread(targets, dumped, plan_read.plan_texts)
         if again:
             from atoo import console as osc
 
             reread_phase = phases.start(REREAD_PHASE, len(again))
+            reread_started = time.monotonic()
             for address, reply in osc.read_in_windows(
                     console, again, on_start=reread_phase.start_address):
                 reread_phase.finish_address(
@@ -3967,10 +4223,9 @@ def apply_plan(
                 prefetched[address] = reply
                 dumped.pop(address, None)
                 dump_rereads += 1
+            stats.add(singles=dump_rereads, seconds=time.monotonic() - reread_started,
+                      single_seconds=time.monotonic() - reread_started)
             reread_phase.finish()
-    elif dry_run and targets and getattr(console, "window", 1) > 1:
-        phase = phases.start(PREVIEW_PHASE, len(targets))
-        prefetched = _prefetch_baselines(console, targets, known, phase)
 
     # Where the records of the phase in progress begin, so that when it ends
     # its summary can say how many of its settings were actually written.
@@ -4010,7 +4265,8 @@ def apply_plan(
         if prefetched is not None and target.address in prefetched:
             # Counted by the phase as its reply came in.
             in_flight = False
-        elif combined_read and (target.address in known or target.address in dumped):
+        elif combined_read and (target.address in known or target.address in dumped
+                                or target.address in absent):
             # Decided on the reset's read: nothing is asked.
             in_flight = False
         else:
@@ -4023,7 +4279,7 @@ def apply_plan(
             reset_seconds = time.monotonic() - reset_started
         if prefetched is not None and target.address in prefetched:
             prior_reply = prefetched[target.address]
-        elif target.address in dumped:
+        elif target.address in dumped or target.address in absent:
             prior_reply = None
         elif target.address in pre_read:
             prior_reply = pre_read.pop(target.address)
@@ -4032,11 +4288,16 @@ def apply_plan(
             #  -- asking again would double the read.
             prior_reply = None
         else:
+            _asked = time.monotonic()
             prior_reply = console.get(target.address)
+            stats.add(singles=1, seconds=time.monotonic() - _asked,
+                      single_seconds=time.monotonic() - _asked)
         if prior_reply is not None and prior_reply.is_socket_error:
             abort_reason = prior_reply.args[0] if prior_reply.args else "socket error"
             break
-        if prior_reply is None and target.address in dumped:
+        if prior_reply is None and target.address in absent:
+            prior_value, read_error = None, "not on the desk under the selector it holds now"
+        elif prior_reply is None and target.address in dumped:
             prior_value, read_error = dumped[target.address]
         elif prior_reply is None and target.address in known:
             prior_value, read_error = known.pop(target.address)
@@ -4052,11 +4313,14 @@ def apply_plan(
         intended_value = target.compute_value(prior_value)
         if (target.address in dumped and read_error is None
                 and not _dump_verdict_is_certain(
-                    target, prior_value, intended_value, reset.read.plan_texts.get(target.address))):
+                    target, prior_value, intended_value, plan_read.plan_texts.get(target.address))):
             # The dump's display rounding could change the verdict: ask the
             # desk for the exact value, as a real run does.
             dump_rereads += 1
+            _asked = time.monotonic()
             reread = console.get(target.address)
+            stats.add(singles=1, seconds=time.monotonic() - _asked,
+                      single_seconds=time.monotonic() - _asked)
             if reread is not None and reread.is_socket_error:
                 abort_reason = reread.args[0] if reread.args else "socket error"
                 break
@@ -4088,12 +4352,19 @@ def apply_plan(
         unchanged = _values_equal(target.value_type, prior_value, intended_value, target.address)
 
         if dry_run:
+            mirror = mirrored.get(target.address)
+            mirrored_by = (mirror[0] if mirror is not None and _values_equal(
+                target.value_type, mirror[1], intended_value, target.address) else None)
             records.append(WriteRecord(
                 address=target.address, description=target.description, value_type=target.value_type,
                 method=None, ack=None,
                 prior_value=prior_value, intended_value=intended_value, readback_value=None,
-                status="dry_run", timestamp=timestamp, forced_by=forced,
+                status="dry_run", timestamp=timestamp, forced_by=forced, mirrored_by=mirrored_by,
             ))
+            if not unchanged and mirrored_by is None:
+                partner = _mirrored_partner(target.address)
+                if partner is not None:
+                    mirrored[partner] = (target.address, intended_value)
             if not unchanged:
                 # The preview says what the real run will do: a selector
                 # that would change forces its governed values too.
@@ -4116,8 +4387,12 @@ def apply_plan(
         # undo must restore -- and mark each one to be written after the
         # selector whatever its baseline says, so the run proves it landed.
         governed_values = _governed_later(targets, index)
+        from atoo import preset_expand as _pe
+        is_model_selector = (_pe.write_order(target.address) == _pe.SELECTOR
+                             and target.address.endswith("/mdl"))
         present = (_leaves_present(console, target.address)
-                   if any(g.address not in known for g in governed_values) else None)
+                   if (any(g.address not in known for g in governed_values)
+                       or is_model_selector) else None)
         for governed in governed_values:
             if governed.address in forced_by:
                 continue
@@ -4140,6 +4415,38 @@ def apply_plan(
                 break
             pre_read[governed.address] = reply
             forced_by[governed.address] = target.address
+        if abort_reason is not None:
+            break
+
+        # What the OLD model holds that this run does not write. When a
+        # model selector changes, the desk drops the leaves that belong to
+        # the model it leaves (a PSE gate's depth and fast) and shows the
+        # new model's defaults; Undo would put the model back and find the
+        # old model's values gone. They are read now, while they are there,
+        # and journalled, so Undo restores them after the selector.
+        if is_model_selector and present is not None:
+            written_here = {t.address for t in targets}
+            for leaf in sorted(present):
+                if leaf == target.address or leaf in written_here or leaf in forced_by:
+                    continue
+                if not _pe.governs(target.address, leaf):
+                    continue
+                orphan_reply = console.get(leaf)
+                if orphan_reply is not None and orphan_reply.is_socket_error:
+                    abort_reason = orphan_reply.args[0] if orphan_reply.args else "socket error"
+                    break
+                if orphan_reply is None or not orphan_reply.args:
+                    continue
+                orphan_type = orphan_reply.typetag[:1] if orphan_reply.typetag else "s"
+                orphan_value, orphan_error = _extract_reply_value(orphan_reply, orphan_type, leaf)
+                if orphan_error is not None or orphan_value is None:
+                    continue
+                records.append(WriteRecord(
+                    address=leaf, value_type=orphan_type, method=None, ack=None,
+                    description=(f"{leaf}: the value the old {target.address} model holds, "
+                                 "recorded so Undo can put it back"),
+                    prior_value=orphan_value, intended_value=None, readback_value=None,
+                    status=ORPHANED_STATUS, timestamp=timestamp, forced_by=target.address))
         if abort_reason is not None:
             break
 
@@ -4240,6 +4547,26 @@ def apply_plan(
 
         warnings = warnings + init.run_notes(reset, records, dry_run=dry_run,
                                              write_seconds=reset_seconds)
+    if dry_run and (stats.dumps or stats.singles):
+        window = getattr(console, "window", 1)
+        if not isinstance(window, int) or window <= 1:
+            path = "one request at a time (console window 1)"
+        elif reset is not None:
+            path = "node dumps for the reset and the plan's settings"
+        elif initialize is False:
+            path = "node dumps for the plan's settings; the reset is off (--no-init)"
+        else:
+            path = ("node dumps for the plan's settings; this console has no initialized "
+                    "capture, so there is no reset")
+        resends_now = getattr(console, "resends", None)
+        if isinstance(resends_now, int) and isinstance(resends_at_start, int):
+            stats.resends = resends_now - resends_at_start
+        lone = (_lone_request_seconds(console, plan_read)
+                if isinstance(window, int) and window > 1 and stats.seconds > SLOW_READ_SECONDS
+                else None)
+        warnings = warnings + [stats.line(
+            path, window=window if isinstance(window, int) else 1, lone_request=lone)]
+    warnings = warnings + absent.notes()
     if dump_rereads:
         warnings = warnings + [
             f"INFO {dump_rereads:,} value(s) taken from a node dump were read again one by one: a "
@@ -4262,13 +4589,33 @@ def _finish(result: ApplyResult) -> ApplyResult:
     return result
 
 
-def _leaves_present(console, selector: str) -> set[str] | None:
-    """The addresses under `selector`'s node as the desk holds them now,
-    from one node dump -- or None when that cannot be known (no dump on
-    this console, the desk did not answer, or a dump that does not even
-    list the selector itself), in which case every value is read on its
-    own, as before. Only ABSENCE is taken from the dump: a value it lists
-    is still read by GET, so its baseline is typed exactly as ever."""
+_PAIR_MODE = re.compile(r"^(/io/in/[^/]+/)(\d+)(/mode)$")
+
+
+def _mirrored_partner(address: str) -> str | None:
+    """The other half of a stereo pair whose `mode` the desk sets together
+    with `address`'s: socket n and n+1 for an odd n (a pair starts on an odd
+    socket, `console_facts.STEREO_PAIR_RULE`), the same on every model. None
+    for any other address."""
+    match = _PAIR_MODE.match(address)
+    if match is None or int(match.group(2)) % 2 == 0:
+        return None
+    return f"{match.group(1)}{int(match.group(2)) + 1}{match.group(3)}"
+
+
+#: The journal status of a value the OLD model of a selector held that this
+#: run does not write: read and recorded before the selector changes, so Undo
+#: can put it back after it restores the selector (Forge's check).
+ORPHANED_STATUS = "orphaned_prior"
+
+
+def _node_leaves(console, selector: str) -> dict[str, str] | None:
+    """`{address: text}` for the addresses under `selector`'s node as the desk
+    holds them now, from one node dump -- or None when that cannot be known (no
+    dump on this console, the desk did not answer, or a dump that does not even
+    list the selector itself), in which case every value is read on its own, as
+    before. Only ABSENCE is taken from the dump: a value it lists is still read
+    by GET, so its baseline is typed exactly as ever."""
     dump_node = getattr(console, "node_dump", None)
     if not callable(dump_node):
         return None
@@ -4281,10 +4628,122 @@ def _leaves_present(console, selector: str) -> set[str] | None:
         return None
     from atoo import console as osc
     try:
-        leaves = set(osc.parse_node_dump(node, dump))
+        leaves = osc.parse_node_dump(node, dump)
     except osc.NodeDumpError:
         return None
     return leaves if selector in leaves else None
+
+
+def _leaves_present(console, selector: str) -> set[str] | None:
+    """The addresses `_node_leaves` lists, or None when that cannot be known."""
+    leaves = _node_leaves(console, selector)
+    return None if leaves is None else set(leaves)
+
+
+@dataclass
+class AbsentGoverned:
+    """Plan values a selector governs that the desk does not hold under the value
+    the selector has now (an FX slot or a gate that holds another model), and
+    so are not read."""
+
+    #: governed address -> its selector
+    selector_of: dict[str, str] = field(default_factory=dict)
+    #: selector -> [what the desk holds in it now, what the plan sets it to, how many]
+    groups: dict[str, list] = field(default_factory=dict)
+    dumps: int = 0
+    seconds: float = 0.0
+
+    def __contains__(self, address: str) -> bool:
+        return address in self.selector_of
+
+    def add(self, address: str, selector: str, desk_holds: object, plan_sets: object) -> None:
+        self.selector_of[address] = selector
+        group = self.groups.setdefault(selector, [desk_holds, plan_sets, 0])
+        group[2] += 1
+
+    def merge(self, found: dict, plan_sets: dict) -> None:
+        """Add what a read found absent (`initialize.DeskRead.plan_absent`)."""
+        for address, (selector, desk_holds) in found.items():
+            self.add(address, selector, desk_holds, plan_sets.get(selector))
+
+    def notes(self) -> list[str]:
+        """One INFO line for each family of selector (`/ch/{n}/gate/mdl`, `/fx/{n}/mdl`)."""
+        families: dict[str, list[str]] = {}
+        for selector in self.groups:
+            families.setdefault(re.sub(r"/\d+", "/{n}", selector), []).append(selector)
+        lines = []
+        for family, selectors in families.items():
+            total = sum(self.groups[s][2] for s in selectors)
+            first = selectors[0]
+            holds, sets, _ = self.groups[first]
+            where = first.rpartition("/")[0]
+            if len(selectors) > 1:
+                shown = ", ".join(s.rpartition("/")[0] for s in selectors[:3])
+                more = f" and {len(selectors) - 3} more" if len(selectors) > 3 else ""
+                where = f"{shown}{more}"
+                holds_words = (f"{holds} in {first} (and {len(selectors) - 1} other "
+                               f"selector(s) like it)")
+            else:
+                holds_words = f"{holds} in {first}"
+            lines.append(
+                f"INFO {total:,} value(s) under {where} were not read: the desk holds "
+                f"{holds_words} and the plan sets {sets}, and those parameters do not exist "
+                "on the desk until the plan's value is set. The apply writes it first and then "
+                "each of them, so the preview shows each as a change")
+        return lines
+
+
+def _governing_selectors(targets: list[WriteTarget]) -> dict[str, str]:
+    """`{address: selector}` for each plan value a selector in the same plan governs
+    (`preset_expand.governs`: a gate, dynamics, EQ or filter model, an FX model),
+    the same table the real apply forces governed writes by."""
+    from atoo import preset_expand
+
+    selectors: dict[str, list[str]] = {}
+    for target in targets:
+        if preset_expand.write_order(target.address) == preset_expand.SELECTOR:
+            selectors.setdefault(target.address.rpartition("/")[0], []).append(target.address)
+    out: dict[str, str] = {}
+    for target in targets:
+        for selector in selectors.get(target.address.rpartition("/")[0], ()):
+            if preset_expand.governs(selector, target.address):
+                out[target.address] = selector
+                break
+    return out
+
+
+def _absent_governed_values(console, targets: list[WriteTarget]) -> AbsentGoverned:
+    """The plan's values that a node dump cannot tell the preview about because
+    their node is not dumped (`audit.bulk_node_for`: an FX slot), whose selector
+    the desk holds at another value, so the leaves do not exist on it yet. One node
+    dump per such selector, as the real apply does (`_leaves_present`) before it
+    changes a selector. Asking for them would time out, each one for the full
+    timeout and its retries; the apply writes the selector first and then each one.
+    (A governed value under a dumped node is found absent by the read's own dump,
+    `initialize.read_desk(..., governed_by=)`.)
+    """
+    from atoo import audit, preset_expand
+
+    out = AbsentGoverned()
+    began = time.monotonic()
+    for target in targets:
+        selector = target.address
+        if preset_expand.write_order(selector) != preset_expand.SELECTOR:
+            continue
+        governed = [t.address for t in targets
+                    if t.address != selector and preset_expand.governs(selector, t.address)
+                    and audit.bulk_node_for(t.address) is None]
+        if not governed:
+            continue
+        out.dumps += 1
+        leaves = _node_leaves(console, selector)
+        if leaves is None:
+            continue
+        for address in governed:
+            if address not in leaves:
+                out.add(address, selector, leaves[selector], target.compute_value(None))
+    out.seconds = time.monotonic() - began
+    return out
 
 
 def _governed_later(targets: list[WriteTarget], index: int) -> list[WriteTarget]:

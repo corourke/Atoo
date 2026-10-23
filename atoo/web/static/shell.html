@@ -1333,13 +1333,9 @@
             </span>
           </div>
 
-          <section class="panel box table-box watch-table-wrap" aria-label="Alerts">
-            <!-- The verdict (§10): TROUBLE, WARNING or ALL OK, read from
-                 the desk; NOT WATCHING before Start. The counts sit on its
-                 right. Warning and Info are buttons -- a click
-                 hides every row of that severity, a second click brings
-                 them back. Error is not: an error is a setting that cannot
-                 work, and hiding all of them at once is unsafe. -->
+          <!-- The verdict bar is the box's head but not inside it,
+               so it can pin under the Watch header for the whole page, not
+               just while the table is on screen. -->
             <div class="verdict-bar" id="watch-verdict">
               <span class="verdict-word" id="watch-verdict-word">Not watching</span>
               <span class="verdict-line" id="watch-verdict-line"></span>
@@ -1351,6 +1347,13 @@
                         title="Click to hide every info; click again to show them"><span class="count-num">0</span> Info<span class="count-hidden" hidden></span></button>
               </section>
             </div>
+          <section class="panel box table-box watch-table-wrap" aria-label="Alerts">
+            <!-- The verdict (§10): TROUBLE, WARNING or ALL OK, read from
+                 the desk; NOT WATCHING before Start. The counts sit on its
+                 right. Warning and Info are buttons -- a click
+                 hides every row of that severity, a second click brings
+                 them back. Error is not: an error is a setting that cannot
+                 work, and hiding all of them at once is unsafe. -->
             <p id="panel-message" class="panel-message watch-box-line" hidden></p>
             <!-- What this read could NOT check. A shorter list of
                  findings must never be mistakable for a healthier desk, so
@@ -1404,6 +1407,7 @@
             </summary>
             <div class="panel box">
               <p id="console-origin" class="console-origin" hidden></p>
+              <p class="console-origin"><a id="watch-save-findings" class="btn btn-quiet" href="/api/watch/findings-log" download="atoo-findings.jsonl">Save findings</a> <span class="notation">what this watch has found so far, as a file (the same lines as <code>atoo watch --findings-log</code>)</span></p>
               <section id="baseline-note" class="baseline-note" hidden></section>
               <!-- Notes about the watch itself (a name resolved at
                    Start, a condition not watched, names refreshed) -- status,

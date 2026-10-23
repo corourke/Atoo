@@ -212,13 +212,26 @@ def test_a_repatch_onto_a_socket_somebody_on_the_desk_uses_leaves_that_socket_al
     assert "ch:20 on the desk also uses" in held and "NOT written" in held
 
 
-def test_sharing_a_running_strips_socket_is_refused_because_it_rewrites_that_strip():
-    """Two strips on one socket turn `clink` off on both -- and the Kick is
-    not named by the change, so the edit is refused, not written."""
+def test_sharing_a_running_strips_socket_is_refused_and_asks_to_name_the_other_strip():
+    """Two strips on one socket turn `clink` off on both. The Kick is not named
+    by the change, so the edit is refused -- and the refusal names the Kick and
+    how to go ahead (decided: refuse and ask
+    first, never write with a warning)."""
     amendment, _m, targets = _review(_change_set(_modify(
         "BassDI", {"patch": {"group": "A", "sockets": [1], "stated": True}})))
     [refused] = amendment.blocked
-    assert "/ch/1/clink" in refused.reason and "does not name" in refused.reason
+    assert "/ch/1/clink" in refused.reason and "channel 'Kick' (ch:1)" in refused.reason
+    assert "name channel 'Kick' (ch:1) in the change as well" in refused.reason
+    assert "needs a rebuild" not in refused.reason and targets.to_write == []
+    assert not [w for w in amendment.warnings if "also rewrites" in w]
+
+
+def test_naming_the_other_strip_too_carries_the_shared_socket_out():
+    amendment, _m, targets = _review(_change_set(
+        _modify("BassDI", {"patch": {"group": "A", "sockets": [1], "stated": True}}),
+        _modify("Kick", {"color": "Blue"})))
+    assert not amendment.blocked, [c.line() for c in amendment.blocked]
+    assert "/ch/1/clink" in {t.address for t in targets.to_write}
 
 
 def test_a_repatch_to_a_socket_the_desk_lacks_is_refused_by_the_preflight():
@@ -268,28 +281,6 @@ def test_a_named_object_edit_writes_only_its_own_addresses():
     index = applied_plan()["busses"]["MON2"]["index"]
     assert [t.address for t in targets.to_write] == [f"/bus/{index}/fdr"]
     assert amendment.edited == ["bus 'MON2'"]
-
-
-def test_an_edit_that_would_rewrite_another_object_is_refused(monkeypatch):
-    """Named fields only: an edit whose value moves an address of something
-    it does not name (here, simulated: a bus field that rewrote a strip's
-    send) is refused rather than written."""
-    real = amend._target_map
-
-    def spill(plan):
-        out = real(plan)
-        if plan["busses"]["MON2"]["fader"]["fader_db"] == -5:
-            send = out["/ch/1/send/2/lvl"]
-            out["/ch/1/send/2/lvl"] = amend.apply_module.WriteTarget(
-                send.address, send.value_type, send.description,
-                amend.apply_module._const(-7.0), send.stage)
-        return out
-
-    monkeypatch.setattr(amend, "_target_map", spill)
-    amendment, _m, _t = _review(
-        _change_set(_modify("MON2", {"fader.fader_db": -5}, obj="bus")), text="MON2 fader -5")
-    [refused] = amendment.blocked
-    assert "/ch/1/send/2/lvl" in refused.reason and "does not name" in refused.reason
 
 
 # ======================================================================

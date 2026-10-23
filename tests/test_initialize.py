@@ -64,14 +64,15 @@ def note(result) -> str:
 def test_every_capture_in_the_table_is_package_data_and_vice_versa():
     files = {p.name for p in init.CAPTURE_DIR.glob("*.snap")}
     assert files == {file for file, _source in init.CAPTURES.values()}
-    assert set(init.CAPTURES) == {"wing-compact", "wing-full"}
+    assert set(init.CAPTURES) == {"wing-compact", "wing-full", "wing-rack"}
 
 
-@pytest.mark.parametrize("model", ["wing-compact", "wing-full"])
+@pytest.mark.parametrize("model", ["wing-compact", "wing-full", "wing-rack"])
 def test_the_packaged_capture_is_the_frozen_initialized_capture(model):
     """Byte for byte the same desk export the tests' frozen copies are."""
     frozen = {"wing-compact": COMPACT_SNAP,
-              "wing-full": FIXTURES / "Initialized-Full.snap"}[model]
+              "wing-full": FIXTURES / "Initialized-Full.snap",
+              "wing-rack": FIXTURES / "Initialized-Rack.snap"}[model]
     packaged = init.CAPTURE_DIR / init.CAPTURES[model][0]
     assert packaged.read_bytes() == frozen.read_bytes()
 
@@ -97,6 +98,19 @@ def test_a_leaf_with_no_known_type_is_not_settable():
     assert unsettable == ["/cfg/mon/1/lvl", "/cfg/mon/2/lvl", "/cfg/talk/lvl", "/rec/path"]
 
 
+@pytest.mark.parametrize("model", ["wing-full", "wing-rack"])
+def test_every_capture_holds_the_compacts_addresses_and_types(model):
+    """One address set for every model, each typed the same way, with the same
+    leaves the desk will not let us set."""
+    leaves = {leaf.address: leaf for leaf in init.load_capture(model).leaves}
+    small = {leaf.address: leaf for leaf in compact().leaves}
+    assert set(leaves) == set(small)
+    assert {a: leaf.value_type for a, leaf in leaves.items()} == {
+        a: leaf.value_type for a, leaf in small.items()}
+    assert sorted(a for a, leaf in leaves.items() if leaf.value_type is None) == [
+        "/cfg/mon/1/lvl", "/cfg/mon/2/lvl", "/cfg/talk/lvl", "/rec/path"]
+
+
 def test_the_full_size_capture_differs_from_the_compact_only_where_the_desks_do():
     """Its channel run stops at LCL 8, and its AES50 A preamps sit at 0.5."""
     full = {leaf.address: leaf.value for leaf in init.load_capture("wing-full").leaves}
@@ -108,8 +122,8 @@ def test_the_full_size_capture_differs_from_the_compact_only_where_the_desks_do(
         f"/io/in/A/{n}/g" for n in range(1, 33)}
 
 
-def test_the_rack_has_no_capture():
-    assert init.load_capture("wing-rack") is None
+def test_a_model_with_no_capture_has_none():
+    assert init.load_capture("wing-x") is None
     assert init.load_capture(None) is None
 
 
@@ -509,10 +523,18 @@ def test_amend_patch_and_undo_never_initialize():
 # ======================================================================
 
 
-def test_the_rack_warns_and_the_plan_is_still_applied():
-    desk = desk_with({"/ch/30/fdr": -6.0})
-    result = apply_plan(tiny(("ch", 1, "Kick")), desk, dry_run=False, full_apply=True,
-                        initialize=True, init_model="wing-rack")
+def test_a_model_with_no_capture_warns_and_the_plan_is_still_applied(monkeypatch):
+    """A labelled model with no capture: the Rack's entry is taken out of the
+    table (and the cache that holds it) so this path stays covered."""
+    monkeypatch.delitem(init.CAPTURES, "wing-rack")
+    init.load_capture.cache_clear()
+    try:
+        desk = desk_with({"/ch/30/fdr": -6.0})
+        result = apply_plan(tiny(("ch", 1, "Kick")), desk, dry_run=False, full_apply=True,
+                            initialize=True, init_model="wing-rack")
+    finally:
+        monkeypatch.undo()
+        init.load_capture.cache_clear()
     assert reset_records(result) == []
     [warning] = [w for w in result.warnings if w.startswith("WARNING not reset")]
     assert "no initialized capture for the WING Rack" in warning
@@ -589,8 +611,8 @@ def test_preflight_note_for_a_model_with_a_capture():
     assert "--no-init" in text and "at the very most" in text
 
 
-def test_preflight_note_for_the_rack_is_the_warning():
-    code, text = init.preflight_note(json.loads(SIXPIECE.read_text()), "wing-rack")
+def test_preflight_note_for_a_model_with_no_capture_is_the_warning():
+    code, text = init.preflight_note(json.loads(SIXPIECE.read_text()), None)
     assert code == "apply.init-no-capture"
     assert text.startswith("WARNING not reset to initialized first")
 

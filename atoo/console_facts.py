@@ -1564,8 +1564,15 @@ def is_talkback_name(*texts: object) -> bool:
 # asks each port's link status first, and reads the outputs of every port
 # with a device on it (`OK`, `ERR` or `UPD`). The walk's desk had nothing on
 # AES50, so `-` is the only value seen on hardware; `OK`, `ERR` and `UPD`
-# are the list's own words. **Not yet confirmed on a desk with a stage
-# box** -- the desk test list carries that test.
+# are the list's own words. **UPD is not "updating"** (2026-10-22): the protocol document (WING_Remote-Protocols-3.1-03.pdf, the
+# `/$stat/A/stat` row) lists `-, OK, ERR, UPD` without a meaning, and
+# A full-size WING read `UPD` on AES50-A with a Behringer S32 on it
+# passing audio. What it means is unknown; the audit says it, at INFO (C010),
+# and never raises it. `ERR` is still read as a link error, **not yet
+# confirmed on a desk** (a cable pull). Forge's capture of that desk
+# (2026-10-22): `/$stat/A/dev "S32"`, `/$stat/A/stat "UPD"`,
+# B and C `dev ""` / `stat "-"`, `/$syscfg/opt_mod "DANTE"`; `errorsc` and
+# `errorsu` were not in it and are still unread.
 #
 # **Monitor source.** `/cfg/mon/1` and `/cfg/mon/2` are the desk's two
 # monitor outputs (the phones and the monitor speakers), and `src` names

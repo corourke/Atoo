@@ -209,6 +209,10 @@ EXPANSION_BAY = r"^/(?:cards/\$type|\$syscfg/opt_mod)$"
 #: presence, so this family carries discovery as well as value.
 STRIP_SEND_ON = rf"^{_STRIP}/send/(?:\d+|MX\d+)/on$"
 STRIP_SEND_LVL = rf"^{_STRIP}/send/(?:\d+|MX\d+)/lvl$"
+#: The same two for a strip's sends to a matrix only (CV018 no longer
+#: looks at a send to a bus), so its Watch pass reads half as many leaves.
+STRIP_MTX_SEND_ON = rf"^{_STRIP}/send/MX\d+/on$"
+STRIP_MTX_SEND_LVL = rf"^{_STRIP}/send/MX\d+/lvl$"
 #: A strip's send to a bus: pre or post (CV006, bound to a plan). Rides in
 #: the same node as `on` and `lvl`, so a dump read asks for nothing more.
 STRIP_SEND_MODE = rf"^{_STRIP}/send/\d+/mode$"
@@ -401,6 +405,8 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
                 STRIP_NAME, SOURCE_NAME),
     "C009": (AES50_STATUS, STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH, OUTPUT_PATCH,
                 STRIP_NAME, SOURCE_NAME),
+    # C010 counts the strips patched from the port and names none.
+    "C010": (AES50_STATUS, STRIP_PATCH, STRIP_ALT_PATCH, GLOBAL_ALT_SWITCH),
     # The switch, the alternate's group, and the main patch the finding
     # says the strip is NOT hearing. Names for the label.
     "C004": (STRIP_ALT_PATCH, STRIP_PATCH, STRIP_NAME, SOURCE_NAME),
@@ -445,10 +451,10 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # addresses as CV016, whose finding it stands down for.
     "CV007": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_NAME)
                 + _IN_USE_STRIP,
-    # Added by Watch from a plan: every strip's sends and level (a send at
-    # the floor passes nothing), each bus's Main routes, and the names the
-    # labels quote.
-    "CV018": (STRIP_SEND_ON, STRIP_SEND_LVL, BUS_MAIN_ON, BUS_NAME)
+    # Added by Watch from a plan: every strip's sends to a matrix and their
+    # level (a send at the floor passes nothing), each bus's Main routes,
+    # and the names the labels quote. A send to a bus is not CV018's.
+    "CV018": (STRIP_MTX_SEND_ON, STRIP_MTX_SEND_LVL, BUS_MAIN_ON, BUS_NAME)
                 + _IN_USE_STRIP,
     # Added by Watch from a plan that states a phantom: the socket each
     # strip is patched to, its 48V, and the names its label quotes.

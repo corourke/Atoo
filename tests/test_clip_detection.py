@@ -864,3 +864,21 @@ def test_the_demo_without_clips_is_the_demo_as_it_was(monkeypatch):
     provider, _ = webui.demo_provider_factory()
     clipping = [provider().values for _ in range(10)]
     assert plain == clipping
+
+
+# ---- which strips carry signal ---------------------------------
+
+
+def test_a_strip_is_carrying_signal_above_minus_60_dBFS_for_five_seconds():
+    """The meters say which strips patched from a stage box are passing audio,
+    whatever word the desk's AES50 link status shows."""
+    now = [100.0]
+    monitor = ClipMonitor("192.0.2.1", clock=lambda: now[0])
+    assert monitor.live() is None                  # no packet yet: not known, not silent
+    _, words = parse_packet(packet(REPORT_ID, ALL, {"/ch/3": (-40 * 256,), "/ch/4": (-70 * 256,)}))
+    monitor.feed(struct.pack(">I", REPORT_ID) + struct.pack(f">{len(words)}h", *words))
+    assert monitor.live() == frozenset({"/ch/3"})
+    now[0] += 4.9
+    assert monitor.live() == frozenset({"/ch/3"})
+    now[0] += 0.2
+    assert monitor.live() == frozenset()           # a packet came, and nothing is above the floor

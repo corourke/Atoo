@@ -17,7 +17,7 @@ import json
 
 import pytest
 
-from atoo import amend, patch
+from atoo import amend, cli, patch
 from atoo import apply as apply_module
 from atoo import console_facts as facts
 from atoo.amend import strip_occupancy
@@ -152,8 +152,13 @@ def test_with_every_socket_of_the_box_taken_the_pick_is_left_and_the_preflight_r
     """The S16 on A is full (the show has A 1-20): nothing free to choose
     instead, so the pick stands, with a warning, and the pre-flight is what
     stops it -- a socket that does not exist is never written."""
-    amendment, _, _ = _review(_lead(17, stated=False))
-    assert any("no free A socket is left" in w for w in amendment.warnings)
+    plan = applied_plan()
+    for n in range(1, 25):
+        taken = horn(60 + n, f"Local {n}", n)
+        taken["patch"] = {"group": "LCL", "sockets": [n], "stated": True}
+        plan["channels"].append(taken)
+    amendment, _, _ = _review(_lead(17, stated=False), plan=plan)
+    assert any("no free socket is left on A or LCL" in w for w in amendment.warnings)
     result = amend.preflight(amendment, skip_verify=True, what="change", aes50_devices=S16_ON_A)
     assert result.refuses and "A 17" in result.refusal
 
@@ -294,3 +299,132 @@ def test_the_docs_stage_box_example_runs_as_the_page_shows(tmp_path, capsys):
             "AES50-A:") in out.err + out.out
     assert "  - A 17 (input) -- channel 'HiHat'; the S16 on AES50-A has 16 inputs, so A 17 " \
            "does not exist" in out.err + out.out
+
+
+# ------------------------- an offline run says when the saved state has no box
+
+
+def _offline_devices(values, capsys):
+    from atoo.audit import ConsoleState
+
+    found = cli._aes50_devices(None, ConsoleState(values))
+    return found, capsys.readouterr().err
+
+
+def test_a_saved_state_without_the_device_names_warns(capsys):
+    found, err = _offline_devices({"/ch/1/name": "Kick"}, capsys)
+    assert found is None
+    assert "WARNING: this saved state has no stage-box device names" in err
+    assert "cannot be checked" in err
+
+
+def test_a_saved_state_with_the_device_names_does_not_warn(capsys):
+    found, err = _offline_devices({"/$stat/A/dev": "S16", "/$stat/B/dev": "",
+                                   "/$stat/C/dev": ""}, capsys)
+    assert found == {"A": "S16", "B": "", "C": ""} and err == ""
+
+
+def test_an_empty_record_is_a_record_and_does_not_warn(capsys):
+    found, err = _offline_devices({f"/$stat/{p}/dev": "" for p in "ABC"}, capsys)
+    assert found == {"A": "", "B": "", "C": ""} and err == ""
+
+
+def test_an_offline_patch_of_a_state_without_the_record_warns(tmp_path, capsys):
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    state = json.loads((root / "atoo" / "web" / "demo_states" / "before.json").read_text())
+    state.pop("/$stat/A/dev", None)
+    capture = tmp_path / "nobox.json"
+    capture.write_text(json.dumps(state))
+    main(["patch", "--show", str(root / "starter" / "demo-show"), "--change-set",
+          str(root / "docs" / "user" / "demo" / "demo-show" / "hihat-a17.change-set.json"),
+          "--state", str(capture), "HiHat on A 17"])
+    err = capsys.readouterr().err
+    assert "this saved state has no stage-box device names" in err
+
+
+# ------------------------------------- The words decide what was named
+
+
+def _pair(first, second, *, stated):
+    channels = []
+    for name, socket in (("Choir L", first), ("Choir R", second)):
+        channel = horn(30, name, socket)
+        channel["patch"] = {"group": "A", "sockets": [socket], "stated": stated}
+        channel["dca"], channel["mute_group"], channel["bus_sends"] = [], [], []
+        channels.append(channel)
+    return channels
+
+
+def _review_many(channels, *, text, devices=S16_ON_A, model="wing-compact", plan=None):
+    plan = plan if plan is not None else _small_show()
+    change_set = patch.empty_change_set("Choir")
+    change_set["add"]["channels"] = channels
+    occupancy = strip_occupancy(occupancy_state(theirs=(), plan=plan), plan)
+    amendment, _ = patch.plan_patch(plan, change_set, occupancy, console_model=model,
+                                    text=text, aes50_devices=devices)
+    return amendment
+
+
+@pytest.mark.parametrize("model", ["wing-compact", "wing", "wing-rack"])
+@pytest.mark.parametrize("flag", [False, True])
+def test_two_unnamed_mics_the_model_put_past_the_box_land_on_free_sockets(model, flag):
+    """The flag the model sets must not decide it: `stated: true` on A 17-18
+    with no socket in the words is the model's invention, so both move."""
+    amendment = _review_many(_pair(17, 18, stated=flag), model=model,
+                             text='Add two choir mics, "Choir L" and "Choir R"')
+    added = [c for c in amendment.effective_plan["channels"] if c["name"].startswith("Choir")]
+    sockets = [c["patch"]["sockets"][0] for c in added]
+    assert len(set(sockets)) == 2 and all(s <= 16 for s in sockets)
+    assert sum("was picked, but the S16 on AES50-A has 16 inputs" in i
+               for i in amendment.infos) == 2
+    result = amend.preflight(amendment, skip_verify=True, what="change", aes50_devices=S16_ON_A)
+    assert not result.refuses
+
+
+def test_a_socket_the_words_name_is_refused_even_if_the_model_forgot_the_flag():
+    amendment = _review_many(_pair(17, 18, stated=False), text="Choir L and R on A 17 and 18")
+    added = [c for c in amendment.effective_plan["channels"] if c["name"].startswith("Choir")]
+    assert [c["patch"]["sockets"] for c in added] == [[17], [18]]
+    result = amend.preflight(amendment, skip_verify=True, what="change", aes50_devices=S16_ON_A)
+    assert result.refuses and result.refusal_code == "amend.socket-missing-on-box"
+
+
+@pytest.mark.parametrize("words,named", [
+    ("on A 5 and 6", {5, 6}), ("A5/6", {5, 6}), ("A 5-8", {5, 6, 7, 8}),
+    ("on LCL 21", set()), ("add two mics", set()),
+])
+def test_the_sockets_the_words_write_after_a_group(words, named):
+    assert patch._numbers_after(words, "A") == named
+
+
+def _full_a_but(free, *, taken_lcl=()):
+    plan = _small_show()
+    for n in range(1, 17):
+        if n not in free:
+            taken = horn(40 + n, f"Stage {n}", n)
+            taken["patch"] = {"group": "A", "sockets": [n], "stated": True}
+            plan["channels"].append(taken)
+    for n in taken_lcl:
+        taken = horn(70 + n, f"Local {n}", n)
+        taken["patch"] = {"group": "LCL", "sockets": [n], "stated": True}
+        plan["channels"].append(taken)
+    return plan
+
+
+@pytest.mark.parametrize("model", ["wing-compact", "wing", "wing-rack"])
+def test_a_stereo_pair_with_no_free_adjacent_pair_on_the_box_goes_to_the_next_free_lcl_pair(model):
+    """A 12 and A 16 are free but not adjacent, so a stereo
+    channel cannot be formed on the S16; the desk's own LCL inputs can."""
+    channel = horn(30, "Choir", 17)
+    channel["patch"] = {"group": "A", "sockets": [17, 18], "stated": False}
+    channel["dca"], channel["mute_group"], channel["bus_sends"] = [], [], []
+    plan = _full_a_but({12, 16}, taken_lcl=(1, 2))
+    amendment = _review_many([channel], plan=plan, model=model, text="Add a stereo choir mic")
+    [added] = [c for c in amendment.effective_plan["channels"] if c["name"] == "Choir"]
+    assert added["patch"]["group"] == "LCL" and added["patch"]["sockets"] == [3, 4]
+    [info] = [i for i in amendment.infos if "'Choir'" in i and "was picked" in i]
+    assert "A has no free stereo pair" in info and "LCL 3+4" in info
+    result = amend.preflight(amendment, skip_verify=True, what="change", aes50_devices=S16_ON_A)
+    assert not result.refuses

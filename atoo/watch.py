@@ -346,6 +346,113 @@ def virtual_soundcheck_note() -> Finding:
     ), "Virtual soundcheck", "on, alternate inputs at INFO")
 
 
+#: The rule id of the INFO saying the show's plan changed on disk after
+#: this Watch started.
+PLAN_CHANGED_RULE_ID = "W004"
+
+
+def plan_changed_note() -> Finding:
+    """W004: the INFO saying the plan file changed after Start. The plan-bound
+    rules (R012 and R013, the plan comparisons) were bound to the plan as it was
+    then, so after a rebuild they judge the desk against numbering and routes
+    that are no longer the show's."""
+    return watch_note(Diagnostic.audit(
+        PLAN_CHANGED_RULE_ID, Severity.INFO, "watch", "The plan changed since Watch started",
+        "The show's plan changed after this Watch started (a rebuild or an apply), but Watch "
+        "is still judging the desk against the plan as it was at Start, so a route or a bus "
+        "number the new plan added can be reported wrongly. Stop Watch and start it again "
+        "to use the new plan.",
+        (),
+    ), "Plan", "changed since Start, restart Watch")
+
+
+def plan_changed_watcher(plan_path) -> "Callable[[], list[Finding]]":
+    """A function for `watch(session_notes=...)` that answers `[plan_changed_note()]`
+    once the file at `plan_path` no longer holds what it held now, at Start, and
+    `[]` until then. The file's size and mtime are looked at every pass; its
+    content only when they moved, so a touch that changes nothing is not news."""
+    import hashlib
+    from pathlib import Path
+
+    path = Path(plan_path)
+
+    def look() -> "tuple[tuple[int, int] | None, str | None]":
+        try:
+            info = path.stat()
+            return (info.st_mtime_ns, info.st_size), hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            return None, None
+
+    seen, digest = look()
+    state = {"seen": seen}
+
+    def notes() -> "list[Finding]":
+        try:
+            info = path.stat()
+            now = (info.st_mtime_ns, info.st_size)
+        except OSError:
+            now = None
+        if now == state["seen"]:
+            return []
+        if now is not None and look()[1] == digest:
+            state["seen"] = now
+            return []
+        return [plan_changed_note()]
+
+    return notes
+
+
+#: The rule id of the INFO saying this Watch has no plan, or one it could not read.
+NO_PLAN_RULE_ID = "W005"
+
+
+def no_plan_note(plan_path=None, reason: str | None = None) -> Finding:
+    """W005: the INFO saying Watch is judging the desk without the show's plan,
+    and which checks that costs, drawn from the rules that take a plan
+    (`audit.rules_needing_a_plan`). `plan_path` and `reason` are given when a
+    plan was named but could not be read."""
+    from atoo.audit import rules_needing_a_plan
+
+    judged, absent = rules_needing_a_plan()
+
+    def listed(pairs) -> str:
+        return ", ".join(f"{rid} {title}" for rid, title in pairs)
+
+    if plan_path is None:
+        title, summary = "Watching without a plan", "no plan, plan checks off"
+        lead = "Watching without a plan: no show's plan was given."
+    else:
+        title, summary = "The plan could not be read", "plan unreadable, plan checks off"
+        lead = f"Watching without the plan: {plan_path} could not be read: {reason}."
+    return watch_note(Diagnostic.audit(
+        NO_PLAN_RULE_ID, Severity.INFO, "watch", title,
+        f"{lead} These run without it, so they can warn about what the plan would have allowed "
+        f"(a parallel bus it asks for, a strip it puts at the floor): {listed(judged)}. "
+        f"These are not run at all: {listed(absent)}. "
+        f"Stop Watch and start it with the show's plan (atoo watch --show DIR; "
+        f"on the Watch page, open the show first).",
+        (),
+    ), "Plan", summary)
+
+
+def plan_notes(plan_path) -> "Callable[[], list[Finding]]":
+    """The `watch(session_notes=...)` function for the plan at `plan_path`, the
+    one place the command line and the Watch page ask: W005 every pass when
+    `plan_path` is None or the file cannot be read, and W004 (`plan_changed_watcher`)
+    once it changes after Start. Decided once, at Start."""
+    if plan_path is None:
+        note = no_plan_note()
+        return lambda: [note]
+    from atoo.audit import read_plan
+
+    plan, reason = read_plan(plan_path)
+    changed = plan_changed_watcher(plan_path)
+    if plan is not None:
+        return changed
+    note = no_plan_note(plan_path, reason)
+    return lambda: [note] + changed()
+
+
 def clip_status_note(status) -> Finding:
     """W002: the INFO saying whether the console's meters are being
     listened to for clips (`metering.ClipMonitor`), and if not,

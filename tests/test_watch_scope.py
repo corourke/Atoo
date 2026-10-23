@@ -200,17 +200,15 @@ def _full_state() -> ConsoleState:
     values["/bus/7/name"] = "Stage Wedge"
     values["/ch/15/send/7/on"], values["/ch/15/send/7/lvl"] = 1, 0.0
     # C008: a stage box on AES50-B in error, with a strip patched from it
-    # and an output carrying a source. C009: a stage box on AES50-C that is
-    # updating, with a strip patched from it.
-    values["/$stat/B/stat"], values["/$stat/C/stat"] = "ERR", "UPD"
+    # and an output carrying a source. C009: AES50-C in error with nothing
+    # patched. C010: AES50-A reading UPD.
+    values["/$stat/A/stat"], values["/$stat/B/stat"], values["/$stat/C/stat"] = "UPD", "ERR", "ERR"
     for port in ("B", "C"):
         for n in range(1, console_facts.OUTPUT_SOCKETS[port] + 1):
             values[f"/io/out/{port}/{n}/grp"], values[f"/io/out/{port}/{n}/in"] = "OFF", 0
     values["/io/out/B/3/grp"], values["/io/out/B/3/in"] = "BUS", 3
     values["/ch/21/name"] = "Stage B In"
     values["/ch/21/in/conn/grp"], values["/ch/21/in/conn/in"] = "B", 1
-    values["/ch/22/name"] = "Stage C In"
-    values["/ch/22/in/conn/grp"], values["/ch/22/in/conn/in"] = "C", 2
     # Matrix 4, fed by bus 4, is the phones' source. Drop the
     # source from a scope and R006 calls it unpatched.
     values["/bus/4/send/MX4/on"], values["/bus/4/send/MX4/lvl"] = 1, 0.0
@@ -472,11 +470,12 @@ def _route_rules_and_state(full_state):
     """CV006, CV007 and CV018 bound to a small plan, and a state tripping
     each: ch 30 sends to Drums in the wrong mode with a second planned send
     off, ch 31 has a planned Main route off and an unlisted one on, ch 32
-    sends to a bus and a Matrix the plan does not list, and Wedge bus 11 is
+    sends to a Matrix the plan does not list (and to a bus, which CV018 ignores), and Wedge bus 11 is
     on a Main its destinations do not list."""
     plan = {
         "busses": {"Drums": {"index": 10, "destination": {"type": "main", "index": 1}},
-                   "Wedge A": {"index": 11, "destination": {"type": "dedicated_output"}}},
+                   "Wedge A": {"index": 11, "destination": {"type": "dedicated_output"}},
+                   "Side": {"index": 12, "destination": {"type": "main", "index": 1}}},
         "channels": [
             {"bank": "ch", "channel": 30, "name": "Click",
              "bus_sends": [{"bus": "Drums", "mode": "post", "level_db": 0.0},
@@ -490,7 +489,7 @@ def _route_rules_and_state(full_state):
     }
     values = dict(full_state.values)
     values.update({
-        "/bus/10/name": "Drums", "/bus/11/name": "Wedge A",
+        "/bus/10/name": "Drums", "/bus/11/name": "Wedge A", "/bus/12/name": "Side Fill",
         "/ch/30/name": "Click", "/ch/31/name": "Bass", "/ch/32/name": "Crowd",
         "/ch/30/send/10/on": 1, "/ch/30/send/10/mode": "PRE", "/ch/30/send/10/lvl": 0.0,
         "/ch/30/send/11/on": 0, "/ch/30/send/11/lvl": 0.0,
@@ -498,7 +497,7 @@ def _route_rules_and_state(full_state):
         "/ch/31/main/2/on": 0, "/ch/31/main/3/on": 1,
         "/ch/32/send/11/on": 1, "/ch/32/send/11/lvl": -6.0,
         "/ch/32/send/MX2/on": 1, "/ch/32/send/MX2/lvl": -6.0,
-        "/bus/11/main/2/on": 1,
+        "/bus/11/main/2/on": 1, "/bus/12/main/1/on": 1, "/bus/12/main/2/on": 1,
     })
     return ({"CV006": audit.bus_send_drift_rule(plan), "CV007": audit.main_route_drift_rule(plan),
              "CV018": audit.unplanned_route_rule(plan)}, ConsoleState(values))
@@ -508,9 +507,8 @@ def _route_rules_and_state(full_state):
 ROUTE_RULE_MUTATIONS = [
     ("CV006", "/ch/30/send/10/mode"), ("CV006", "/ch/30/send/11/on"), ("CV006", "/bus/10/name"),
     ("CV007", "/ch/31/main/2/on"), ("CV007", "/ch/31/main/3/on"),
-    ("CV018", "/ch/32/send/11/on"), ("CV018", "/ch/32/send/11/lvl"),
     ("CV018", "/ch/32/send/MX2/on"), ("CV018", "/ch/32/send/MX2/lvl"),
-    ("CV018", "/bus/11/main/2/on"), ("CV018", "/bus/11/name"),
+    ("CV018", "/bus/11/main/2/on"), ("CV018", "/bus/12/main/2/on"), ("CV018", "/bus/12/name"),
 ]
 
 
@@ -776,8 +774,7 @@ MUTATIONS = [
     ("C008", "/ch/21/in/conn/in"),
     ("C008", "/ch/21/name"),
     ("C009", "/$stat/C/stat"),
-    ("C009", "/ch/22/in/conn/grp"),
-    ("C009", "/ch/22/name"),
+    ("C010", "/$stat/A/stat"),
     ("C007", "/io/in/LCL/5/mute"),
     ("C007", "/io/in/LCL/14/mute"),
     ("C007", "/io/in/LCL/13/mode"),

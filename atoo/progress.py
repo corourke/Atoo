@@ -637,6 +637,17 @@ def _resolve_stream(stream):
     return stream
 
 
+def input_total(usage: dict) -> int:
+    """Every input token of a call: what the provider reports as input plus,
+    for Claude, what was written to and read from the prompt cache --
+    `usage.input_tokens` there counts only what follows the last cache
+    breakpoint. For any other provider `input_tokens` is already the whole
+    prompt and the two cache keys are absent."""
+    return ((usage.get("input_tokens") or 0)
+            + (usage.get("cache_creation_input_tokens") or 0)
+            + (usage.get("cache_read_input_tokens") or 0))
+
+
 class ModelCallProgress:
     """Say what one model call is doing while it does it.
 
@@ -853,7 +864,13 @@ class ModelCallProgress:
             thinking = self.snapshot()["thinking_tokens"]
             source = "estimated" if thinking is not None else None
         return {
-            "input": usage.get("input_tokens"),
+            # Every input token: Anthropic's `input_tokens` is only what
+            # fell after the last cache breakpoint (`input_total`).
+            "input": input_total(usage) if usage.get("input_tokens") is not None else None,
+            # What the prompt cache did (Claude); None where
+            # the provider reports no cache counts.
+            "cache_write": usage.get("cache_creation_input_tokens"),
+            "cache_read": usage.get("cache_read_input_tokens"),
             "output": usage.get("output_tokens"),
             "reasoning_tokens_as_reported": reported,
             "thinking": thinking,
@@ -928,7 +945,7 @@ class ModelCallProgress:
             "output_chars": self.text_chars,
             "thinking_tokens": thinking_tokens,
             "output_tokens": output_tokens,
-            "input_tokens": usage.get("input_tokens"),
+            "input_tokens": input_total(usage) if usage.get("input_tokens") is not None else None,
             "total_output_tokens": total_out,
             "estimated": total_out is None,
             # The live view (issue: "show progress updates from the build

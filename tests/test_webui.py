@@ -13,6 +13,7 @@ broadcast to).
 
 from __future__ import annotations
 
+import io
 import json
 import random
 import re
@@ -473,6 +474,8 @@ def test_setup_page_renders_meta_build_log(client):
     assert "Build log" in js
     # Each role's heading carries its thinking count.
     assert "usage.thinking_source" in js and "usage.thinking" in js
+    # "in" is every input token; the prompt cache's share follows it.
+    assert "usage.cache_read" in js and "usage.cache_write" in js and "usage.cost" in js
 
 
 def test_setup_page_no_longer_renders_expectations_findings(client):
@@ -2765,6 +2768,36 @@ def test_a_build_with_no_model_to_talk_to_fails_as_a_finding_not_a_crash(tmp_pat
     assert not (tmp_path / "touringband" / "plan.json").exists()
 
 
+def test_a_build_whose_provider_does_not_answer_puts_its_reason_in_the_dock(tmp_path, monkeypatch):
+    """The dock's one finding carries the generic line AND the
+    provider's own reason (the log's second, indented line), and does not
+    point at ATOO_AI_PROVIDER, which is not what is wrong."""
+    import urllib.error
+
+    def refuse(self, req, *a, **k):
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(
+            b'{"error":{"message":"You have reached your specified workspace API usage limits."}}'))
+
+    monkeypatch.setenv("ATOO_AI_PROVIDER", "claude")
+    monkeypatch.setenv("ATOO_AI_API_KEY", "sk-secret-0123456789")
+    # A build under the page's Stop signal opens through an opener, not urlopen.
+    monkeypatch.setattr("urllib.request.OpenerDirector.open", refuse)
+    app = create_app(initial_bundle=str(_touringband_bundle(tmp_path)),
+                     initial_conventions=str(_house(tmp_path)))
+    with fastapi_testclient.TestClient(app) as c:
+        assert c.post("/api/build/run", json={"console_model": "wing-compact"}).status_code == 200
+        status = _wait_for_build(c)
+        assert status["state"] == "failed"
+        finding = status["findings"][0]
+        assert "The AI isn't responding." in finding["message"]
+        assert "workspace API usage limits" in finding["message"]
+        assert "ATOO_AI_PROVIDER" not in finding["fix"]
+        assert "sk-secret" not in json.dumps(status)
+        # The page shows `message` as it is; assert the served asset still reads it.
+        js = c.get("/static/setup.js").text
+        assert "f.message" in js or ".message" in js
+
+
 def test_a_build_refuses_a_console_model_it_was_not_given(build_client):
     """An unstated model is a hard stop, and not a judgement
     call -- a Full's 8 local inputs and a Compact's 24 are a patch that
@@ -3407,8 +3440,8 @@ def test_watch_verdict_and_table_headings_stay_at_the_top(client):
     css = client.get("/static/styles.css").text
     box = re.search(r"\.watch-table-wrap\.panel\.box \{([^}]*)\}", css).group(1)
     assert "overflow: clip" in box and "overflow: hidden" not in box
-    bar = re.search(r"\.watch-table-wrap \.verdict-bar \{([^}]*)\}", css).group(1)
-    assert "position: sticky" in bar and "top: 0" in bar
+    bar = re.search(r"\.watch-shell > \.verdict-bar \{([^}]*)\}", css).group(1)
+    assert "position: sticky" in bar and "var(--watch-head-h" in bar
     heads = re.search(r"#alert-table thead th \{([^}]*)\}", css).group(1)
     assert "position: sticky" in heads and "var(--verdict-h" in heads
     js = client.get("/static/watch.js").text

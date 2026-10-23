@@ -134,9 +134,11 @@ def test_start_and_save_are_served_locked_and_unlocked_only_by_the_script(assets
 
 def test_the_verdict_bar_heads_the_alert_table_inside_its_box(assets):
     panel = _watch_panel(assets["html"])
-    box = panel[panel.index('class="panel box table-box watch-table-wrap"'):
-                panel.index('id="watch-suppressed"')]
-    assert box.index('id="watch-verdict"') < box.index('id="alert-table"')
+    # The verdict is the box's head but a sibling of it, so it
+    # can pin under the Watch header for the whole page.
+    box = panel[panel.index('id="watch-verdict"'):panel.index('id="watch-suppressed"')]
+    assert box.index('id="watch-verdict"') < box.index('class="panel box table-box watch-table-wrap"')
+    assert box.index('class="panel box table-box watch-table-wrap"') < box.index('id="alert-table"')
     # The three counts moved into it, their filter hooks unchanged.
     verdict = box[box.index('id="watch-verdict"'):box.index('id="alert-table"')]
     for sev in ("error", "warning", "info"):

@@ -183,14 +183,17 @@ def test_a_channel_already_on_the_desk_is_modified_not_written():
     assert amend.amendment_targets(amendment).to_write == []
 
 
-def test_dropping_a_bus_is_not_written():
+def test_dropping_a_bus_returns_it_to_free():
+    """The engineer's drop is carried out. (`test_freed_bus.py`
+    has the writes and Undo.)"""
     change_set = patch.empty_change_set("No drum bus")
     change_set["drop"]["busses"] = ["Drums"]
     amendment, merge = patch.plan_patch(applied_plan(), patch.validate_change_set(change_set),
                                         occupancy())
-    [change] = [c for c in amendment.changes if c.kind is ChangeKind.MODIFIED]
-    assert change.kind_of_object == "bus" and "nothing returns a bus to free" in change.reason
-    assert "Drums" in merge.plan["busses"]
+    [change] = [c for c in amendment.changes if c.kind is ChangeKind.RELEASED]
+    assert change.kind_of_object == "bus" and "returned to free" in change.reason
+    assert not [c for c in amendment.changes if c.kind is ChangeKind.MODIFIED]
+    assert "Drums" not in merge.plan["busses"]
 
 
 def test_a_socket_the_change_names_is_honoured_even_when_taken():
@@ -293,7 +296,7 @@ def test_what_the_model_is_given(tmp_path, desk, model, capsys):
     assert HORNS_TEXT in user
     assert "Horns get a 100 Hz high-pass." in user and "a note to myself" not in user
     assert "The horns go in the Horns DCA." in user
-    assert '"name": "Kick"' in user and "READ-ONLY" in user
+    assert '"name":"Kick"' in user and "READ-ONLY" in user
 
 
 def test_a_confirmed_patch_writes_journals_the_change_and_leaves_plan_json(
@@ -650,10 +653,37 @@ def test_a_socket_the_desk_lacks_is_refused_in_a_changes_words(tmp_path, desk, m
                                                  "stated": True}
     model.response = _reply(change_set)
     show = _bundle(tmp_path)
-    assert _patch(show, confirm=True) == 2
+    assert _patch(show, confirm=True, text=HORNS_TEXT + " Put the first on LCL 30.") == 2
     err = capsys.readouterr().err
     assert "This change would patch 1 socket(s) that do not exist" in err
     assert "Refusing to write this change: LCL 30" in err
     assert _writes(desk) == []
 
 
+
+
+def test_a_provider_that_fails_says_the_ai_isnt_responding_and_why(
+        tmp_path, desk, monkeypatch, capsys):
+    """Any provider failure, a workspace spend limit's 400
+    included, is the one generic line and the provider's own reason; the
+    desk and the show are untouched, and no key is printed."""
+    import io
+    import urllib.error
+    from atoo.ai_provider import ClaudeProvider
+
+    def refuse(req, timeout=None):
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(
+            b'{"error":{"message":"You have reached your specified workspace API usage limits."}}'))
+
+    monkeypatch.setattr("atoo.ai_provider.urllib.request.urlopen", refuse)
+    monkeypatch.setattr(cli, "provider_from_env",
+                        lambda: ClaudeProvider(api_key="sk-secret-0123456789", show_progress=False))
+    show = _bundle(tmp_path)
+    before = (show / "plan.json").read_text()
+    assert _patch(show) != 0
+    err = capsys.readouterr().err
+    assert "The AI isn't responding." in err
+    assert "HTTP 400" in err and "workspace API usage limits" in err
+    assert "nothing was changed" in err
+    assert "sk-secret" not in err
+    assert (show / "plan.json").read_text() == before

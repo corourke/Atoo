@@ -12,6 +12,7 @@ from __future__ import annotations
 import collections
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -210,6 +211,40 @@ class FakeConsole:
         return OscReply(address="/*", typetag="s", args=["OK"])
 
 
+_PAIR_MODE = re.compile(r"^(/io/in/[^/]+/)(\d+)(/mode)$")
+
+
+class PairModeMirror:
+    """Mixin for a fake desk that, like the real one, sets BOTH sockets of a
+    stereo pair when either one's `mode` is written (by set_param or by node
+    command). A preview counts the pair once (`WriteRecord.mirrored_by`), so a
+    test that compares its count with a confirmed run needs a desk that does
+    what the real one does."""
+
+    def _mirror(self, address: str, value, value_type: str) -> None:
+        match = _PAIR_MODE.match(address)
+        if match and address not in self.reject_writes_to:
+            n = int(match.group(2))
+            other = f"{match.group(1)}{n + 1 if n % 2 else n - 1}{match.group(3)}"
+            if other in self.state:
+                self.state[other] = (value, value_type)
+
+    def set_param(self, address, value, value_type="f"):
+        super().set_param(address, value, value_type)
+        self._mirror(address, value, value_type)
+
+    def set_node(self, address, command):
+        reply = super().set_node(address, command)
+        key, _, text = command.partition("=")
+        if key == "mode":
+            self._mirror(f"{address}/{key}", text, "s")
+        return reply
+
+
+class MirroringConsole(PairModeMirror, FakeConsole):
+    pass
+
+
 @pytest.fixture
 def plan():
     return compiled("smallband")
@@ -308,8 +343,8 @@ def test_dry_run_would_change_count_equals_what_a_confirmed_run_writes(plan):
     state = _seed_all(plan)
     state["/ch/7/flt/lcf"] = (_A_STEPPED_LCF_READING, "f")
 
-    preview = apply_plan(plan, FakeConsole(state=dict(state)), dry_run=True)
-    confirmed = apply_plan(plan, FakeConsole(state=dict(state)), dry_run=False)
+    preview = apply_plan(plan, MirroringConsole(state=dict(state)), dry_run=True)
+    confirmed = apply_plan(plan, MirroringConsole(state=dict(state)), dry_run=False)
 
     would_change = [w for w in preview.writes if w.status == "dry_run" and w.would_change]
     assert len(would_change) == len(confirmed.changed)

@@ -1,6 +1,6 @@
-"""C008 (AES50 Port Cannot Carry Its Patch) and C009 (AES50 Stage Box Link Not
-OK): a stage box whose link is down, or updating, under a patch that depends
-on it.
+"""C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK)
+and C010 (AES50 Port Reports UPD): a stage box whose link is down, in error
+with nothing patched, or reading the word UPD (said at INFO only).
 
 A read takes each AES50 port's status (`/$stat/{A,B,C}/stat`: `-`, `OK`, `ERR`,
 `UPD`) and used it only to choose which outputs to read. A stage box whose link
@@ -34,7 +34,7 @@ from tests.snap_desk import SnapDesk, snap_values
 
 FIXTURES = Path(__file__).parent / "fixtures"
 INITIALIZED_COMPACT = FIXTURES / "console-runs" / "Initialized-Compact.snap"
-IDS = {"C008", "C009"}
+IDS = {"C008", "C009", "C010"}
 
 
 def _rule(rule_id):
@@ -142,22 +142,63 @@ def test_each_port_is_its_own_finding_and_the_key_is_its_status_address():
 
 
 # --------------------------------------------------------------------------
-# C009: a stage box not passing audio that nothing depends on, or updating
+# C009: a stage box in error that nothing depends on; C010: UPD
 # --------------------------------------------------------------------------
 
 
-def test_a_stage_box_that_is_updating_is_a_warning_with_nothing_patched():
-    [f] = _found(_state(A="UPD"))
-    assert (f.rule_id, f.severity) == ("C009", Severity.WARNING)
-    assert f.message == ("AES50-A reports UPD: the stage box on it is updating. Nothing is patched "
-                         "from it or to it yet.")
+def _upd_state(*parts, live=None, model="wing-compact", device="S16", **status):
+    state = _state(*parts, {"/$stat/A/dev": device}, A="UPD", **status)
+    return ConsoleState(state.values, console_model=model, live_strips=live)
 
 
-def test_an_updating_stage_box_says_what_is_silent_until_it_finishes():
-    [f] = _found(_state(_strip("/ch/4", "Bass", "A", 4), A="UPD"))
-    assert f.rule_id == "C009"
-    assert f.message == ('AES50-A reports UPD: the stage box on it is updating, and CH 4 "Bass" '
-                         "takes its input from it. Those carry no audio until it finishes.")
+def test_upd_is_never_a_warning_or_an_error_only_the_desks_word_at_info():
+    """A healthy Behringer S32 passing audio reads UPD on a
+    full-size WING; a word whose meaning is unconfirmed does not raise a
+    hazard."""
+    c010 = _rule("C010")
+    assert (c010.severity, c010.category, c010.scope) == (
+        Severity.INFO, "configuration", RuleScope.HAZARD)
+    strip = _strip("/ch/4", "Bass", "A", 4)
+    for live in (None, frozenset(), frozenset({"/ch/4"})):
+        findings = run_audit(_upd_state(strip, live=live))
+        assert not [f for f in findings if f.severity in (Severity.WARNING, Severity.ERROR)
+                    and f.rule_id in IDS]
+        [f] = [f for f in findings if f.rule_id in IDS]
+        assert (f.rule_id, f.severity) == ("C010", Severity.INFO)
+        assert f.addresses == ("/$stat/A/stat",)
+
+
+def test_upd_with_nothing_patched_says_so():
+    [f] = _found(_upd_state(device=""))
+    assert f.message == ("AES50-A reports UPD, which the desk's list gives without saying what it "
+                         "means (a healthy stage box has been seen reading it). Nothing is "
+                         "patched from it.")
+
+
+@pytest.mark.parametrize("model", ["wing", "wing-compact", "wing-rack"])
+@pytest.mark.parametrize("device", ["S16", "S32", "SD16", "SD8", "Stage Connect", ""])
+def test_upd_is_one_info_line_for_every_console_and_stage_box_and_never_lists_channels(model, device):
+    parts = [_strip(f"/ch/{n}", f"In {n}", "A", n) for n in range(1, 19)] + [_out("A", 3)]
+    live = frozenset(f"/ch/{n}" for n in range(1, 10))
+    [f] = _found(_upd_state(*parts, live=live, model=model, device=device))
+    assert (f.rule_id, f.severity) == ("C010", Severity.INFO)
+    assert "9 of the 18 strips patched from it are carrying signal, so it is passing audio" in f.message
+    assert "carry no audio" not in f.message and "CH 1" not in f.message
+
+
+def test_upd_names_the_device_the_desk_gives_on_the_port():
+    """A capture of a full-size WING with an S32: `/$stat/A/dev "S32"`, `stat "UPD"`."""
+    [f] = _found(_upd_state(device="S32"))
+    assert f.message.startswith("AES50-A (S32) reports UPD, which the desk's list gives")
+
+
+def test_upd_with_no_signal_or_no_meters_does_not_claim_the_box_is_down():
+    strip = _strip("/ch/4", "Bass", "A", 4)
+    [f] = _found(_upd_state(strip, live=frozenset()))
+    assert "None of the 1 strips patched from it is carrying signal just now; that may only " \
+           "be a quiet stage." in f.message
+    [f] = _found(_upd_state(strip, live=None))
+    assert "The meters are not being read" in f.message and "no audio" not in f.message
 
 
 def test_a_link_in_error_with_nothing_patched_is_a_warning_not_an_error():
@@ -265,9 +306,9 @@ def test_under_a_plan_a_strip_the_plan_never_names_is_still_reported():
 
 def test_a_read_with_no_output_sockets_names_c008_and_c009_as_not_checked():
     state = ConsoleState({"/ch/1/name": "Kick", "/io/in/LCL/1/vph": 0}, console_model="wing-compact")
-    assert {"C008", "C009"} <= set(unanswerable_rule_ids(state))
+    assert {"C008", "C009", "C010"} <= set(unanswerable_rule_ids(state))
     assert "C008" in coverage_caveat(state) and "C009" in coverage_caveat(state)
-    assert "R006, R011, CV009, C008 and C009 could not be checked" in render_coverage(state)
+    assert "R006, R011, CV009, C008, C009 and C010 could not be checked" in render_coverage(state)
     nothing = ConsoleState({"/ch/1/name": "Kick"}, console_model="wing-compact")
     assert "C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK)" in \
         render_coverage(nothing)
@@ -292,8 +333,8 @@ def test_watch_says_a_link_failed_and_that_it_recovered():
     assert (ids(events[1].new_findings), ids(events[1].cleared_findings)) == (["C008"], [])
     assert (ids(events[2].new_findings), ids(events[2].cleared_findings)) == ([], [])
     assert ids(events[2].all_findings) == ["C008"]
-    assert (ids(events[3].new_findings), ids(events[3].cleared_findings)) == (["C009"], ["C008"])
-    assert (ids(events[4].new_findings), ids(events[4].cleared_findings)) == ([], ["C009"])
+    assert (ids(events[3].new_findings), ids(events[3].cleared_findings)) == (["C010"], ["C008"])
+    assert (ids(events[4].new_findings), ids(events[4].cleared_findings)) == ([], ["C010"])
     assert (ids(events[5].new_findings), ids(events[5].cleared_findings)) == (["C008"], [])
 
 

@@ -1215,3 +1215,29 @@ def test_a_plan_that_uses_no_bay_never_asks_the_desk_about_one(
 
     assert "/cards/$type" not in asked
     assert "/$syscfg/opt_mod" not in asked
+
+
+def test_a_build_whose_provider_fails_says_the_ai_isnt_responding_and_why(
+        touring, capsys, monkeypatch):
+    """The provider's own reason follows the generic line; no plan."""
+    import io
+    import urllib.error
+    from atoo.ai_provider import ClaudeProvider
+
+    def refuse(req, timeout=None):
+        raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(
+            b'{"error":{"message":"You have reached your specified workspace API usage limits."}}'))
+
+    monkeypatch.setattr("atoo.ai_provider.urllib.request.urlopen", refuse)
+    monkeypatch.setattr("atoo.cli.provider_from_env",
+                        lambda: ClaudeProvider(api_key="sk-secret-0123456789", show_progress=False))
+    out = touring / "p.json"
+    code = main(["build", "--console-model", "wing-compact", "--input", str(touring / "touringband.csv"),
+                 "--conventions", str(touring / "touringband.md"), "--out", str(out),
+                 "--no-resolve"])
+    err = capsys.readouterr().err
+    assert code == 1
+    assert "generation failed: The AI isn't responding." in err
+    assert "Reason: " in err and "HTTP 400" in err and "workspace API usage limits" in err
+    assert "no plan was written" in err and "sk-secret" not in err
+    assert not out.exists()

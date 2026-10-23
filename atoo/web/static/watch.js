@@ -993,12 +993,19 @@
   const verdictBar = el("watch-verdict");
   const verdictWord = el("watch-verdict-word");
   const verdictLine = el("watch-verdict-line");
-  // The column headings stick just below the verdict bar, whose height
-  // changes as its line wraps; the stylesheet reads it from `--verdict-h`.
-  if (verdictBar && typeof ResizeObserver === "function") {
-    new ResizeObserver(() => {
-      verdictBar.parentElement.style.setProperty("--verdict-h", verdictBar.offsetHeight + "px");
+  // The Watch header and the verdict pin to the top of the window
+  //  and the column headings stick below both. Their heights
+  // change as they wrap; the stylesheet reads them from `--watch-head-h`
+  // and `--verdict-h`.
+  const watchHead = el("panel");
+  if (typeof ResizeObserver === "function") {
+    const shell = verdictBar && verdictBar.parentElement;
+    if (verdictBar) new ResizeObserver(() => {
+      shell.style.setProperty("--verdict-h", verdictBar.offsetHeight + "px");
     }).observe(verdictBar);
+    if (watchHead) new ResizeObserver(() => {
+      shell.style.setProperty("--watch-head-h", watchHead.offsetHeight + "px");
+    }).observe(watchHead);
   }
   const alertHead = document.querySelector("#alert-table thead");
   const consoleOrigin = el("console-origin");
@@ -1357,6 +1364,9 @@
     if (running) stopBtn.removeAttribute("title");
     else stopBtn.title = "Locked: not watching";
     intervalInput.disabled = running;
+    // A running watch hides the app header and the bundle bar
+    // (the stylesheet does it, on the Watch tab only); Stop brings them back.
+    document.body.classList.toggle("is-watching", !!running);
     if (running !== lastRunning) {
       lastRunning = running;
       wcPanel.open = !running;

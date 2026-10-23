@@ -3022,6 +3022,15 @@ body.is-demo-show .build-body .example-write-note { display: none; }
    inside a box. */
 .watch-shell .block-head { margin: 0 0 8px; }
 .watch-head { align-items: center; }
+/* The Watch header stays at the top of the window, with the
+   verdict under it, however far the page scrolls. */
+.watch-shell > .watch-head {
+  position: sticky; top: 0; z-index: 5; background: var(--bg); margin: 0; padding: 8px 0;
+}
+/* While a watch runs on the Watch tab, nothing above the header is shown
+   (the app header with the tabs and theme, and the show bundle / console
+   bar); Stop brings them back. */
+body.is-watching:has(#mode-watch.is-active) :is(.topbar, #bundle-chrome) { display: none; }
 .watch-head .push { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .watch-head .btn-secondary { margin-left: 0; }
 /* "Updated 7s ago" -> "Updated 12s ago" must not change the
@@ -3051,11 +3060,15 @@ details.watch-fold > summary .push { flex: none; margin-left: auto; display: fle
    the table is too wide for the window; there the headings scroll with
    the rows and only the verdict stays. `--verdict-h` is the verdict's own
    height, set by watch.js, so the headings start exactly below it. */
-.watch-table-wrap .verdict-bar { position: sticky; top: 0; z-index: 4; }
+.watch-shell > .verdict-bar {
+  position: sticky; top: var(--watch-head-h, 0px); z-index: 4;
+  border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-radius: 4px 4px 0 0;
+}
+.watch-table-wrap.panel.box { border-top: 0; border-radius: 0 0 4px 4px; }
 @media (min-width: 641px) {
   .watch-table-scroll { overflow-x: visible; }
   #alert-table thead th {
-    position: sticky; top: var(--verdict-h, 0px); z-index: 3; background: var(--bg-panel);
+    position: sticky; top: calc(var(--watch-head-h, 0px) + var(--verdict-h, 0px)); z-index: 3; background: var(--bg-panel);
   }
 }
 .watch-box-line { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--border); }
@@ -3114,6 +3127,9 @@ body.is-demo-show .wc-box .wc-add-row:has(> .empty[hidden]) { display: none; }
 
 @media (max-width: 760px) {
   .watch-head .push { margin-left: 0; }
+  /* At phone width the pinned header is only the title, the
+     state, Stop and the two switches; the rest scrolls away with the page. */
+  body.is-watching .watch-shell > .watch-head :is(#watch-notation, .watch-interval, #start-lock, #start-btn) { display: none; }
   .summary.verdict-counts { margin-left: 0; }
   /* A fold's header wraps at phone width rather than pushing the page
      sideways: the notation takes the line under the title. */

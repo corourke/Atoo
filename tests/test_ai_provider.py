@@ -91,3 +91,31 @@ def test_api_backend_raises_without_api_key():
 def test_provider_from_env_raises_on_unknown_backend():
     with pytest.raises(AIProviderError, match="unknown ATOO_AI_PROVIDER"):
         provider_from_env({"ATOO_AI_PROVIDER": "carrier-pigeon"})
+
+
+# -- pricing an OpenAI-compatible host -------------------------
+
+def _api_env(**extra):
+    return {"ATOO_AI_PROVIDER": "api", "ATOO_AI_API_KEY": "sk-test", **extra}
+
+
+def test_api_prices_come_from_the_environment():
+    provider = provider_from_env(_api_env(ATOO_AI_PRICE_IN="0.2", ATOO_AI_PRICE_OUT="0.5"))
+    assert provider.price == (0.2, 0.5)
+
+
+def test_api_with_no_price_set_has_no_price():
+    provider = provider_from_env(_api_env())
+    assert provider.price is None
+
+
+@pytest.mark.parametrize("only", ["ATOO_AI_PRICE_IN", "ATOO_AI_PRICE_OUT"])
+def test_one_price_without_the_other_is_refused(only):
+    with pytest.raises(AIProviderError, match=r"ATOO_AI_PRICE_IN and ATOO_AI_PRICE_OUT go together"):
+        provider_from_env(_api_env(**{only: "1"}))
+
+
+@pytest.mark.parametrize("bad", ["cheap", "-1", "nan", "inf", "$2"])
+def test_a_price_that_is_not_a_number_of_dollars_is_refused(bad):
+    with pytest.raises(AIProviderError, match=r"ATOO_AI_PRICE_IN must be a number"):
+        provider_from_env(_api_env(ATOO_AI_PRICE_IN=bad, ATOO_AI_PRICE_OUT="1"))

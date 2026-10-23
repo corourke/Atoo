@@ -102,7 +102,10 @@ def test_request_matches_the_messages_api_shape(capture):
 
     body = capture["body"]
     assert body["model"] == "claude-opus-5"
-    assert body["system"] == "SYS"                       # top-level, not a message
+    # top-level, not a message; one block carrying the cache breakpoint (a
+    # user message that is a plain string has none of its own)
+    assert body["system"] == [{"type": "text", "text": "SYS",
+                               "cache_control": {"type": "ephemeral"}}]
     assert body["messages"] == [{"role": "user", "content": "USER"}]
     assert body["max_tokens"] == 128000                  # required; the model's own limit
     assert body["output_config"] == {"effort": "medium"}
@@ -748,7 +751,8 @@ def test_the_progress_and_usage_lines_are_labelled_by_role(capture, capsys):
     err = capsys.readouterr().err
     # ...and by the effort it ran at, since the critic has its own.
     assert "claude-sonnet-5 (critic, effort medium)" in err
-    assert "100 in, 200 out" in err
+    # (a one-letter system prompt is below the model's cache minimum, said)
+    assert "100 in (prefix ~" in err and "-token minimum, not cached), 200 out" in err
 
 
 def _usage_stream(input_tokens: int, output_tokens: int, text: str) -> bytes:
