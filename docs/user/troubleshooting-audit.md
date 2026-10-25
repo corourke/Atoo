@@ -414,6 +414,17 @@ Audit findings: 1 info.
 ...
 ```
 
+A bus whose `role` in `busses.csv` is `parallel` or `fx` (a [captured
+show](capture.md#editing-the-sheets) has one) is said by that role, one note
+per bus, quoting the cell: **Parallel Bus Asked For**, or **Read As Effect
+Sends** for an effect return. On the church desk's captured show:
+
+```
+[INFO] R013 Read As Effect Sends (4)
+  "busses.csv, Bus 13 "Delay Long", role: fx." CH 1 "Piano1" reaches MAIN 1 by more than one route, one of them through BUS 13 "Delay Long", read as an effect return beside the dry signal; R012 is quiet about it.
+  ...
+```
+
 If the plan includes some of those routes but not all (the plan has the two
 busses, and the conventions never gave the channel a direct Main route that is
 also on), `R012` still speaks and names the routes the plan does not include,

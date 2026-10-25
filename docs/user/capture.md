@@ -25,7 +25,10 @@ asks for the file and which WING saved it. **Folder** is where the show
 goes, named as below; change it if you like. The dialog says what it
 does: *Captures the desk to input.csv and busses.csv which you can
 edit.* Press **Capture this desk**, and the new show opens on Build's
-step 04, where you edit it ([below](#editing-the-sheets)).
+step 04, where you edit it ([below](#editing-the-sheets)). On the Watch
+page with no show open, **Make a show from this desk** opens the same
+dialog on the console Watch is reading, and Watch keeps running
+([Watch the desk](watch-a-show.md#with-no-show-make-a-show-from-this-desk)).
 
 ## What it makes
 
@@ -176,6 +179,16 @@ two inputs on one channel. **Save** stays locked until it is fixed.
 
 Nothing goes to the desk until you apply the plan. A role, a label or a
 note changes nothing on the desk.
+
+### While Watch runs
+
+**Edit sheets ↗** on the Watch page opens this step in a new tab, and Watch
+keeps running. It reads the plan on its next pass after a Save, with no
+restart. A role changes what it says (a split through a `parallel` bus is
+*Parallel bus asked for*, quoting the cell); anything the desk would change
+for is a WARNING, **Sheet differs from desk**, until you apply it, with
+**Open in Apply** beside it ([Edit the sheets while it
+runs](watch-a-show.md#edit-the-sheets-while-it-runs)).
 
 ## Applying it back
 

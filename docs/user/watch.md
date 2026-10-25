@@ -184,6 +184,10 @@ again, for example). When Watch sees the plan file change it adds an INFO,
 `W004` "The plan changed since Watch started", and says what to do: stop Watch
 and start it again.
 
+A **Save** in Build's step 04 is not a rebuild. On the Watch page, Watch
+reads the saved plan on its next pass, with no restart and no `W004`
+([Edit the sheets while it runs](watch-a-show.md#edit-the-sheets-while-it-runs)).
+
 ### Watching without a plan
 
 Watch judges the desk against the show's plan: it stops R012 from reporting a
@@ -207,7 +211,9 @@ atoo watch --console 192.0.2.16
 That is what you get from `atoo watch` without `--show`, and from the Watch page
 with no show open. For a desk you didn't build and won't rebuild,
 [capture it](capture.md) first: `atoo capture` makes a show of the desk as it
-is, and Watch then runs every check with it. If the show is given but its `plan.json` is missing or will
+is, and Watch then runs every check with it. On the Watch page, **Make a show
+from this desk** does that without stopping, and the running watch takes the
+new show's plan. If the show is given but its `plan.json` is missing or will
 not read, the same note names the file and the reason (*`show/plan.json` could
 not be read: not valid JSON: Expecting property name ...*). A show whose plan
 reads has no such note. On the Watch page it is under **This watch** as
