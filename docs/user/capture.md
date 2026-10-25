@@ -49,7 +49,7 @@ Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/c
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
-What the desk does not state, decided or left out (15):
+What the desk does not state, decided or left out (13):
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
@@ -96,12 +96,15 @@ leaves open, `capture` decides and says, at INFO, so you can correct it:
 
 ## What it cannot hold yet
 
+Every send goes into `plan.json` as well as `busses.csv`: a channel sent
+straight to a Matrix (the drummer's in-ears), a bus sent to another bus (a
+broadcast mix built from the band's buses), and a Matrix fed by several
+sources, each with its pre or post. So Watch follows those routes too, and a
+send the show has that is switched off is reported.
+
 Nothing is dropped silently. Each of these is one INFO line, naming what
 it is about, and the snapshot in `captures/` keeps the whole desk:
 
-- **A channel sent straight to a Matrix, a bus sent to a bus, and a Matrix
-  fed by more than one source** are rows in `busses.csv`, but not yet in
-  `plan.json`, which cannot hold them.
 - **Sockets fed straight from an input**, such as a recording or Dante
   split, are not in the sheets. The plan records them, so Watch says only
   if one changes, and `atoo apply` does not write them.

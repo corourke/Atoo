@@ -661,9 +661,10 @@ No model, and nothing is written to the desk. Every name is written in: a
 channel with no name of its own takes its source's. What the desk does not
 state is decided and said, at INFO: a category from the channel's first DCA,
 a type from its source, the role fx for a bus whose effects are all reverbs,
-delays or modulation set fully wet. What the plan cannot hold yet (a channel
-sent to a Matrix, a bus sent to a bus, a Matrix fed by several sources) stays
-in busses.csv and the snapshot, and is listed too.
+delays or modulation set fully wet. Every send is in the plan, on its source,
+with its tap: a channel sent to a Matrix, a bus sent to a bus. What the plan
+cannot hold yet (a channel's inserts) stays in the sheets and the snapshot, and
+is listed too.
 
 Then watch it with the show: atoo watch --show DIR --console ADDRESS.
 ```
