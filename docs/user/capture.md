@@ -182,8 +182,8 @@ note changes nothing on the desk.
 
 ### While Watch runs
 
-**Edit sheets ↗** on the Watch page opens this step in a new tab, and Watch
-keeps running. It reads the plan on its next pass after a Save, with no
+**Edit sheets** on the Watch page brings you to this step, and Watch keeps
+running; **Back to Watch** returns to it. It reads the plan on its next pass after a Save, with no
 restart. A role changes what it says (a split through a `parallel` bus is
 *Parallel bus asked for*, quoting the cell); anything the desk would change
 for is a WARNING, **Sheet differs from desk**, until you apply it, with

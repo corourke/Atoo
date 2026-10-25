@@ -282,12 +282,14 @@ before you send it to someone. On the Watch page, **Save findings** under
 
 ### Edit the sheets while it runs
 
-With a show open, **Edit sheets ↗** in the header opens Build's step 04 for
-that show in a new tab: its Channels, Busses and Outputs tables are the
+With a show open, **Edit sheets** in the header takes the page to Build's
+step 04 for that show: its Channels, Busses and Outputs tables are the
 show's `input.csv` and `busses.csv` ([Editing the
-sheets](capture.md#editing-the-sheets)). Watch keeps running in its own tab,
-and the Build tab says so at the top: *Opened from Watch, which keeps running
-in its own tab. It reads the sheets on its next pass after Save.*
+sheets](capture.md#editing-the-sheets)). Watch keeps running while you edit,
+and step 04 says so at the top: *Watch is still running. It reads the sheets
+on its next pass after Save; go back to Watch to see it.* **Back to Watch**
+beside it (or **Watch** in the header) returns to the running watch, its
+findings as they were.
 
 Watch never writes. After a **Save**, its next pass reads the saved plan,
 with no restart, and a line under the header says when:
@@ -307,10 +309,10 @@ Read busses.csv at 01:49:03 PM, after its Save at 01:48:52 PM in Build 04: 1 cha
 
   > BUS 9 "Presentr": "busses.csv, Bus 9 "Presentr", outputs: LCL 1-2; AUX 1-2." The desk does not have this yet (4 settings: output AUX 1 source; output AUX 1 channel; output AUX 2 source; output AUX 2 channel). Nothing is written until you apply it, or undo the edit.
 
-  **Open in Apply →** opens Apply in a new tab with the full build's
-  preview run, where you arm and write as usual. **Show in Build 04 ↗**
-  opens the row in step 04. The warning clears on the first pass after the
-  desk has it.
+  **Open in Apply** goes to Apply and runs the full build's preview, where
+  you arm and write as usual. **Show in Build 04** goes to step 04, on the
+  row, opened. Watch keeps running either way. The warning clears on the
+  first pass after the desk has it.
 
 ### With no show: Make a show from this desk
 
