@@ -212,9 +212,10 @@ written: its level is left as it was.
 
 They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s
 own optional columns, so you can also write them by hand. A Save in step
-04 carries them into the plan. **A build does not place channels by them
-yet**: where a filled cell and the plan disagree, `atoo verify` says so
-(`input-list.column-not-built`), so a cell that had no effect never looks
+04 carries them into the plan, and a build places channels by them, so a
+filled cell wins over the conventions. Where a filled cell and the plan
+disagree (the sheet changed in a spreadsheet since), `atoo verify` says so
+(`input-list.column-not-followed`), so a cell that had no effect never looks
 honoured. A captured show's plan agrees with its sheets.
 
 A build does not read `busses.csv` yet either. A build of a show that has

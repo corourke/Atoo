@@ -40,7 +40,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
 | `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
-| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). [`atoo capture`](capture.md) writes them from a desk, and a Save in Build's step 04 carries them into the plan. A build does not place channels by them yet; see [below](#the-channel-dca-and-mute_group-columns). |
+| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). A filled cell **wins** over the conventions and instructions, as `preset` does: a build places the channel there and puts it in those DCAs and mute groups. [`atoo capture`](capture.md) writes them from a desk, and a Save in Build's step 04 carries them into the plan. See [below](#the-channel-dca-and-mute_group-columns). |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
 
 **Column order does not matter**: every column is read by its header.
@@ -159,14 +159,30 @@ channel,patch,name,category,type,model,phantom,dca,mute_group,notes
 9,AES50-A 19,Kick,Drum LEVELS,Mic,,FALSE,Drum LEVELS,ALL,
 ```
 
+**A filled cell wins** over your conventions and instructions, as the
+`preset` column does. Each change it makes is a note in the build's report:
+
+- **`channel`** puts the channel on that strip. A channel the conventions
+  had put there takes the strip the moved one left, so nothing is lost and
+  no strip holds two inputs. An aux strip has no high-pass, so a channel
+  moved onto one has none.
+- **`dca`** and **`mute_group`** are the channel's whole membership. A name
+  your conventions do not declare is declared, and takes the next free DCA
+  or mute group.
+- **Two rows naming one strip** are refused, naming them, unless they are a
+  stereo source's two rows (one strip). Where a stereo source's rows name
+  different strips, the first row's wins, and the report says so.
+- A blank cell leaves it to the conventions.
+
 [`atoo capture`](capture.md) writes them when it reads a desk you didn't
 build, and that show's plan agrees with them. Edit them in Build's step 04
 and its **Save** carries them into the plan as well
-([Editing the sheets](capture.md#editing-the-sheets)). **A build does not
-place channels by them yet**: your conventions still decide. So where a
-filled cell and the plan disagree, `atoo verify` says so, rather than let a
-cell that had no effect look honoured. On the show [capture](capture.md)
-made, with Kick moved to channel 3 in the sheet outside step 04:
+([Editing the sheets](capture.md#editing-the-sheets)). A cell changed
+anywhere else (a spreadsheet, a text editor) reaches the plan at the next
+build, or the next Save in step 04. Until then the plan does not follow it,
+and `atoo verify` says so, rather than let a cell that had no effect look
+honoured. On the show [capture](capture.md) made, with Kick moved to
+channel 3 in the sheet outside step 04:
 
 ```bash
 sed -i 's/^9,AES50-A 19,Kick,/3,AES50-A 19,Kick,/' /tmp/shows/church-full-2026-10-24/input.csv
@@ -175,7 +191,7 @@ atoo verify --show /tmp/shows/church-full-2026-10-24
 
 ```
 ...
-  [warning] channels[Kick]: the input list puts 'Kick' on channel 3, and the plan has it on 9 -- Build does not place channels by the input list's channel, dca and mute_group columns yet, so the cell has had no effect on this plan  (input-list.column-not-built)
+  [warning] channels[Kick]: the input list puts 'Kick' on channel 3, and the plan has it on 9 -- the plan does not follow the cell, so it has had no effect on this plan  (input-list.column-not-followed)
 ...
 ```
 
@@ -197,7 +213,7 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
 ```
 
 ```
-couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8'), which Build does not place channels by yet
+couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8')
 ```
 
 **No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is
