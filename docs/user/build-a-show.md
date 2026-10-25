@@ -21,6 +21,12 @@ before anything goes near the desk.
 Next to **Show bundle**, the bar reads **friday-club/**. That folder holds all of
 this show's files ([Show bundles](show-bundles.md)).
 
+The Atoo header (**Build**, **Apply**, **Watch** and the theme) and the
+**Show bundle / Console** bar stay at the top of the window however far you
+scroll, in Build and in Apply, with the step tiles and **Findings** just
+below them. On a phone-width window only the Atoo header stays; the bar
+scrolls away with the page.
+
 ## 2. Check your house rules: 01 Conventions
 
 **Build** is four tiles, one per file and then the plan. On a show that
