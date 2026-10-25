@@ -216,10 +216,11 @@ Everything else is the desk and your watch conditions.
 **Where your outputs go is read, wherever they are.** A watch reads the
 output sockets your plan patches as well as the desk's own panel, and
 the outputs of every AES50 stage box the desk reports a device on (or a
-channel takes its input from). A Matrix that the phones or the monitor
+channel takes its input from), and of a Dante or SoundGrid module or a
+card the desk reports fitted, with or without a plan. A Matrix that the phones or the monitor
 speakers listen to counts as reaching an output with no socket of its
-own. If a reading still could not see a stage box's outputs, the
-monitor busses on it are not called unrouted: `R007 Output Route Not
+own. If a reading still could not see a stage box's or a module's
+outputs, the busses and Matrices patched there are not called unrouted: `R007 Output Route Not
 Checked` says, at INFO, which outputs were not read.
 
 Every transcript on this page runs against a captured state file, with

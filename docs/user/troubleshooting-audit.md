@@ -806,8 +806,9 @@ or point the run at the plan for the show, which names every socket it
 patches, stage boxes included.
 
 **A partial read is still a read.** The rules only stand down when *no*
-output socket was read. If you named `LCL` and the mix goes out on a
-card, they will run and they may well fire — the coverage line tells you
+output socket was read. A stage box, a module or a card the desk reports
+is read whatever you named; if you named `LCL` and the mix goes out on
+USB or StageConnect, they will run and they may well fire — the coverage line tells you
 what was covered, and that is the thing to check first.
 
 ## `audit` says "No findings" on a console that is visibly wrong

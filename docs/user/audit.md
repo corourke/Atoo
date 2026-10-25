@@ -161,10 +161,15 @@ You usually do not have to say. Atoo reads the panel of whichever
 model the desk states it is when it connects — on a Compact that is local
 inputs 1-24 and local outputs 1-8 — and, if you gave it a plan, every
 socket group that plan patches, which is how it learns about the stage
-box on AES50-A that no console model table could know about.
+box on AES50-A that no console model table could know about. With or
+without a plan, it also reads the outputs of whatever the desk itself
+reports is there: every AES50 port with a stage box on it, and a Dante
+or SoundGrid module or a card in the expansion slot. So a Matrix patched
+to Dante outputs is seen as patched with no plan at all, and the
+`Physical sockets read:` line names the module (`MOD 1-64`).
 
-Pass the flag when your rig has something neither of those covers — a
-card, or a stage box the plan does not mention:
+Pass the flag when your rig has something none of those covers — USB or
+StageConnect outputs, or a stage box's inputs the plan does not mention:
 
 | flag | what it covers |
 |---|---|
