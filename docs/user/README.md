@@ -26,7 +26,7 @@ In this order, the first time:
 | Page | For |
 |---|---|
 | [Build a show](build-a-show.md) | Show bundle files: the input list, your show-specific instructions, the **Build plan**, and the watch list |
-| [Apply a plan to the desk](apply-to-desk.md) | The four steps: the pre-flight, **Preview** (the desk as scribble strips), writing, undo |
+| [Apply a plan to the desk](apply-to-desk.md) | The four steps: the pre-flight, **Preview** (the desk as tiles, each tile's changes in Detail), writing, undo |
 | [Patch a show that is already on the desk](patch-a-show.md) | Making a change typed in plain English |
 | [Watch the desk during a show](watch-a-show.md) | Live findings, and setting watch conditions |
 

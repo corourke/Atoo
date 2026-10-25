@@ -84,13 +84,50 @@ Press **Preview**. It reads every address the plan would write, and
 writes nothing; it needs no arming. (After a rebuild, **Apply the
 difference** on **Build** does this step for you: it opens Apply with
 **Full build** chosen and runs the preview.) Step 2 then draws the desk as the
-plan will leave it: every channel, aux, bus, main, matrix, DCA and mute
-group as a scribble strip, in its colour, with its name and number.
-Strips the plan does not use are dimmed, and a strip the write would
-change has a blue outline. Above the drawing are the counts: addresses
-read, how many will change, how many already match, and how many did
-not answer. **All … changes, address by address** opens them with each value now
-and after, the first 250 of a long list.
+plan will leave it, one tile per channel, aux, bus, main, matrix, DCA and
+mute group, each in its colour with its number and name. After those
+come four more banks, so every address the preview read has a tile:
+**Inputs** and **Outputs**, one tile per socket group (Local, AES50-A,
+-B and -C, StageConnect, USB, Card, Module, AES/EBU); **FX**, one tile
+per effect slot; and **Console**, for a setting that belongs to no strip,
+such as talkback. A tile the plan does not use is drawn dark and dashed.
+A tile the write would change has a blue outline, even a strip the plan
+does not use (a full build resets its patch). Above the tiles are the
+counts: addresses read, how many will change, how many already match, and
+how many did not answer. The tiles' changes add up to **will change**.
+
+**Click a tile to see its Detail** in the side bar. The Findings fold up
+to their heading and verdict, and one line (for example **▸ Choices 8 ·
+Build details 9**) opens them again. Detail names the tile, says how
+many settings will change and how many are the same, and names the
+preset its values come from, if any (**Includes values from the plan and
+the preset Kick In**). A strip whose source or output socket changes too
+has a line that jumps to that socket's group (**Source AES50-A 1 has 3
+changes →**). Then come two lists, under headings in the order the desk's
+own screen uses (Strip, Patch, Input, Filter, Gate, EQ, Dynamics, Sends,
+Mains):
+
+- **Changing**: each setting with its value **now** and **after**. A small
+  note says why a row is written when that is not obvious: *sent again:
+  type changes* (its selector changes, so the value is written again),
+  *not on the desk until model changes* (shown with a "now" of —),
+  *reset to the initialized desk*, or *disconnected: nothing in the plan
+  is patched here*.
+- **Not changing**: each setting with the value it already holds. A
+  value the desk holds within its own step of the plan's is listed here,
+  with the plan's figure beside it: **-40 dB (plan -40.5 dB)**.
+
+The names are plain ("low cut frequency"); **Show addresses** adds each
+setting's OSC address under its name. **‹** and **›** step through the
+tiles that change. Click the tile again, press **Esc** or **Close** to go
+back to Findings. On a phone, Detail opens under the bank you tapped, and
+**Not changing** starts folded.
+
+![Apply on the Demo show: channel 1's Detail in the side bar after a preview](img/apply-preview-detail.png)
+
+The preview keeps no list of every address. To keep a whole preview,
+run `atoo apply --show <folder> --journal preview.json` without
+`--confirm`: it writes every address it read to that file.
 
 **A value "now" can be the desk's rounded readout.** The figure shown
 for what a setting holds now can be rounded the way the desk displays

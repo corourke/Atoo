@@ -99,16 +99,18 @@ sends, and what a full apply's reset does.
 Click **Apply**. On a real desk this is the one screen that writes. Its
 first step, **What will be written**, names the plan and its **Pre-flight
 verify**: **0 errors · 0 warnings**, so the plan could be written as it
-stands. Beside it, **7 notes (3 among Choices, 4 among Build details)**
+stands. Beside it, **8 notes (4 among Choices, 4 among Build details)**
 are the pre-flight's own; the Findings panel's counts are the whole
 show's, so they hold the build's notes as well.
 
 Press **Preview**. It reads the Demo's simulated WING, a WING Compact
 with the show already on it, exactly as it would read a real desk, and
-draws the desk as the plan will leave it: **1667 addresses read**, **444
-will change**, **1223 already match**, **0 didn't answer**. The 444 are
+draws the desk as the plan will leave it: **1677 addresses read**, **537
+will change**, **1140 already match**, **0 didn't answer**. The 537 are
 mostly the channel and bus processing, which the simulated desk does not
-hold.
+hold. Click a tile, **Kick** say, and the side bar shows its Detail: the
+39 settings that will change, each with its value now and after, then the
+64 that are the same.
 
 ![Apply on the Demo show: the desk drawn as scribble strips after a preview](img/apply-demo-preview.png)
 
