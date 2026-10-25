@@ -121,6 +121,12 @@ it is about, and the snapshot in `captures/` keeps the whole desk:
   record: `atoo apply` does not load an effect from it.
 - **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
+- **A bus nothing feeds that reaches only a Main** is left out, and no
+  `sources` cell names it. A desk initialized at the factory routes its
+  unused buses to Main 1, so capturing one says, for example, *Left out of
+  the sheets: Bus 9, Bus 10, Bus 11, Bus 12, Bus 13, Bus 14, Bus 15 and Bus
+  16, which nothing feeds and which reach only a Main, so no row has them and
+  no sources cell names them.*
 
 ## Watching it
 
