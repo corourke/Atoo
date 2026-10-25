@@ -585,7 +585,8 @@ none, so they did not run there:
 - **A stage box whose link drops** is `C008` (an error, when a channel or
   output depends on the port) or `C009` (a warning: in error
   with nothing patched to it); a port reading `UPD` is `C010` (information
-  only: its meaning is not known). No condition is needed for it.
+  only: the desk flags the stage box's firmware as older than it expects,
+  and audio still passes). No condition is needed for it.
 - **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
   write `muted` `==` `false` on the channel that matters.

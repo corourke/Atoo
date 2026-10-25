@@ -226,12 +226,13 @@ read the run says that `C007` could not be checked.
 ## A stage box is on the patch but no audio comes from it: `C008`, `C009`, `C010`
 
 A WING reports the state of each AES50 port: nothing on it (`-`), linked
-(`OK`), a link error (`ERR`) or updating (`UPD`). A stage box whose link has
+(`OK`), a link error (`ERR`) or a stage box whose firmware needs updating
+(`UPD`). A stage box whose link has
 failed silences every input on it and every output to it at once, and nothing
 on a channel shows it: the patch is as you set it, the fader is up and the
 meter is flat. `C008` says so for a port that something depends on, and
-`C009` for a stage box in error that nothing is patched to. `C010` only
-reports the word `UPD`, because Atoo does not know what it means.
+`C009` for a stage box in error that nothing is patched to. `C010` says
+that the desk wants the stage box's firmware updated (`UPD`).
 
 ```
 $ atoo audit --state stagebox.state.json
@@ -240,8 +241,8 @@ Audit findings: 1 error, 1 info.
 [ERROR] C008 AES50 Port Cannot Carry Its Patch
   AES50-A reports a link error (ERR), and CH 1 "Kick" and CH 2 "Snare" take their input from it. No audio passes while the link is in error: check the cable and the stage box.
 
-[INFO] C010 AES50 Port Reports UPD
-  AES50-B (S32) reports UPD, which the desk's list gives without saying what it means (a healthy stage box has been seen reading it). The meters are not being read, so Atoo cannot say whether it is passing audio.
+[INFO] C010 AES50 Stage Box Firmware Needs Updating
+  AES50-B (S32) reports UPD: the desk flags the stage box's firmware as older than it expects. Audio can still pass, but preamp remote control and dual-port A/B need current stage-box firmware; update the box. The meters are not being read, so Atoo cannot say whether it is passing audio.
 ...
 ```
 
@@ -257,10 +258,13 @@ connected, with nothing patched to it, is not an error.
 patched from it or to it yet: nothing in the show is lost, but the link
 will not carry audio.
 
-**`C010` is information, never a warning.** A healthy Behringer S32 on
-AES50-A, passing audio, reads `UPD` on a full-size WING, so Atoo does not
-treat `UPD` as a stage box that is updating and silent. `C010` says what
-the desk said and, in Watch, what the meters show: how many of the strips
+**`C010` is information, never a warning.** `UPD` means the desk flags the
+stage box's firmware as older than it expects, or not fully matching the
+console's version. The link still passes audio: a healthy Behringer S32 on
+AES50-A of a full-size WING reads `UPD` while it carries the show. What needs
+current stage-box firmware is preamp remote control from the desk and
+dual-port A/B, so update the box when you can. `C010` names the device the
+desk reports on the port and, in Watch, what the meters show: how many of the strips
 patched from that port are carrying signal, so the box is passing audio, or
 that none is just now, which may only be a quiet stage. It never lists
 every channel on the port as silent; that is for a port that is down
@@ -274,8 +278,8 @@ checked when they did not. A channel on its alternate input is reported by
 `C004` instead.
 
 **What `ERR` and `UPD` mean.** The
-desk's own list has those words. Atoo reads `ERR` as a link error; what
-`UPD` means is not known (see `C010`). `R002` follows sockets, not links, so a bus patched to
+desk's own list has those words. Atoo reads `ERR` as a link error; `UPD`
+is stage-box firmware the desk wants updated (see `C010`). `R002` follows sockets, not links, so a bus patched to
 a dead stage box's output still counts as routed there; `C008` is the check
 that the link is up.
 
