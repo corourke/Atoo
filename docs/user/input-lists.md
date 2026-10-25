@@ -75,9 +75,39 @@ AES50-A 16,Keys R,keys,DI,,FALSE,
 ```
 
 Whether those two become one linked stereo strip or two mono ones is
-decided later, from your conventions and from the names. That is why the
-names matter: *"if two sequential inputs are marked L/R, patch as one
-stereo channel"* is a rule that can only match what you wrote in `name`.
+decided by your conventions, and they can only see what you wrote in
+`name`. So name the pair so it reads as one.
+
+### Stating a stereo pair: the recipe
+
+1. **Name the two rows the same, ending in `L` and `R`** (or `Left` and
+   `Right`): `Keys L` / `Keys R`, `Playback Left` / `Playback Right`,
+   `OH L` / `OH R`. The side is the last word; everything before it is
+   the same on both rows. `Gtr (stage left)` and `Gtr (stage right)` are
+   two guitars, not a pair.
+2. **Put this sentence in your conventions**, word for word:
+
+   ```
+   Every L/R pair of inputs becomes one stereo channel.
+   ```
+
+   Every such pair on the list becomes one stereo channel, named for what
+   the two rows share (`Keys`), whatever the model wrote; where it had
+   written the pair otherwise, an INFO line says it was paired.
+3. **For a pair that stays two mono channels, name it in a sentence of
+   its own**, for example overheads you process separately:
+
+   ```
+   Keep OH L and OH R as two mono channels.
+   ```
+
+   A sentence that names the pair and says *mono channels* keeps it
+   apart, also said at INFO.
+
+Without a sentence that plain (*"stereo-paired inputs become one stereo
+channel"* does not say which inputs), pairing is left to the model, and
+the build says at INFO that it chose. The rule and its exceptions are
+covered in [Writing conventions](conventions.md#stereo-pairs-are-a-conventions-decision).
 
 The two rows need not state a socket. When they do not, the build pairs
 them on the next free odd-even pair.

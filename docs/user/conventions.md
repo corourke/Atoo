@@ -215,7 +215,26 @@ decide it, and the exception usually matters more than the rule:
   marked as stereo pair (L/R, Left/Right), patch as one stereo channel.
 ```
 
-The exception wins over the naming rule. What a pair can be *patched to*
+The exception wins over the naming rule. Both of these say it plainly
+enough to be carried out as written. The shortest form that is, with the
+rows named `Keys L` / `Keys R`, `OH L` / `OH R`:
+
+```
+Every L/R pair of inputs becomes one stereo channel.
+Keep OH L and OH R as two mono channels.
+```
+
+The first sentence makes every L/R pair on the list one stereo channel;
+the second keeps the overheads apart. A pair the model had written
+otherwise is paired and said at INFO, and a pair kept apart is listed
+at INFO. A vaguer
+sentence (*"stereo-paired inputs become one stereo channel"*) leaves
+pairing to the model, which says what it chose.
+[Stating a stereo pair](input-lists.md#stating-a-stereo-pair-the-recipe)
+has the naming that goes with it. A later version adds a sheet for
+busses and outputs where mono or stereo is a column of its own.
+
+What a pair can be *patched to*
 is the desk's business, not yours — two adjacent sockets, odd first — and
 that constraint lives on the [input list page](input-lists.md#a-stereo-pair-needs-two-adjacent-sockets-odd-first),
 because the cabling is where it can still be fixed.
