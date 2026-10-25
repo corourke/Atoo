@@ -238,8 +238,8 @@ that the desk wants the stage box's firmware updated (`UPD`).
 $ atoo audit --state stagebox.state.json
 Audit findings: 1 error, 1 info.
 
-[ERROR] C008 AES50 Port Cannot Carry Its Patch
-  AES50-A reports a link error (ERR), and CH 1 "Kick" and CH 2 "Snare" take their input from it. No audio passes while the link is in error: check the cable and the stage box.
+[ERROR] C008 Stage Box Link Error
+  Stage box AES50 port A reports a link error and can not carry the inputs of CH 1 "Kick" and CH 2 "Snare".
 
 [INFO] C010 AES50 Stage Box Firmware Needs Updating
   AES50-B (S32) reports UPD: the desk flags the stage box's firmware as older than it expects. Audio can still pass, but preamp remote control and dual-port A/B need current stage-box firmware; update the box. The meters are not being read, so Atoo cannot say whether it is passing audio.
@@ -249,9 +249,17 @@ Audit findings: 1 error, 1 info.
 **`C008` is an error.** A port that reads `ERR`, or `-` (no stage box
 there at all), while a channel takes its input from it or an output on it
 carries a source, is a patch that cannot carry audio, and `audit` exits `1`.
-The finding names the port, the channels and the outputs on it. Check the
-cable and the stage box; for `-`, connect the stage box, or patch those
-channels and outputs somewhere else. A stage box that is simply not
+The finding names the port, the channels and the outputs on it. Its title
+says which: **Stage Box Link Error** for `ERR`, **Stage Box Not Connected**
+for `-`, as the church desk with its stage box B unplugged reads:
+
+```
+[ERROR] C008 Stage Box Not Connected
+  Stage box AES50 port B appears to not be connected and can not carry outputs AES50-B 25-32.
+```
+
+Check the cable and the stage box; for `-`, connect the stage box, or patch
+those channels and outputs somewhere else. A stage box that is simply not
 connected, with nothing patched to it, is not an error.
 
 **`C009` is a warning.** It says a stage box is in error with nothing
