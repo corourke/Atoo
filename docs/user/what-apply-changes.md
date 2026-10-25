@@ -8,6 +8,8 @@ This page lists each of them, so none is a surprise either.
 
 Only a full apply (or the browser's **Apply**, which runs it) does any of
 this. `patch`, `amend` and `undo` touch only what their change owns.
+Neither does applying a show [captured from a desk](capture.md#applying-it-back):
+it writes only its own patch, routing, names, membership and widths.
 Every write below is read back and journalled with the value the desk
 held, so `atoo undo` reverses it with the rest of the apply.
 

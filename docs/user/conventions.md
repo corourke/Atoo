@@ -204,7 +204,7 @@ spanned high-passes from 32 Hz to 1500 Hz.
 ## Stereo pairs are a conventions decision
 
 The input list cannot say whether two sources are a pair — see
-[why](input-lists.md#two-columns-you-may-not-have). Your conventions
+[why](input-lists.md#columns-you-may-not-have). Your conventions
 decide it, and the exception usually matters more than the rule:
 
 ```

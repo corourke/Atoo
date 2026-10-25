@@ -205,7 +205,9 @@ atoo watch --console 192.0.2.16
 ```
 
 That is what you get from `atoo watch` without `--show`, and from the Watch page
-with no show open. If the show is given but its `plan.json` is missing or will
+with no show open. For a desk you didn't build and won't rebuild,
+[capture it](capture.md) first: `atoo capture` makes a show of the desk as it
+is, and Watch then runs every check with it. If the show is given but its `plan.json` is missing or will
 not read, the same note names the file and the reason (*`show/plan.json` could
 not be read: not valid JSON: Expecting property name ...*). A show whose plan
 reads has no such note. On the Watch page it is under **This watch** as

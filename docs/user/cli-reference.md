@@ -635,6 +635,50 @@ stable across rewordings; quote it in a bug report.
 | `--skip-verify` | Don't run the deterministic verifier over the finished plan. Verification checks the plan against the console's real limits, the input list it claims to cover, and equipment-safety rules. Skipping it is almost never what you want. |
 | `--pretty` | Also print a human-readable rendering, not just the raw JSON plan |
 
+## `atoo capture`
+
+<!-- preamble:start -->
+For a desk you didn't build and won't rebuild: it reads the desk, or a
+`.snap` saved on it, and makes a show folder you can watch and edit, with
+no model and nothing written to the desk. What it writes, what it
+decides, and what it cannot hold yet: [Capturing a desk you didn't
+build](capture.md).
+<!-- preamble:end -->
+
+```
+Capture a desk you didn't build as a show you can watch and edit.
+
+  atoo capture --console 192.0.2.148
+  atoo capture --snap CCC-20261024.snap --console-model wing-full
+
+Reads the desk, or a .snap saved on it, and makes a show folder in your Atoo
+folder: input.csv (one row per input, with its channel, DCAs and mute groups),
+busses.csv (one row per bus, Main and Matrix: what feeds it, where it goes, its
+effects), plan.json (the desk as it is: patch, routing, membership and widths,
+not faders or EQ), an empty watch.json, and the snapshot under captures/.
+
+No model, and nothing is written to the desk. Every name is written in: a
+channel with no name of its own takes its source's. What the desk does not
+state is decided and said, at INFO: a category from the channel's first DCA,
+a type from its source, the role fx for a bus whose effects are all reverbs,
+delays or modulation set fully wet. What the plan cannot hold yet (a channel
+sent to a Matrix, a bus sent to a bus, a Matrix fed by several sources) stays
+in busses.csv and the snapshot, and is listed too.
+
+Then watch it with the show: atoo watch --show DIR --console ADDRESS.
+```
+
+| Option | What it does |
+|---|---|
+| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--snap` `FILE` | Capture a .snap show file saved on the console instead of a live desk. Needs --console-model: a .snap does not say which WING wrote it. |
+| `--console-model` | Which WING the --snap came from. A live desk states its own model. |
+| `--dir` `DIR` | The folder to make the show in (default: your Atoo folder, ~/Documents/Atoo unless ~/.atoo.config's [workspace] says otherwise). |
+| `--name` | The show folder's name (default: the .snap's name, or the desk's model and today's date). A name already taken gets -2, -3. |
+| `--port` `VALUE` | Console OSC port (default: 2223) |
+| `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
+| `--no-progress` | Do not print the progress line while reading the console. |
+
 ## `atoo compare`
 
 <!-- preamble:start -->

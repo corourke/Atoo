@@ -40,6 +40,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
 | `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
+| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). [`atoo capture`](capture.md) writes them from a desk. A build does not place channels by them yet; see [below](#the-channel-dca-and-mute_group-columns). |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
 
 **Column order does not matter**: every column is read by its header.
@@ -146,15 +147,47 @@ instructions. The build checks the model quoted you word for word, and
 `verify` warns about the row, quoting you
 (`reconcile.deliberately-unassigned`).
 
-## Two columns you may not have
+## The `channel`, `dca` and `mute_group` columns
 
-A file carrying either is **refused, not ignored** — the file would
+Three optional columns that say where an input sits on the desk: the
+channel it is on (`1` to `40`, or `Aux 1` to `Aux 8`), and the DCAs and mute
+groups it is in, each a `;`-separated list of their names. A stereo source's
+two rows give the same channel.
+
+```
+channel,patch,name,category,type,model,phantom,dca,mute_group,notes
+9,AES50-A 19,Kick,Drum LEVELS,Mic,,FALSE,Drum LEVELS,ALL,
+```
+
+[`atoo capture`](capture.md) writes them when it reads a desk you didn't
+build, and that show's plan agrees with them. **A build does not place
+channels by them yet**: your conventions still decide. So where a filled
+cell and the plan disagree, `atoo verify` says so, rather than let a cell
+that had no effect look honoured. On the show [capture](capture.md)
+made, with Kick moved to channel 3 in the sheet:
+
+```bash
+sed -i 's/^9,AES50-A 19,Kick,/3,AES50-A 19,Kick,/' /tmp/shows/church-full-2026-10-24/input.csv
+atoo verify --show /tmp/shows/church-full-2026-10-24
+```
+
+```
+...
+  [warning] channels[Kick]: the input list puts 'Kick' on channel 3, and the plan has it on 9 -- Build does not place channels by the input list's channel, dca and mute_group columns yet, so the cell has had no effect on this plan  (input-list.column-not-built)
+...
+```
+
+A channel the desk does not have (`41`, `Aux 9`) is refused, naming the
+row.
+
+## Columns you may not have
+
+A file carrying either of these is **refused, not ignored** — the file would
 otherwise load, the column would have no effect, and the plan would
 quietly contradict the sheet.
 
-**No channel numbers** (`channel`, `channel_number` or `ch`). Which strip
-a source lands on is computed from your conventions; that is most of what
-Atoo is for.
+**`ch` or `channel_number`.** The desk channel goes in the `channel`
+column, above.
 
 ```bash
 sed '1s/^socket,/ch,socket,/; 2,$s/^/1,/' docs/user/demo/touringband/input.csv > /tmp/with-ch.csv
@@ -162,7 +195,7 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
 ```
 
 ```
-couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- conventions compute channel assignment; the input list must not specify one
+couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8'), which Build does not place channels by yet
 ```
 
 **No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is

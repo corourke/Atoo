@@ -58,6 +58,7 @@ In this order, the first time:
 |---|---|
 | [Command-line quickstart](quickstart.md) | input list to plan to desk to proof, end to end, with `atoo` commands |
 | [How a show gets built](pipeline.md) | the stages, which one gates, and `resolve` |
+| [Capturing a desk you didn't build](capture.md) | `capture`: a desk or a `.snap` as a show you can watch, with no model and nothing written |
 | [Learning from a batch of builds](lessons.md) | `lessons`: the questions your builds keep asking, as candidate lines for your conventions |
 | [Applying a plan](applying.md) | `apply`: preview, reading the result, flags, exit codes |
 | [What a full apply changes on the desk](what-apply-changes.md) | the reset to initialized, unpatching unbuilt strips, Main routes, talkback, alternate inputs, expansion bays |
