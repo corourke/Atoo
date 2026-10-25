@@ -110,14 +110,24 @@ box gains two more parts:
   build** chosen and the preview already run, so the next thing you read
   is how many addresses will change. It writes nothing.
 
-Below the box, the plan is three tables: **Channels**, one row per input
-(channel, patch, phantom, DCAs, mute groups), then **Busses** and
-**Outputs**. Press **▸** on any row for its high-pass, sends, colour and
-the reason for each value. After a rebuild, a strip that changed carries
-**ADDED**, **CHANGED** or **MOVED** by its number: yellow when nothing it
-is made from changed, grey when your edit asked for it.
+Below the box, the plan is three tables, and each is a sheet you can
+edit. **Channels** is your input list, one row per input: channel, patch,
+name, category, type, 48V, DCA and mute group. **Busses** and **Outputs**
+are the show's `busses.csv`, one row per bus, Main and Matrix: name, role,
+width, sources, tap and outputs. A cell you left empty shows, in grey, what
+the plan put there. Press **▸** on any row for the rest of its cells, and
+for its high-pass, sends, colour and the reason for each value. After a
+rebuild, a strip that changed carries **ADDED**, **CHANGED** or **MOVED**
+by its number: yellow when nothing it is made from changed, grey when your
+edit asked for it.
 
-![Step 04's channel table for a 19-channel band](img/build-plan-channels.png)
+Type in a cell and press **Save**: it writes the file and updates the plan
+straight away, with no model, as the note under each table says. A cell
+that cannot work on the desk (a socket it does not have, two inputs on one
+channel) turns red with the reason, and Save waits until it is fixed.
+[Editing the sheets](capture.md#editing-the-sheets) has the details.
+
+![Step 04's Channels table for a 19-channel band: the input list's own columns, the plan's values in grey where a cell is empty](img/build-plan-channels.png)
 
 ## 6. Read the findings
 
@@ -150,6 +160,9 @@ a link to the row it is about.
 
 Save an edit to any of the three files and the **04 Plan** tile reads
 **STALE**. So does **Build output**, which lists which file changed.
+An edit made in step 04's tables is the exception: its Save updates the
+plan too, so it stays current, unless you changed a cell the plan has no
+place for (a category, a note, a preset), which only a rebuild reads.
 Press **Rebuild plan**. When the rebuild lands, **Changed since the last
 build** says what it changed, and **Apply the difference** takes you to
 the preview of it. A full build writes only the addresses where the desk

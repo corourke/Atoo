@@ -40,7 +40,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
 | `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
-| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). [`atoo capture`](capture.md) writes them from a desk. A build does not place channels by them yet; see [below](#the-channel-dca-and-mute_group-columns). |
+| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). [`atoo capture`](capture.md) writes them from a desk, and a Save in Build's step 04 carries them into the plan. A build does not place channels by them yet; see [below](#the-channel-dca-and-mute_group-columns). |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
 
 **Column order does not matter**: every column is read by its header.
@@ -160,11 +160,13 @@ channel,patch,name,category,type,model,phantom,dca,mute_group,notes
 ```
 
 [`atoo capture`](capture.md) writes them when it reads a desk you didn't
-build, and that show's plan agrees with them. **A build does not place
-channels by them yet**: your conventions still decide. So where a filled
-cell and the plan disagree, `atoo verify` says so, rather than let a cell
-that had no effect look honoured. On the show [capture](capture.md)
-made, with Kick moved to channel 3 in the sheet:
+build, and that show's plan agrees with them. Edit them in Build's step 04
+and its **Save** carries them into the plan as well
+([Editing the sheets](capture.md#editing-the-sheets)). **A build does not
+place channels by them yet**: your conventions still decide. So where a
+filled cell and the plan disagree, `atoo verify` says so, rather than let a
+cell that had no effect look honoured. On the show [capture](capture.md)
+made, with Kick moved to channel 3 in the sheet outside step 04:
 
 ```bash
 sed -i 's/^9,AES50-A 19,Kick,/3,AES50-A 19,Kick,/' /tmp/shows/church-full-2026-10-24/input.csv

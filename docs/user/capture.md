@@ -19,6 +19,14 @@ A `.snap` does not say which WING saved it, and the three have different
 sockets, so a `.snap` needs `--console-model` (`wing-full`, `wing-compact`
 or `wing-rack`). A live desk states its own model.
 
+In the browser, press **New show…** in the bundle bar and choose **From a
+desk**: **The console** reads the console in the bar, and **A .snap file**
+asks for the file and which WING saved it. **Folder** is where the show
+goes, named as below; change it if you like. The dialog says what it
+does: *Captures the desk to input.csv and busses.csv which you can
+edit.* Press **Capture this desk**, and the new show opens on Build's
+step 04, where you edit it ([below](#editing-the-sheets)).
+
 ## What it makes
 
 A show folder in your Atoo folder (`~/Documents/Atoo/`, or `--dir`), named
@@ -29,7 +37,7 @@ chooses your own. Rename the folder freely afterwards.
 | File | What's in it |
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
-| `busses.csv` | One row per bus, Main and Matrix in use: its `name`, `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), and its DCAs and mute groups |
+| `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
 | `plan.json` | The desk as it is: patch, routing, membership and widths. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
 | `captures/` | The `.snap` it was made from, or a live desk's reading |
@@ -109,6 +117,8 @@ it is about, and the snapshot in `captures/` keeps the whole desk:
   split, are not in the sheets. The plan records them, so Watch says only
   if one changes, and `atoo apply` does not write them.
 - **Effects inserted on a channel** are listed in that row's `notes`.
+- **Effects inserted on a bus, Main or Matrix** are in its `fx` cell, as a
+  record: `atoo apply` does not load an effect from it.
 - **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
 
@@ -127,6 +137,40 @@ warning. The plan states no mix, so a channel muted during a service is
 not a finding. Anything a rule finds about the desk itself, such as a bus
 that reaches nothing or a dead link, is still reported.
 
+## Editing the sheets
+
+Build's step 04 shows the two sheets as its three tables, every cell
+editable:
+
+- **Channels** is `input.csv`: channel, patch, name, category, type, 48V,
+  DCA and mute group. Press **▸** on a row for its model, preset and notes.
+- **Busses** and **Outputs** are `busses.csv`: name, role, width, sources,
+  tap and outputs. **▸** opens its effects, preset, DCAs, mute groups,
+  label and notes, and **Feeds**: where the row goes, worked out from the
+  other rows' sources.
+
+A cell left empty shows, in grey, what the plan has there. Type in a cell
+and the table marks it; **Save** writes the file and updates the plan, with
+no model. Under the Channels table it says *Save writes the input.csv file
+and updates the build plan.*, and under Busses and Outputs *Save writes
+the busses.csv file and updates the build plan.* Renaming an input or a bus
+renames it in every row's sources too.
+
+`sources` is the list of what feeds a row, separated by `;`: channel names,
+bus names, an input-list category, `*` for every channel, and on a Matrix,
+Main names. `Kick (pre)` sets that one source's tap. Take a name out and
+its send comes out of the plan; add one and it goes in, post-fader if
+nothing says pre, and the Save's message says so.
+
+A cell that cannot work on the desk turns red, with the reason under its
+row, before you press Save: a socket the desk does not have
+(`LCL output 9 does not exist -- LCL outputs are 1..8 on a WING
+(full-size console)`), a Main feeding a bus, a source nothing is called,
+two inputs on one channel. **Save** stays locked until it is fixed.
+
+Nothing goes to the desk until you apply the plan. A role, a label or a
+note changes nothing on the desk.
+
 ## Applying it back
 
 A captured plan is the desk as it is, so applying it back to the same desk
@@ -139,11 +183,21 @@ built show does: it writes its own patch, routing, names, membership and
 widths, and nothing else. `atoo verify` says so
 (`capture.mix-left-to-desk`).
 
+Its sends and its DCAs and mute groups are the whole list of them: a full
+apply switches off every send between the strips the plan holds that the
+plan does not list, and takes a strip out of a DCA it is no longer in. So a
+send you took out of a sheet comes off the desk, and only its switch is
+written: its level is left as it was.
+
 ## The `channel`, `dca` and `mute_group` columns
 
 They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s
-own optional columns, so you can also write them by hand. **A build does
-not place channels by them yet**: where a filled cell and the plan
-disagree, `atoo verify` says so (`input-list.column-not-built`), so a
-cell that had no effect never looks honoured. A captured show's plan
-agrees with its sheets.
+own optional columns, so you can also write them by hand. A Save in step
+04 carries them into the plan. **A build does not place channels by them
+yet**: where a filled cell and the plan disagree, `atoo verify` says so
+(`input-list.column-not-built`), so a cell that had no effect never looks
+honoured. A captured show's plan agrees with its sheets.
+
+A build does not read `busses.csv` yet either. A build of a show that has
+one says so in the plan's notes; Save in step 04's Busses table lays the
+sheet onto the new plan.

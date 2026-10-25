@@ -666,7 +666,9 @@ with its tap: a channel sent to a Matrix, a bus sent to a bus. What the plan
 cannot hold yet (a channel's inserts) stays in the sheets and the snapshot, and
 is listed too.
 
-Then watch it with the show: atoo watch --show DIR --console ADDRESS.
+Then watch it with the show: atoo watch --show DIR --console ADDRESS, and edit
+its sheets in `atoo ui`, Build step 04, whose Save updates the plan. The UI's
+New show... > From a desk does the same as this command.
 ```
 
 | Option | What it does |
