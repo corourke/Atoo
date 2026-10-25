@@ -368,7 +368,7 @@ show's plan adds ([Watching from the command line](watch.md)), and it
 clears when the desk is put back. A socket this rule judges is not also
 reported by `C001`.
 
-## A channel reaches the same Main or Matrix by two routes: `R012`, `R013`
+## A channel reaches the same Main or Matrix by two routes: `R012`, `R013`, `R014`
 
 When one channel reaches the same Main or Matrix by two routes, the two copies
 add together. Level builds up where nobody expected it, and if one route has
@@ -418,9 +418,8 @@ If the plan includes some of those routes but not all (the plan has the two
 busses, and the conventions never gave the channel a direct Main route that is
 also on), `R012` still speaks and names the routes the plan does not include,
 for example `the plan does not include the route CH 2 "Snare" to BUS 2 "Drums Comp"`. With no plan,
-nothing can have been asked for, so every split is reported, including a
-channel with a send to a reverb bus and another to a group bus when both
-reach Main 1, and the finding says so: *Atoo has no plan it could read for this
+nothing can have been asked for, so every split is reported except an effect
+send (below), and the finding says so: *Atoo has no plan it could read for this
 show*. That is the message to expect if you ran `audit` without `--plan` or
 `--show`, or started Watch without opening the show (Watch also says so once, in an INFO,
 `W005`): run it again with the
@@ -431,6 +430,34 @@ route off on the desk, or state the purpose of the parallel bus in your
 conventions or instructions and rebuild. In Watch both rules run on every pass
 and need nothing extra from the desk.
 
+
+**A reverb or delay bus is not a second copy (`R014`).** On a WING an effect
+is a bus that inserts it: a channel sent to a "Reverb" bus that runs a reverb,
+routed to Main 1, reaches Main 1 directly and through that bus, but the bus
+carries the reverb's return, not the dry channel again. So with or without a
+plan, a route through a bus with a reverb, delay, chorus, flanger, phaser or
+pitch shifter inserted on it (and switched on) is read as an effect send and
+left out of the split. `R014` says so, at INFO, naming the effect it went on:
+
+```
+$ atoo audit --state verb.state.json
+Audit findings: 1 warning, 3 info.
+
+[WARNING] R012 Signal Splits And Recombines
+  CH 1 "Kick" reaches MAIN 1 twice: directly, and through BUS 1 "Drums". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. Atoo has no plan it could read for this show, so it cannot tell a parallel bus from a mistake: run it with the show's plan (open the show, or pass --show or --plan); if this is a mistake, switch one of the routes off.
+...
+[INFO] R014 Signal Split Through An Effect Send
+  CH 5 "Vox" reaches MAIN 1 through BUS 11 "Reverb" as well as by another route. Read as an effect send: BUS 11 "Reverb" runs VSS3 in FX4 (a reverb), so it carries the effect's return rather than a second dry copy, and R012 is quiet about it. If BUS 11 "Reverb" is meant to carry the dry signal too, set the effect fully wet or take it off.
+...
+```
+
+A bus with no such effect on it, such as a "Drums Comp" bus for parallel
+compression, is still two dry copies and still `R012`, until the show's plan
+asks for it. So is a bus running a doubler (`DOUBLE`), which mixes a doubled
+copy with the dry voice, or a compressor or EQ. A channel with two dry routes
+and a reverb send gets `R012` for the two, and the finding says which route
+it left out as an effect send. Atoo goes on the effect model, not on how wet
+the effect is set: a reverb bus set half dry still reads as an effect send.
 ## A bus is heard on one side only, or is not the width the plan says: `R011`, `CV020`
 
 Every bus, Main and Matrix has two output slots, a left one and a right one.

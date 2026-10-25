@@ -188,7 +188,11 @@ and start it again.
 
 Watch judges the desk against the show's plan: it stops R012 from reporting a
 parallel bus the plan asked for, and it adds the checks that compare the desk
-with the plan. With no plan, it still runs, on the checks that need none. It
+with the plan. With no plan, it still runs, on the checks that need none. A
+channel sent to a reverb, delay or chorus bus is not reported even then: a bus
+with such an effect inserted on it is read from the desk as an effect send, and
+`R014` says so at INFO, naming the effect
+([R012, R013, R014](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)). It
 tells you so, once, at INFO, as `W005`:
 
 ```bash
