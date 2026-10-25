@@ -218,6 +218,11 @@ disagree (the sheet changed in a spreadsheet since), `atoo verify` says so
 (`input-list.column-not-followed`), so a cell that had no effect never looks
 honoured. A captured show's plan agrees with its sheets.
 
-A build does not read `busses.csv` yet either. A build of a show that has
-one says so in the plan's notes; Save in step 04's Busses table lays the
-sheet onto the new plan.
+A build reads `busses.csv` too. Rebuild a captured show from your
+conventions and the bus sheet still wins wherever it has a filled cell: the
+names, roles, widths, sources and outputs it gives are laid onto the new
+plan, each change a note in the build's report (in **Findings**, under
+**Choices**), and what the plan cannot hold yet (`fx`) is said there too. A
+cell that cannot work on the desk stops the build, naming the cell, as Save
+does in step 04: *busses.csv cannot be laid onto this plan, so nothing was
+written: busses.csv, Bus 4, outputs: LCL output 99 does not exist …*

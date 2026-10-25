@@ -556,7 +556,9 @@ The plan is written to a file either way -- an
 
 A show bundle (--show DIR) supplies input.csv and instructions.md
 from one directory and writes plan.json back into it. An explicit flag always wins
-over the bundle.
+over the bundle. A bundle's busses.csv (the bus sheet: one row per bus, Main and
+Matrix) is laid onto the plan: a filled cell wins over the conventions, each change
+is a note, and a cell that cannot work on the desk stops the build, naming it.
 
 A bundle build also DRAFTS that bundle's watch.json -- the short list of
 things worth an alert if they move mid-show. Drafted conditions are marked

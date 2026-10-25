@@ -120,7 +120,9 @@ Below the box, the plan is three tables, and each is a sheet you can
 edit. **Channels** is your input list, one row per input: channel, patch,
 name, category, type, 48V, DCA and mute group. **Busses** and **Outputs**
 are the show's `busses.csv`, one row per bus, Main and Matrix: name, role,
-width, sources, tap and outputs. A cell you left empty shows, in grey, what
+width, sources, tap and outputs. A build lays the bus sheet onto the plan it
+makes, so a filled cell there wins over your conventions, and each change is
+a note under **Choices**. A cell you left empty shows, in grey, what
 the plan put there. Press **▸** on any row for the rest of its cells, and
 for its high-pass, sends, colour and the reason for each value. After a
 rebuild, a strip that changed carries **ADDED**, **CHANGED** or **MOVED**
