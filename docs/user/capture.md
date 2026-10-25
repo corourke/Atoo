@@ -105,13 +105,7 @@ leaves open, `capture` decides and says, at INFO, so you can correct it:
 - **`tap`** is the pre or post most of a row's sources use; a source that
   differs says so in `sources` (`Crowd (pre)`).
 
-## What it cannot hold yet
-
-Every send goes into `plan.json` as well as `busses.csv`: a channel sent
-straight to a Matrix (the drummer's in-ears), a bus sent to another bus (a
-broadcast mix built from the band's buses), and a Matrix fed by several
-sources, each with its pre or post. So Watch follows those routes too, and a
-send the show has that is switched off is reported.
+## What stays out of the sheets
 
 Nothing is dropped silently. Each of these is one INFO line, naming what
 it is about, and the snapshot in `captures/` keeps the whole desk:
@@ -132,6 +126,12 @@ it is about, and the snapshot in `captures/` keeps the whole desk:
   no sources cell names them.*
 
 ## Watching it
+
+Every send goes into `plan.json` as well as `busses.csv`: a channel sent
+straight to a Matrix (the drummer's in-ears), a bus sent to another bus (a
+broadcast mix built from the band's buses), and a Matrix fed by several
+sources, each with its pre or post. So Watch follows those routes too, and a
+send the show has that is switched off is reported.
 
 Give Watch the show, from the command line or with the show open in the
 browser:
