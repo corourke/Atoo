@@ -202,7 +202,7 @@ when it was. Each change nobody asked for is also a WARNING in the
 **Findings** panel, under **To check** (`rebuild.unasked-change`), so the
 verdict reads **Ready to apply · 1 to check**. It does not block Apply.
 
-Worked example: [Command-line quickstart](quickstart.md).
+Worked example: [The command line](quickstart.md).
 
 ## 2. Critic pass — a second read of the plan
 
@@ -356,7 +356,7 @@ them; the linked source is the list.
 
 ## See also
 
-- [Command-line quickstart](quickstart.md) — the whole path, once, with output
+- [The command line](quickstart.md) — the whole path, once, with output
 - [Applying a plan](applying.md) — stages 3 and 4 in detail
 - [Learning from a batch of builds](lessons.md) — `atoo lessons`
 - [Checking a desk](audit.md) and [Watching from the command line](watch.md) — stage 5 in detail

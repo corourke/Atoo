@@ -1,4 +1,4 @@
-# Capturing a desk you didn't build
+# Capturing a desk
 
 Some desks are already set up, and nobody is going to rebuild them from an
 input list: a church's weekly patch, a venue's house desk, a show somebody

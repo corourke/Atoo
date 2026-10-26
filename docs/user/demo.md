@@ -124,7 +124,7 @@ Press **Stop** when you have seen enough.
 
 We haven't covered patching, for making last minute changes as it needs an 
 API key. To learn about that flow, on a real desk, see
-[Patch a show that is already on the desk](patch-a-show.md).
+[Patch a show](patch-a-show.md).
 
 ## Leave the demo
 
@@ -134,6 +134,6 @@ next to **Show bundle**.
 
 ## Next
 
-- [Set up Atoo](configuration.md): your own Atoo folder, your desk and
-  your presets.
+- [How Atoo works](how-atoo-works.md): the files and the steps behind
+  what you just saw.
 - [Why Atoo?](why.md), if you are still deciding.

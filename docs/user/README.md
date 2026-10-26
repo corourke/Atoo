@@ -16,10 +16,13 @@ In this order, the first time:
 | [Why Atoo?](why.md) | Whether Atoo is worth your time against what you already do |
 | [Installing Atoo](install.md) | Install on a Mac or Linux with `uv`, step by step, then open `atoo ui`; Homebrew and pipx, and Windows, too |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
+| [How Atoo works](how-atoo-works.md) | The three files you write, the plan, and build, verify, apply and watch |
 | [Set up Atoo](configuration.md) | Your Atoo folder with `atoo init`, your desk with `a2 ping`, your presets, and the config file |
 | [Setting up an AI provider](ai-provider.md) | The model that writes your plans, and its API key |
-| [Connect to your desk and try the CLI](testing-on-your-desk.md) | On your own WING: read-only checks, then a write and undo |
-| [Change the Demo show](change-the-demo.md) | Your first build, on a copy of the Demo, then a patch onto the desk |
+| [Build your first show](change-the-demo.md) | Your copy of the Demo show: change it with or without a model, apply it, watch it and undo |
+| [Patch a show](patch-a-show.md) | A change typed in plain English, onto a show already on the desk |
+| [Capture a desk you didn't build](capture-a-desk.md) | A desk that is already set up, as a show you can watch and edit |
+| [The command line](quickstart.md) | One show from files to desk with `atoo` commands, then useful things to try |
 
 ## Using Atoo in the browser
 
@@ -27,7 +30,6 @@ In this order, the first time:
 |---|---|
 | [Build a show](build-a-show.md) | Show bundle files: the input list, your show-specific instructions, the **Build plan**, and the watch list |
 | [Apply a plan to the desk](apply-to-desk.md) | The four steps: the pre-flight, **Preview** (the desk as tiles, each tile's changes in Detail), writing, undo |
-| [Patch a show that is already on the desk](patch-a-show.md) | Making a change typed in plain English |
 | [Watch the desk during a show](watch-a-show.md) | Live findings, and setting watch conditions |
 
 ## The files you write
@@ -56,9 +58,8 @@ In this order, the first time:
 
 | Page | For |
 |---|---|
-| [Command-line quickstart](quickstart.md) | input list to plan to desk to proof, end to end, with `atoo` commands |
 | [How a show gets built](pipeline.md) | the stages, which one gates, and `resolve` |
-| [Capturing a desk you didn't build](capture.md) | `capture`: a desk or a `.snap` as a show you can watch, with no model and nothing written |
+| [Capturing a desk](capture.md) | `capture`: a desk or a `.snap` as a show you can watch, with no model and nothing written |
 | [Learning from a batch of builds](lessons.md) | `lessons`: the questions your builds keep asking, as candidate lines for your conventions |
 | [Applying a plan](applying.md) | `apply`: preview, reading the result, flags, exit codes |
 | [What a full apply changes on the desk](what-apply-changes.md) | the reset to initialized, unpatching unbuilt strips, Main routes, talkback, alternate inputs, expansion bays |
@@ -71,6 +72,7 @@ In this order, the first time:
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
 | [Rules reference](rules-reference.md) | every rule `audit` and Watch can report (generated from the code) |
+| [AI provider reference](ai-provider-reference.md) | Prompt caching on Claude, and what an OpenAI-compatible host is sent |
 | [Reporting a problem](reporting.md) | what to send when something is wrong, and which files help |
 | [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
 

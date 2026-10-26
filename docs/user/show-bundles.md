@@ -335,7 +335,7 @@ an extra way to invoke, not a replacement.
 
 ## See also
 
-- [Command-line quickstart](quickstart.md) — the whole path, once, on `touringband`
+- [The command line](quickstart.md) — the whole path, once, on `touringband`
 - [Writing an input list](input-lists.md) — what goes in `input.csv`
 - [Writing conventions](conventions.md) — the file that stays outside the bundle
 - [The journal](journals.md) — what `apply --confirm` writes into `journals/`

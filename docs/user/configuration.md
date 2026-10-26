@@ -39,7 +39,7 @@ It creates `~/Documents/Atoo` and sets up your config file,
 | `README.md` | What each file is, and what to do next |
 
 To get an editable copy of the Demo show as well, run `atoo init --demo`
-([Change the Demo show](change-the-demo.md)).
+([Build your first show](change-the-demo.md)).
 
 `atoo init` never overwrites anything. To reset a file, delete it and run
 `atoo init` again, or run `atoo init --force`.

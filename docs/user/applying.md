@@ -5,7 +5,7 @@ back. The readback is the product: a remote write can fail silently, so
 the only thing that makes "the console is set up the way you wrote it
 down" a fact rather than a hope is asking the console afterwards.
 
-If you have not applied a plan before, [Command-line quickstart](quickstart.md) walks
+If you have not applied a plan before, [The command line](quickstart.md) walks
 one through end to end. This page is what it means and how to steer it.
 
 ## Preview first, then `--confirm`
@@ -364,6 +364,6 @@ command in one place.
 - [Command reference](cli-reference.md) — every flag, generated from the code
 
 - [Apply a plan to the desk](apply-to-desk.md) — the same, in the browser
-- [Command-line quickstart](quickstart.md) — the whole path, once, on the shipped example
+- [The command line](quickstart.md) — the whole path, once, on the shipped example
 - [Checking a desk](audit.md) — checking a desk nobody just applied to
 - [Troubleshooting](troubleshooting.md) — when it will not connect, or something did not land

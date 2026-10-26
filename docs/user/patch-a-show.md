@@ -1,11 +1,10 @@
-# Patch a show that is already on the desk
+# Patch a show
 
-The horn section turns up at 6pm. Three channels have to go onto a desk
-that is already set up and line-checked, and nothing already in use can
-move.
-
-Type the change in plain English. Atoo reads which strips are free,
-works out exactly what to write, shows you, and writes only that.
+Once a show is on the desk, a change goes on as a patch: you type it in
+plain English, Atoo works out exactly what to write, shows you, and writes
+only that. Nothing already in use moves. For example, a horn section
+turns up just before doors, and three channels have to go onto a desk
+that is already set up and line-checked.
 
 **When:** in the setup window, after the full apply and before doors.
 Not mid-show. Save a snapshot on the desk once it is patched, so the
@@ -122,3 +121,8 @@ The command-line version is
 [`atoo patch`](patch.md). Building the show again with the new inputs and
 patching the difference onto the desk is a command-line route too:
 [`atoo amend`](amend.md); the Patch screen takes a typed change only.
+
+## Next
+
+[Capture a desk you didn't build](capture-a-desk.md): a desk that is
+already set up, as a show you can watch and edit.

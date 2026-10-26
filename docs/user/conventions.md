@@ -394,7 +394,7 @@ Conventions, in order -- each layer overrides the one above it:
 
 `build` prints that stack every time, so a plan can always be
 explained afterwards. (The run above then stops with `no console model
-stated`, a separate flag — see [Command-line quickstart](quickstart.md).)
+stated`, a separate flag — see [The command line](quickstart.md).)
 
 ## A default conventions file across every show
 
@@ -435,7 +435,7 @@ wrong with it and is then ignored. The browser page can write the
 - [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colours, and the resolved file
 - [Writing an input list](input-lists.md) — the other half
 - [Channels that are not on the input list](extra-strips.md) — talkback, playback and the strips you add at every show
-- [Command-line quickstart](quickstart.md) — both files through to a proven desk
+- [The command line](quickstart.md) — both files through to a proven desk
 - [Show bundles](show-bundles.md) — where `instructions.md` lives
 - `starter/conventions.md` — the complete starter, which builds the Demo show
 - [Conventions reference](conventions-reference.md) — the levels

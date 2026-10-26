@@ -1,6 +1,6 @@
 # Patching a running show: `atoo patch`
 
-*From the command line. In the browser, see [Patch a show that is already on the desk](patch-a-show.md).*
+*From the command line. In the browser, see [Patch a show](patch-a-show.md).*
 
 The horn section has turned up during the setup window. The show is
 already applied, there is a mix on the desk, and you cannot re-run

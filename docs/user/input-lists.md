@@ -558,7 +558,7 @@ wherever it is used. The two useful moments:
 
 - [Writing conventions](conventions.md) — the other half, and the file
   that decides what happens to these rows
-- [Command-line quickstart](quickstart.md) — an input list through to a proven desk
+- [The command line](quickstart.md) — an input list through to a proven desk
 - [Show bundles](show-bundles.md) — where `input.csv` lives for one show
 - [Channels that are not on the input list](extra-strips.md) — talkback,
   playback and the strips you add at every show
