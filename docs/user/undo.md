@@ -21,7 +21,7 @@ atoo undo touringband/journals/20260924T054016.101288Z-apply-S2203A1.json --cons
 ```
 
 A bundle with no `journals/` has recorded no writes, and `undo --show`
-says so without contacting the desk (exit `1`). A show that has never
+reports that without contacting the desk (exit `1`). A show that has never
 been applied has none:
 
 ```

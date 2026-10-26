@@ -196,7 +196,7 @@ parallel bus the plan asked for, and it adds the checks that compare the desk
 with the plan. With no plan, it still runs, on the checks that need none. A
 channel sent to a reverb, delay or chorus bus is not reported even then: a bus
 with such an effect inserted on it is read from the desk as an effect send, and
-`R014` says so at INFO, naming the effect
+`R014` notes it at INFO, naming the effect
 ([R012, R013, R014](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)). It
 tells you so, once, at INFO, as `W005`:
 
@@ -304,7 +304,7 @@ atoo watch --state-sequence audit_demo_state.json,audit_demo_state_before.json -
   ... 7 more CLEARED lines
 ```
 
-**Nothing changing is nearly silent.** A pass with no news says so in one
+**Nothing changing is nearly silent.** A pass with no news prints one
 line and moves on — no repeated all-clear, no re-listing of findings you
 have already seen:
 
@@ -356,7 +356,7 @@ With `--name-refresh 1`, every pass is 323 requests: 8 passes is about
 
 With `--per-leaf` a pass is about two minutes, an interval this short
 changes almost nothing, and `--count 8` is about 17 minutes — the
-estimate line says so.
+estimate line shows it.
 
 ## Names are read at Start and refreshed
 
@@ -375,7 +375,7 @@ stretches it, and `--name-refresh N` changes it.
 
 **What it costs: a rename is seen at the next refresh, not the next
 pass.** Rename a channel, or give two strips the same name, and N001
-says so up to five passes later. The findings carry one INFO for the whole
+reports it up to five passes later. The findings carry one INFO for the whole
 session saying exactly that, in the baseline and in every pass's table
 (never as a change), so a quiet table between refreshes is never mistaken
 for a check that ran:

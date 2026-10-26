@@ -88,8 +88,8 @@ every other quote, and lists the strips in the
 [resolved conventions](conventions-reference.md#the-resolved-conventions).
 Every build then makes those strips itself, on the strip and from the
 socket you named, with the preset you named. Their sockets and strip
-numbers are held first, so no other channel lands on them. A build says
-so up front:
+numbers are held first, so no other channel lands on them. A build lists
+them up front:
 
 ```
 INFO instructed strips: 2 in club.resolved.md -- code builds MUSIC (aux 1), TALKBACK (aux 8)

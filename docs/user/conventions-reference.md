@@ -71,7 +71,7 @@ atoo verify --show docs/user/demo/touringband
 ```
 
 Change the word to `Pink` in the conventions, rebuild, and the note goes.
-A bus named with an old word says so the same way, as `bus.colour-alias`.
+A bus named with an old word gets the same note, as `bus.colour-alias`.
 
 ## Colours the desk does not have
 
@@ -241,7 +241,7 @@ wrote it, so nothing is lost. A quote that is not in your file or the
 domain knowledge is a WARNING, `resolve.quote-not-found`: the rule
 citing it may be the resolver's own, not yours. Neither stops the file
 being used; a file that is empty or quotes nothing that can be found is
-not used at all, and the build says so. A build prints these as one line
+not used at all, and the build reports it. A build prints these as one line
 each (how many, and this command to list them); every one is kept in the
 plan's `meta.build_findings`.
 
@@ -311,8 +311,8 @@ A few more things about the preset map:
 - **A library that cannot be read is said, not skipped.** If the
   library's files cannot be opened (the folder is gone, a preset file
   is damaged), no name can be checked, so every map item counts as
-  covered, and one note says so, `resolve.preset-library-unreadable`,
-  with the reason.
+  covered, and one note, `resolve.preset-library-unreadable`, gives
+  the reason.
 
 For the Vocals line above, `resolve --check` says:
 
@@ -389,7 +389,7 @@ entry that names no category takes the one its name is a word of
 (MUSIC is a Misc word), else the one for its kind of strip (`aux`), and
 the build's INFO line for the strip says which and why.
 
-Each setting code wrote says so in the plan: the channel's provenance
+Each setting code wrote is marked in the plan: the channel's provenance
 reads `category table: Drums`, and the build keeps one note per
 category in `meta.build_findings`. From the three-row show the
 transcripts here were built on (Kick, Lead Vox, Host), where the

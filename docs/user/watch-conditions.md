@@ -245,7 +245,7 @@ Things to know:
   or a mute group; and a bus, Main or Matrix can be, but `watch` does not
   read their tags, so the condition could never fire.
 - **`Main` on its own means `MAIN 1`**, the main L/R. An `info` finding
-  says so: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make
+  reads: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make
   it explicit*. The Watch screen's table rewrites the cell to `MAIN 1` and
   shows the same note under it, not in red. No other kind has a
   default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are
@@ -376,7 +376,7 @@ Things to know:
   mean instead.
 - **The kind and name wins over a channel named the same.** If a channel
   is literally called `BUS Drums`, the condition still watches the bus
-  named Drums, and an `info` finding says so. To watch that channel,
+  named Drums, and an `info` finding notes it. To watch that channel,
   write `CH BUS Drums` or its position.
 - **A channel whose name begins with a kind word** -- "Main Vox" -- is
   written `CH Main Vox`. Plain `Main Vox` means the Main named Vox.

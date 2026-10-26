@@ -95,8 +95,8 @@ strip you mute.
 left without (a bus's mono or stereo, a send's pre or post, a stereo
 pairing), the build decides it and `verify` reports each decision as an
 `inferred.*` note. Where your conventions and instructions **contradict
-each other**, or declare something this show never uses, the build says
-so in a note that quotes the lines (`conventions.conflict`,
+each other**, or declare something this show never uses, the build adds
+a note that quotes the lines (`conventions.conflict`,
 `conventions.unused`).
 
 **One fix-up round.** When the plan fails `verify` with errors, or a
@@ -145,7 +145,7 @@ A full build writes only the addresses where the desk differs from the
 plan, so the preview's "will change" is the difference.
 
 Which lines are "about" a strip is read from their words, so a line
-that calls a strip by another name is not seen, and the section says so
+that calls a strip by another name is not seen, and the section notes it
 at INFO. A changed line that names no strip at all ("monitor sends are
 pre-fader") could be about anything, so every change is then taken as
 asked for, and said at INFO. A heading, or a line you only re-wrapped or
@@ -271,7 +271,7 @@ have a reason to write it anyway.
 ```
 
 Pass `--input` whenever you can. Without it the checks that need the
-input list are skipped, and `verify` says so rather than returning a
+input list are skipped, and `verify` reports that rather than returning a
 clean result nobody earned. Did every input on your list become a
 channel? That is the most important check there is.
 

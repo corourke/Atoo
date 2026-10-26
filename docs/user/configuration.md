@@ -62,17 +62,14 @@ folder. With `[conventions] default` set, you can drop `--conventions`
 from `build`. A show's own `instructions.md` still layers on top of it
 ([show bundles](show-bundles.md)).
 
-**`[workspace]` is the folder you keep your shows in.** `atoo init`
-makes `~/Documents/Atoo` and sets it. `atoo ui` started with no
-`--show` opens its file browser there, so **New show…** puts a new show
-beside the others, and says so when it starts:
+The `[workspace]` folder, by default, holds your shows, presets,
+conventions and house watch-conditions. Running `atoo init` creates a
+workspace folder at `~/Documents/Atoo` and sets up your config file. When
+you start `atoo ui` it will report its working folder:
 
 ```
 Working folder: ~/Documents/Atoo -- Open… and New show… start here.
 ```
-
-Nothing else reads it: every other command takes its files from flags or
-from `--show`.
 
 **`atoo init` never replaces a value you have set.** It reports the
 value it found and the one it would have set; `atoo init --force`
@@ -85,8 +82,7 @@ and leave the rest of the file alone.
 
 ### Check it took
 
-Every command that uses a setting from this file **says so**, so you
-can see where a value came from. These were run in a folder holding a
+Commands report any settings used from your config file. These were run in a folder holding a
 copy of the Demo show's `input.csv`, with the file above pointing at a
 copy of the starter conventions (`starter/conventions.md`) at
 `~/atoo/house.md` and of the starter presets (`starter/presets/`)

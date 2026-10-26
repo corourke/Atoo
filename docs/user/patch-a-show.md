@@ -52,7 +52,7 @@ Under the drawing, **Will be written** lists every change in groups:
 |---|---|
 | **Added** | a new channel, going into a free strip |
 | **Returned to free** | a dropped channel's strip, cleared back to unused |
-| **Moved down by the insert** | a running channel that an *insert* ("insert HiHat after Snare and renumber the channels after it") moves to the next strip down: one line for every strip that moves, each rewritten whole on its new number. Undo puts them all back. Without those words, *"add HiHat after Snare"* moves nothing, and a note says so and gives the words that would. See [Inserting a channel](patch.md#inserting-a-channel-and-renumbering-the-strips-after-it) |
+| **Moved down by the insert** | a running channel that an *insert* ("insert HiHat after Snare and renumber the channels after it") moves to the next strip down: one line for every strip that moves, each rewritten whole on its new number. Undo puts them all back. Without those words, *"add HiHat after Snare"* moves nothing, and a note gives the words that would. See [Inserting a channel](patch.md#inserting-a-channel-and-renumbering-the-strips-after-it) |
 | **Edited: named fields only** | something already running, changed only in the fields you named (*"HPF 100 on the vocals"*), listed old → new |
 | **Modified, not written** | something running that the change did not name field by field, or a fader it did not name; left alone |
 | **Refused** | a change that names something not on the desk, or has no free strip, or patches a socket past the end of the stage box on an AES50 port (`A 17` on an S16: the pre-flight panel names the box and its size) |

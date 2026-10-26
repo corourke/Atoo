@@ -205,7 +205,7 @@ count as the same thing: `Kick In`, `kick_in` and `KICK-IN` are one name.
 Or name it in the input list's optional `preset` column, matched the
 same way; **the input list wins** over the conventions and instructions
 ([The `preset` column](input-lists.md#the-preset-column)). The build
-says so at INFO (`reply.preset-from-input-list`) when it replaces a
+notes it at INFO (`reply.preset-from-input-list`) when it replaces a
 different preset. In the browser, Build step 02's Preset column offers
 this library's names.
 
@@ -361,7 +361,7 @@ Worth knowing:
   `PFL`, `AFL`, `EQ` and `INS2`, and the desk turns an `IN` written to an
   aux into `BUS`. So `build` carries `IN` -- and a channel's `FILT`,
   since an aux has no filter -- onto an aux as `BUS`, the same point in
-  the aux's signal, and says so at INFO (`preset.value-not-on-strip`).
+  the aux's signal, with an INFO (`preset.value-not-on-strip`).
   A choice with no equivalent on an aux (a dynamics model only a channel
   has, say) is left out, with the values set for it, and the note names
   each.

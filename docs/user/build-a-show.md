@@ -54,7 +54,7 @@ warning come up beside **Save** and **Discard**.
 Either:
 
 - press **Change file** on the tile and choose the band's CSV. It is
-  copied into the show as `input.csv`, and the bar says so; or
+  copied into the show as `input.csv`, and the bar shows the new file; or
 - click the tile, press **+ Add row**, and type each input.
 
 Each row is one thing plugged in: **Name**, **Category**, **Type**,

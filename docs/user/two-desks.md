@@ -109,8 +109,8 @@ Undo of touringband/journals/20260929T001832.164202Z-apply-S2203A1.json
 **Entries recorded before desks were recorded** name no desk. They are
 taken to be the connected desk's — the single-desk assumption was true
 when they were written, there is nothing recorded to hold them to, and
-refusing them would strand the only undo those runs have — and undo says
-so at INFO. Its per-address guard still applies. An offline `--state`
+refusing them would strand the only undo those runs have — and undo notes
+this at INFO. Its per-address guard still applies. An offline `--state`
 preview contacts no desk, so it previews the newest entry on the whole
 stack and says a confirmed run may pick a different one.
 
@@ -137,7 +137,7 @@ reason to stop, but a patch to a jack that is not there is.
 **Every socket the plan uses exists on this desk: it is applied.** The
 Compact and the Rack have the same local and aux I/O — 24 LCL in, 8 out,
 no AUX — so every socket a Compact plan can name is on a Rack. The run
-says so and carries on:
+notes this and carries on:
 
 ```bash
 atoo apply --show touringband --console 198.51.100.6
@@ -245,7 +245,7 @@ Console: WING,198.51.100.7,FOH-B,wing-compact,S2207B4,3.1-0-g9f314617:release
   ADDED            channel 'T.Sax' -> ch:23 (the rebuild asked for ch:22): new channel, placed on a free strip
   ...
 APPLIED: 66 address(es) evaluated, 39 written, 0 mismatch(es).
-plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and says so first.
+plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
 Untouched-strip proof: 867 unrelated address(es) read before and after, 0 changed.
 Journal: touringband/journals/20260928T211010.406626Z-amend-S2207B4.json (scope: ch:21, ch:22, ch:23)
 ```
@@ -260,8 +260,7 @@ it again — its apply's — while the primary's is still its amend's.
 [Undoing a change or an amend](undo.md#undoing-a-change-or-an-amend-leaves-planjson-alone)).
 
 **A desk this bundle has not written to yet** — a new spare, or a desk the
-show was put on by hand — is amended against `plan.json`, and amend says
-so:
+show was put on by hand — is amended against `plan.json`, and amend prints:
 
 ```
 Console: WING,198.51.100.11,SPARE,wing-compact,S2210C9,3.1-0-g9f314617:release
@@ -274,7 +273,7 @@ predates per-desk plans, and when `--state` means no desk was contacted.
 
 **And a warning when the plan does not look like this desk.** If the plan
 amend is comparing against claims strips as running that read empty on the
-desk — no name, nothing on the socket, factory patch — it says so. Here
+desk — no name, nothing on the socket, factory patch — it warns. Here
 the spare above has never had the show at all:
 
 ```

@@ -16,7 +16,7 @@ no desk, use the [Demo show](demo.md).
 2. Leave **Every** at `2` seconds, or raise it on a slow network.
 3. Press **Start watching**.
 
-With no console in the bar, **Start watching** is locked and says so:
+With no console in the bar, **Start watching** is locked, with the reason beside it:
 *Locked: no console. Choose one in the bar*. Set one there (or choose
 Demo) and it unlocks. Beside a chosen Demo, the header's state reads
 **Demo ready** until you press Start.
@@ -98,7 +98,7 @@ at the top of each. Here on the [Demo show](demo.md):
   condition (*Also CV017 Muted Against Plan*), and the Vox Verb bus is
   sometimes switched off to show CV015.
 - With no show open, or a plan that will not read, Watch has none of those
-  rules and says so once, in an INFO under **This watch**: *Plan: no plan, plan
+  rules, and an INFO under **This watch** reads: *Plan: no plan, plan
   checks off* (`W005`; [Watching without a plan](watch.md#watching-without-a-plan)).
 - Watch reads the output sockets the plan patches and the outputs of any
   AES50 stage box on the desk, so monitor busses patched to a stage box
@@ -184,7 +184,7 @@ A channel on its alternate input (`C004`) and the desk's global alternate
 switch (`C005`) are warnings, because a show never starts on them. During a
 virtual soundcheck they are the right setting, and warnings you learn to
 ignore are worse than none. The **Virtual soundcheck** switch in the header
-says so. Turn it on (it reads **On**, and a **Virtual soundcheck** tag
+is for this. Turn it on (it reads **On**, and a **Virtual soundcheck** tag
 appears beside the connection) and those two rules are shown as info, not
 warnings: every channel on its alternate is still named, each row says
 *Virtual soundcheck is on, so this is expected*, and **This watch** says
@@ -287,7 +287,7 @@ With a show open, **Edit sheets** in the header takes the page to Build's
 step 04 for that show: its Channels, Busses and Mains and Matrix tables are the
 show's `input.csv` and `busses.csv` ([Editing the
 sheets](capture.md#editing-the-sheets)). Watch keeps running while you edit,
-and step 04 says so at the top: *Watch is still running. It reads the sheets
+and step 04 shows this at the top: *Watch is still running. It reads the sheets
 on its next pass after Save; go back to Watch to see it.* **Back to Watch**
 beside it (or **Watch** in the header) returns to the running watch, its
 findings as they were.
@@ -320,7 +320,7 @@ Read busses.csv at 01:49:03 PM, after its Save at 01:48:52 PM in Build 04: 1 cha
 With no show open, the header offers **Make a show from this desk**. It is
 **New show… → From a desk** on the console in the bar, the one Watch is
 reading ([Capturing a desk](capture.md)). Watch keeps running,
-and once the show is written it says so under the header and takes the new
+and once the show is written, a line under the header confirms it, and Watch takes the new
 show's plan on its next pass: the *Watching without a plan* note goes, and
 a split the desk is built with, such as a reverb bus, is a note instead of a
 warning. A socket only the plan names is read once you stop and start.

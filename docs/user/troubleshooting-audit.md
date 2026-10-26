@@ -25,7 +25,7 @@ bay only when something on it is patched from or routed to that bay, so
 a desk that uses neither pays nothing for the check.
 
 A capture that was taken without the bay's reading cannot answer the
-question, and the audit says so instead of passing quietly. The line
+question, and the audit reports that instead of passing quietly. The line
 comes just above the socket summary:
 
 ```
@@ -61,7 +61,7 @@ switch (or `atoo watch --virtual-soundcheck`) shows `C004` and `C005` at
 info, still naming every channel, with *Virtual soundcheck is on, so this is
 expected* in the row. Turning it off makes any channel still on its alternate
 a warning again at once, which is the check you want before doors.
-`atoo audit` has no such switch: it reads the desk once, and says so.
+`atoo audit` has no such switch: it reads the desk once.
 
 `atoo apply` puts every strip it builds back on its main input, so
 after an apply this finding means somebody switched the strip since.
@@ -182,7 +182,7 @@ wanted. It is a warning, so `audit` exits `0`.
 It does not wait for the fader: a show built from your conventions
 starts every fader at the floor, and a strip with no source is as dead
 at the floor as it is at unity. It stays quiet for a strip on its
-alternate input (`C004` already says so) and for the talkback strip. With `--plan`, a patch the plan
+alternate input (`C004` already reports it) and for the talkback strip. With `--plan`, a patch the plan
 states is checked by `CV005`, so `C006` leaves that strip to it. A
 capture taken without the patch readings cannot answer, and the check
 says nothing then.
@@ -224,7 +224,7 @@ A WING reports the state of each AES50 port: nothing on it (`-`), linked
 (`UPD`). A stage box whose link has
 failed silences every input on it and every output to it at once, and nothing
 on a channel shows it: the patch is as you set it, the fader is up and the
-meter is flat. `C008` says so for a port that something depends on, and
+meter is flat. `C008` reports a port that something depends on, and
 `C009` for a stage box in error that nothing is patched to. `C010` says
 that the desk wants the stage box's firmware updated (`UPD`).
 
@@ -396,7 +396,7 @@ exits `0`, but the level is probably not what you meant. One finding per
 channel and per Main or Matrix, with the routes one hop at a time. Only a
 route that is switched on and above the floor counts: a send that is off, or
 pulled all the way down, is not a route. A **muted** bus, Main or channel on a
-route still is one: it is silent now, and the finding says so, because the
+route still is one: it is silent now, and the finding mentions it, because the
 copies add up the moment it is unmuted.
 
 **Two busses into one Main is how parallel compression is built** (a "Drums"
@@ -404,7 +404,7 @@ bus and a "Drums Comp" bus), so the check stands down when the plan asked for
 it. With `--plan` it is quiet for a channel and Main when the plan includes
 **every route** of the split: the channel's sends and Main routes, and the busses'
 own Main destinations. To ask for it, state the purpose of the parallel bus in your conventions or
-instructions and rebuild. When the plan includes every route, `R013` says so, so a rule that
+instructions and rebuild. When the plan includes every route, `R013` notes it at INFO, so a rule that
 went quiet is never silent about it:
 
 ```
@@ -432,13 +432,13 @@ busses, and the conventions never gave the channel a direct Main route that is
 also on), `R012` still speaks and names the routes the plan does not include,
 for example `the plan does not include the route CH 2 "Snare" to BUS 2 "Drums Comp"`. With no plan,
 nothing can have been asked for, so every split is reported except an effect
-send (below), and the finding says so: *Atoo has no plan it could read for this
+send (below), and the finding adds: *Atoo has no plan it could read for this
 show*. That is the message to expect if you ran `audit` without `--plan` or
-`--show`, or started Watch without opening the show (Watch also says so once, in an INFO,
+`--show`, or started Watch without opening the show (Watch also notes this once, in an INFO,
 `W005`): run it again with the
 show's plan. If you rebuilt the show while Watch was
-running, Watch is still using the plan it started with; it says so in an INFO
-(`W004`), and the fix is to stop and start Watch. To make a split go away once the plan is in hand: switch one
+running, Watch is still using the plan it started with, and an INFO
+(`W004`) tells you, and the fix is to stop and start Watch. To make a split go away once the plan is in hand: switch one
 route off on the desk, or state the purpose of the parallel bus in your
 conventions or instructions and rebuild. In Watch both rules run on every pass
 and need nothing extra from the desk.
@@ -450,7 +450,7 @@ routed to Main 1, reaches Main 1 directly and through that bus, but the bus
 carries the reverb's return, not the dry channel again. So with or without a
 plan, a route through a bus with a reverb, delay, chorus, flanger, phaser or
 pitch shifter inserted on it (and switched on) is read as an effect send and
-left out of the split. `R014` says so, at INFO, naming the effect it went on:
+left out of the split. `R014` notes it at INFO, naming the effect it went on:
 
 ```
 $ atoo audit --state verb.state.json
@@ -492,7 +492,7 @@ Physical sockets read: in none; out LCL 1-4.
 ```
 
 **`R011` is a warning.** A stereo bus into one speaker is a one-sided mix,
-the kind you notice at soundcheck, so the audit says so. It is a warning and
+the kind you notice at soundcheck, so the audit reports it. It is a warning and
 not an error, because the desk works and the show can go on, and `audit` exits
 `0`. If one speaker is what you meant (a stage wedge on a stereo bus, or a mono
 PA on Main left), set the bus **mono** on the desk, so the jack carries the
@@ -949,7 +949,7 @@ at a time. With `--per-leaf`, one request per address, about two minutes
 is normal.
 
 **No progress line at all** means you passed `--no-progress`, or the desk
-never answered, in which case stderr says so and
+never answered, in which case stderr reports it and
 [`atoo ping`](troubleshooting.md#atoo-cannot-reach-the-console)
 is the next step.
 
@@ -974,7 +974,7 @@ values one at a time, so nothing is lost but time.
 
 When three addresses of the same kind (`/fx/{n}/mdl`, say) go unanswered
 while the desk answers everything else, the read stops asking for the
-rest of that kind and says so in an `INFO: stopped asking for …` line.
+rest of that kind, with an `INFO: stopped asking for …` line.
 If that line names something your desk does have, such as a fader or a
 send level, the link is slow or lossy: run the read again, and report
 it in an issue.

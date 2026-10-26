@@ -71,8 +71,8 @@ mismatch. A late answer counts only if it names the same address,
 arrived after the write, and carries the value asked for, so a write the
 desk never accepted stays a mismatch.
 
-A verdict reached that way says so: `readback_source` is `"late_reply"`
-(the desk said so itself, late) or `"recheck"` (the re-read), and the
+A verdict reached that way is marked: `readback_source` is `"late_reply"`
+(the desk's own reply, late) or `"recheck"` (the re-read), and the
 summary's note counts them:
 
 ```

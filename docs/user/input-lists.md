@@ -52,7 +52,7 @@ it is what you check against the stage box, and `notes` last.
 If your conventions and instructions state **no** head-amp gain anywhere,
 a model sometimes still puts a mic's 20 dB on a row of type `Line` (a
 laptop, a playback feed) patched to a head amp, where it would clip the
-preamp. The build then gives that channel 0 dB and says so at INFO
+preamp. The build then gives that channel 0 dB, with an INFO
 (`reply.line-gain`):
 
 ```
@@ -201,7 +201,7 @@ channel,patch,name,category,type,model,phantom,dca,mute_group,notes
   or mute group.
 - **Two rows naming one strip** are refused, naming them, unless they are a
   stereo source's two rows (one strip). Where a stereo source's rows name
-  different strips, the first row's wins, and the report says so.
+  different strips, the first row's wins, and the report names both.
 - A blank cell leaves it to the conventions.
 
 [`atoo capture`](capture.md) writes them when it reads a desk you didn't
@@ -210,7 +210,7 @@ and its **Save** carries them into the plan as well
 ([Editing the sheets](capture.md#editing-the-sheets)). A cell changed
 anywhere else (a spreadsheet, a text editor) reaches the plan at the next
 build, or the next Save in step 04. Until then the plan does not follow it,
-and `atoo verify` says so, rather than let a cell that had no effect look
+and `atoo verify` warns, rather than let a cell that had no effect look
 honoured. On the show [capture](capture.md) made, with Kick moved to
 channel 3 in the sheet outside step 04:
 
@@ -378,7 +378,7 @@ order,socket,name,category,type,model,phantom,notes
 ```
 
 The plan was built before TRAX was skipped, so it still has a TRAX
-channel. `verify` says so as a warning (the desk would work, with a
+channel. `verify` gives a warning (the desk would work, with a
 strip nobody plugs into; the notes are left out here with `grep`):
 
 ```bash
@@ -425,7 +425,7 @@ Optional. A value names a preset in your
 [preset library](presets.md), matched as a name in your conventions is
 ([how forgiving that is](presets.md#naming-one-and-how-forgiving-the-match-is)),
 so `kick in` finds **Kick In**. Like a stated patch, **the list wins**
-over the conventions, and the build says so at INFO when it replaces a
+over the conventions, and the build notes it at INFO when it replaces a
 different preset. A name the library has not got is a `preset.unknown`
 warning, and the strip is built without it.
 

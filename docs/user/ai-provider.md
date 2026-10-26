@@ -74,7 +74,7 @@ the reads elsewhere.
 
 If a call's prefix is shorter than the model can cache (512 tokens on Sonnet
 5.5, 1,024 on Sonnet 5, 4,096 on Haiku 4.5; Anthropic's published minimums),
-nothing is cached and the line says so, for example
+nothing is cached, and the line shows why, for example
 `300 in (prefix ~300 tokens, below the 512-token minimum, not cached)`. If the
 prefix is long enough and the API still reports nothing written or read, the
 line says that too. The Setup page's Build log shows the same split beside each
@@ -140,7 +140,7 @@ written `null`, and read as not stated. Atoo still checks every reply
 against its full format, whatever the host held to.
 
 A host that does not know one of these fields answers 400 and names it.
-Atoo asks again **once per field, without it**, and says so:
+Atoo asks again **once per field, without it**, and prints:
 
 ```
 INFO the host at https://api.example.com refused `response_format` (Unknown field: response_format); asked again without it -- the reply is still checked against the full plan format here

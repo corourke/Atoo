@@ -105,7 +105,7 @@ leaves open, `capture` decides and says, at INFO, so you can correct it:
   effect return. A bus with a doubler or a compressor on it (a vocal bus)
   carries the dry signal too, so it stays blank.
 - **`tap`** is the pre or post most of a row's sources use; a source that
-  differs says so in `sources` (`Crowd (pre)`).
+  differs is marked in `sources` (`Crowd (pre)`).
 
 ## Effects
 
@@ -285,7 +285,7 @@ renames it in every row's sources too.
 bus names, an input-list category, `*` for every channel, and on a Matrix,
 Main names. `Kick (pre)` sets that one source's tap. Take a name out and
 its send comes out of the plan; add one and it goes in, post-fader if
-nothing says pre, and the Save's message says so.
+nothing says pre, and the Save's message tells you which.
 
 A cell that cannot work on the desk turns red, with the reason under its
 row, before you press Save: a socket the desk does not have
@@ -315,7 +315,7 @@ the desk has them, rather than setting unity and unmuted as it does for a
 built show. It also does not [reset the desk to initialized or unpatch
 the strips it does not hold](what-apply-changes.md), as a full apply of a
 built show does: it writes its own patch, routing, names, membership and
-widths, and nothing else. `atoo verify` says so
+widths, and nothing else. `atoo verify` reports this
 (`capture.mix-left-to-desk`).
 
 Its sends and its DCAs and mute groups are the whole list of them: a full
@@ -330,7 +330,7 @@ They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)
 own optional columns, so you can also write them by hand. A Save in step
 04 carries them into the plan, and a build places channels by them, so a
 filled cell wins over the conventions. Where a filled cell and the plan
-disagree (the sheet changed in a spreadsheet since), `atoo verify` says so
+disagree (the sheet changed in a spreadsheet since), `atoo verify` warns
 (`input-list.column-not-followed`), so a cell that had no effect never looks
 honoured. A captured show's plan agrees with its sheets.
 

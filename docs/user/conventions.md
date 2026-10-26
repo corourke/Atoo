@@ -141,7 +141,7 @@ way depends on whether the desk can work without it.
   show is *patched*, and a patch left to whatever the desk had may not
   work. So the build makes the reasonable choice — from your conventions
   first, then from what the bus is for and what things are called — and
-  says so in an [INFO note](reading-findings.md#info-a-choice-made-and-said)
+  tells you in an [INFO note](reading-findings.md#info-a-choice-made-and-said)
   naming what it chose and why.
 
 A **physical socket** is never decided that way: a socket is where a
@@ -172,7 +172,7 @@ The same principle, in the places it usually bites:
   only feeds a physical output (a monitor mix) is made pre-fader, and
   anything else post-fader — with an `inferred.send-mode` note naming the
   bus and the channels.
-- **Send level defaults to unity, and says so.** A send your conventions
+- **Send level defaults to unity, with a note.** A send your conventions
   list with no level is set to unity (0 dB), with an
   `inferred.send-level` note naming the bus and the channels. It is never
   left empty, because the desk would then keep its own send level, and
@@ -341,7 +341,7 @@ here, for that channel.
 When your conventions name presets by kind -- one for alto sax, one for
 baritone -- and the input list just says `Sax`, the build takes the
 most common kind (an alto, so A Sax) rather than leaving the strip with
-no preset, and says so in its notes, naming the other: call the row
+no preset, and its notes name the other: call the row
 `Baritone sax` for B Sax. A tom with no qualifier is read as a rack
 tom, a guitar as electric. `patch` makes the same choice
 ([patch.md](patch.md)). It is the model's choice from your wording, so

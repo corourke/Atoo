@@ -42,7 +42,7 @@ If Atoo is not installed yet, start at
 Two things carry over from show to show, so you set them once:
 
 - **Which model writes the plan**, in your shell environment. Claude is
-  the default, and with no API key `build` stops and says so. See
+  the default, and with no API key `build` stops and tells you. See
   [Setting up an AI provider](ai-provider.md); you can
   leave it until step 2.
 - **Your house conventions, your presets and your desk**, in
@@ -110,7 +110,7 @@ models do not have the same sockets — a Compact has 24 local inputs and
 no aux jacks, a full-size WING has 8 and does. You pass it once: `build`
 records it in the plan, and `verify` and `apply` read it back out. So does
 a rebuild: `atoo build --show DIR` on a show that has been built before
-takes the model from that show's `plan.json`, says so at `INFO`, and
+takes the model from that show's `plan.json`, notes it at `INFO`, and
 accepts `--console-model` to build for a different WING. A show with no
 plan yet is refused, and the refusal names the flag.
 

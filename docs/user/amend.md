@@ -129,7 +129,7 @@ Fifty-seven addresses for two new strips and a new DCA; 532 that a full
 
 - **A strip the rebuild tried to renumber.** If the same source has moved
   to a different strip number between the two plans, `amend` stops and
-  says so. Re-planning to make room is a deliberate, separate operation,
+  names the strip. Re-planning to make room is a deliberate, separate operation,
   never an automatic one.
 - **A channel with no free strip.** Named, and the run exits `2`.
 - **A strip that is already running and whose settings changed.**
@@ -333,7 +333,7 @@ S2203A1), the first run ends:
 
 ```
 APPLIED: 66 address(es) evaluated, 39 written, 0 mismatch(es).
-plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and says so first.
+plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
 Untouched-strip proof: 867 unrelated address(es) read before and after, 0 changed.
 Journal: touringband/journals/20260926T004554.758608Z-amend-S2203A1.json (scope: ch:21, ch:22, ch:23)
 ```

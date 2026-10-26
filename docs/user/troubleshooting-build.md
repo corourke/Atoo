@@ -23,7 +23,7 @@ export ANTHROPIC_API_KEY=...        # or ATOO_AI_API_KEY
 ```
 
 **No internet.** Easy to hit at the desk: a laptop cabled to the WING's
-network, with no uplink, cannot reach the model. The message says so
+network, with no uplink, cannot reach the model. The message explains this
 after the raw error. This one came from `patch`, which calls the same
 model; `build` prints the same words after `generation failed:`.
 
@@ -107,7 +107,7 @@ Stopped by you (Ctrl-C) after 18s. Nothing was written to the show; plan.json is
 ```
 
 The exit code is 130. A stop during the watch-conditions draft, after the plan
-was written, says so instead. The thinking summaries each call shows
+was written, reports that instead. The thinking summaries each call shows
 are kept in the build's log, which [`atoo lessons`](lessons.md)
 reads.
 

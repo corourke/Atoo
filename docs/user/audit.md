@@ -82,7 +82,7 @@ that quietly skipped them would look exactly like one that ran them and
 found nothing. See ["Socket counts, and when you need to say
 them"](#socket-counts-and-when-you-need-to-say-them) below.
 
-A clean desk says so and says nothing else:
+A clean desk prints one line and nothing else:
 
 ```
 No findings -- every rule in this audit passed.
@@ -143,7 +143,7 @@ The file is written as soon as the read finishes, before any rule runs.
 It records which stage box (an S16, say) is on each AES50 port, so a
 later `atoo patch --state` can refuse a socket past the box's size, as it
 does against the desk; a file saved before Atoo did this has none, and
-`patch` says so with a warning. It does not record which WING model it came
+`patch` gives a warning. It does not record which WING model it came
 from, so pass the `--plan` when you replay it: its console model is used. `--dump-state` saves a
 live read only, and is refused with `--state`.
 

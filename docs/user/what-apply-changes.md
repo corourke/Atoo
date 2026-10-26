@@ -53,7 +53,7 @@ The read takes a few seconds. A desk far from
 initialized can need a few thousand writes, at about 40 ms each.
 
 - **`--no-init`** skips the reset, for a desk you have initialized by
-  hand. The run says so at INFO.
+  hand. The run notes it at INFO.
 - **A desk whose model Atoo cannot tell** (or has no capture for) gets a
   WARNING, and the plan is written without the reset. Initialize it by
   hand first. A Compact, a full-size WING and a Rack each have a capture,
@@ -135,7 +135,7 @@ reaching it directly as well.
 
 A route that is on is written at unity, post-fader, as is a Matrix's
 feed: the conventions have no words for a route's own level or tap, and
-the report says so once.
+the report notes this once.
 
 ## Talkback: the assign follows the plan
 

@@ -100,7 +100,7 @@ So `out=$(atoo audit --state s.json)` followed by a test on whether
 `$out` is empty distinguishes the two, and `atoo ping` first
 separates "the desk is unreachable" from either. (Do not test stderr
 instead: a run that resolved its console from the environment or from
-`~/.atoo.config` says so there on a perfectly good run.)
+`~/.atoo.config` prints where it came from there, on a perfectly good run.)
 
 ### A rejected command line exits `2`, not `1`
 
@@ -200,7 +200,7 @@ while it reads the desk -- the reset's read, a preview, `audit`, `watch`,
 `patch`'s and `amend`'s reads -- so a read takes about requests x round
 trip / window instead of requests x round trip. It is at most 64. Writes, and the
 readback of each write, are always one at a time. `1` is the old
-one-at-a-time read, exactly; a run with any other value than `8` says so
+one-at-a-time read, exactly; a run with any other value than `8` prints it
 on stderr (`Using console window 1 from ATOO_CONSOLE_WINDOW`) -- and
 from the page, in the run's log on the Apply screen, or as a *Console
 window* note on Watch's *This watch* line. See
@@ -238,7 +238,7 @@ console and to none that do not.
 | `ATOO_AI_MAX_TOKENS` | claude | the model's output limit: `128000`, or `64000` on Haiku (thinking tokens count against it). A role on a model with a lower limit is sent that limit |
 | `ATOO_AI_THINKING_SUMMARIES` | claude | on -- `0` stops asking for the thinking summaries step 04 shows while the model thinks |
 | `ATOO_AI_STREAM` | api | on -- `0` asks the host for one reply instead of a stream (step 04 then has no live text) |
-| `ATOO_AI_PRICE_IN`, `ATOO_AI_PRICE_OUT` | api | unset = the usage line says `no price set`. Dollars per million input and output tokens; both or neither. They add the `-- $x.xx` a Claude call prints and the build log's cost. A host that reports its own cost (xAI's `cost_in_usd_ticks`) is believed instead, and the line says so |
+| `ATOO_AI_PRICE_IN`, `ATOO_AI_PRICE_OUT` | api | unset = the usage line says `no price set`. Dollars per million input and output tokens; both or neither. They add the `-- $x.xx` a Claude call prints and the build log's cost. A host that reports its own cost (xAI's `cost_in_usd_ticks`) is believed instead, and the line names it |
 | `ATOO_AI_PRICE_CACHED` | api | unset = cached input is priced as ordinary input. Dollars per million cached input tokens, used when the host reports them (`prompt_tokens_details.cached_tokens`) and the two prices above are set |
 | `ATOO_PROMPT_DIR` | generate, critic | the packaged `atoo/prompts` |
 | `ATOO_OSC_REPLY_MATCH` | apply, audit, watch, compare, ui | on -- set to `off` to disable reply matching |
@@ -288,8 +288,8 @@ reload rather than the rest of your setup time.
 
 The same operation covers a vocalist who has left and a set of delay speakers
 dropped from the rider. A channel the rebuild DROPPED is RETURNED TO FREE --
-unpatched (OFF, as a full apply leaves a strip the plan does not use; an INFO
-says so), left unmuted, its fader at -inf, and its name, colour and icon cleared on the strip
+unpatched (OFF, as a full apply leaves a strip the plan does not use, with an
+INFO), left unmuted, its fader at -inf, and its name, colour and icon cleared on the strip
 and on the source socket -- only where the desk still reads as the strip your
 plan built: a strip somebody has renamed, repatched or named on its SOURCE
 socket since is reported and left exactly as it is, and so is one that did not
@@ -332,7 +332,7 @@ readback mismatch, or an unrelated address that moved.
 | `--amended-plan` `FILE` | The rebuild: the same show, built again from the same conventions with the change in it (three horn rows added to input.csv, a line in instructions.md). `atoo build` produces it; amend works out what is new in it and writes only that. The same as `atoo patch --amended-plan`. |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan that is ALREADY on the desk. Normally left out: with --show, it is the plan the desk's own newest journal entry left on it, else the bundle's plan.json. |
-| `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--state` | A JSON object of address -> value (the same shape `audit --state` takes) -- work out the delta from that instead of a live console. Reviews the whole amendment offline; it can never write. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
@@ -434,7 +434,7 @@ already patched there.
 | `--input` | The input list the plan was built from. Optional, but without it the checks that need it are skipped: that every input became a channel, that no channel was invented, and that phantom power is safe for the microphones in use. |
 | `--presets` `DIR` | Atoo's own preset library: a directory of .chn channel-preset exports, looked up by the name inside the file. These are NOT the console's own presets or scenes -- those cannot be recalled remotely at all -- they are parameter values Atoo writes like any other. `build` expands each named preset INTO the plan (its processing values, the plan's own processing winning where both set one), and `apply` writes what the plan carries; verify and apply use the library only to say whether it changed since. A plan naming a preset this library hasn't got is a warning, never a block. Defaults to [presets] default in ~/.atoo.config. |
 | `--skip-verify` | Apply the plan without verifying it against the console's limits first. Verification runs before the console is contacted; skipping it means an impossible plan reaches real hardware. |
-| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 | `--confirm` | Actually write to the console. Without this, apply is a preview that changes nothing. |
@@ -501,7 +501,7 @@ running without --plan shows everything the rules produced.
 | Option | What it does |
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
-| `--console` | Console IP address -- read its live state and audit that. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address -- read its live state and audit that. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--state` | A JSON object of address -> value (an offline capture, or a hand-built demo -- try ~/Documents/Atoo/audit-demo/audit_demo_state.json, which `atoo init` copies) -- audit that instead of a live console. Lets a novice operator try this with no console attached at all. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
@@ -584,7 +584,7 @@ domain knowledge restated once as explicit rules, each citing the line it comes 
 with every open question marked "Decided:". When its fingerprint matches (the
 conventions, the domain knowledge and the resolve prompt are unchanged), the generator
 and the fix-up read it IN PLACE OF both. When it is missing or stale, the build makes
-it first -- one extra model call, role `resolve` -- and says so. The critic still reads
+it first -- one extra model call, role `resolve` -- and notes it. The critic still reads
 your raw conventions. --no-resolve (or ATOO_RESOLVE=0) turns this off; the plan
 records which it was at meta.resolved_conventions.
 
@@ -592,7 +592,7 @@ CATEGORY TABLE. The resolved file ends with a Category table: each category's co
 HPF, DCA, mute group, gain, trim, fader and Main routing, restating its prose. Code
 writes those values on every channel built from an input-list row of that category,
 wherever the generator's reply leaves them out -- a value the reply writes wins -- and
-says so, one note per category. A channel the instructions ask for (Talkback) gets
+notes it, one note per category. A channel the instructions ask for (Talkback) gets
 nothing from it. --no-category-rules (or ATOO_CATEGORY_RULES=0) turns it off.
 
 An HTML comment, <!-- like this -->, inline or across lines, is a note to yourself:
@@ -616,14 +616,14 @@ What it tells you goes to stderr, severity-labelled, worst first:
   WARNING  a default was applied, or a rule matched nothing
   NOTE     a choice made where your conventions were silent, or nothing to do;
            said out loud rather than hidden, and never blocks
-A finding that is a limitation of Atoo itself says so -- editing your
+A finding that is a limitation of Atoo itself tells you -- editing your
 conventions file will not fix it. The code in parentheses is
 stable across rewordings; quote it in a bug report.
 ```
 
 | Option | What it does |
 |---|---|
-| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. With --show, a show that has been built before takes the model from its own plan.json and says so; this flag overrides that. |
+| `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. With --show, a show that has been built before takes the model from its own plan.json, with an INFO; this flag overrides that. |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--input` | Input list CSV path -- one band/event/venue's physical inputs. Omit together with --conventions to auto-detect the pair in the current directory instead. |
 | `--conventions` | Your conventions file (Markdown) -- standing house style, reusable across every show, like the conventions.md `atoo init` copies in. Plain English; the model reads it directly. Defaults to ~/.atoo.config's [conventions] default. A show bundle's instructions.md layers over this, it does not replace it. |
@@ -680,7 +680,7 @@ New show... > From a desk does the same as this command.
 
 | Option | What it does |
 |---|---|
-| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--snap` `FILE` | Capture a .snap show file saved on the console instead of a live desk. Needs --console-model: a .snap does not say which WING wrote it. |
 | `--console-model` | Which WING the --snap came from. A live desk states its own model. |
 | `--dir` `DIR` | The folder to make the show in (default: your Atoo folder, ~/Documents/Atoo unless ~/.atoo.config's [workspace] says otherwise). |
@@ -739,7 +739,7 @@ your own to edit, build and apply to a desk (the one the UI opens is read-only).
 
 It never overwrites. A file already there is left alone and reported; a config
 value already set to something else is left alone, and the line says what init
-would have set. Run twice, the second run changes nothing and says so. --force
+would have set. Run twice, the second run changes nothing and reports that. --force
 replaces those config values, and starter files that are UNCHANGED copies of an
 older starter set (init records what it copied in .atoo-starter.json) --
 never a file you have edited. A demo-show folder already there is left whole,
@@ -791,7 +791,7 @@ instructions.md, once answered, so no future build has to work it out again.
 |---|---|
 | `--show` `DIR` | The show bundle to mine -- its current plan.json is always read. |
 | `--last` `N` | Only the N newest builds/ files (default: all of them -- builds/ keeps the newest 5, so at most 5 are ever read). |
-| `--git` `N` | Also read the last N committed versions of plan.json from git history, if the bundle is inside a git repository -- otherwise this says so and reads the current plan only. Useful for an older plan that still carries its build log inline. |
+| `--git` `N` | Also read the last N committed versions of plan.json from git history, if the bundle is inside a git repository -- otherwise this notes it and reads the current plan only. Useful for an older plan that still carries its build log inline. |
 | `--json` | Machine-readable output instead of the plain-text report. |
 
 ## `atoo patch`
@@ -895,13 +895,13 @@ holds. A name the desk does not hold either is REFUSED.
 | `--save-change-set` `FILE` | Also save the compiled change set (with the change's text) to FILE, for --change-set to write later. |
 | `--promote` `CHANGE` | Keep a change already written in the show for good: append its text to the bundle's instructions.md, under a dated 'Promoted changes' heading, and a row to input.csv for each input it added that the list does not have. CHANGE is its number (3, or 'change 3'), its short name, or its journal entry. Needs --show; no console or model. A preview unless --confirm. plan.json is not touched: rebuild to put the change in it. A change that was undone is refused. |
 | `--conventions` `FILE` | The house conventions to compile the change with. Default: the file the show on the desk was built from (recorded in its plan), else the [conventions] default in ~/.atoo.config. The bundle's instructions.md layers on top, as for a build. |
-| `--presets` `DIR` | The preset library the change's new channels and busses take their presets from (.chn channel presets, .bus bus presets), expanded into the change as a build expands them into a plan. Not needed as a rule: without it, the library the plan on the desk was built with (or the packaged starter presets, when its files match them), else [presets] default in ~/.atoo.config; an INFO says which. With none, a change that names presets says so up front, as a WARNING, and its new strips are written without those presets' values. |
+| `--presets` `DIR` | The preset library the change's new channels and busses take their presets from (.chn channel presets, .bus bus presets), expanded into the change as a build expands them into a plan. Not needed as a rule: without it, the library the plan on the desk was built with (or the packaged starter presets, when its files match them), else [presets] default in ~/.atoo.config; an INFO says which. With none, a change that names presets warns up front, as a WARNING, and its new strips are written without those presets' values. |
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |
 | `--no-constrain` | Do not constrain the model's reply to the change-set format (the same escape as `build --no-constrain`). The reply is still checked against it. The claude, ollama and api providers constrain decoding (the api provider sends it as `response_format`; ATOO_AI_STRUCTURED=0 also stops that). |
 | `--prompt-dir` `DIR` | Read change_compile.md from DIR instead of the packaged prompts (sets ATOO_PROMPT_DIR for this run). |
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
 | `--plan` | The plan that is ALREADY on the desk. Normally left out: with --show, it is the plan the desk's own newest journal entry left on it, else the bundle's plan.json, else an empty board. |
-| `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address -- read which strips are free from the live desk. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--state` | A JSON object of address -> value (the same shape `audit --state` takes) -- work out the delta from that instead of a live console. Reviews the whole change offline; it can never write. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
@@ -969,7 +969,7 @@ printed as the desk spelled it: that is the string to report.
 
 | Option | What it does |
 |---|---|
-| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 
@@ -1015,7 +1015,7 @@ exits 0 either way. Nothing is read from a console and nothing is written.
 each preset's processing values are put INTO the plan, keyed by the address each
 is written to, so the plan says exactly what `apply` will write. Where the plan
 states a value of its own at the same address (a high-pass, an EQ band), the
-plan wins, and says so. Processing only -- a preset never writes sends, main
+plan wins, with an INFO. Processing only -- a preset never writes sends, main
 routing, fader, mute, the input patch or tags. A bus preset also loads the
 effect it inserts into an FX engine, chosen by code (reverbs and delays on 1-8,
 the preset's own engine when it is free) and announced. Preset writes are read
@@ -1242,7 +1242,7 @@ a journal on the desk it was written to. The serial is the desk: the same serial
 at a new address is the same desk (said at INFO), and a different serial is
 refused even at the same address, naming both. There is no override. A desk that
 states no serial is matched by its address. An entry recorded before entries
-named their desk is taken to be this desk's, and undo says so.
+named their desk is taken to be this desk's, and undo notes it.
 
 An undo reverses OUR RUN and nothing else -- which is what a console snapshot
 cannot do. A snapshot puts the whole desk back to a moment, throwing away every
@@ -1277,7 +1277,7 @@ for the first time) has nothing to put back; it is named at INFO and exits 0.
 | Option | What it does |
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
-| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 | `--state` | A JSON object of address -> value (the same shape `atoo audit --state` takes) to preview the reversal against, instead of contacting a console. Preview only: a value read from a file says nothing about what the desk holds now, which is the whole question the 'still ours' guard asks, so --state can never be combined with --confirm. |
@@ -1335,7 +1335,7 @@ With --console it also listens to the console's meters (a read-only native conne
 port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,
 aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. A clip
 ends once the strip has been below -3 dBFS for 200 ms. If the connection cannot be had, or
-the meter data stops, it says so at INFO (W002) and carries on.
+the meter data stops, it notes it at INFO (W002) and carries on.
 
 A channel on its alternate input (C004) and the global alternate switch (C005) are
 warnings, since a show never starts on them. During a virtual soundcheck they are
@@ -1410,7 +1410,7 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 | Option | What it does |
 |---|---|
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. More: https://docs.atoo.app/build/show-bundles/ |
-| `--console` | Console IP address -- poll its live state and audit each read. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either says so on stderr. |
+| `--console` | Console IP address -- poll its live state and audit each read. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--state-sequence` | Comma-separated JSON state files, played in order and then repeated -- an offline demo of an operator making changes between polls, with no console attached. Try ~/Documents/Atoo/audit-demo/audit_demo_state_before.json and audit_demo_state.json, which `atoo init` copies. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |

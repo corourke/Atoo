@@ -131,8 +131,8 @@ empty. Atoo stops before writing anything.
 does not refuse the patch itself: it answers all 64 `CRD`/`MOD`
 addresses whether or not hardware is fitted, accepts the write, and
 reads it back unchanged. The strip shows a patch, the journal says
-`match`, and the channel is silent. Atoo stopping is the only point
-at which anything says so.
+`match`, and the channel is silent. Atoo stopping is the only sign
+that anything is wrong.
 
 Three things to check, in order:
 

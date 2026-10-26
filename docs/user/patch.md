@@ -142,9 +142,9 @@ without a flag, and the first INFO line says which one and why:
    presets somewhere else (the Demo show, or a copy of it in `/tmp`)
    finds the packaged starter presets by their contents;
 3. else `[presets] default` in `~/.atoo.config`. One that is not a
-   folder, or holds no presets, is passed over, and the INFO says so.
+   folder, or holds no presets, is passed over, with an INFO naming it.
 
-With none of them, a change that names presets says so first, before the
+With none of them, a change that names presets gives a warning first, before the
 review, as a `WARNING: no preset library was found ...` line naming
 them: the strips are still written and pass audio, without their
 presets' processing. Pass `--presets DIR` and preview again.
@@ -183,7 +183,7 @@ A change can also edit what is running; see
   the review says which.
 - **A channel you drop is dropped, even if the desk has changed.** *"Lose
   the MD vocal"* returns the strip to free whatever somebody has done to it
-  since the build — renamed or repatched. The review says so at `WARNING`:
+  since the build — renamed or repatched. The review gives a `WARNING`:
   what the strip holds now, and that it is not what the plan built. Undo
   puts it back. (A rebuild with `amend` that merely leaves a channel out
   never named it, so it still leaves a changed strip alone.)
@@ -196,7 +196,7 @@ A change can also edit what is running; see
   like any instruction you state. Nothing is written with a warning instead.
 - **A channel can be made stereo, or mono again.** *"Make ch 5 stereo"*
   puts a mono channel that is on an odd socket on that socket and the next
-  one, if nothing uses it, and says so at `INFO`; name the pair in the change
+  one, if nothing uses it, with an `INFO`; name the pair in the change
   to choose it yourself. What cannot be done is refused with the reason: a
   cable on an even socket cannot be one half of a pair where it is (a stereo
   pair on a WING starts on an odd socket), and a second socket another
@@ -223,7 +223,7 @@ A change can also edit what is running; see
   channel whose type is Line, patched to a head amp (a stage box's or a
   local input), takes 0 dB where the plan gave it more than 10 dB and
   **nothing states a gain**: not your conventions, not `instructions.md`,
-  not the Category table, not the change. An INFO says so: *a Line source
+  not the Category table, not the change. An INFO explains: *a Line source
   on A 16, a head amp, so its gain is 0 dB, not the 20 dB the plan had --
   that is a mic's gain, and a line-level feed with it would clip the
   preamp.* Where your conventions do state a gain, even a line about every
@@ -240,7 +240,7 @@ A change can also edit what is running; see
   past the box it is refused by the pre-flight, naming the box and its
   size; a socket the change leaves to Atoo ("add two choir mics") is
   chosen within the box, and if the model picked one the box lacks, the
-  next free socket is used instead and an INFO says so. A stereo
+  next free socket is used instead, with an INFO. A stereo
   channel needs two adjacent sockets; if the box has no free pair left, the
   next free `LCL` pair is used and the INFO says why (see [the pre-flight](amend.md#the-pre-flight-the-same-checks-as-apply)).
   A box Atoo has no size for is reported, and its sockets are not checked.
@@ -391,7 +391,7 @@ from the initialized capture of your console model.
   initialized Main or Matrix, and its socket reads as an initialized desk's;
   a Matrix is also taken off the Main or bus that fed it. Channels and
   buses that still route to a dropped Main are left as they are, and the
-  review says so: that is a routing you did not ask to change.
+  review lists them: that is a routing you did not ask to change.
 - **The number is free for a new one in the same change.** *"Make a Horns
   DCA on DCA 5"* puts it on DCA 5, the DCA the same change returns to free;
   a new DCA or mute group with no number named takes the lowest free one,
@@ -497,7 +497,7 @@ What an insert does and does not do:
   reads: raise it again. One that the plan states is written as stated.
 - **An insert, an edit and a drop can share a change.** An edit of a strip
   the insert moves is written with the move (the strip is rewritten whole on
-  its new number, and an INFO says so); a drop beside an insert is carried
+  its new number, with an INFO); a drop beside an insert is carried
   out, and a strip the dropped channel leaves that a moved channel lands on
   is written once, by the channel that lands.
 - **The input list is not edited.** `--promote` appends the new input at
@@ -536,7 +536,7 @@ the model:
   does not take one side of a stereo channel on its own, so *"48V on the
   keys"* sets `source.phantom` and the review marks both sockets under
   `SWITCHES 48V LIVE`. When the plan states a different value for the
-  second socket, the second follows and an INFO line says so. A change that would switch only
+  second socket, the second follows, with an INFO line. A change that would switch only
   the second socket (`source.pair_phantom` alone), or leave the two
   different, is refused, and the refusal names `source.phantom`; nothing is
   written. A pair the change does not touch the 48V of stays as it was

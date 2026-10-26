@@ -17,7 +17,7 @@ says what each part means and what to do about it.
 Your conventions will not say everything. When they are silent, the plan
 still has to decide, because a desk cannot be left half-set: a bus is
 mono or stereo, a Matrix has a number. Atoo makes the usual choice,
-and **says so** at INFO, with what it was decided from:
+and **tells you** at INFO, with what it was decided from:
 
 > busses[MON5, MON6, Drums, ...] (11 busses): width set to stereo -- the
 > conventions did not state it; decided by the generator: Instructions

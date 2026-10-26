@@ -234,7 +234,7 @@ it and Save. See
 **A file you already have is copied in, not pointed at.** In the UI,
 choosing an input list or an instructions file from outside the open
 bundle with a Build tile's **Change file** copies it into the bundle as
-its `input.csv` or `instructions.md`, and says so — *"Copied
+its `input.csv` or `instructions.md`, and reports it: *"Copied
 ~/lists/band.csv into festival/input.csv -- the bundle now owns its copy;
 edits to the original won't reach it."* A bundle that already has one is
 asked first (replace it, keeping the old one as `backups/input.csv.bak`; keep the
@@ -279,7 +279,7 @@ atoo build --console-model wing-compact --show my-show --conventions conventions
 ```
 
 The flag is for the first build. Once the show has a `plan.json`, `atoo
-build --show my-show` takes the model from it and says so.
+build --show my-show` takes the model from it, with an INFO.
 
 After that the directory is one draggable thing holding the whole show.
 The build also leaves its own log in `builds/` — one file per build,

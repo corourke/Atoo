@@ -199,7 +199,7 @@ older rows have no button, and a row written to another desk has only an
 2. Step 3 now reads **Arm and undo**. Tick **Arm**, then press the red
    **Undo newest write**, directly under the **Undo** heading. If some
    controls had changed since, the undo goes ahead for the rest and the
-   result, under the button, says so in yellow: **517 put back**, **1 was
+   result appears under the button, in yellow: **517 put back**, **1 was
    left as it is**.
 
 When the undo lands, step 2 goes back to the write's box by itself, and
@@ -214,8 +214,8 @@ locks again, when a write or an undo lands, or the console in the bar or
 the newest row changes: press **Preview undo again**.
 
 With no row to undo on this desk, **Preview undo** is locked on the
-empty History line, and **Locked: nothing has been written from this
-show** says so.
+empty History line, with **Locked: nothing has been written from this
+show** beside it.
 
 Undo puts back only the addresses that write changed, and only where
 nothing has written over them since. Undo again to step back one more.

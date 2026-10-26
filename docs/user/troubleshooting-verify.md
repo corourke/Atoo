@@ -39,7 +39,7 @@ warning or a note, and is applied.
 `patch` to `null` instead -- the state a build leaves when the
 conventions never say where the Matrix physically lands, or a Matrix
 used only inside the desk, as the phones or monitor source -- and verify
-says so at WARNING:
+gives a WARNING:
 
 ```
 $ atoo verify --show unpatched-show
@@ -224,7 +224,7 @@ Five other things to check:
    not guess: `Kick (In)` is a different name, and is reported rather
    than resolved to the thing it obviously means.
 3. **Are two files claiming the same name?** That is `preset.ambiguous`:
-   it uses the newest, names the ones it ignored, and says so out loud —
+   it uses the newest, and names the ones it ignored —
    picking silently is how the wrong one gets applied for a month.
 4. **Is the directory readable?** A library it cannot read is
    `preset.unreadable-library` rather than a silent empty one.

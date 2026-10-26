@@ -26,13 +26,13 @@ from a [show bundle](show-bundles.md). Without it, name the plan with
 `--plan` and, ideally, the input list with `--input`: several checks —
 that every input became a channel, that no channel was invented, that
 phantom power is safe for the mics in use — are skipped when `apply`
-cannot see the list the plan was built from, and it says so rather than
-passing silently.
+cannot see the list the plan was built from, and it reports that they
+were skipped rather than passing silently.
 
 The console address can come from `--console`, from `$ATOO_CONSOLE`,
 or from a `[console]` section in `~/.atoo.config`, in that order. A
-run that connects somewhere the command line never named says so on
-stderr.
+run that connects to an address the command line never named prints
+where it came from, on stderr.
 
 ## What happens, in order
 
