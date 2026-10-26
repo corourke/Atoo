@@ -1,9 +1,10 @@
 # Watch conditions: your own alerts
 
 The built-in rules know what a WING should look like; they do not know
-your show. A watch condition is a line you write about *this* rig — the
-Kick stays on LCL 5, the PA is never muted, the Band DCA stays up — and
-Watch checks it on every pass. Conditions are deterministic structured
+your show. A watch condition is a line you write about *this* rig saying
+**when to alert** — the Kick is not on LCL 5, the PA is muted, the Band DCA
+is pulled down — and Watch checks it on every pass. It alerts while it is
+true. Conditions are deterministic structured
 JSON, not prose and not a model: the runtime path has no AI in it at
 all. This page is the file format, used both by **Watch** in the browser
 and by `atoo watch`.
@@ -20,13 +21,14 @@ cd ~/Documents/Atoo/audit-demo
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "kick-on-lcl5",
-      "description": "Kick must stay patched to LCL 5",
+      "id": "kick-off-lcl5",
+      "description": "Kick is not on LCL 5",
       "channel": "Kick",
       "field": "patch",
-      "operator": "==",
+      "operator": "!=",
       "value": "LCL 5",
       "severity": "error"
     }
@@ -38,15 +40,15 @@ cd ~/Documents/Atoo/audit-demo
 atoo watch --state-sequence audit_demo_state.json --watch-conditions one.watch.json --count 1
 ```
 
-The fixture's Kick is on LCL 1, so the condition is violated and fires at
-the severity the file itself asked for:
+The fixture's Kick is on LCL 1, not LCL 5, so the condition is true and
+fires at the severity the file itself asked for:
 
 ```
-[2026-09-22T06:09:37+00:00] baseline -- 12 finding(s) already present:
+[2026-10-26T01:02:10+00:00] baseline -- 12 finding(s) already present:
 Audit findings: 1 error, 7 warning, 4 info.
 
-[ERROR] WATCH:kick-on-lcl5 Kick must stay patched to LCL 5
-  CH 1 "Kick" is patched to LCL 1 -- Kick must stay patched to LCL 5.
+[ERROR] WATCH:kick-off-lcl5 Kick is not on LCL 5
+  CH 1 "Kick" is patched to LCL 1 -- Kick is not on LCL 5.
 
 ... the 11 structural findings
 ```
@@ -56,19 +58,32 @@ structural findings plus your one, sorted by severity, so your condition
 leads.
 
 **The line says which strip, what it is, and your description** —
-`CH 1 "Kick" is patched to LCL 1 -- Kick must stay patched to LCL 5.` —
-and nothing else: not the condition's id, operator or value. So write the description as the rule you want kept, in your
-own words; it is the half of the sentence that says what should be true.
+`CH 1 "Kick" is patched to LCL 1 -- Kick is not on LCL 5.` — and nothing
+else: not the condition's id, operator or value. So write the description
+as what is wrong when it fires, in your own words.
 
-**A condition you wrote correctly about a rig that is set up correctly
-produces nothing at all.** That silence is the feature, and it is why
+**The file starts with `"version": 2`.** A condition used to state what
+should hold, and fire when it did not; a file written then means the
+opposite of what it says now, so Watch refuses one without the mark rather
+than misread it. The refusal names the file, says how each operator turns
+round, and ends with a command that converts the file in place:
+
+```
+my-show/watch.json: has no "version": 2, so it was written when a condition stated what should hold. A condition now states when to alert: it fires when it is true. Invert each condition: == and != swap, < becomes >=, >= becomes <, <= becomes >, > becomes <=; on dca and mute_group, == becomes "not in" and != becomes "in". Then add "version": 2 at the top. This does all of it to the file in place:
+  python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); n={'==':'!=','!=':'==','<':'>=','>=':'<','<=':'>','>':'<='}; g={'==':'not in','!=':'in'}; [c.update(operator=(g if c.get('field') in ('dca','mute_group') else n)[c['operator']]) for c in d['watch_conditions']]; d['version']=2; json.dump(d, open(p,'w'), indent=2)" my-show/watch.json
+```
+
+Paste that line, then reword the descriptions to say what is wrong: the
+command changes what each condition does, not what its description says.
+
+**A condition you wrote about a rig that is set up correctly produces
+nothing at all.** That silence is the feature, and it is why
 these are worth writing for the handful of things that would ruin a show
 rather than for everything you can think of.
 
 **In Watch, each condition has a small *i* beside its ID** that says the
 condition in plain English, for example *"Alerts as a warning when any DCA
-from 1 to 5 is muted."* A condition states what should be true, and the
-sentence says when the alert fires, so it reads the other way round.
+from 1 to 5 is muted."* It reads the same way round as the condition.
 It is made from the condition's cells (never from its description), covers
 every field, operator, range, name and bus, and says how the alert names
 the strip. A condition the file format would refuse has no sentence.
@@ -81,8 +96,8 @@ shows where it is.
 |---|---|---|
 | `fader_db` | a number | `==` `!=` `<` `<=` `>` `>=` |
 | `muted` | `true` / `false` | `==` `!=` |
-| `dca` | a DCA **name**, e.g. `"Drums"` | `==` `!=` |
-| `mute_group` | a mute-group **name** | `==` `!=` |
+| `dca` | a DCA **name**, e.g. `"Drums"` | `in` `not in` |
+| `mute_group` | a mute-group **name** | `in` `not in` |
 | `patch` | a socket, e.g. `"LCL 3"` | `==` `!=` |
 | `send_on` | `true` / `false`, with a `bus` | `==` `!=` |
 | `send_db` | a number, with a `bus` | `==` `!=` `<` `<=` `>` `>=` |
@@ -91,9 +106,12 @@ shows where it is.
 
 The last four are [sends and 48V](#sends-and-48v). Only the two levels,
 `fader_db` and `send_db`, have an ordering worth comparing, so only they
-take `<` and friends. The rest ask a yes/no question: **`==` asserts it holds,
-`!=` asserts it does not.** `"field": "dca", "operator": "!=", "value":
-"Drums"` fires when the channel *is* in the Drums DCA.
+take `<` and friends. `dca` and `mute_group` ask about membership in words:
+**`not in` alerts when the channel is not in the group, `in` when it is.**
+`"field": "dca", "operator": "not in", "value": "Drums"` fires when the
+channel is not in the Drums DCA. The rest take `==` and `!=`: `"field":
+"patch", "operator": "!=", "value": "LCL 5"` fires when the channel is
+patched anywhere but LCL 5.
 
 `severity` is one of `info`, `warning` or `error`, and it is yours to
 set — the condition fires at whatever level you said it mattered.
@@ -131,7 +149,13 @@ bad.watch.json: watch_conditions[0] ('kick-on-lcl99'): field 'patch' value 'LCL 
 Same for an operator the field cannot support:
 
 ```
-bad-op.watch.json: watch_conditions[0] ('kick-dca-gt'): field 'dca' asks a yes/no question and only supports ['!=', '=='] ('==' asserts it holds, '!=' asserts it does not), not '>'
+bad-op.watch.json: watch_conditions[0] ('kick-dca-gt'): field 'dca' takes 'in' or 'not in', not '>'
+```
+
+And the old spelling of membership, which meant the opposite:
+
+```
+old-dca.watch.json: watch_conditions[0] ('kick-in-drums'): field 'dca' takes 'in' or 'not in', not '==': a condition now says when to alert, so 'not in' alerts when the strip is not in the group and 'in' when it is. A file written before that meant '==' as 'not in'
 ```
 
 Both exit `1` without reading anything.
@@ -156,27 +180,28 @@ Case does not matter and the space is optional: `ch10`, `Ch 10` and
 as `CH 10`. `DCA 10-16` and `ALL AUX` are written that way too.
 
 A range or `ALL` condition is checked on **each strip it covers**, and
-each strip that breaks it is its own finding, citing the strip's
+each strip it is true of is its own finding, citing the strip's
 position and its name when it has one. Saved as `positions.watch.json`:
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "busses-trimmed",
-      "description": "Every bus stays at or below -5 dB",
+      "id": "busses-up",
+      "description": "A bus is above -5 dB",
       "channel": "ALL BUS",
       "field": "fader_db",
-      "operator": "<=",
+      "operator": ">",
       "value": -5,
       "severity": "warning"
     },
     {
-      "id": "drum-dca-up",
-      "description": "The drum DCAs are never pulled right down",
+      "id": "drum-dca-down",
+      "description": "A drum DCA is pulled right down",
       "channel": "DCA 1-4",
       "field": "fader_db",
-      "operator": ">",
+      "operator": "<=",
       "value": -60,
       "severity": "error"
     }
@@ -190,16 +215,16 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions positions.w
 
 The fixture has three busses at 0 dB and one DCA at the floor, so the
 baseline has four findings of yours among the structural ones. The three
-busses break the same condition in the same way, so they are one entry,
+busses make the same condition true in the same way, so they are one entry,
 with the count in brackets:
 
 ```
-[ERROR] WATCH:drum-dca-up The drum DCAs are never pulled right down
-  DCA 1 "Drums" has its fader at -144 dB -- The drum DCAs are never pulled right down.
+[ERROR] WATCH:drum-dca-down A drum DCA is pulled right down
+  DCA 1 "Drums" has its fader at -144 dB -- A drum DCA is pulled right down.
 
-[WARNING] WATCH:busses-trimmed Every bus stays at or below -5 dB (3)
+[WARNING] WATCH:busses-up A bus is above -5 dB (3)
   BUS 1 "Drums", BUS 2 "Monitor 1", BUS 3 "FX"
-  Each has its fader at 0 dB -- Every bus stays at or below -5 dB.
+  Each has its fader at 0 dB -- A bus is above -5 dB.
 ```
 
 DCAs 2 to 4 are not in the fixture at all, so they say nothing: a strip
@@ -226,7 +251,7 @@ Things to know:
   default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are
   refused.
 - **What is refused when the file loads** -- each is a condition no
-  console could satisfy: a malformed target (`CH`, `BUS -`, `DCA 3-`), a
+  console could ever make true: a malformed target (`CH`, `BUS -`, `DCA 3-`), a
   position the WING does not have (`CH 41`, `MAIN 5`, `DCA 17`), a
   backwards range (`DCA 16-10`), and a field the kind does not have.
 
@@ -282,32 +307,33 @@ Saved as `scoped.watch.json`:
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "drum-bus-trimmed",
-      "description": "The drum bus stays at or below -5 dB",
+      "id": "drum-bus-up",
+      "description": "The drum bus is above -5 dB",
       "channel": "BUS Drums",
       "field": "fader_db",
-      "operator": "<=",
+      "operator": ">",
       "value": -5,
       "severity": "warning"
     },
     {
-      "id": "drum-dca-up",
-      "description": "The drum DCA is never pulled right down",
+      "id": "drum-dca-down",
+      "description": "The drum DCA is pulled right down",
       "channel": "DCA Drums",
       "field": "fader_db",
-      "operator": ">",
+      "operator": "<=",
       "value": -60,
       "severity": "error"
     },
     {
-      "id": "horns-unmuted",
-      "description": "The horn bus is never muted",
+      "id": "horns-muted",
+      "description": "The horn bus is muted",
       "channel": "BUS Horns",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     }
   ]
@@ -323,19 +349,19 @@ only at strips of its own kind. It has no bus named Horns. Among the
 structural findings, the baseline has these lines of yours:
 
 ```
-[ERROR] WATCH:drum-dca-up The drum DCA is never pulled right down
-  DCA 1 "Drums" has its fader at -144 dB -- The drum DCA is never pulled right down.
+[ERROR] WATCH:drum-dca-down The drum DCA is pulled right down
+  DCA 1 "Drums" has its fader at -144 dB -- The drum DCA is pulled right down.
 
-[WARNING] WATCH:drum-bus-trimmed The drum bus stays at or below -5 dB
-  BUS 1 "Drums" has its fader at 0 dB -- The drum bus stays at or below -5 dB.
+[WARNING] WATCH:drum-bus-up The drum bus is above -5 dB
+  BUS 1 "Drums" has its fader at 0 dB -- The drum bus is above -5 dB.
 
-[WARNING] WATCH:horns-unmuted The horn bus is never muted
-  BUS Horns matches no BUS at Start -- none is named 'Horns' -- so the condition 'horns-unmuted' is not watched. It is tried again the next time Watch starts.
+[WARNING] WATCH:horns-muted The horn bus is muted
+  BUS Horns matches no BUS at Start -- none is named 'Horns' -- so the condition 'horns-muted' is not watched. It is tried again the next time Watch starts.
 
-[INFO] WATCH:drum-bus-trimmed The drum bus stays at or below -5 dB
+[INFO] WATCH:drum-bus-up The drum bus is above -5 dB
   BUS Drums resolved to BUS 1 at Start; a rename or move after Start is not followed until Watch restarts.
 
-[INFO] WATCH:drum-dca-up The drum DCA is never pulled right down
+[INFO] WATCH:drum-dca-down The drum DCA is pulled right down
   DCA Drums resolved to DCA 1 at Start; a rename or move after Start is not followed until Watch restarts.
 ```
 
@@ -367,9 +393,9 @@ Things to know:
 ## Sends and 48V
 
 Some rules are about one show's sends and its 48V, which the built-in rules
-cannot know: *the click stays on in every in-ear mix*, *Kick stays at or
-below -6 dB in the drummer's mix*, *48V stays on for the overheads*. Four
-fields say them.
+cannot know, written as when to alert: *the click is off in an in-ear mix*,
+*Kick is above -6 dB in the drummer's mix*, *48V is off for the overheads*.
+Four fields say them.
 
 | field | value | operators | about |
 |---|---|---|---|
@@ -401,35 +427,36 @@ Saved as `sends.watch.json`:
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "drums-mix-has-kick-and-snare",
-      "description": "Kick and Snare stay in the Drums mix",
+      "id": "kick-snare-out-of-drums-mix",
+      "description": "Kick or Snare is out of the Drums mix",
       "channel": "CH 1-2",
       "field": "send_on",
       "bus": "BUS Drums",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "error"
     },
     {
-      "id": "kick-level-in-drums",
-      "description": "Kick stays at or below -6 dB in the Drums mix",
+      "id": "kick-loud-in-drums",
+      "description": "Kick is above -6 dB in the Drums mix",
       "channel": "Kick",
       "field": "send_db",
       "bus": "BUS Drums",
-      "operator": "<=",
+      "operator": ">",
       "value": -6,
       "severity": "warning"
     },
     {
-      "id": "playback-out-of-drums",
-      "description": "Playback stays out of the Drums mix",
+      "id": "playback-in-drums",
+      "description": "Playback is in the Drums mix",
       "channel": "Playback",
       "field": "send_on",
       "bus": "Drums",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     }
   ]
@@ -444,25 +471,25 @@ Among the structural findings, the baseline has two lines of yours. Kick and
 Snare both have their send to Drums on, so the first condition says nothing:
 
 ```
-[ERROR] WATCH:playback-out-of-drums Playback stays out of the Drums mix
-  CH 7 "Playback" has its send to BUS 1 "Drums" switched on -- Playback stays out of the Drums mix.
+[ERROR] WATCH:playback-in-drums Playback is in the Drums mix
+  CH 7 "Playback" has its send to BUS 1 "Drums" switched on -- Playback is in the Drums mix.
 
 ...
-[WARNING] WATCH:kick-level-in-drums Kick stays at or below -6 dB in the Drums mix
-  CH 1 "Kick" has its send to BUS 1 "Drums" at 0 dB -- Kick stays at or below -6 dB in the Drums mix.
+[WARNING] WATCH:kick-loud-in-drums Kick is above -6 dB in the Drums mix
+  CH 1 "Kick" has its send to BUS 1 "Drums" at 0 dB -- Kick is above -6 dB in the Drums mix.
 ```
 
-**One finding per strip that breaks it.** A range on `channel` gives each
-strip its own finding, and a range on `bus` lists the busses that break the
-condition inside one finding (*has its sends to BUS 5 "IEM 1" and BUS 6 "IEM
+**One finding per strip it is true of.** A range on `channel` gives each
+strip its own finding, and a range on `bus` lists the busses that make it
+true inside one finding (*has its sends to BUS 5 "IEM 1" and BUS 6 "IEM
 2" switched off*). A send that was not read is skipped, so a strip with some
 of its sends unread is judged on the rest. `send_db` compares the level
-whether or not the send is switched on, so *stays on* and *stays above -10*
+whether or not the send is switched on, so *is off* and *is at or below -10*
 are two conditions.
 
 **`phantom` is the 48V on the socket the strip is patched to** and, for a
-stereo source, the socket after it: each must satisfy the condition, and the
-finding names the one that does not. It has nothing to say for a strip that
+stereo source, the socket after it: the condition fires when either makes it
+true, and the finding names that one. It has nothing to say for a strip that
 is not patched, one patched from a card, USB or another group with no
 48V, one on its alternate input, or one whose 48V was not read. Save this
 small capture as `condenser.state.json`:
@@ -480,23 +507,24 @@ and these conditions as `phantom.watch.json`:
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "overheads-48v",
-      "description": "48V stays on for the overheads",
+      "id": "overheads-48v-off",
+      "description": "48V is off for the overheads",
       "channel": "CH 1-2",
       "field": "phantom",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "error"
     },
     {
-      "id": "piano-no-48v",
-      "description": "The piano never gets 48V",
+      "id": "piano-48v",
+      "description": "The piano has 48V",
       "channel": "Piano",
       "field": "phantom",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     }
   ]
@@ -509,11 +537,11 @@ atoo watch --state-sequence condenser.state.json --watch-conditions phantom.watc
 
 ```
 ...
-[ERROR] WATCH:overheads-48v 48V stays on for the overheads
-  CH 2 "OH R" has 48V off at LCL 2 -- 48V stays on for the overheads.
+[ERROR] WATCH:overheads-48v-off 48V is off for the overheads
+  CH 2 "OH R" has 48V off at LCL 2 -- 48V is off for the overheads.
 
-[ERROR] WATCH:piano-no-48v The piano never gets 48V
-  CH 3 "Piano" has 48V on at LCL 3 -- The piano never gets 48V.
+[ERROR] WATCH:piano-48v The piano has 48V
+  CH 3 "Piano" has 48V on at LCL 3 -- The piano has 48V.
 ...
 ```
 
@@ -528,35 +556,36 @@ A handful of mistakes ruin a show, and the same handful turns up at most
 gigs. The [Demo show](demo.md)'s `watch.json` carries a set worth
 starting from. **A rule about a kind of strip is one condition on a
 range**, not one per strip: the report still names every strip that
-breaks it, by number and by its name on the desk.
+it is true of, by number and by its name on the desk.
 
 | Watch for | Condition | Severity |
 |---|---|---|
-| the PA muted | `MAIN 1`, `muted` `==` `false` | error |
-| the PA fader pulled down | `MAIN 1`, `fader_db` `>=` `-40` | error |
-| a monitor or in-ear mix muted | `BUS 1-4`, `muted` `==` `false` | error |
-| a mix or FX bus muted or at the floor | `BUS 5-7`: `muted` `==` `false`, and `fader_db` `>=` `-40` | error |
-| a DCA muted or pulled down | `DCA 1-5`: `muted` `==` `false`, and `fader_db` `>=` `-30` | error for the mute, warning for the fader |
-| the one channel the room hears | `Lead Vox`, `muted` `==` `false` | error |
-| the click in every in-ear mix | `Click`, `send_on` `==` `true`, `bus` `BUS 5-8` | error |
-| a monitor send kept pre-fader | `CH 1-8`, `send_mode` `==` `"pre"`, `bus` `BUS 1-4` | warning |
-| 48V on the condensers | `CH 5-6`, `phantom` `==` `true` | error |
+| the PA muted | `MAIN 1`, `muted` `==` `true` | error |
+| the PA fader pulled down | `MAIN 1`, `fader_db` `<` `-40` | error |
+| a monitor or in-ear mix muted | `BUS 1-4`, `muted` `==` `true` | error |
+| a mix or FX bus muted or at the floor | `BUS 5-7`: `muted` `==` `true`, and `fader_db` `<` `-40` | error |
+| a DCA muted or pulled down | `DCA 1-5`: `muted` `==` `true`, and `fader_db` `<` `-30` | error for the mute, warning for the fader |
+| the one channel the room hears, muted | `Lead Vox`, `muted` `==` `true` | error |
+| the click off in an in-ear mix | `Click`, `send_on` `==` `false`, `bus` `BUS 5-8` | error |
+| a monitor send that is not pre-fader | `CH 1-8`, `send_mode` `!=` `"pre"`, `bus` `BUS 1-4` | warning |
+| 48V off on the condensers | `CH 5-6`, `phantom` `==` `false` | error |
 
-Write each description as the rule and nothing more (*No DCA is muted.*):
-the report adds the strip and what was read, as in
-`DCA 2 "Band" has its fader at -144 dB -- No DCA fader is below -30 dB.`
+Write each description as what is wrong and nothing more (*A DCA is
+muted.*): the report adds the strip and what was read, as in
+`DCA 2 "Band" has its fader at -144 dB -- A DCA fader is below -30 dB.`
 
 Here is the start of a house set, as a file of your own,
 `house.watch.json`:
 
 ```json
 {
+  "version": 2,
   "watch_conditions": [
-    {"id": "pa-muted", "description": "The PA stays unmuted.", "channel": "MAIN 1", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "pa-fader-low", "description": "The PA fader stays above -40 dB.", "channel": "MAIN 1", "field": "fader_db", "operator": ">=", "value": -40, "severity": "error"},
-    {"id": "monitor-muted", "description": "No monitor bus is muted.", "channel": "BUS 1-2", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "dca-muted", "description": "No DCA is muted.", "channel": "DCA 1-8", "field": "muted", "operator": "==", "value": false, "severity": "error"},
-    {"id": "dca-fader-low", "description": "No DCA fader is below -30 dB.", "channel": "DCA 1-8", "field": "fader_db", "operator": ">=", "value": -30, "severity": "warning"}
+    {"id": "pa-muted", "description": "The PA is muted.", "channel": "MAIN 1", "field": "muted", "operator": "==", "value": true, "severity": "error"},
+    {"id": "pa-fader-low", "description": "The PA fader is below -40 dB.", "channel": "MAIN 1", "field": "fader_db", "operator": "<", "value": -40, "severity": "error"},
+    {"id": "monitor-muted", "description": "A monitor bus is muted.", "channel": "BUS 1-2", "field": "muted", "operator": "==", "value": true, "severity": "error"},
+    {"id": "dca-muted", "description": "A DCA is muted.", "channel": "DCA 1-8", "field": "muted", "operator": "==", "value": true, "severity": "error"},
+    {"id": "dca-fader-low", "description": "A DCA fader is below -30 dB.", "channel": "DCA 1-8", "field": "fader_db", "operator": "<", "value": -30, "severity": "warning"}
   ]
 }
 ```
@@ -569,8 +598,8 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions house.watch
 
 ```
 ...
-[WARNING] WATCH:dca-fader-low No DCA fader is below -30 dB.
-  DCA 1 "Drums" has its fader at -144 dB -- No DCA fader is below -30 dB.
+[WARNING] WATCH:dca-fader-low A DCA fader is below -30 dB.
+  DCA 1 "Drums" has its fader at -144 dB -- A DCA fader is below -30 dB.
 ...
 ```
 
@@ -589,7 +618,7 @@ none, so they did not run there:
   and audio still passes). No condition is needed for it.
 - **A channel that reaches no output** is `CV016`, with the plan.
   Without it, no built-in rule covers a channel that reaches nothing, so
-  write `muted` `==` `false` on the channel that matters.
+  write `muted` `==` `true` on the channel that matters.
 - **A send switched off or flipped to post-fader, a Main route that is
   wrong, or a send or route that is on and not in the plan** are `CV006`,
   `CV007` and `CV018`, with the plan. They cover the plan's sends and Main

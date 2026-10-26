@@ -1359,21 +1359,24 @@ sockets are read too. With or without a plan, so are the outputs of any AES50
 stage box, and of any module or card, the desk reports.
 
 --watch-conditions PATH adds operator-authored alerts on top of the built-in
-structural rules -- deterministic, structured, no AI in the runtime path. A JSON file of:
+structural rules -- deterministic, structured, no AI in the runtime path. Each
+condition says when to alert: it fires while it is true. A JSON file of:
 
-  { "watch_conditions": [
-      { "id": "crowd-mic-never-muted",
-        "description": "Crowd Mic must never be muted",
+  { "version": 2, "watch_conditions": [
+      { "id": "crowd-mic-muted",
+        "description": "Crowd Mic is muted",
         "channel": "Crowd Mic", "field": "muted", "operator": "==",
-        "value": false, "severity": "error" } ] }
+        "value": true, "severity": "error" } ] }
 
   atoo watch --console 203.0.113.50 --watch-conditions my_show.watch.json
 
-Fields: "muted" (bool), "fader_db" (number), and -- asking a yes/no question, so "=="
-asserts it holds and "!=" asserts it does not -- "dca" and "mute_group" (a group NAME,
-e.g. "Drums") and "patch" (a socket written the way an input list's patch column
-writes one -- "AES50-A 12", "LCL 3", "AES 1", "CRD 64"). Those three take "=="/"!="
-only. Note "AES 1" (AES/EBU) and "AES50-A 1" are different sockets.
+Fields: "muted" (bool), "fader_db" (number), "dca" and "mute_group" (a group NAME,
+e.g. "Drums"; "not in" alerts when the strip is not in it, "in" when it is) and
+"patch" (a socket written the way an input list's patch column writes one --
+"AES50-A 12", "LCL 3", "AES 1", "CRD 64"; "!=" alerts when it is patched anywhere
+else, "==" when it is patched there). Note "AES 1" (AES/EBU) and "AES50-A 1" are
+different sockets. A file without "version": 2 was written when a condition said
+what should hold, and is refused with how to convert it.
 
 Sends and 48V: "send_on" (bool), "send_db" (number) and "send_mode" ("pre", "post" or
 "group") are about the channel's send to the bus a "bus" key names -- written like
@@ -1381,8 +1384,8 @@ Sends and 48V: "send_on" (bool), "send_db" (number) and "send_mode" ("pre", "pos
 "phantom" (bool) is the 48V on the socket the strip is patched to (and the next, for
 a stereo source).
 
-  { "id": "kick-stays-in-drums", "description": "Kick must stay in the Drums DCA",
-    "channel": "Kick", "field": "dca", "operator": "==", "value": "Drums",
+  { "id": "kick-out-of-drums", "description": "Kick is not in the Drums DCA",
+    "channel": "Kick", "field": "dca", "operator": "not in", "value": "Drums",
     "severity": "warning" }
 
 "channel" is a channel's or aux's name, matched case-insensitively; a name matching zero

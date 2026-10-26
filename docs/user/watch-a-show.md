@@ -335,26 +335,31 @@ line under the table to open it.
 
 Each row is one check on one channel, bus or DCA:
 
-| Channel | Field | Operator | Value | Severity |
+| Channel | Alert when | Operator | Value | Severity |
 |---|---|---|---|---|
-| `Lead Vox` | `muted` | `==` | `false` | error |
-| `Playback` | `fader_db` | `>` | `-60` | warning |
-| `DCA Band` | `fader_db` | `>=` | `-20` | warning |
-| `MAIN PA` | `muted` | `==` | `false` | error |
+| `Lead Vox` | `muted` | `==` | `true` | error |
+| `Playback` | `fader_db` | `<=` | `-60` | warning |
+| `DCA Band` | `fader_db` | `<` | `-20` | warning |
+| `MAIN PA` | `muted` | `==` | `true` | error |
 
-**Field** is one of `muted`, `fader_db`, `dca`, `mute_group`, `patch`,
+A row says **when to alert**: it fires while it is true. **Alert when** is
+the field, one of `muted`, `fader_db`, `dca`, `mute_group`, `patch`,
 `send_on`, `send_db`, `send_mode` or `phantom`. The three `send_` fields
 are about a channel's send to a bus, and show a **Bus** box under the
-Field (*to bus: BUS 5-8, or a name*): write the bus the way you write a
+field cell (*to bus: BUS 5-8, or a name*): write the bus the way you write a
 channel, and it is rewritten to its one spelling when you leave the box
 ([Sends and 48V](watch-conditions.md#sends-and-48v)).
-Give each row an **ID** and a **Description**: the description is what
-the table shows when it fires, so write the reason, *"Playback carries
-the backing tracks."*
+`dca` and `mute_group` take **not in** or **in** (*not in* alerts when the
+channel is not in the group); the levels take every comparison, and the
+rest `==` and `!=`. Give each row an **ID** and a **Description**: the
+description is what the table shows when it fires, so write what is wrong,
+*"Playback is pulled down."* A `watch.json` written before conditions said when to
+alert has no `"version": 2`, and the panel refuses it with a command that
+converts it ([The file starts with "version": 2](watch-conditions.md#watch-conditions-your-own-alerts)).
 
 **The small *i* beside each ID says what the row does, in plain
 English.** Hover it, press it, or tab to it and press Enter; Escape closes
-it. A row that is `fader_db >= -40` on `CH 1` reads *"Alerts as an error
+it. A row that is `fader_db < -40` on `CH 1` reads *"Alerts as an error
 when CH 1 has its fader below -40 dB."* and then says how the alert will
 name the strip: by its number and its console name, such as `CH 1
 "Kick"`. The sentence is written from the row's own cells, not from your

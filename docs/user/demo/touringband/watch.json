@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "watch_conditions": [
     {
       "id": "Kick",
@@ -6,65 +7,65 @@
       "channel": "Kick",
       "field": "muted",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "warning"
     },
     {
-      "id": "vocals-unmuted",
-      "description": "No vocal channel is muted.",
+      "id": "vocals-muted",
+      "description": "A vocal channel is muted.",
       "channel": "CH 13-18",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error",
       "source": "drafted"
     },
     {
       "id": "main-fader-floor",
-      "description": "Main stays at or above -10 dB.",
+      "description": "Main is below -10 dB.",
       "channel": "Main",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -10,
       "severity": "error",
       "source": "drafted"
     },
     {
       "id": "vocals-bus-upper",
-      "description": "The Vocals bus fader stays at or below +5 dB.",
+      "description": "The Vocals bus fader is above +5 dB.",
       "channel": "Vocals",
       "field": "fader_db",
-      "operator": "<=",
+      "operator": ">",
       "value": 5,
       "severity": "warning",
       "source": "drafted"
     },
     {
       "id": "vocals-bus-lower",
-      "description": "The Vocals bus fader stays at or above -5 dB.",
+      "description": "The Vocals bus fader is below -5 dB.",
       "channel": "Vocals",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -5,
       "severity": "warning",
       "source": "drafted"
     },
     {
       "id": "drums-bus-upper",
-      "description": "The Drums bus fader stays at or below +5 dB.",
+      "description": "The Drums bus fader is above +5 dB.",
       "channel": "Drums",
       "field": "fader_db",
-      "operator": "<=",
+      "operator": ">",
       "value": 5,
       "severity": "warning",
       "source": "drafted"
     },
     {
       "id": "monitor-bus-soundcheck",
-      "description": "MON1 stays at the floor until soundcheck.",
+      "description": "MON1 is up before soundcheck.",
       "channel": "MON1",
       "field": "fader_db",
-      "operator": "==",
+      "operator": "!=",
       "value": -144,
       "severity": "warning",
       "source": "drafted"
@@ -76,6 +77,6 @@
     "monitor-bus-soundcheck",
     "vocals-bus-lower",
     "vocals-bus-upper",
-    "vocals-unmuted"
+    "vocals-muted"
   ]
 }
