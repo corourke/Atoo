@@ -218,7 +218,11 @@ disagree (the sheet changed in a spreadsheet since), `atoo verify` says so
 (`input-list.column-not-followed`), so a cell that had no effect never looks
 honoured. A captured show's plan agrees with its sheets.
 
-A build reads `busses.csv` too. Rebuild a captured show from your
+A build reads `busses.csv` too. On a captured show, **Build plan** asks
+first: *This plan was read from the desk. Build plan replaces it with a new
+plan from your conventions, using a model; your sheet edits still win.*
+**Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a
+captured show from your
 conventions and the bus sheet still wins wherever it has a filled cell: the
 names, roles, widths, sources and outputs it gives are laid onto the new
 plan, each change a note in the build's report (in **Findings**, under
