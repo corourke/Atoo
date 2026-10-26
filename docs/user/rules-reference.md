@@ -533,4 +533,4 @@ The show's plan changed after Watch started (a rebuild or an apply), and Watch i
 
 **Info** · Watch only
 
-Watch has no plan, or could not read the one it was given. It names the checks that run without the plan, and the plan comparisons that do not run at all. Start Watch with the show (`atoo watch --show DIR`) to judge the desk against it.
+Watch has no plan, or could not read the one it was given, so the checks listed under Compared with the plan are off, and a few others may warn about something the plan asked for. Start Watch with the show (`atoo watch --show DIR`) to judge the desk against it.

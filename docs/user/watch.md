@@ -206,8 +206,10 @@ atoo watch --console 192.0.2.16
 
 ```
 [INFO] W005 Watching without a plan
-  Watching without a plan: no show's plan was given. These run without it, so they can warn about what the plan would have allowed (a parallel bus it asks for, a strip it puts at the floor): L002 Active Strip Fader At Floor, R008 Strip Reaches Nothing, ... R012 Signal Splits And Recombines, R013 Signal Split Asked For. These are not run at all: CV015 Effect Insert Contradicts Plan, CV016 Planned Routes All Off, ... Stop Watch and start it with the show's plan (atoo watch --show DIR; on the Watch page, open the show first).
+  No show's plan was given, so the 11 checks that compare the desk with the plan are off, and 7 others may warn about something the plan asked for. Start Watch with the show: atoo watch --show DIR, or open the show on the Watch page.
 ```
+
+The checks that are off are the ones under [Compared with the plan](rules-reference.md#compared-with-the-plan) in the Rules reference.
 
 That is what you get from `atoo watch` without `--show`, and from the Watch page
 with no show open. For a desk you didn't build and won't rebuild,
