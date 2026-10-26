@@ -345,4 +345,5 @@ be something you can mistake for a clean desk.
 - [Watching from the command line](watch.md) — the same rules on a loop
 - [Troubleshooting](troubleshooting.md) — when it cannot reach the console
 - [Reading findings](reading-findings.md#codes) — what a finding's code tells you
+- [Rules reference](rules-reference.md) — every rule, what it checks and whether it needs the plan
 - [Command reference](cli-reference.md) — every flag, generated from the code

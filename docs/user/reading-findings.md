@@ -75,7 +75,7 @@ says which check found it:
 | `critic.` | the critic pass, a second model call that checks the plan against your conventions |
 | `patch.`, `strip.`, `group.` and others | verify: the plan against the desk's limits and your input list |
 | `apply.` | the Apply pre-flight and the apply run |
-| a letter code and three digits, such as `R005` or `CV016` | the checks `audit` and Watch run on the desk itself |
+| a letter code and three digits, such as `R005` or `CV016` | the checks `audit` and Watch run on the desk itself; the [Rules reference](rules-reference.md) lists every one |
 | `WATCH:` | one of your own watch conditions |
 
 A critic finding starts with a short claim, such as *Keys bus created,

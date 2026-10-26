@@ -994,3 +994,4 @@ Ways out, in this order:
 - [Checking a desk](audit.md) — `atoo audit`
 - [Watching from the command line](watch.md) — `atoo watch`
 - [Reading findings](reading-findings.md#codes) — what a finding's code tells you
+- [Rules reference](rules-reference.md) — every rule `audit` and Watch can report

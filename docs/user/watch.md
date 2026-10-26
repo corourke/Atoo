@@ -407,4 +407,5 @@ running, and there is no background service or state kept between runs.
 - [Watch conditions](watch-conditions.md) — your own alerts, and the file format
 - [Checking a desk](audit.md) — one read, the rules, `--plan`
 - [Show bundles](show-bundles.md) — where `watch.json` lives
+- [Rules reference](rules-reference.md) — every rule Watch can report
 - [Command reference](cli-reference.md) — every flag, generated from the code

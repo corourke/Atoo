@@ -70,5 +70,6 @@ In this order, the first time:
 | [Checking a desk](audit.md) | `audit`: one read, signal tracing, and checking a desk against its plan |
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
+| [Rules reference](rules-reference.md) | every rule `audit` and Watch can report (generated from the code) |
 | [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
 
