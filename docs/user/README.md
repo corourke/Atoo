@@ -16,7 +16,7 @@ In this order, the first time:
 | [Why Atoo?](why.md) | Whether Atoo is worth your time against what you already do |
 | [Installing Atoo](install.md) | Install on a Mac or Linux with `uv`, step by step, then `atoo init` and `atoo ui`; Homebrew and pipx, and Windows, too |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
-| [Testing on your desk](testing-on-your-desk.md) | On your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and undo |
+| [Connect to your desk and try the CLI](testing-on-your-desk.md) | On your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and undo |
 | [Configuring Atoo](configuration.md) | The config file and environment variables |
 | [Setting up an AI provider](ai-provider.md) | The model that writes your plans, and its API key |
 | [Change the Demo show](change-the-demo.md) | Your first build, on a copy of the Demo, then a patch onto the desk |
@@ -71,5 +71,6 @@ In this order, the first time:
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
 | [Rules reference](rules-reference.md) | every rule `audit` and Watch can report (generated from the code) |
+| [Reporting a problem](reporting.md) | what to send when something is wrong, and which files help |
 | [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
 

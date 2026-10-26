@@ -117,5 +117,5 @@ input list.
 ## Found something wrong?
 
 Open an issue on the repository with what you ran, what you expected,
-and what you saw. For a desk of your own, [Testing on your
-desk](testing-on-your-desk.md#4-report) says what to send.
+and what you saw. [Reporting a problem](reporting.md) says what to send,
+and which files help.

@@ -520,9 +520,10 @@ A plan states those slots in a top-level `user_sources` section, and
 `verify` checks them — including the odd-first rule, which is not
 bypassed anywhere.
 
-**`apply` does not write them yet.** For now the `USR` slots are set up
-on the console by hand, and `verify` says so once per plan rather than
-letting a section it ignores look like one it honoured.
+`apply` writes each slot (what it takes, and its name) before the
+channel that patches it, and sets both slots of a stereo pair to stereo;
+Undo puts them back. How a slot set this way sounds at the strip has not
+yet been checked on a desk.
 
 ## Checking a list before the desk exists
 

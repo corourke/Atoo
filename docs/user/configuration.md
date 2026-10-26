@@ -140,7 +140,7 @@ to give it, and the first one found wins:
 3. `[console]` in `~/.atoo.config`, for the desk you always use.
 
 A command that was not given `--console` says which address it used, and
-where it came from ([Testing on your desk](testing-on-your-desk.md#1-before-you-start-10-minutes)).
+where it came from ([Connect to your desk and try the CLI](testing-on-your-desk.md#1-before-you-start)).
 Read that line before a write.
 
 ---

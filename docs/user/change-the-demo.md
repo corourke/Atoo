@@ -6,8 +6,8 @@ change a file and rebuild the plan; once it is set, patch the change on
 and move nothing else. This page does both, on a copy of the Demo show.
 
 **You need:** a model set up ([Setting up an AI provider](ai-provider.md))
-for steps 4 and 6, and for steps 5 to 7 the desk you tried in [Testing
-on your desk](testing-on-your-desk.md), **not doing a show**, with its
+for steps 4 and 6, and for steps 5 to 7 the desk you connected to in [Connect
+to your desk and try the CLI](testing-on-your-desk.md), **not doing a show**, with its
 own show saved.
 
 ## 1. Make a copy of the Demo show

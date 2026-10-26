@@ -1,31 +1,24 @@
-# Testing on your desk
+# Connect to your desk and try the CLI
 
-Atoo works with the WING Compact, the full-size WING and the WING
-Rack. This page takes your own desk, with its own stage boxes and
-firmware, through four steps, each safer than the next, and you can
-stop after any of them. If something looks wrong, a report is what
-fixes it: a report from step 2 is worth sending.
+This page walks you through an initial connection to your desk, and gives you a brief tour of the Atoo command line interface (CLI). You will go through four steps, each one doing a little
+more than the last: connect, read, write and undo. You can stop after any step.
 
-Do [Try the Demo show](demo.md) first: it is the same screens with no
-desk. Then you need a laptop on the same network as the desk. The
-examples use `192.0.2.16` for the desk: type your own.
+[Try the Demo show](demo.md) first: it is the same screens, with no
+desk. You need a laptop on the same network as the desk. The examples use
+`192.0.2.16` as the desk's address; use your own desk's IP address.
 
-**Testing a branch from a clone?** Before anything else, run
-`atoo --version`: its first line must name your clone's folder and the
-branch you checked out, not an `installed copy` (the install from [Installing
-Atoo](install.md), which never follows a branch). [Which atoo am I
-running?](install-from-checkout.md#4-which-atoo-am-i-running)
+If you are testing a branch from a clone, first check [which atoo you
+are running](install-from-checkout.md#4-which-atoo-am-i-running).
 
-## 1. Before you start (10 minutes)
+## 1. Before you start
 
-1. **Find the desk's address.** On the desk, it is in the network
-   settings under **Setup**. If the desk is not in front of you,
-   WING-EDIT on a laptop on the same network shows the address of each
-   desk it finds.
-2. **Save the show that is on the desk**: **Library**, **Snap**,
-   **Save**; set **Scope** to **All**; **Save**. This is your way back
-   if everything else fails.
-3. **Ping it.** It sends one message, and writes nothing:
+1. **Find the desk's address.** On the desk, it is in **Setup**, under
+   the network settings. If you are not at the desk, WING-EDIT on a
+   laptop on the same network shows the address of each desk it finds.
+2. **Save the show that is on the desk.** Press **Library**, then
+   **Snap**, then **Save**; set **Scope** to **All** and press **Save**.
+   This is your way back if anything goes wrong.
+3. **Ping it.** This sends one message and writes nothing:
 
    ```bash
    a2 ping --console 192.0.2.16
@@ -36,182 +29,115 @@ running?](install-from-checkout.md#4-which-atoo-am-i-running)
    Detected model: WING Compact (wing-compact)
    ```
 
-   `a2` is Atoo's short spelling: `a2 ping` and `atoo ping` are the
-   same command. Keep both lines for the report (blank out the serial if
-   you like). `Detected model: not recognised` is a finding in itself.
+   Keep both lines in case you [report a problem](reporting.md); blank
+   out the serial number if you like. (`a2` is the short spelling of
+   `atoo`; use whichever you prefer.)
 
-   If nothing answers, Atoo says so:
+   If nothing answers, you'll see:
 
    ```
    no reply from 192.0.2.16:2223 -- is the console reachable, and is its OSC remote enabled?
    ```
 
-   See [Troubleshooting: the desk](troubleshooting-desk.md).
+   [Troubleshooting: the desk](troubleshooting-desk.md) covers what to
+   check.
 
-**You do not have to retype the address.** Set it for this terminal
-with `export ATOO_CONSOLE=192.0.2.16`, or for good in
-`~/.atoo.config` ([Configuring Atoo](configuration.md#the-console)). A
-command that was not given `--console` says where it got one:
+To avoid typing the IP address every time, save it once: see [Configuring
+Atoo](configuration.md#the-console).
 
-```
-Using console 192.0.2.16 from ATOO_CONSOLE
-```
+## 2. Read-only on your desk
 
-Read that line. It is there so that an address left over from last
-week's desk cannot quietly aim a write at the wrong one.
+Neither of these exercises writes anything to the desk.
 
-## 2. Read-only on your desk (15 minutes)
+1. **Audit the desk.**
 
-These two never write. They are safe on a desk that is doing a show,
-though the first time is better done on one that is not.
-
-1. **Audit**. It reads the whole desk and checks it against built-in
-   rules (a 48V socket nothing is patched to, a DCA at the floor with
-   live members, two strips with one name). `--dump-state` keeps what it
-   read:
+   It reads the whole desk and checks it against
+   the built-in rules, such as 48V on a socket nothing is patched to, a
+   DCA at the floor with live channels in it, or two strips with the
+   same name. `--dump-state` saves what it read to a file:
 
    ```bash
    atoo audit --console 192.0.2.16 --dump-state my-desk.state.json
    ```
 
-   Check each finding against the desk. A finding that is wrong about
-   your desk is the most useful thing you can send.
+   Check each finding against the desk.
 
-2. **Watch**, for a few minutes. In `atoo ui`, choose your desk
-   next to **Console** (**Change…**, **Address**), then **Watch**,
-   **Start watching** ([Watch the desk during a show](watch-a-show.md)).
-   Pull a DCA that has channels in it to the floor: a row appears, and
-   clears when you push it back up.
-   Clip detection needs the laptop on the desk's own network; through a
-   VPN or router it reports *Clip detection: off* and the rest of Watch
-   still works.
-   From the command line, three readings:
+2. **Watch it for a few minutes.**
+
+   Run `atoo watch` from the command line. This command takes three readings:
 
    ```bash
    atoo watch --console 192.0.2.16 --count 3
    ```
 
-To see what an audit prints before you go near a desk, a saved reading
-stands in for one (`atoo init` copies one into your Atoo folder):
+Every rule that `watch` can report is in the [Rules reference](rules-reference.md).
 
-```
-atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json
-```
+## 3. Write a show plan, then undo
 
-```
-Audit findings: 7 warning, 3 info.
+**Only on a desk that is not running a show.** A full apply takes over
+the whole desk: it resets it, unpatches what the plan doesn't use, then
+writes the plan. Your network, clock, cards and monitor listening are
+left alone (See: [what a full apply changes](what-apply-changes.md)).
 
-[WARNING] C001 Phantom Power On Unpatched Socket
-  48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
+1. **Make sure you have saved the desk's show** ([step
+   1](#1-before-you-start)).
 
-[WARNING] CH002 DCA Fader Low With Active Members
-  DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
-  ...
-```
-
-## 3. Write, then undo (30 minutes)
-
-**Only on a desk that is not doing a show.** A full apply takes the
-whole desk: it resets it to the initialized state (network, clock,
-cards and your monitor listening are left alone), unpatches the strips
-the plan does not build, then writes the plan
-([what a full apply changes](what-apply-changes.md)).
-
-1. **Check you saved the desk's show** ([step 1](#1-before-you-start-10-minutes)).
-2. **Copy the Demo show to a folder of your own.** The one Atoo
-   ships is read-only.
+2. **Make your own copy of the Demo show.** The one built into Atoo
+   can't be changed.
 
    ```bash
    atoo init --demo
    ```
 
-   This writes it into your Atoo folder as
-   `~/Documents/Atoo/demo-show`, beside the starter conventions and
-   presets it was built from, and lists each file it copied. If you have
-   run `init` before, it adds only the copy; a `demo-show` already there
-   is left alone. (With `init --dir`, the copy is in that folder: use its
-   path below.)
+   The copy goes in your Atoo folder as `~/Documents/Atoo/demo-show`.
 
-3. **Check it against your desk's model**, with nothing contacted:
-   `atoo verify --show ~/Documents/Atoo/demo-show --console-model wing-full`
-   (or `wing-compact`, `wing-rack`). It should pass, as the Demo show
-   does (below).
-4. **Keep a reading from before**:
-   `atoo audit --console 192.0.2.16 --dump-state before.state.json`.
-5. **Preview**. It reads the desk and shows each value now and after,
-   and writes nothing. A value now can be the desk's rounded readout
-   ([Applying a plan](applying.md#reading-the-result)); which settings
-   would change is decided exactly:
+3. **Check it against your desk's model.** This contacts nothing. Use
+   `wing-full`, `wing-compact` or `wing-rack`:
+
+   ```bash
+   atoo verify --show ~/Documents/Atoo/demo-show --console-model wing-full
+   ```
+
+   ```
+   0 error(s), 0 warning(s), 4 note(s)
+     ...
+   ```
+
+   It should end with `APPLICABLE: notes only`.
+
+4. **Preview the write.** This reads the desk and lists what the plan will write:
 
    ```bash
    atoo apply --show ~/Documents/Atoo/demo-show --console 192.0.2.16
    ```
 
-6. **Write**. `--confirm` is the arm:
+   If no errors, continue on to actually apply the show to the desk.
+
+5. **Write it.** The `--confirm` option allows the write and read back:
 
    ```bash
    atoo apply --show ~/Documents/Atoo/demo-show --console 192.0.2.16 --confirm
    ```
 
-   Every value is read back. Copy the line that starts `APPLIED:`, and
-   any `MISMATCH` lines under it. On a WING Rack, expect a WARNING that
-   there is no initialized capture: the plan is written without the
-   reset.
-7. **Look at the desk.** Names, colours, patch, sends, DCAs: does it
+   Every value is read back afterwards. Look at the line that starts
+   `APPLIED:` and note any `MISMATCH` lines under it.
+
+6. **Look at the desk.** Do the names, colours, patch, sends and DCAs
    match the [Demo show](demo.md)?
-8. **Undo** the write. Preview first, then arm it:
+
+7. **Undo the write.** Preview it first, then add `--confirm`:
 
    ```bash
    atoo undo --show ~/Documents/Atoo/demo-show --console 192.0.2.16
    atoo undo --show ~/Documents/Atoo/demo-show --console 192.0.2.16 --confirm
    ```
 
-9. **Keep a reading from after**:
-   `atoo audit --console 192.0.2.16 --dump-state after.state.json`.
-   Undo should have put back what the apply changed; the two readings
-   show whether it did.
-10. **Load your saved show** back onto the desk.
-
-The browser does the same from **Open…** on your copy, then **Apply**:
-see [Apply a plan to the desk](apply-to-desk.md).
-
-Step 3 on the copy (it ends `APPLICABLE: notes only`):
-
-```
-atoo verify --show ~/Documents/Atoo/demo-show --console-model wing-full
-```
-
-```
-0 error(s), 0 warning(s), 4 note(s)
-  ...
-```
-
-## 4. Report
-
-Open a **Desk test report** on the repository's **Issues** tab (**New
-issue**), or send the same by email. It asks for:
-
-- the desk model, the firmware (the last field of `ping`'s `Console:`
-  line), your laptop and how you installed;
-- which steps you ran, and **where you stopped, and why**;
-- for step 3, the `APPLIED:` line and any `MISMATCH` lines, as text;
-- anything that did not land, looked wrong, or made no sense.
-
-Attach, zipped, whatever you have of:
-
-- `my-desk.state.json`, `before.state.json` and `after.state.json`;
-- the journals of your write and its undo: the files in
-  `~/Documents/Atoo/demo-show/journals/`;
-- a screenshot of anything confusing.
-
-A state file holds the desk's names and settings, not audio. Tick
-**Credit** if you are happy to be thanked by name in the release notes.
+8. **Load your saved show** back onto the desk.
 
 ## Next
 
-[Configuring Atoo](configuration.md): your desk, conventions and
-presets, set once, then [Setting up an AI provider](ai-provider.md), so
-you can build.
+Set up your desk, conventions and presets once in [Configuring
+Atoo](configuration.md), then [set up an AI provider](ai-provider.md) so you can build your own shows.
 
 ## See also
 

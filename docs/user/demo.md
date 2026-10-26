@@ -134,6 +134,6 @@ next to **Show bundle**.
 
 ## Next
 
-- [Testing on your desk](testing-on-your-desk.md): the same, on your own
-  WING.
+- [Connect to your desk and try the CLI](testing-on-your-desk.md): the
+  same, on your own WING.
 - [Why Atoo?](why.md), if you are still deciding.

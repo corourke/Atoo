@@ -203,7 +203,11 @@ A `source` is written as the desk lists it:
 
 There is no "channel, pre-fader" source, because the desk has none. A split
 carries the input before the channel strip. A processed or post-fader feed
-goes through a user signal, and its row says `USR n`.
+goes through a user signal, and its row says `USR n`. What the slot takes
+(a channel at its pre or post tap, say) is the plan's: a capture records
+every USR slot a channel or an output reads, and Apply writes it back; a
+slot assigned on the desk that nothing reads is left as it is, said at
+INFO.
 
 `atoo apply` writes each one's source, as it writes a bus's output patch,
 so the show puts its splits back on any desk; applied to the desk it came

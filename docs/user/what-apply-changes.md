@@ -111,6 +111,19 @@ puts its splits back on any desk. Applied to the desk it came from, they
 are already there and nothing changes. In the Preview they are on their
 output group's tile, beside the buses and Mains patched there.
 
+## User signals and user patches: each slot before what reads it
+
+A plan can define the desk's `USR` slots: a user signal (USR 1-24) takes a
+channel, aux, bus, Main or Matrix at its pre or post tap, and a user patch
+(USR 25-56) takes a physical socket. A channel patched to a slot, or an
+output fed from one, hears whatever the slot takes, so Apply writes each
+slot first: what it takes, a user signal's tap and leg when the plan states
+them, and its name. A stereo channel on a pair of slots sets both to stereo.
+[Undo](undo.md) puts each slot back as it was. A plan
+[captured](capture.md#splits-and-recording-feeds) from a desk records every
+slot a channel or an output reads, so applied back to that desk nothing
+changes.
+
 ## Direct Main routes: every Main is written, OFF included
 
 A WING ships every channel and aux routed straight to **Main 1**, and
