@@ -41,7 +41,7 @@ chooses your own. Rename the folder freely afterwards.
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
-| `outputs.csv` | One row per output socket fed straight from a source rather than from a bus, Main or Matrix: a split or a recording feed. The `output` socket, its `source` in the desk's own words, and `notes`. See [Splits and recording feeds](#splits-and-recording-feeds) |
+| `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`. See [Every output socket](#every-output-socket-outputscsv) |
 | `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
 | `captures/` | The `.snap` it was made from, or a live desk's reading |
@@ -57,7 +57,7 @@ atoo capture --snap tests/fixtures/church-full-2026-10-24.snap --console-model w
 Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/church-full-2026-10-24/
   input.csv    46 inputs on 40 channels
   busses.csv   15 buses, 1 Mains, 5 Matrices
-  outputs.csv  123 output sockets fed straight from a source
+  outputs.csv  147 output sockets: 123 fed straight from a source, 24 by a bus, a Main or a Matrix
   plan.json    the desk as it is: patch, routing, membership, widths, effects
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
@@ -163,21 +163,11 @@ engine that can hold it; its parameters are left as the desk has them.*
 Type `V-PLATE` in **M1**'s FX cell instead and it is refused: *every
 engine that can hold V-PLATE (FX1-8) is already in use*.
 
-## Splits and recording feeds
+## Every output socket: outputs.csv
 
-An output socket the desk feeds straight from a source, not from a bus, a
-Main or a Matrix, is a split: the Dante module's outputs to a recording
-machine, the WING-LIVE card one to one, a USB recording feed, an AES50
-split to a monitor desk. The capture writes each one to `outputs.csv`, one
-row per socket, and the plan records them (`direct_outputs`). The capture
-says which, at INFO:
-
-```
-  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are in outputs.csv, one row each; Apply writes them and Watch says only if one changes.
-```
-
-The file has one row per socket, never a range, in the order the desk lists
-its outputs:
+`outputs.csv` says what each output socket carries: one row for every
+socket the desk patches, whatever feeds it. The file has one row per
+socket, never a range, in the order the desk lists its outputs:
 
 ```bash
 head -4 /tmp/shows/church-full-2026-10-24/outputs.csv
@@ -186,10 +176,31 @@ grep "^USB 5," /tmp/shows/church-full-2026-10-24/outputs.csv
 
 ```
 output,source,notes
-AUX 3,SEND 19,
-AUX 7,MON 1,
-AUX 8,MON 2,
+LCL 1,Bus 9 L,
+LCL 2,Bus 9 R,
+LCL 3,Bus 8 L,
 USB 5,AES50-A 5,
+```
+
+A bus, a Main or a Matrix is written by its side, so its two sockets are two
+rows. `busses.csv`'s `outputs` cell says the same sockets for each bus,
+worked out from the plan (`LCL 1-2` for Bus 9).
+
+A socket that carries an object's R without its L on the socket before it
+(Bus 3's R alone on a USB socket, say) is recorded as that socket's own
+source, as the desk has it, and the capture says so at INFO; `busses.csv`'s
+cell leaves it out, since a cell's sockets go L then R.
+
+### Splits and recording feeds
+
+An output socket the desk feeds straight from a source, not from a bus, a
+Main or a Matrix, is a split: the Dante module's outputs to a recording
+machine, the WING-LIVE card one to one, a USB recording feed, an AES50
+split to a monitor desk. The plan records them (`direct_outputs`), and the
+capture says which, at INFO:
+
+```
+  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are in outputs.csv, one row each, with every other patched socket; Apply writes them and Watch says only if one changes.
 ```
 
 A `source` is written as the desk lists it:
@@ -217,15 +228,30 @@ so it says only if one changes. `atoo verify` refuses a split on a socket
 a bus, a Main or a Matrix also patches, naming both, and one fed from a
 source the desk does not have.
 
-A build lays `outputs.csv` onto the plan the way it lays `busses.csv`:
-- a row with a filled `source` wins over the conventions;
+**`outputs.csv` is where each socket's source is kept, and `busses.csv`'s
+Outputs column follows it.** A build lays `outputs.csv` onto the plan:
+- a row with a filled `source` wins over the conventions, whatever fed the
+  socket before: `LCL 1,Bus 10 L` moves LCL 1 from Bus 9 to Bus 10;
+- a bus, a Main or a Matrix the file names feeds the sockets its rows give
+  it and no others, so moving a bus's rows to new sockets moves the bus;
+  it is not also left on its old ones;
 - `OFF` disconnects that socket;
 - a socket the file doesn't list is left to the conventions.
 
-Each change is an INFO (`build.outputs-sheet`). A row that cannot work stops
-the build, naming it: a socket the desk does not have, one a bus or a Main
-also patches, a source past its group's end. Build's step 04 does not show
-the file yet; its table is waiting on a design review.
+Each change is an INFO (`build.outputs-sheet`), for example *outputs.csv
+wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).*
+
+When the show has `outputs.csv`, a build does not read `busses.csv`'s
+Outputs column. Until Build 04 has its Outputs table, the Busses table's
+Outputs cell can still be edited, and saving a move there rewrites
+`outputs.csv` to match: the old sockets' rows go and the new ones are
+added. A cell edited in another program that disagrees with `outputs.csv`
+is not used, and the build says so, for example *busses.csv says Bus 9 goes
+to AUX 1-2, outputs.csv says LCL 1-2: outputs.csv is where each socket's
+source is kept, so it wins, and busses.csv's Outputs column follows it.* A row that
+cannot work stops the build, naming it: a socket the desk does not have, a
+socket listed twice, a source past its group's end. Build's step 04 does not
+show the file yet; its table is waiting on a design review.
 
 ## What stays out of the sheets
 

@@ -305,8 +305,9 @@ Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
 ```
 
 `--pretty` lists each run and what feeds it under **DIRECT OUTPUTS**. The show's
-[`outputs.csv`](capture.md#splits-and-recording-feeds) wins over them where
-it names a socket.
+[`outputs.csv`](capture.md#every-output-socket-outputscsv) wins over them where
+it names a socket. It is where every socket's source is kept, a bus's, a Main's
+or a Matrix's included; `busses.csv`'s Outputs column follows it.
 
 There is no "channel, pre-fader" feed on the desk. A processed or
 post-fader feed goes through a user signal (`USR`), and the output is fed
