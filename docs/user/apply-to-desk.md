@@ -158,8 +158,9 @@ The command's own output runs under the button as it goes. A full write
 first puts the desk back to its initialized state, writing only what
 differs from it; on a WING Compact the read for that took about 35
 seconds when reads went one request at a time, and should now be
-shorter. It then goes through the plan, reads each address, writes only
-those that differ, and reads every value it wrote back. The progress line
+shorter. It reads the plan's settings from the desk up front, the way
+the preview does, then goes through the plan, writes only those that
+differ, and reads every value it wrote back, one at a time. The progress line
 counts the settings it looks at; when it ends it says how many it wrote.
 
 ## 5. Read the result

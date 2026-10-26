@@ -136,14 +136,22 @@ exact value, so the figure a preview shows as a setting's current value
 can be rounded; a number whose rounding could change whether the plan's
 value is already held is read again by itself, and the run says how many
 (`value(s) taken from a node dump were read again one by one`). A real apply
-never uses a dump: it reads each setting by itself just before it writes it,
-and the journal and Undo hold those exact values. Each address is asked
-once. With `--no-init`, or on a console with no initialized capture, the
+reads the desk the same way, before it writes anything, and then writes only
+what differs; it also reads again by itself every number a dump printed
+rounded, so the journal and Undo hold the desk's exact values. Each address is
+asked once. Because what is already set was decided before the first write,
+a run that wrote something reads the skipped settings again afterwards, in
+one pass: one of its own writes can move another setting on the desk (a
+stereo pair's mode carries its partner). Any that moved is written and read
+back like the rest, and the run names it: `INFO 1 setting(s) the run had
+found already set changed on the desk while it wrote, and were written and
+read back: ...`. With `--no-init`, or on a console with no initialized capture, the
 plan's values are read by the same node dumps, in one step, `reading the desk
 for the preview`.
 
 Every preview ends with one line saying what it read, on whichever path it
-took, so a slow one says why:
+took, so a slow one says why (a real apply's says `the run, before its
+writes, read the desk with ...`):
 
 ```
 - INFO the preview read the desk with 2,396 requests (922 node dumps, 1,474 single reads) in 0.2s: node dumps for the reset and the plan's settings

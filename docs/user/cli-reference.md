@@ -361,7 +361,7 @@ Write a plan to a console, then read every value back.
 
 The first form changes nothing: it reads the console's current value for every
 address the plan would touch and shows you the before/after. Writing requires
---confirm. It reads each address again just before writing it and sends only
+--confirm. It reads every address again before its writes and sends only
 those that differ, so the number written is the number the preview said would
 change (unless the console moved in between); each is journalled with its prior
 value so it can be reversed.
