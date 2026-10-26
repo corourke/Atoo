@@ -557,8 +557,9 @@ The plan is written to a file either way -- an
 A show bundle (--show DIR) supplies input.csv and instructions.md
 from one directory and writes plan.json back into it. An explicit flag always wins
 over the bundle. A bundle's busses.csv (the bus sheet: one row per bus, Main and
-Matrix) is laid onto the plan: a filled cell wins over the conventions, each change
-is a note, and a cell that cannot work on the desk stops the build, naming it.
+Matrix) and outputs.csv (one row per output socket fed straight from a source) are
+laid onto the plan: a filled cell wins over the conventions, each change is a note,
+and a cell that cannot work on the desk stops the build, naming it.
 
 A bundle build also DRAFTS that bundle's watch.json -- the short list of
 things worth an alert if they move mid-show. Drafted conditions are marked
@@ -656,8 +657,10 @@ Capture a desk you didn't build as a show you can watch and edit.
 Reads the desk, or a .snap saved on it, and makes a show folder in your Atoo
 folder: input.csv (one row per input, with its channel, DCAs and mute groups),
 busses.csv (one row per bus, Main and Matrix: what feeds it, where it goes, its
-effects), plan.json (the desk as it is: patch, routing, membership and widths,
-not faders or EQ), an empty watch.json, and the snapshot under captures/.
+effects), outputs.csv (one row per output socket fed straight from a source: a
+split or a recording feed), plan.json (the desk as it is: patch, routing,
+membership and widths, not faders or EQ), an empty watch.json, and the snapshot
+under captures/.
 
 No model, and nothing is written to the desk. Every name is written in: a
 channel with no name of its own takes its source's. What the desk does not

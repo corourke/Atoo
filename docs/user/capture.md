@@ -41,6 +41,7 @@ chooses your own. Rename the folder freely afterwards.
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
+| `outputs.csv` | One row per output socket fed straight from a source rather than from a bus, Main or Matrix: a split or a recording feed. The `output` socket, its `source` in the desk's own words, and `notes`. See [Splits and recording feeds](#splits-and-recording-feeds) |
 | `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
 | `captures/` | The `.snap` it was made from, or a live desk's reading |
@@ -56,6 +57,7 @@ atoo capture --snap tests/fixtures/church-full-2026-10-24.snap --console-model w
 Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/church-full-2026-10-24/
   input.csv    46 inputs on 40 channels
   busses.csv   15 buses, 1 Mains, 5 Matrices
+  outputs.csv  123 output sockets fed straight from a source
   plan.json    the desk as it is: patch, routing, membership, widths, effects
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
@@ -166,13 +168,42 @@ engine that can hold V-PLATE (FX1-8) is already in use*.
 An output socket the desk feeds straight from a source, not from a bus, a
 Main or a Matrix, is a split: the Dante module's outputs to a recording
 machine, the WING-LIVE card one to one, a USB recording feed, an AES50
-split to a monitor desk. The plan records each one (`direct_outputs`), with
-the socket and the source that feeds it, and the capture says which, at
-INFO:
+split to a monitor desk. The capture writes each one to `outputs.csv`, one
+row per socket, and the plan records them (`direct_outputs`). The capture
+says which, at INFO:
 
 ```
-  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are not in the sheets; the plan records them, Apply writes them and Watch says only if one changes.
+  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are in outputs.csv, one row each; Apply writes them and Watch says only if one changes.
 ```
+
+The file has one row per socket, never a range, in the order the desk lists
+its outputs:
+
+```bash
+head -4 /tmp/shows/church-full-2026-10-24/outputs.csv
+grep "^USB 5," /tmp/shows/church-full-2026-10-24/outputs.csv
+```
+
+```
+output,source,notes
+AUX 3,SEND 19,
+AUX 7,MON 1,
+AUX 8,MON 2,
+USB 5,AES50-A 5,
+```
+
+A `source` is written as the desk lists it:
+- an input socket, as the input list spells it: `AES50-A 5`, `LCL 3`,
+  `MOD 12`;
+- a user signal or patch: `USR 3`;
+- the oscillator: `OSC 1`;
+- a bus, a Main or a Matrix by its side: `Bus 9 L`, `Main 1 R`, `Matrix 6 L`;
+- a send or the monitor by the desk's own number: `SEND 19`, `MON 1`;
+- `OFF` for nothing.
+
+There is no "channel, pre-fader" source, because the desk has none. A split
+carries the input before the channel strip. A processed or post-fader feed
+goes through a user signal, and its row says `USR n`.
 
 `atoo apply` writes each one's source, as it writes a bus's output patch,
 so the show puts its splits back on any desk; applied to the desk it came
@@ -182,17 +213,21 @@ so it says only if one changes. `atoo verify` refuses a split on a socket
 a bus, a Main or a Matrix also patches, naming both, and one fed from a
 source the desk does not have.
 
-The sheets do not show them yet; to change one, edit `plan.json`.
+A build lays `outputs.csv` onto the plan the way it lays `busses.csv`:
+- a row with a filled `source` wins over the conventions;
+- `OFF` disconnects that socket;
+- a socket the file doesn't list is left to the conventions.
+
+Each change is an INFO (`build.outputs-sheet`). A row that cannot work stops
+the build, naming it: a socket the desk does not have, one a bus or a Main
+also patches, a source past its group's end. Build's step 04 does not show
+the file yet; its table is waiting on a design review.
 
 ## What stays out of the sheets
 
 Nothing is dropped silently. Each of these is one INFO line, naming what
 it is about, and the snapshot in `captures/` keeps the whole desk:
 
-- **Sockets fed straight from an input**, such as a recording or Dante
-  split, are not in the sheets. The plan records them, `atoo apply` writes
-  them and Watch says only if one changes; see
-  [Splits and recording feeds](#splits-and-recording-feeds).
 - **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
 - **A bus nothing feeds that reaches only a Main** is left out, and no

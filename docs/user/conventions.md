@@ -277,6 +277,40 @@ the strip is switched over it hears their source.
 What `apply` writes, and why it also puts every strip back on its main
 input, is on [What a full apply changes](what-apply-changes.md#alternate-inputs-every-strip-back-on-its-main-input).
 
+## Splits and recording feeds
+
+A split is an output socket fed straight from an input socket, not from a
+bus, a Main or a Matrix: every input to a monitor desk on AES50-B, every input
+to the WING-LIVE card or to USB for a multitrack recording. It carries the
+input before the channel strip (the preamp's gain, but no EQ, dynamics or
+fader), which is what a recording and a virtual soundcheck want. Say it in
+the words you would use:
+
+```
+## Splits
+- Monitor split: every input socket goes out, unprocessed, on AES50-B in the same order.
+- Recording split: every input socket also goes out on USB 1 upward, in input order.
+- Record AES50-A 1-12 one to one to CRD 1-12.
+```
+
+"Every input" means every input socket your channels are patched from, in
+channel order, a stereo channel's two sockets in turn, one output socket
+each. A range you name is used as written. The plan holds one entry per
+output socket, each said at INFO with the line it came from, and the show's
+[`outputs.csv`](capture.md#splits-and-recording-feeds) wins over them where
+it names a socket.
+
+There is no "channel, pre-fader" feed on the desk. A processed or
+post-fader feed goes through a user signal (`USR`), and the output is fed
+from that.
+
+`verify` refuses a split the desk cannot carry, such as a run past the end
+of its group or a socket a bus or a Main already uses:
+
+```
+  [error] direct_outputs[USB 49]: USB output 49 does not exist -- USB outputs are 1..48 on a WING Compact  (output.socket-out-of-range)
+```
+
 ## Presets by name, never by value
 
 ```
