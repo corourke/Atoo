@@ -664,9 +664,11 @@ channel with no name of its own takes its source's. What the desk does not
 state is decided and said, at INFO: a category from the channel's first DCA,
 a type from its source, the role fx for a bus whose effects are all reverbs,
 delays or modulation set fully wet. Every send is in the plan, on its source,
-with its tap: a channel sent to a Matrix, a bus sent to a bus. What the plan
-cannot hold yet (a channel's inserts) stays in the sheets and the snapshot, and
-is listed too.
+with its tap: a channel sent to a Matrix, a bus sent to a bus. Every effect
+inserted on a channel, bus, Main or Matrix is in the plan with its engine's
+settings (from a live desk, one more request per engine after the desk's read),
+so apply loads it back. What the plan cannot hold yet (a GRP-mode tap) stays in
+the sheets and the snapshot, and is listed too.
 
 Then watch it with the show: atoo watch --show DIR --console ADDRESS, and edit
 its sheets in `atoo ui`, Build step 04, whose Save updates the plan. The UI's
@@ -1352,7 +1354,7 @@ to a Matrix, or a bus's route to a Main, that is on and the plan does not have
 is mono or stereo where the plan states the other (CV020), talkback that reaches
 some destinations but not a monitor mix the plan builds (CV021; CV022 is the INFO
 naming the busses it took for monitor mixes), and an
-FX bus's effect bypassed or changed (CV015). The plan's output
+effect the plan inserts bypassed or changed (CV015). The plan's output
 sockets are read too. With or without a plan, so are the outputs of any AES50
 stage box, and of any module or card, the desk reports.
 

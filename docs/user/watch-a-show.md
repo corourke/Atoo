@@ -90,8 +90,9 @@ at the top of each. Here on the [Demo show](demo.md):
   sends it to Drums and Drums Comp; neither send is on*),
   **CV017 Muted Against Plan** (a channel, bus, DCA, Main or Matrix
   the plan leaves unmuted, muted on the desk; never the talkback mic),
-  and, when the plan loads an FX bus's effect from a bus preset,
-  **CV015 FX Bus Effect Contradicts Plan** (that bus's insert switched
+  and, when the plan inserts an effect (an FX bus's bus preset, or what a
+  capture found on any strip),
+  **CV015 Effect Insert Contradicts Plan** (that insert switched
   off, the reverb bypassed, or the engine holding another effect). On the
   Demo, Lead Vox muted shows CV017 folded under the show's own
   condition (*Also CV017 Muted Against Plan*), and the Vox Verb bus is

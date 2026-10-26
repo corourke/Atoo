@@ -89,10 +89,11 @@ took for a monitor mix:
   because muting between songs is normal; if a particular mute should be
   an error, write a [watch condition](watch-conditions.md) for it. The
   talkback mic is left out: it is muted between talks on purpose.
-- `CV015 FX Bus Effect Contradicts Plan`, when the plan loads an
-  effect from a bus preset (a reverb on the Vox Verb bus, say: see
-  [Bus presets](bus-presets.md)): that bus's
-  insert switched off (the effect bypassed, so the bus returns nothing),
+- `CV015 Effect Insert Contradicts Plan`, when the plan inserts an
+  effect: from a bus preset (a reverb on the Vox Verb bus, say: see
+  [Bus presets](bus-presets.md)), or one a capture found on a channel,
+  bus, Main or Matrix ([Capture a desk](capture.md)). The
+  insert switched off (the effect bypassed, so an FX bus returns nothing),
   pointing at another engine, or its engine holding another effect.
 
 A strip whose every planned route is off is one row, `CV016`, which names
@@ -205,7 +206,7 @@ atoo watch --console 192.0.2.16
 
 ```
 [INFO] W005 Watching without a plan
-  Watching without a plan: no show's plan was given. These run without it, so they can warn about what the plan would have allowed (a parallel bus it asks for, a strip it puts at the floor): L002 Active Strip Fader At Floor, R008 Strip Reaches Nothing, ... R012 Signal Splits And Recombines, R013 Signal Split Asked For. These are not run at all: CV015 FX Bus Effect Contradicts Plan, CV016 Planned Routes All Off, ... Stop Watch and start it with the show's plan (atoo watch --show DIR; on the Watch page, open the show first).
+  Watching without a plan: no show's plan was given. These run without it, so they can warn about what the plan would have allowed (a parallel bus it asks for, a strip it puts at the floor): L002 Active Strip Fader At Floor, R008 Strip Reaches Nothing, ... R012 Signal Splits And Recombines, R013 Signal Split Asked For. These are not run at all: CV015 Effect Insert Contradicts Plan, CV016 Planned Routes All Off, ... Stop Watch and start it with the show's plan (atoo watch --show DIR; on the Watch page, open the show first).
 ```
 
 That is what you get from `atoo watch` without `--show`, and from the Watch page

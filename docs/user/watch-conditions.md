@@ -610,7 +610,7 @@ none, so they did not run there:
   a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when
   you want it as a warning or an error.
 - **48V on an empty socket, two strips with one name** are `C001` and
-  `N001`. **An effect bypassed on an FX bus** is `CV015`, with the
+  `N001`. **An effect the plan inserts, bypassed** is `CV015`, with the
   plan.
 
 Where one of your conditions and a built-in rule both fire, Watch in the

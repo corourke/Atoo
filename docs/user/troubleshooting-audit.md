@@ -635,10 +635,11 @@ engineers bypass effects on purpose. A capture taken before these checks
 existed has no reading of the inserts, and all three rules then stay
 silent.
 
-**An FX bus your plan set up from a bus preset** is checked against the
-plan instead: `CV015 FX Bus Effect Contradicts Plan` is a WARNING when
-its insert is switched off, names another engine, or the engine holds
-another effect than the bus preset's ([Bus presets](bus-presets.md)).
+**An effect your plan inserts** (an FX bus's from a bus preset, or one a
+capture found on any strip) is checked against the plan instead:
+`CV015 Effect Insert Contradicts Plan` is a WARNING when its insert is
+switched off, names another engine, or the engine holds another effect
+than the plan's ([Bus presets](bus-presets.md), [Capture a desk](capture.md)).
 `audit` runs it when given the plan, and Watch runs it from the open
 show's plan, with more plan checks: a channel cut off from every
 planned route (CV016), a mute the plan does not have (CV017), 48V that

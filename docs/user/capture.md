@@ -41,7 +41,7 @@ chooses your own. Rename the folder freely afterwards.
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
-| `plan.json` | The desk as it is: patch, routing, membership and widths. Not faders, mutes, send levels or EQ: they are the mix |
+| `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
 | `captures/` | The `.snap` it was made from, or a live desk's reading |
 
@@ -56,11 +56,11 @@ atoo capture --snap tests/fixtures/church-full-2026-10-24.snap --console-model w
 Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/church-full-2026-10-24/
   input.csv    46 inputs on 40 channels
   busses.csv   15 buses, 1 Mains, 5 Matrices
-  plan.json    the desk as it is: patch, routing, membership, widths
+  plan.json    the desk as it is: patch, routing, membership, widths, effects
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
-What the desk does not state, decided or left out (13):
+What the desk does not state, decided or left out (12):
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
@@ -105,6 +105,62 @@ leaves open, `capture` decides and says, at INFO, so you can correct it:
 - **`tap`** is the pre or post most of a row's sources use; a source that
   differs says so in `sources` (`Crowd (pre)`).
 
+## Effects
+
+Every effect switched on in an insert, on a channel, bus, Main or Matrix,
+goes into `plan.json` on that strip: the effect, the engine it is in and
+all of that engine's settings. A bus's, Main's or Matrix's are in its `fx`
+cell too, and a channel's in its row's `notes` (the input list has no
+effects column):
+
+```bash
+grep "^Bus 11" /tmp/shows/church-full-2026-10-24/busses.csv
+grep "^17," /tmp/shows/church-full-2026-10-24/input.csv
+```
+
+```
+Bus 11,Reverb,fx,stereo,MIC1 Lead;MIC2;MIC3;MIC4;MIC5,post,,BPLATE; VSS3,,AllBand;FX Vocals,BAND;VOCAL;ALL,,
+17,LCL 1,Pastor,Speaker,Mic,,FALSE,Speaker,SPEAKING;ALL,"Inserts: GEQ (FX9, preins)"
+```
+
+`atoo apply` loads each effect back into its engine with those settings
+and switches its insert on. Applied to the desk it came from, that changes
+nothing; applied to another desk, or after someone changed the effects,
+it puts them back. Watch checks them too: an insert switched off, pointing
+at another engine, or an engine holding another effect is a warning,
+`CV015 Effect Insert Contradicts Plan`.
+
+From a live desk, the effects' settings are one more short read after the
+desk's: one request for each engine a strip inserts, counted in the
+capture's summary (*plan.json the desk as it is: ..., effects; 16
+effect(s), their parameters read in 16 more request(s) after the desk's
+read*). An engine that does not answer keeps its effect only, at INFO:
+`atoo apply` loads the effect and leaves its settings as the desk has them.
+
+To change a bus's, Main's or Matrix's effects, edit its `fx` cell in Build's
+step 04 (or the file), with the effects' names as the desk shows them,
+`;`-separated:
+
+- an effect still named keeps its engine and settings;
+- an effect you delete comes off its insert (the engine keeps it, inserted
+  nowhere); emptying the cell takes them all off;
+- an effect you add goes on a free insert, in a free engine that can hold
+  it, with its settings as the desk has them, and a note in the plan says
+  which engine;
+- a name the desk has no effect for, more than two effects, or no engine
+  left that can hold it is refused, naming the cell, and nothing changes.
+
+On the church show, open **B13** (Delay Long) with **▸**: its FX cell
+reads `TAP-DL`. Type `NOPE` and the row turns red with *fx "NOPE": no FX
+engine on the desk offers this effect; write the model as the desk names
+it (V-REV, ST-DL)*. Type `ST-DL` and press **Save busses.csv**: *Saved
+church-full-2026-10-24/busses.csv: 1 row(s) changed. The plan is updated:
+Bus 13 fx ST-DL.* The plan's notes say *Bus 13: TAP-DL comes off its
+pre-insert.* and *Bus 13: ST-DL goes on its pre-insert, in FX2, a free
+engine that can hold it; its parameters are left as the desk has them.*
+Type `V-PLATE` in **M1**'s FX cell instead and it is refused: *every
+engine that can hold V-PLATE (FX1-8) is already in use*.
+
 ## What stays out of the sheets
 
 Nothing is dropped silently. Each of these is one INFO line, naming what
@@ -113,9 +169,6 @@ it is about, and the snapshot in `captures/` keeps the whole desk:
 - **Sockets fed straight from an input**, such as a recording or Dante
   split, are not in the sheets. The plan records them, so Watch says only
   if one changes, and `atoo apply` does not write them.
-- **Effects inserted on a channel** are listed in that row's `notes`.
-- **Effects inserted on a bus, Main or Matrix** are in its `fx` cell, as a
-  record: `atoo apply` does not load an effect from it.
 - **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
 - **A bus nothing feeds that reaches only a Main** is left out, and no
@@ -224,9 +277,9 @@ plan from your conventions, using a model; your sheet edits still win.*
 **Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a
 captured show from your
 conventions and the bus sheet still wins wherever it has a filled cell: the
-names, roles, widths, sources and outputs it gives are laid onto the new
-plan, each change a note in the build's report (in **Findings**, under
-**Choices**), and what the plan cannot hold yet (`fx`) is said there too. A
+names, roles, widths, sources, outputs and effects it gives are laid onto
+the new plan, each change a note in the build's report (in **Findings**,
+under **Choices**), with the engine each added effect was given. A
 cell that cannot work on the desk stops the build, naming the cell, as Save
 does in step 04: *busses.csv cannot be laid onto this plan, so nothing was
 written: busses.csv, Bus 4, outputs: LCL output 99 does not exist …*
