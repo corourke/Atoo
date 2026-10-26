@@ -1,28 +1,174 @@
-# Configuring Atoo
+# Set up Atoo
 
 Your house conventions, your presets and your desk are the same from
-show to show, so you should not have to type them every time. Set them
-once here. Which AI model writes your plans is the other half:
-[Setting up an AI provider](ai-provider.md).
+show to show, so you set them up once. This page creates your Atoo
+folder, connects to your desk and checks your presets. The other half of
+setting up is the AI model that builds your plans: [Setting up an AI
+provider](ai-provider.md).
 
-Atoo takes its settings from two places:
+## 1. Create your Atoo folder: `atoo init`
 
-| Where | What goes there | Why there |
-|---|---|---|
-| `~/.atoo.config` | your house conventions file, your preset library, your watch conditions, your usual desk, your working folder | These are **your** files and your desk, the same from show to show. |
-| environment variables | a desk for this session only ([below](#the-console)), and the AI model and its key ([Setting up an AI provider](ai-provider.md)) | A key is a secret, so it does not belong in a file you might copy or share, and a venue's desk is for one session. |
+```bash
+atoo init
+```
 
-Neither is required. Without the config file, every command takes its
-paths and console as flags. Every flag beats both, so `--conventions`,
-`--presets` or `--console` always wins for that one run.
+```
+Working folder: ~/Documents/Atoo (created)
+  README.md                    created
+  conventions.md               created
+  presets/README.md            created
+  presets/                     23 presets: 23 created
+  audit-demo/                  3 files: 3 created
+
+~/.atoo.config:
+  [conventions] default    set to ~/Documents/Atoo/conventions.md
+  [presets] default        set to ~/Documents/Atoo/presets
+  [workspace] default      set to ~/Documents/Atoo
+
+Next: `atoo ui` opens Atoo in your browser, starting in ~/Documents/Atoo. ~/Documents/Atoo/README.md says what each file is.
+```
+
+It creates `~/Documents/Atoo` and sets up your config file,
+`~/.atoo.config`, to point at it:
+
+| File | What it is |
+|---|---|
+| `conventions.md` | Example house conventions, to rewrite as your own house style |
+| `presets/` | Nineteen starter channel presets (`.chn`), one per common source, and three bus presets (`.bus`). Add your own, exported from the desk or WING Edit. |
+| `audit-demo/` | Three small saved readings of a desk, for trying [`atoo audit`](audit.md) and [`atoo watch`](watch.md) with no desk |
+| `README.md` | What each file is, and what to do next |
+
+To get an editable copy of the Demo show as well, run `atoo init --demo`
+([Change the Demo show](change-the-demo.md)).
+
+`atoo init` never overwrites anything. To reset a file, delete it and run
+`atoo init` again, or run `atoo init --force`.
+
+## 2. Connect to your desk
+
+1. **Find the desk's address.** On the desk, it is in **Setup**, under
+   the network settings. If you are not at the desk, WING Edit on a
+   laptop on the same network shows the address of each desk it finds.
+2. **Ping it.** This sends one message and writes nothing:
+
+   ```bash
+   a2 ping --console 192.0.2.16
+   ```
+
+   ```
+   Console: WING,192.0.2.16,FOH,wing-compact,SN12345,3.1-0
+   Detected model: WING Compact (wing-compact)
+   ```
+
+   If nothing answers, you'll see:
+
+   ```
+   no reply from 192.0.2.16:2223 -- is the console reachable, and is its OSC remote enabled?
+   ```
+
+   [Troubleshooting: the desk](troubleshooting-desk.md) covers what to
+   check.
+
+3. **Save the address**, so you don't type it every time. Add these two
+   lines to `~/.atoo.config`:
+
+   ```toml
+   [console]
+   default = "192.0.2.16"
+   ```
+
+   For a venue's desk you'll only use once, `export
+   ATOO_CONSOLE=192.0.2.16` sets it for this terminal instead
+   ([The console](#the-console)).
+
+Already have a show on the desk that you didn't build with Atoo? You can
+[capture it](capture.md) to watch and edit it.
+
+## 3. Look at your presets: `atoo presets`
+
+`atoo presets` lists your preset library, by the names your conventions
+use:
+
+```bash
+atoo presets
+```
+
+```
+No --presets given -- using the [presets] default in /home/you/.atoo.config: /home/you/Documents/Atoo/presets
+
+20 preset(s) in /home/you/Documents/Atoo/presets
+
+name     params  file
+-------  ------  -----------
+A Sax        83  A Sax.chn
+Ac Gtr       83  Ac Gtr.chn
+...
+```
+
+A preset's name is the one it was saved under on the desk, not its file
+name ([Using channel presets](presets.md)).
+
+## 4. Confirm your settings
+
+Commands report any settings used from your config file, so you can see
+where each value came from. These were run with a config file pointing
+at a copy of the starter conventions at `~/atoo/house.md` and of the
+starter presets at `~/atoo/channel_presets` (paths shortened to
+`/home/you`), in a folder holding a copy of the Demo show's `input.csv`:
+
+```bash
+atoo presets
+```
+
+```
+No --presets given -- using the [presets] default in /home/you/.atoo.config: /home/you/atoo/channel_presets
+
+19 preset(s) in /home/you/atoo/channel_presets
+...
+```
+
+```bash
+atoo ping
+```
+
+```
+Using console 192.0.2.16 from /home/you/.atoo.config [console]
+```
+
+A build lists every conventions layer it read and where each one came
+from, before it calls the model:
+
+```bash
+atoo build --console-model wing-compact --input input.csv --out plan.json
+```
+
+```
+Conventions, in order -- each layer overrides the one above it:
+  1. /home/you/atoo/house.md  (/home/you/.atoo.config)
+```
+
+If you do not see one of these lines, the setting was not used. Look
+for a one-line complaint about the config file just above it.
+
+---
 
 ---
 
 ## The config file
 
+Atoo takes its settings from two places, and neither is required:
+
+| Where | What goes there |
+|---|---|
+| `~/.atoo.config` | Your house conventions file, your preset library, your watch conditions, your usual desk and your working folder: the same from show to show. |
+| Environment variables | A desk for this session only ([below](#the-console)), and the AI model and its key ([Setting up an AI provider](ai-provider.md)). A key is a secret, so it does not belong in a file you might copy or share. |
+
+A flag always wins for that one run: `--conventions`, `--presets` or
+`--console`.
+
 `~/.atoo.config` is a small TOML file in your home directory.
 **`atoo init` writes its `[conventions]`, `[presets]` and `[workspace]`
-sections for you** ([First run](install.md#3-first-run-atoo-init-then-atoo-ui)).
+sections for you** ([step 1](#1-create-your-atoo-folder-atoo-init)).
 Here it is with every section filled in:
 
 ```toml
@@ -80,48 +226,6 @@ replaces it. Like every write to this file, it changes only that line.
 **Replace the default** swaps it for another. Both change that one line
 and leave the rest of the file alone.
 
-### Check it took
-
-Commands report any settings used from your config file. These were run in a folder holding a
-copy of the Demo show's `input.csv`, with the file above pointing at a
-copy of the starter conventions (`starter/conventions.md`) at
-`~/atoo/house.md` and of the starter presets (`starter/presets/`)
-at `~/atoo/channel_presets` (paths shortened to `/home/you`):
-
-```bash
-atoo presets
-```
-
-```
-No --presets given -- using the [presets] default in /home/you/.atoo.config: /home/you/atoo/channel_presets
-
-19 preset(s) in /home/you/atoo/channel_presets
-...
-```
-
-```bash
-atoo ping
-```
-
-```
-Using console 192.0.2.16 from /home/you/.atoo.config [console]
-```
-
-A build lists every conventions layer it read and where each one came
-from, before it calls the model:
-
-```bash
-atoo build --console-model wing-compact --input input.csv --out plan.json
-```
-
-```
-Conventions, in order -- each layer overrides the one above it:
-  1. /home/you/atoo/house.md  (/home/you/.atoo.config)
-```
-
-If you do not see one of these lines, the setting was not used. Look
-for a one-line complaint about the config file just above it.
-
 ---
 
 ## The console
@@ -135,9 +239,8 @@ to give it, and the first one found wins:
    for one session;
 3. `[console]` in `~/.atoo.config`, for the desk you always use.
 
-A command that was not given `--console` says which address it used, and
-where it came from ([Connect to your desk and try the CLI](testing-on-your-desk.md#1-before-you-start)).
-Read that line before a write.
+A command that was not given `--console` prints which address it used,
+and where it came from. Read that line before a write.
 
 ---
 

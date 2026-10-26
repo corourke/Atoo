@@ -306,7 +306,7 @@ something teaches more than one that finds nothing.
 |---|---|
 | write the input list for my own show | [Writing an input list](input-lists.md) |
 | write down how I set up a desk | [Writing conventions](conventions.md) |
-| set my house files, my desk or my model once | [Configuring Atoo](configuration.md), [Setting up an AI provider](ai-provider.md) |
+| set my house files, my desk or my model once | [Set up Atoo](configuration.md), [Setting up an AI provider](ai-provider.md) |
 | understand what `apply` guarantees | [Applying a plan](applying.md) |
 | keep one show's files together | [Show bundles](show-bundles.md) |
 | check a desk that is already set up | [Checking a desk](audit.md) |

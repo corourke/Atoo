@@ -228,7 +228,7 @@ Three things refine the figure, and the usage line says when one applies:
   prompt prefix; a host that does not know it ignores it. Its name is not a
   setting.
 
-## Check it took
+## Confirm which model is in use
 
 A build names the model before it sends anything. On a Claude build the
 plan's call looks like this:

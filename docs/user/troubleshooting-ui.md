@@ -23,7 +23,7 @@ of the one page at `/`. The `Plan:` line appears only with `--plan` (or
 there: with a console configured it names the address and where it came
 from (`--console`, `ATOO_CONSOLE` or `~/.atoo.config`), and the
 bundle bar's **Change…** sets another without a restart. The
-`Working folder:` line is the folder [`atoo init`](install.md#3-first-run-atoo-init-then-atoo-ui)
+`Working folder:` line is the folder [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init)
 made; before `init` it says there is none, and how to make one.
 
 ### It exits immediately

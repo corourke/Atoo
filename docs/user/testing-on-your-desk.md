@@ -136,8 +136,8 @@ left alone (See: [what a full apply changes](what-apply-changes.md)).
 
 ## Next
 
-Set up your desk, conventions and presets once in [Configuring
-Atoo](configuration.md), then [set up an AI provider](ai-provider.md) so you can build your own shows.
+[Change the Demo show](change-the-demo.md): your first build, on a copy
+of the Demo, then a change onto the desk.
 
 ## See also
 

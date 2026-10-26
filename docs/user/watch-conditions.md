@@ -10,7 +10,7 @@ all. This page is the file format, used both by **Watch** in the browser
 and by `atoo watch`.
 
 Every transcript on this page runs against a captured state file, with
-no console attached. [`atoo init`](install.md#3-first-run-atoo-init-then-atoo-ui) copies
+no console attached. [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init) copies
 the captures into your Atoo folder, as `audit-demo/` (run it again if
 yours was made before they existed; it adds what is missing and touches
 nothing you have changed):

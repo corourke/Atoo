@@ -134,6 +134,6 @@ next to **Show bundle**.
 
 ## Next
 
-- [Connect to your desk and try the CLI](testing-on-your-desk.md): the
-  same, on your own WING.
+- [Set up Atoo](configuration.md): your own Atoo folder, your desk and
+  your presets.
 - [Why Atoo?](why.md), if you are still deciding.

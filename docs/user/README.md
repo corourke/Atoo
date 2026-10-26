@@ -14,11 +14,11 @@ In this order, the first time:
 | Page | For |
 |---|---|
 | [Why Atoo?](why.md) | Whether Atoo is worth your time against what you already do |
-| [Installing Atoo](install.md) | Install on a Mac or Linux with `uv`, step by step, then `atoo init` and `atoo ui`; Homebrew and pipx, and Windows, too |
+| [Installing Atoo](install.md) | Install on a Mac or Linux with `uv`, step by step, then open `atoo ui`; Homebrew and pipx, and Windows, too |
 | [Try the Demo show](demo.md) | Build, Apply and Watch on a simulated desk, in five minutes |
-| [Connect to your desk and try the CLI](testing-on-your-desk.md) | On your own WING: its address, a saved show, `a2 ping`, then read-only checks, a write and undo |
-| [Configuring Atoo](configuration.md) | The config file and environment variables |
+| [Set up Atoo](configuration.md) | Your Atoo folder with `atoo init`, your desk with `a2 ping`, your presets, and the config file |
 | [Setting up an AI provider](ai-provider.md) | The model that writes your plans, and its API key |
+| [Connect to your desk and try the CLI](testing-on-your-desk.md) | On your own WING: read-only checks, then a write and undo |
 | [Change the Demo show](change-the-demo.md) | Your first build, on a copy of the Demo, then a patch onto the desk |
 
 ## Using Atoo in the browser

@@ -64,45 +64,7 @@ Its first line names the copy you just installed:
 atoo 0.2.5 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
-## 3. First run: `atoo init`, then `atoo ui`
-
-`atoo init` sets up a folder to hold your conventions, shows and presets. It makes `~/Documents/Atoo`, copies a starter set into it, and points
-`~/.atoo.config` at it:
-
-```bash
-atoo init
-```
-
-```
-Working folder: ~/Documents/Atoo (created)
-  README.md                    created
-  conventions.md               created
-  presets/README.md            created
-  presets/                     23 presets: 23 created
-  audit-demo/                  3 files: 3 created
-
-~/.atoo.config:
-  [conventions] default    set to ~/Documents/Atoo/conventions.md
-  [presets] default        set to ~/Documents/Atoo/presets
-  [workspace] default      set to ~/Documents/Atoo
-
-Next: `atoo ui` opens Atoo in your browser, starting in ~/Documents/Atoo. ~/Documents/Atoo/README.md says what each file is.
-```
-
-| File | What it is |
-|---|---|
-| `README.md` | what each file is, and what to do next |
-| `conventions.md` | example house conventions, to rewrite as your own house style |
-| `presets/` | nineteen starter channel presets (`.chn`), one per common source, that `conventions.md` names, and three bus presets (`.bus`): a compressor for the mix busses and a reverb for the FX busses. You can add your own channel and bus presets exported from the desk or Wing-Edit. |
-| `audit-demo/` | three small, hand-built console captures for trying [`atoo audit`](audit.md) and [`atoo watch`](watch.md) with no desk |
-
-Note that the Atoo installer won't overwrite anything, so if you want 
-to reset something in your Atoo directory, either delete it first and then run `atoo init` again, or run init with the `--force` option.
-
-To include the demo show in your directory (so that you can make changes or apply it to your desk) add the demo option, `atoo init --demo`. See:
-([Change the Demo show](change-the-demo.md)).
-
-Then open Atoo in your browser:
+## 3. Open Atoo: `atoo ui`
 
 ```bash
 atoo ui
@@ -114,10 +76,12 @@ Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
 Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
 Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
 Console: none configured -- set one in the bundle bar (Change…) before Ping, Apply or a live Watch.
-Working folder: ~/Documents/Atoo -- Open… and New show… start here.
+No show open and no working folder set -- `atoo init` makes ~/Documents/Atoo with house conventions and a preset library.
 ```
 
-The Atoo UI opens in your default browser. `Ctrl-C` in the terminal stops it.
+Atoo opens in your default browser. `Ctrl-C` in the terminal stops it.
+You don't need to set anything up yet: the Demo show works as it is, and
+[Set up Atoo](configuration.md) comes after it.
 
 Next: [Try the Demo show](demo.md).
 
