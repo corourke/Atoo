@@ -284,7 +284,7 @@ before you send it to someone. On the Watch page, **Save findings** under
 ### Edit the sheets while it runs
 
 With a show open, **Edit sheets** in the header takes the page to Build's
-step 04 for that show: its Channels, Busses and Outputs tables are the
+step 04 for that show: its Channels, Busses and Mains and Matrix tables are the
 show's `input.csv` and `busses.csv` ([Editing the
 sheets](capture.md#editing-the-sheets)). Watch keeps running while you edit,
 and step 04 says so at the top: *Watch is still running. It reads the sheets

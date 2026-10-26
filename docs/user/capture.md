@@ -265,7 +265,7 @@ editable:
 
 - **Channels** is `input.csv`: channel, patch, name, category, type, 48V,
   DCA and mute group. Press **▸** on a row for its model, preset and notes.
-- **Busses** and **Outputs** are `busses.csv`: name, role, width, sources,
+- **Busses** and **Mains and Matrix** are `busses.csv`: name, role, width, sources,
   tap and outputs. **▸** opens its effects, preset, DCAs, mute groups,
   label and notes, and **Feeds**: where the row goes, worked out from the
   other rows' sources.
@@ -273,7 +273,7 @@ editable:
 A cell left empty shows, in grey, what the plan has there. Type in a cell
 and the table marks it; **Save** writes the file and updates the plan, with
 no model. Under the Channels table it says *Save writes the input.csv file
-and updates the build plan.*, and under Busses and Outputs *Save writes
+and updates the build plan.*, and under Busses and Mains and Matrix *Save writes
 the busses.csv file and updates the build plan.* Renaming an input or a bus
 renames it in every row's sources too.
 
