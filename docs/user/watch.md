@@ -275,8 +275,8 @@ Physical sockets read: in LCL 1-9; out LCL 1-2.
   NEW     [WARNING] CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
   NEW     [WARNING] L001 Send On But Near-Silent: CH 2 "Snare"'s send to BUS 1 is on at -105dB -- audible in principle, in practice dead.
   ...
-  NEW     [INFO] CH001 Channel Not In Any DCA (5): CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback" -- each is in use but belongs to no DCA group.
-  ... 2 more NEW lines
+  NEW     [WARNING] R002 Bus No Output (2): BUS 2 "Monitor 1", BUS 3 "FX" -- each is in use but has no route to a physical output -- not directly, not through a Main, and not through a Matrix.
+  ... 3 more NEW lines
 ```
 
 Three things to read here.
@@ -298,7 +298,7 @@ atoo watch --state-sequence audit_demo_state.json,audit_demo_state_before.json -
 [2026-09-22T06:14:12+00:00] change detected:
   CLEARED [WARNING] C001 Phantom Power On Unpatched Socket: 48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
   CLEARED [WARNING] CH002 DCA Fader Low With Active Members: DCA 1 "Drums" is at the floor (-20dB or lower) but controls 2 active member(s): CH 1 "Kick", CH 2 "Snare".
-  ... 8 more CLEARED lines
+  ... 7 more CLEARED lines
 ```
 
 **Nothing changing is nearly silent.** A pass with no news says so in one

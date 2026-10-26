@@ -42,16 +42,16 @@ The fixture's Kick is on LCL 1, so the condition is violated and fires at
 the severity the file itself asked for:
 
 ```
-[2026-09-22T06:09:37+00:00] baseline -- 16 finding(s) already present:
-Audit findings: 1 error, 7 warning, 8 info.
+[2026-09-22T06:09:37+00:00] baseline -- 12 finding(s) already present:
+Audit findings: 1 error, 7 warning, 4 info.
 
 [ERROR] WATCH:kick-on-lcl5 Kick must stay patched to LCL 5
   CH 1 "Kick" is patched to LCL 1 -- Kick must stay patched to LCL 5.
 
-... the 15 structural findings
+... the 11 structural findings
 ```
 
-It is reported alongside the built-in rules, not instead of them: 15
+It is reported alongside the built-in rules, not instead of them: 11
 structural findings plus your one, sorted by severity, so your condition
 leads.
 

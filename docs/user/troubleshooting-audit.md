@@ -13,13 +13,10 @@ bay](troubleshooting-desk.md#apply-says-the-console-has-nothing-in-a-bay).
 
 ```
 $ atoo audit --state mod.state.json
-Audit findings: 1 error, 1 info.
+Audit findings: 1 error.
 
 [ERROR] C003 Patch Uses An Empty Expansion Bay
   CH 40 "Podium" is patched from MOD 1, but /$syscfg/opt_mod reports 'NONE': there is nothing in that bay, so no audio passes. The desk accepts and shows this patch without complaint.
-
-[INFO] CH001 Channel Not In Any DCA
-  CH 40 "Podium" is in use but belongs to no DCA group.
 ...
 ```
 
@@ -46,13 +43,10 @@ screen and every other check show you, still looks exactly right.
 
 ```
 $ atoo audit --state alt.state.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 warning.
 
 [WARNING] C004 Channel On Its Alternate Input
   CH 12 "Kick In" is listening to its alternate patch from CRD, not its main patch (AES50-A 1). After a virtual soundcheck this is a channel that does not hear the stage; switch it back on the desk if the show is live.
-
-[INFO] CH001 Channel Not In Any DCA
-  CH 12 "Kick In" is in use but belongs to no DCA group.
 ...
 ```
 
@@ -621,13 +615,10 @@ and nothing on the strip itself looks wrong.
 
 ```
 $ atoo audit --state fx.state.json
-Audit findings: 1 warning, 2 info.
+Audit findings: 1 warning, 1 info.
 
 [WARNING] E001 Insert On An Empty FX Slot
   CH 3 "Lead Vox"'s pre-insert is on and names FX4, which has no effect loaded. Nothing is processing this strip; load the effect into FX4 or point the insert at the slot that has it.
-
-[INFO] CH001 Channel Not In Any DCA
-  CH 3 "Lead Vox" is in use but belongs to no DCA group.
 
 [INFO] E002 FX Loaded But Not Inserted
   FX5 (DE-S2) has an effect loaded, but no channel, aux, bus, Main or Matrix inserts it, so nothing is heard through it.
@@ -686,14 +677,14 @@ and no more.
 
 **The talk mic's own strip is left out of the mix checks.** A talk mic
 is normally kept out of the mix: fader down, in no DCA. So when
-talkback is assigned, `audit` does not report that strip as "in no DCA"
-(`CH001`), "fader at floor" (`L002`), "sends nowhere" (`R008`),
+talkback is assigned, `audit` does not report that strip as
+"fader at floor" (`L002`), "sends nowhere" (`R008`),
 "nothing patched" (`C006`) or "socket muted" (`C007`). It says once that it did
 this, so the exemption is never silent:
 
 ```
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
+  CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ```
 
 ## Talkback that misses one monitor mix: `CV021`, `CV022`
@@ -755,7 +746,7 @@ Audit findings: 1 warning, 1 info.
   Talkback is assigned to CH40, and the plan puts 'Tom 3' on ch 40, so the talk mic and that input share one strip. Move the input off ch 40, or set talkback's assign to OFF or the other strip on the desk's talkback page.
 
 [INFO] T002 Talkback Strip Left Out Of Mix Checks
-  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
+  CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ...
 ```
 

@@ -99,7 +99,7 @@ atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json
 ```
 
 ```
-Audit findings: 7 warning, 8 info.
+Audit findings: 7 warning, 3 info.
 
 [WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.

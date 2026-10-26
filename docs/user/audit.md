@@ -32,7 +32,7 @@ read looks like, with a handful of faults seeded on purpose. Against a
 real desk, swap `--state FILE` for `--console 192.0.2.16`.
 
 ```
-Audit findings: 7 warning, 8 info.
+Audit findings: 7 warning, 3 info.
 
 [WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
@@ -56,10 +56,6 @@ Audit findings: 7 warning, 8 info.
 [INFO] C002 Shared Physical Input
   LCL 5 feeds more than one strip: CH 5 "Bass", CH 6 "Bass DI".
 
-[INFO] CH001 Channel Not In Any DCA (5)
-  CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback"
-  Each is in use but belongs to no DCA group.
-
 [INFO] CH003 Mute Group Active, Silencing Routed Members
   MGRP 1 "Vocals" is engaged and is silencing 1 active member(s): CH 3 "Vocal".
 
@@ -74,11 +70,11 @@ Physical sockets read: in LCL 1-9; out LCL 1.
 `LCL 9` -- with the name the desk is showing in quotes.
 
 **A rule that fires on several strips is one entry**, with the count in
-brackets: `CH001 ... (5)` above is five channels, listed once, and the
+brackets: `R002 ... (2)` above is two buses, listed once, and the
 sentence they share is said once. Where the strips differ in something
 you would act on -- a level, a socket -- each keeps its own line under
-the one heading. The count on the first line is still per finding: 15,
-not 10.
+the one heading. The count on the first line is still per finding: 10,
+not 9.
 
 **The last line is not a finding — it is what the reading covered.** Some
 rules can only answer for sockets that were actually read, and a report
@@ -213,7 +209,7 @@ atoo audit --state audit_demo_state.json --trace-from input:LCL:1 --trace-to out
 ```
 
 ```
-Audit findings: 7 warning, 8 info.
+Audit findings: 7 warning, 3 info.
 ...
 Physical sockets read: in LCL 1-9; out LCL 1.
 OK: input:LCL:1 reaches output:LCL:1 via input:LCL:1 -> strip:/ch/1 -> bus:1 -> main:1 -> output:LCL:1
@@ -227,7 +223,7 @@ atoo audit --state audit_demo_state.json --trace-from input:A:1 --trace-to outpu
 ```
 
 ```
-Audit findings: 7 warning, 8 info.
+Audit findings: 7 warning, 3 info.
 ...
 Physical sockets read: in LCL 1-9; out LCL 1.
 BROKEN: input:A:1 does not reach output:LCL:1.
@@ -243,7 +239,7 @@ atoo audit --state audit_demo_state.json --trace-from input:LCL:3 --trace-to out
 ```
 
 ```
-Audit findings: 7 warning, 8 info.
+Audit findings: 7 warning, 3 info.
 ...
 Physical sockets read: in LCL 1-9; out LCL 1.
 BROKEN: input:LCL:3 does not reach output:LCL:1.
@@ -268,7 +264,7 @@ atoo audit --state audit_demo_state.json --plan audit_demo_plan.json
 Audit findings: 5 warning, 3 info.
 ```
 
-**Fewer than the fifteen you got without it, not more.** `--plan` both
+**Fewer than the ten you got without it, not more.** `--plan` both
 adds and subtracts, and the subtraction is covered further down. Two
 findings go on top of the structural ones, and the first is the reason to
 do this at all:
@@ -338,10 +334,10 @@ and explained at the end of the report:
 
 ```
 [INFO] S001 Findings Withheld From This Report
-  10 finding(s) are not listed above because a plan was supplied: 1 C002 (1 about an object the plan never mentions); 5 CH001 (5 about an object the plan never mentions); 1 L001 (1 about an object the plan never mentions); 1 N001 (1 about an object the plan never mentions); 2 R002 (2 about an object the plan never mentions). Re-run the same audit with no plan to see every finding the rules produced.
+  5 finding(s) are not listed above because a plan was supplied: 1 C002 (1 about an object the plan never mentions); 1 L001 (1 about an object the plan never mentions); 1 N001 (1 about an object the plan never mentions); 2 R002 (2 about an object the plan never mentions). Re-run the same audit with no plan to see every finding the rules produced.
 ```
 
-Drop `--plan` and you get all fifteen back. A shorter report should never
+Drop `--plan` and you get all ten back. A shorter report should never
 be something you can mistake for a clean desk.
 
 ## See also
