@@ -4,12 +4,10 @@ On a Mac or Linux, two commands and one new terminal window. Each step
 starts with how to tell it is already done, so skip any you have.
 Windows: [below](#windows).
 
-## 1. uv
+## 1. `uv`
 
-uv installs a Python program the way an app is installed: one command,
-its own private folder, and one command to remove it. It also fetches
-the Python that Atoo needs (3.11 or newer), so you never install one
-yourself, and leaves the Python your laptop came with alone.
+`uv` installs a Python program as an app that you can call on the 
+command line, and also fetches the correct version of Python (3.11 or newer).
 
 ```bash
 uv --version
@@ -22,18 +20,17 @@ means you do not. Install it:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-With Homebrew, `brew install uv` does the same.
+If you are a Homebrew user, `brew install uv` does the same.
 
 Then **open a new terminal window**. The installer puts uv in
-`~/.local/bin` and adds that folder to your `PATH` in your shell's
-startup file, and a window that was already open does not read the
-change. In the new window, check:
+`~/.local/bin` and updates your `PATH` in your shell's
+startup file. In the new window, check:
 
 ```bash
 uv --version
 ```
 
-Still `command not found`: run `~/.local/bin/uv tool update-shell`, then
+If you are still seeing `command not found`: run `~/.local/bin/uv tool update-shell`, then
 open another new window.
 
 ## 2. Install Atoo
@@ -42,27 +39,19 @@ open another new window.
 uv tool install --python 3.12 "atoo[ui]"
 ```
 
-`--python 3.12` is not optional on a Mac: without it uv may pick the
-Python 3.9 that Apple's Command Line Tools put on the laptop, and stop
-with an error that Atoo needs Python 3.11 or newer. With it, uv uses a
-3.12 it already has or downloads one of its own.
+`--python 3.12` is needed to prevent use of the built-in
+Python 3.9 that is installed by default on MacOS.
 
-This installs Atoo and its browser UI into a private folder of their
-own, with a Python of their own, and changes nothing else on the
-laptop. It ends with `Installed 2 executables: a2, atoo`: two commands
-that are the same command, `atoo`, and `a2`, its short spelling
-(`a2 ui` is `atoo ui`).
+This installs Atoo and its browser UI into a private folder along with Python. It should end with `Installed 2 executables: a2, atoo`.  (You can use `a2` in place of `atoo` if you prefer that spelling.)
 
-Make sure `atoo` is on your `PATH`, whatever the installer did on this
-laptop (on a new Mac account it often is not yet):
+Then add `atoo` to your `PATH`:
 
 ```bash
 uv tool update-shell; exec zsh
 ```
 
-`update-shell` adds `~/.local/bin` to your shell's startup file, or says
-it is already there. `exec zsh` restarts the shell in this window so it
-reads the change; zsh is the default on a Mac. In bash or any other
+`update-shell` adds `~/.local/bin` to your shell's startup file. `exec zsh` restarts the shell in this window so it
+reads the change; `zsh` is the default on a Mac. If you are using `bash` or any other
 shell, open a new terminal window instead. Check:
 
 ```bash
@@ -75,14 +64,9 @@ Its first line names the copy you just installed:
 atoo 0.2.5 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
-`atoo: command not found`: the command above, then `atoo --version`
-again.
-
 ## 3. First run: `atoo init`, then `atoo ui`
 
-`atoo init` gives you a folder of your own to work in, so nothing you
-do touches the files Atoo ships. It makes `~/Documents/Atoo` (or
-wherever `--dir` says), copies a starter set into it, and points
+`atoo init` sets up a folder to hold your conventions, shows and presets. It makes `~/Documents/Atoo`, copies a starter set into it, and points
 `~/.atoo.config` at it:
 
 ```bash
@@ -109,16 +93,13 @@ Next: `atoo ui` opens Atoo in your browser, starting in ~/Documents/Atoo. ~/Docu
 |---|---|
 | `README.md` | what each file is, and what to do next |
 | `conventions.md` | example house conventions, to rewrite as your own house style |
-| `presets/` | nineteen starter channel presets (`.chn`), one per common source, that `conventions.md` names, and three bus presets (`.bus`): a compressor for the mix busses and a reverb for each of two FX busses. Export your own from the desk into it |
+| `presets/` | nineteen starter channel presets (`.chn`), one per common source, that `conventions.md` names, and three bus presets (`.bus`): a compressor for the mix busses and a reverb for the FX busses. You can add your own channel and bus presets exported from the desk or Wing-Edit. |
 | `audit-demo/` | three small, hand-built console captures for trying [`atoo audit`](audit.md) and [`atoo watch`](watch.md) with no desk |
 
-**It never overwrites anything.** A file already there is left alone and
-reported, and so is a config value that already names something else
-(`--force` replaces that, never a file you have edited). Run it twice
-and the second run says `Nothing to do`.
+Note that the Atoo installer won't overwrite anything, so if you want 
+to reset something in your Atoo directory, either delete it first and then run `atoo init` again, or run init with the `--force` option.
 
-It makes no show: your first one is made in the browser with **New
-show…**. To edit the Demo show, `atoo init --demo` adds a copy of it
+To include the demo show in your directory (so that you can make changes or apply it to your desk) add the demo option, `atoo init --demo`. See:
 ([Change the Demo show](change-the-demo.md)).
 
 Then open Atoo in your browser:
@@ -136,32 +117,25 @@ Console: none configured -- set one in the bundle bar (Change…) before Ping, A
 Working folder: ~/Documents/Atoo -- Open… and New show… start here.
 ```
 
-The page opens in your default browser. Over SSH, with no display, it
-opens nothing and says so; the address is printed for that.
-`--no-browser` turns the opening off, and a second `atoo ui` opens the
-one already running. `Ctrl-C` in the terminal stops it.
+The Atoo UI opens in your default browser. `Ctrl-C` in the terminal stops it.
 
 Next: [Try the Demo show](demo.md).
 
-## When it does not work
+## Troubleshooting
 
 **`uv: command not found`, or `atoo: command not found`, after a
 successful install.** The terminal has not seen the `PATH` change: run
 `uv tool update-shell; exec zsh` (or `~/.local/bin/uv tool update-shell`
-if `uv` itself is not found), or open a new window. In bash, open a new
-window rather than `exec zsh`.
+if `uv` itself is not found), or open a new window. If using bash, open a new window.
 
 **`uv tool install` says Atoo needs Python 3.11 or newer.** uv picked
 the Python 3.9 that came with the laptop. Run step 2's command with
 `--python 3.12` after `install`, as written above.
 
 **`the web UI needs the 'ui' extra` from `atoo ui`.** It was installed
-without `[ui]`. Run step 2's command again with `--force` after
-`install`.
+without `[ui]`. Install Atoo again: run step 2's command again with `--force` after `install`.
 
-**The starter set is missing.** If an install has lost it, `init`
-writes nothing, exits 1, and says where it looked. Install it again:
-step 2's command with `--force` after `install`.
+**The starter set is missing.** Install Atoo again: run step 2's command again with `--force` after `install`.
 
 [Troubleshooting](troubleshooting.md) covers the desk, builds and the
 browser.
@@ -197,7 +171,7 @@ Its `atoo --version` names a copy in pipx's own folder, ending
 `pipx/venvs/atoo/...`. To update or remove it: `pipx upgrade atoo`,
 `pipx uninstall atoo`. Keep one of the two installs, not both: each
 puts its `atoo` in `~/.local/bin`, and `atoo --version` says which one
-you have ([Which atoo am I
+you have. See: ([Which atoo am I
 running?](install-from-checkout.md#4-which-atoo-am-i-running)).
 
 ## Windows

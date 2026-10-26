@@ -130,7 +130,7 @@ quietly. Nothing went wrong but the cut.
 ## `atoo: command not found`
 
 That is an install problem: see
-[When it does not work](install.md#when-it-does-not-work).
+[Troubleshooting](install.md#troubleshooting).
 
 ## See also
 
