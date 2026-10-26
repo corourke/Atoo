@@ -94,6 +94,28 @@ export ATOO_AI_PROVIDER=ollama
 export ATOO_AI_MODEL=qwen2.5-coder:7b
 ```
 
+Two more settings are worth making for a local model:
+
+```bash
+export ATOO_AI_NUM_CTX=24576
+export ATOO_AI_TIMEOUT=1800
+```
+
+- **`ATOO_AI_NUM_CTX`** is how much of the conversation the model holds at
+  once, in tokens. Unset, Atoo sizes it to each request. Fixing it at
+  `24576` keeps the model's memory use the same from one build to the
+  next, and saves Ollama reloading the model when the size changes.
+- **`ATOO_AI_TIMEOUT`** is how many seconds Atoo waits for the model to
+  say anything before giving up: `120` by default on Ollama. A large
+  local model reading a big show can be silent for longer than that, so
+  give it `1800`.
+
+**Memory.** A model of 14 to 30 billion parameters needs a machine with
+32 GB of memory. An Apple Silicon Mac with 32 GB runs one entirely on its
+GPU at the context size above; a larger model spills onto the CPU and
+slows right down. With less memory, or no GPU, expect a build to take far
+longer.
+
 ## Any OpenAI-compatible host
 
 ```bash
