@@ -80,7 +80,8 @@ INFO ch 24-40, aux 3-7: not in this plan, unpatched from their sources so none l
 A WING ships with its local outputs already patched (on a Compact, outputs
 3-8 carry busses and the Mains), and an earlier show leaves its own patches
 behind. A full apply **disconnects every output socket on the desk's own
-panel that no bus, Main or Matrix of the plan is patched to**: the
+panel that no bus, Main or Matrix of the plan is patched to, and that the
+plan does not record as a split**: the
 socket's group goes to `OFF`, and nothing else about it is touched. A
 socket the plan does patch keeps what the plan wrote, and one that already
 reads `OFF` is left as it is. One INFO line says which sockets:
@@ -98,6 +99,17 @@ above, which sets every output group to its initialized state, so nothing
 needs to be told how many sockets each has. With `--no-init`, or on a Rack
 (no capture), [`--clean-output-sockets`](applying.md#flags-worth-knowing)
 reaches them. [Undo](undo.md) puts each socket back as it was.
+
+## Splits and recording feeds
+
+A plan captured from a desk records every output socket fed straight from
+a source rather than from a bus, Main or Matrix: a Dante split, the
+WING-LIVE card one to one, a USB recording feed, an AES50 split
+([Capturing a desk](capture.md#splits-and-recording-feeds)). Apply writes
+each one's source, as it writes a bus's output patch, so the captured show
+puts its splits back on any desk. Applied to the desk it came from, they
+are already there and nothing changes. In the Preview they are on their
+output group's tile, beside the buses and Mains patched there.
 
 ## Direct Main routes: every Main is written, OFF included
 

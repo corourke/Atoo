@@ -161,14 +161,38 @@ engine that can hold it; its parameters are left as the desk has them.*
 Type `V-PLATE` in **M1**'s FX cell instead and it is refused: *every
 engine that can hold V-PLATE (FX1-8) is already in use*.
 
+## Splits and recording feeds
+
+An output socket the desk feeds straight from a source, not from a bus, a
+Main or a Matrix, is a split: the Dante module's outputs to a recording
+machine, the WING-LIVE card one to one, a USB recording feed, an AES50
+split to a monitor desk. The plan records each one (`direct_outputs`), with
+the socket and the source that feeds it, and the capture says which, at
+INFO:
+
+```
+  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are not in the sheets; the plan records them, Apply writes them and Watch says only if one changes.
+```
+
+`atoo apply` writes each one's source, as it writes a bus's output patch,
+so the show puts its splits back on any desk; applied to the desk it came
+from, they are already there and nothing changes. In Apply's Preview they
+are on their output group's tile. Watch counts them as part of the show,
+so it says only if one changes. `atoo verify` refuses a split on a socket
+a bus, a Main or a Matrix also patches, naming both, and one fed from a
+source the desk does not have.
+
+The sheets do not show them yet; to change one, edit `plan.json`.
+
 ## What stays out of the sheets
 
 Nothing is dropped silently. Each of these is one INFO line, naming what
 it is about, and the snapshot in `captures/` keeps the whole desk:
 
 - **Sockets fed straight from an input**, such as a recording or Dante
-  split, are not in the sheets. The plan records them, so Watch says only
-  if one changes, and `atoo apply` does not write them.
+  split, are not in the sheets. The plan records them, `atoo apply` writes
+  them and Watch says only if one changes; see
+  [Splits and recording feeds](#splits-and-recording-feeds).
 - **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
 - **A bus nothing feeds that reaches only a Main** is left out, and no

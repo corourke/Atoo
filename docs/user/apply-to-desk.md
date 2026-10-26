@@ -88,7 +88,9 @@ plan will leave it, one tile per channel, aux, bus, main, matrix, DCA and
 mute group, each in its colour with its number and name. After those
 come four more banks, so every address the preview read has a tile:
 **Inputs** and **Outputs**, one tile per socket group (Local, AES50-A,
--B and -C, StageConnect, USB, Card, Module, AES/EBU); **FX**, one tile
+-B and -C, StageConnect, USB, Card, Module, AES/EBU), where a captured
+show's [splits and recording feeds](capture.md#splits-and-recording-feeds)
+are listed with the buses and Mains patched there; **FX**, one tile
 per effect slot; and **Console**, for a setting that belongs to no strip,
 such as talkback. A tile the plan does not use is drawn dark and dashed.
 A tile the write would change has a blue outline, even a strip the plan
