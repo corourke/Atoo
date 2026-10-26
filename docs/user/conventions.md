@@ -296,7 +296,15 @@ the words you would use:
 "Every input" means every input socket your channels are patched from, in
 channel order, a stereo channel's two sockets in turn, one output socket
 each. A range you name is used as written. The plan holds one entry per
-output socket, each said at INFO with the line it came from, and the show's
+output socket, each said at INFO with the line it came from, and the build
+says them under the plan it wrote; for twelve inputs split to AES50-B and
+recorded to USB:
+
+```
+Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
+```
+
+`--pretty` lists each run and what feeds it under **DIRECT OUTPUTS**. The show's
 [`outputs.csv`](capture.md#splits-and-recording-feeds) wins over them where
 it names a socket.
 
