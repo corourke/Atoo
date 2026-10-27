@@ -111,11 +111,17 @@ exactly as the command would from a terminal, and a build that writes no
 plan ends **Failed** with a `build.failed` error in the Findings panel. The message
 is the build's own last word on why, and the whole of what it said is in
 the log on step 04. By far the commonest cause is that **a build needs a
-model and cannot reach one**. With nothing configured, the Findings panel says:
+model and cannot reach one**: a key that is wrong, or a host that does not
+answer.
+
+With no model set up at all, a build never starts. **Build plan** and
+**Rebuild plan** are locked, and beside **Build plan** the page says:
 
 ```
-The build did not produce a plan (exit 1): generation failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead
+a build needs a model, and none is set up here (no API key: set ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) before starting `atoo ui`, or ATOO_AI_PROVIDER=ollama for a local model)
 ```
+
+The plan you have stays as it is, so Apply can still write it.
 
 Set the key, or point `ATOO_AI_PROVIDER` at another backend (see
 [`build` says "generation failed"](troubleshooting-build.md#build-says-generation-failed)) **in the shell

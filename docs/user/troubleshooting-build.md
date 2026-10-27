@@ -10,10 +10,12 @@ is the only command that needs one: `verify`, `compare`, `apply`,
 `audit`, `watch`, `ping` and `ui` all work on a plan that already
 exists. The last line names the cause. There are three common ones.
 
-**No API key.** The default model is Claude, which needs your key:
+**No API key.** The default model is Claude, which needs your key. With
+none set, the build stops before it starts, and nothing on disk changes:
+the show's `plan.json` is left exactly as it was.
 
 ```
-generation failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead
+build failed: a build needs a model: the default is Claude, which needs an API key in ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) -- or set ATOO_AI_PROVIDER=ollama to use a local Ollama model instead. See 'Setting up an AI provider' in the user guide. Nothing was changed: plan.json is as it was.
 ```
 
 Set it, as in [Setting up an AI provider](ai-provider.md):

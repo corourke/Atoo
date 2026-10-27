@@ -78,6 +78,12 @@ different: it needs a build (step 4).
 
 ## 4. Bring the guest singer in (needs a model)
 
+A build is a call to an AI model, so this step needs one set up before
+`atoo ui` starts ([Setting up an AI provider](ai-provider.md)). Without
+one, **Rebuild plan** is locked, with the reason beside **Build plan**, and
+the plan stays exactly as it is: skip this step, leave Guest Vox skipped,
+and go on to step 5 with the plan from step 3.
+
 The input list already has the guest's microphone, switched off: its row
 is skipped, so the build leaves it out.
 
