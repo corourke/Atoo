@@ -107,6 +107,18 @@ passes, it is the plan, and the build says what was fixed
 shows both rounds' errors and exits 2 (`build.fixup-unresolved`).
 There is one round, never a loop.
 
+With the critic on (below), it reads the first plan before this round. When
+it finds a line of your instructions or conventions the plan did not carry
+out, and quotes that line exactly, the line goes back in the same round,
+alongside verify's errors, or on its own. The corrected plan is kept only
+if `verify` finds it no worse: no more errors, and, with as many, no more
+strips that reach no output. Otherwise the first plan stands, and the
+build says what is still open (`build.fixup-rejected`). Each line sent back
+is a note quoting it (`build.critic-repair`): carried out, where code can
+see the sockets it names, or else to be confirmed in the plan. The critic's
+other findings were about the first plan, so once it is replaced each
+starts *On the first plan:*.
+
 **It is the slow stage**: minutes on a hosted model. Each model call
 shows where it is while it runs (waiting, thinking or writing, and for
 how long), and a build can be stopped at any time with Ctrl-C or
@@ -216,8 +228,14 @@ desk will hold them: where the plan states none, unity and unmuted, which
 is what Apply writes. So it does not point at an unset mute when your
 conventions say "unmuted", and it still does when they say "muted".
 
-**It is advisory, and it gates nothing.** Its findings are printed and
-kept in the plan, and no later stage reads them. Routing is not its job:
+**It is advisory, and it gates nothing.** It reads the first plan, before
+the fix-up round. One kind of finding goes back to the model: an omission
+that quotes a line of your instructions or conventions exactly, such as
+*Video Feed: Send the main mix to USB 18-19*. It joins the fix-up round
+(above), so the line is carried out in this build. A quote that is not word
+for word in your files, or an opinion about how a rule was carried out, is
+only printed. Its findings are kept in the plan, and no later stage reads
+them. Routing is not its job:
 code checks that in `verify`. It is off by default on the command line
 (Build's step 04 ticks it for you), and the plan records whether it ran. Which model it runs on is set in [Setting up
 Atoo](configuration.md).

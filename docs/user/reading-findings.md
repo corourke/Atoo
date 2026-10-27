@@ -81,7 +81,14 @@ says which check found it:
 A critic finding starts with a short claim, such as *Keys bus created,
 but there is only one keyboard*, and then gives its reasons. The critic
 is a model giving a second opinion, so its findings are WARNING at most
-and never stop an apply.
+and never stop an apply. When it finds one of your lines left out and
+quotes it word for word, the build's fix-up round carries it out; the
+critic's warning then becomes a note, `build.critic-repair`, quoting your
+line; where code cannot see whether it was carried out, the note asks you to
+confirm it in the plan. A warning that ends *still not carried out after the
+fix-up round* is a line to add by hand, or to state more plainly. One that
+starts *On the first plan:* was about the plan the fix-up round replaced, and
+may already be mended.
 
 ## In the browser
 

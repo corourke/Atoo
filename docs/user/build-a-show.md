@@ -88,8 +88,9 @@ instructions on top.
 2. Under **Console model**, choose your desk: **WING Compact**,
    **WING (full-size console)** or **WING Rack**.
 3. **Run the critic pass** is ticked: a second model reads the plan
-   against your conventions and reports where it disagrees. Untick it
-   to skip that call.
+   against your conventions and reports where it disagrees. A line of
+   yours it finds left out, quoted word for word, goes back to the model
+   once to be carried out. Untick it to skip that call.
 4. Press **Build plan**.
 
 **Options** folds: click its heading to close it. Closed, it still says
