@@ -307,7 +307,11 @@ Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
 `--pretty` lists each run and what feeds it under **DIRECT OUTPUTS**. The show's
 [`outputs.csv`](capture.md#every-output-socket-outputscsv) wins over them where
 it names a socket. It is where every socket's source is kept, a bus's, a Main's
-or a Matrix's included; `busses.csv`'s Outputs column follows it.
+or a Matrix's included; `busses.csv`'s Outputs column follows it. A show built
+from conventions has none until you save Build 04's
+[Outputs table](capture.md#the-outputs-table), which writes every socket the
+plan patches; from then on the file decides those sockets, and a changed
+convention no longer moves them.
 
 ### Processed feeds
 

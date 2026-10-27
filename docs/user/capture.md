@@ -108,6 +108,16 @@ leaves open, `capture` decides and says, at INFO, so you can correct it:
 - **`tap`** is the pre or post most of a row's sources use; a source that
   differs is marked in `sources` (`Crowd (pre)`).
 
+### The desk's colours
+
+The capture keeps each colour as the desk shows it, so Build's step 04 draws
+it: a channel's, a bus's, a Main's and a Matrix's number, a channel's patch,
+and each Outputs row's source. A strip linked to its source (the WING's
+factory setting) shows its socket's colour, not its own, so that is the one
+drawn, and the plan states none of its own for it. Applied back, the plan
+writes each strip's own colour where the desk showed it, and leaves every
+socket's as it was. Navy, the desk's default, is drawn as Navy.
+
 ## Effects
 
 Every effect switched on in an insert, on a channel, bus, Main or Matrix,
@@ -244,16 +254,22 @@ Each change is an INFO (`build.outputs-sheet`), for example *outputs.csv
 wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).*
 
 When the show has `outputs.csv`, a build does not read `busses.csv`'s
-Outputs column. Until Build 04 has its Outputs table, the Busses table's
-Outputs cell can still be edited, and saving a move there rewrites
-`outputs.csv` to match: the old sockets' rows go and the new ones are
-added. A cell edited in another program that disagrees with `outputs.csv`
-is not used, and the build says so, for example *busses.csv says Bus 9 goes
-to AUX 1-2, outputs.csv says LCL 1-2: outputs.csv is where each socket's
-source is kept, so it wins, and busses.csv's Outputs column follows it.* A row that
-cannot work stops the build, naming it: a socket the desk does not have, a
-socket listed twice, a source past its group's end. Build's step 04 does not
-show the file yet; its table is waiting on a design review.
+Outputs column. In Build's step 04 that column is read-only: you move a bus
+in the [Outputs table](#the-outputs-table), and its Save rewrites the bus's
+`busses.csv` cell to match. A cell edited in another program that disagrees
+with `outputs.csv` is not used, and the build says so, for example
+*busses.csv says Bus 9 goes to AUX 1-2, outputs.csv says LCL 1-2:
+outputs.csv is where each socket's source is kept, so it wins, and
+busses.csv's Outputs column follows it.* A row that cannot work stops the
+build, naming it: a socket the desk does not have, a socket listed twice, a
+source past its group's end.
+
+**A show built from conventions has no `outputs.csv` at first.** Build's
+step 04 shows the plan's own outputs in its Outputs table, and says so. Its
+first Save writes `outputs.csv` with every socket the plan patches, and from
+then on the file decides: a rebuild lays it on, so a change to your
+conventions no longer moves a socket the file lists. Edit the row instead,
+or delete `outputs.csv` to hand every socket back to the conventions.
 
 ## User signals and patches: user.csv
 
@@ -355,10 +371,13 @@ editable:
 
 - **Channels** is `input.csv`: channel, patch, name, category, type, 48V,
   DCA and mute group. Press **▸** on a row for its model, preset and notes.
-- **Busses** and **Mains and Matrix** are `busses.csv`: name, role, width, sources,
-  tap and outputs. **▸** opens its effects, preset, DCAs, mute groups,
-  label and notes, and **Feeds**: where the row goes, worked out from the
-  other rows' sources.
+- **Busses** and **Mains and Matrix** are `busses.csv`: name, role and width,
+  with the sockets it feeds as read-only badges (`LCL 3-4`), which you change
+  in Outputs. **▸** opens its sources and their tap, its effects, preset,
+  DCAs, mute groups, label and notes, and **Feeds**: where the row goes,
+  worked out from the other rows' sources.
+- **Outputs** is `outputs.csv`: every output socket the desk patches and
+  what feeds it ([The Outputs table](#the-outputs-table)).
 - **User signals and patches** is `user.csv`: slot, source, tap, leg and
   name. With no slot in use it says so, and **Add a slot** starts one
   ([User signals and patches](#user-signals-and-patches-usercsv)).
@@ -384,6 +403,30 @@ two inputs on one channel. **Save** stays locked until it is fixed.
 
 Nothing goes to the desk until you apply the plan. A role, a label or a
 note changes nothing on the desk.
+
+### The Outputs table
+
+One row per output socket: the socket, what feeds it in the desk's words
+(`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up
+together, fed by sources that go up together, fold into one line of
+read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a
+bus's two sides. Press **▸** to open the run and edit its rows. A run
+holding an edited or refused row stays open.
+
+The row's left edge says what feeds it: solid blue for an input socket (a
+split or a recording feed), double grey for a bus, a Main or a Matrix,
+dashed brass for a user signal or patch, dotted grey for a send, the
+monitor or the oscillator. The square beside the source is the desk's own
+colour for it, as [the desk shows it](#the-desks-colours).
+
+To move a socket, change its output or its source; to disconnect one, type
+`OFF` as its source; **Add a socket** adds a row. Each cell is checked as
+you type, and one that cannot work turns red with the reason under its
+row. **Save outputs.csv** writes the file and updates the plan, with no
+model: the file is written in the desk's output order and words, with
+your notes, and a socket you took `OFF` has no row. Moving a bus, a Main or
+a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says
+so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
 
 ### While Watch runs
 
