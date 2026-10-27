@@ -214,7 +214,7 @@ workspace folder at `~/Documents/Atoo` and sets up your config file. When
 you start `atoo ui` it will report its working folder:
 
 ```
-Working folder: ~/Documents/Atoo -- Open… and New show… start here.
+Working folder: ~/Documents/Atoo
 ```
 
 **`atoo init` never replaces a value you have set.** It reports the

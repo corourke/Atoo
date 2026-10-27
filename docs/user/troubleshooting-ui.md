@@ -2,29 +2,28 @@
 
 `atoo ui` will not start, or its page is blank, stale or read-only.
 
-A healthy start prints where to point a browser and then sits there:
+A healthy start says which Atoo is running, opens the page in your browser, and then sits there:
 
 ```text
 $ atoo ui --plan touringband/plan.json
 atoo 0.2.5 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
-Atoo: http://127.0.0.1:8420 -- Build, Apply and Watch (Ctrl-C to stop)
-Session-based: closing this stops whatever it was watching, and nothing is kept between runs.
-Watch and Build never write to a console. The shell's Apply mode is the one screen that does, and only with Arm ticked.
 Plan: touringband/plan.json -- on Build step 04
 Console: none configured -- set one in the bundle bar (Change…) before Ping, Apply or a live Watch.
-Working folder: ~/Documents/Atoo -- Open… and New show… start here.
+Working folder: ~/Documents/Atoo
 ```
 
-The first line says which copy of Atoo this is ([`atoo --version`](install-from-checkout.md#4-which-atoo-am-i-running)
-prints the same), and the page repeats it at the bottom. One URL, and it is the whole UI: Build, Apply and Watch are three modes
-of the one page at `/`. The `Plan:` line appears only with `--plan` (or
-`--show` on a bundle that has a `plan.json`); the plan is on Build step
+The first line says which copy of Atoo this is and where it runs from
+([`atoo --version`](install-from-checkout.md#4-which-atoo-am-i-running) adds the branch and
+commit), and the page repeats it at the bottom. The page opens at `http://127.0.0.1:8420/`;
+Build, Apply and Watch are three modes of that one page. With `--no-browser`, or where no
+browser can be opened, the start prints the address instead. The `Plan:` line appears only
+with `--plan` (or `--show` on a bundle that has a `plan.json`); the plan is on Build step
 04, which can also open one from a path. The `Console:` line is always
 there: with a console configured it names the address and where it came
 from (`--console`, `ATOO_CONSOLE` or `~/.atoo.config`), and the
 bundle bar's **Change…** sets another without a restart. The
 `Working folder:` line is the folder [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init)
-made; before `init` it says there is none, and how to make one.
+made, where **Open…** and **New show…** start; before `init` it says there is none, and how to make one.
 
 ### It exits immediately
 
