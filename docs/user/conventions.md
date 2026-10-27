@@ -309,9 +309,34 @@ Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
 it names a socket. It is where every socket's source is kept, a bus's, a Main's
 or a Matrix's included; `busses.csv`'s Outputs column follows it.
 
-There is no "channel, pre-fader" feed on the desk. A processed or
-post-fader feed goes through a user signal (`USR`), and the output is fed
-from that.
+### Processed feeds
+
+A split carries the input before the channel. A feed of a channel *after* its
+processing, a post-fader vocal to a stream recorder or the keys pre-fader to
+a video desk, goes through one of the desk's 24 user signals (`USR 1-24`),
+and the output is fed from that. Say which strip, which tap and which socket;
+leave the user signal to Atoo:
+
+```
+## Feeds
+- Stream recorder: the lead vocal, post-fader, on USB 13, so the stream follows the vocal's level in the mix.
+- Keys to the video desk: the keys pre-fader, on USB 14-15, processed but not following the keys fader.
+```
+
+Pre-fader is after the channel's EQ and dynamics, before its fader; post-fader
+follows the fader as well. The build takes the next user signal the show does
+not already use, and one feed of the same strip at the same tap is shared by
+every socket that asks for it. A stereo channel takes two, its left and its
+right, on the socket you name and the next. It says each at INFO, for the
+lines above:
+
+- *USB 13 carries Lead Vox after its fader (post), through USR 1, the next free user signal, as '- Stream recorder: the lead vocal, post-fader, on USB 13' asks*
+- *USB 14-15 carries Keys before its fader (pre), through USR 2, USR 3, the next free user signals, as '- Keys to the video desk: the keys pre-fader, on USB 14-15' asks*
+
+A strip is named as the show names it; a stereo pair answers to its name
+without the L (`Keys` for `Keys L`). A strip the show doesn't have, or a feed
+when all 24 user signals are already used, is a warning naming the line, and
+that feed is not built.
 
 `verify` refuses a split the desk cannot carry, such as a run past the end
 of its group or a socket a bus or a Main already uses:
