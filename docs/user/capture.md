@@ -251,7 +251,14 @@ Outputs column follows it.** A build lays `outputs.csv` onto the plan:
 - a socket the file doesn't list is left to the conventions.
 
 Each change is an INFO (`build.outputs-sheet`), for example *outputs.csv
-wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).*
+wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).* Where the
+file takes sockets off a bus, a Main or a Matrix that a line of your
+instructions or conventions asks for in so many words, the build says so as
+a WARNING, quoting the line, for example *outputs.csv decides Main 1's
+sockets (LCL 1-2), so the instructions' 'Video Feed: Send the main mix to
+USB 18-19' is not carried out: USB 18-19 are not patched from Main 1. Add
+USB 18-19 to outputs.csv, or edit them in Build 04's Outputs table, to
+carry it out.*
 
 When the show has `outputs.csv`, a build does not read `busses.csv`'s
 Outputs column. In Build's step 04 that column is read-only: you move a bus
@@ -265,8 +272,10 @@ build, naming it: a socket the desk does not have, a socket listed twice, a
 source past its group's end.
 
 **A show built from conventions has no `outputs.csv` at first.** Build's
-step 04 shows the plan's own outputs in its Outputs table, and says so. Its
-first Save writes `outputs.csv` with every socket the plan patches, and from
+step 04 shows the plan's own outputs in its Outputs table, and says so: *This
+show has no outputs.csv yet -- these are the plan's outputs. Save writes
+outputs.csv, which will then take priority over conventions and instructions
+during a build.* Its first Save writes `outputs.csv` with every socket the plan patches, and from
 then on the file decides: a rebuild lays it on, so a change to your
 conventions no longer moves a socket the file lists. Edit the row instead,
 or delete `outputs.csv` to hand every socket back to the conventions.
