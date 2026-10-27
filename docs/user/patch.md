@@ -224,7 +224,9 @@ A change can also edit what is running; see
   the routes into a Main or Matrix and a Matrix's feed. Each object that moves
   is named at INFO. *"Make the matrix a Main"* takes the lowest free Main
   unless the change names one; routes to its old number stay there, and an
-  INFO names them. Two objects can swap numbers in one change. Refused only
+  INFO names them. Two objects can swap numbers in one change: each is
+  written whole on the other's number, with its own sends, tags and routes,
+  and each address is written once. Refused only
   for a number past the desk's range, or one another object holds that the
   change does not also renumber or drop (named). The new number is judged
   free from the plan on the desk, because the desk read covers strips, not
@@ -334,7 +336,7 @@ A change can also edit what is running; see
   on its strip, and a second patch would place a second copy of it. A
   change already promoted is still listed until the rebuilt show is
   applied, marked `(promoted)`.
-- **A bus, DCA or mute group the plan does not know is read off the desk.**
+- **A bus, DCA, mute group, Main or Matrix the plan does not know is read off the desk.**
   On a desk Atoo did not set up, or one set up by hand since, a change that
   names one — *"clear bus Drums"*, *"put the sax in the Horns DCA"* — reads
   just that object's name from the desk (never a sweep of it), and for a drop
@@ -342,8 +344,28 @@ A change can also edit what is running; see
   carried out against what the desk holds, and an `INFO` says it was found
   there (*"bus 'Drums' is not in the plan on the desk, but the desk holds it
   as bus 5"*). A strip that sends into it or belongs to it but is not in the
-  plan is named in a `WARNING` and left as it is: the plan has no record of
-  it to edit. A name the desk does not hold either is still refused.
+  plan has that taken away too, from what the desk read: its send switched
+  off, or the group's tag taken out of its tags (its other tags stay). An
+  `INFO` names those strips, and Undo puts them back. A name the desk does
+  not hold either is still refused.
+
+  A Main or Matrix the plan does not know is read the same way, by the name
+  the desk gives it or by its number (*"drop Matrix 1"*). Dropping a Matrix
+  switches off every send into it the desk reads as on, from a strip, a bus
+  or a Main, whether or not the plan holds it. Dropping a Main leaves the
+  strips routed to it as they are. Either way the output sockets it feeds
+  were not read, so they stay patched as the desk has them, and an `INFO`
+  says so. Undo puts it all back.
+
+  Such an object can be edited as well as dropped. An edit of a bus writes
+  only what it names (*"tilt +2 on the Drums bus"*); sending the bus to a
+  socket reads which Mains it is routed to first, so the route it leaves is
+  switched off. Renumbering a Main or Matrix (*"make Room EQ Matrix 3"*)
+  reads all of it off the desk, with every send or route into it, and
+  writes them on the new number; the old number is cleared. The output
+  sockets it feeds are not read, so they still take the old number: name
+  them in the change to move them too. A number the desk already holds
+  under another name is refused.
 
 ## Clearing a bus
 
