@@ -531,9 +531,12 @@ What an insert does and does not do:
   reads: raise it again. One that the plan states is written as stated.
 - **An insert, an edit and a drop can share a change.** An edit of a strip
   the insert moves is written with the move (the strip is rewritten whole on
-  its new number, with an INFO); a drop beside an insert is carried
-  out, and a strip the dropped channel leaves that a moved channel lands on
-  is written once, by the channel that lands.
+  its new number, with an INFO); an edit of the channel the change inserts
+  (*"insert HiHat after Snare, HPF 200 on it"*) is set on it and written
+  with it; a drop beside an insert is carried out, and a strip the dropped
+  channel leaves that a moved channel lands on is written once, by the
+  channel that lands. A move or a renumber can share the change too. Each
+  address is written once, and Undo puts every one back.
 - **The input list is not edited.** `--promote` appends the new input at
   the end of `input.csv`; put the row where it belongs by hand before the
   next rebuild, or the rebuilt numbering will not match the desk.
