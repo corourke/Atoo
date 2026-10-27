@@ -42,6 +42,7 @@ chooses your own. Rename the folder freely afterwards.
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
 | `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`. See [Every output socket](#every-output-socket-outputscsv) |
+| `user.csv` | Only when the desk uses one: one row per USR slot a channel or an output reads, saying what the slot takes. See [User signals and patches](#user-signals-and-patches-usercsv) |
 | `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
 | `captures/` | The `.snap` it was made from, or a live desk's reading |
@@ -216,9 +217,10 @@ There is no "channel, pre-fader" source, because the desk has none. A split
 carries the input before the channel strip. A processed or post-fader feed
 goes through a user signal, and its row says `USR n`. What the slot takes
 (a channel at its pre or post tap, say) is the plan's: a capture records
-every USR slot a channel or an output reads, and Apply writes it back; a
-slot assigned on the desk that nothing reads is left as it is, said at
-INFO.
+every USR slot a channel or an output reads, in
+[`user.csv`](#user-signals-and-patches-usercsv) and the plan, and Apply
+writes it back; a slot assigned on the desk that nothing reads is left as
+it is, said at INFO.
 
 `atoo apply` writes each one's source, as it writes a bus's output patch,
 so the show puts its splits back on any desk; applied to the desk it came
@@ -252,6 +254,64 @@ source is kept, so it wins, and busses.csv's Outputs column follows it.* A row t
 cannot work stops the build, naming it: a socket the desk does not have, a
 socket listed twice, a source past its group's end. Build's step 04 does not
 show the file yet; its table is waiting on a design review.
+
+## User signals and patches: user.csv
+
+A WING's `USR` slots are how a channel or an output gets a signal the
+patch alone cannot give it: a **user signal** (USR 1-24) takes a channel,
+an aux, a bus, a Main or a Matrix before or after its fader, and a **user
+patch** (USR 25-56) takes an input socket as it is. A post-fader recording
+feed, or a stereo channel on two sockets that are not side by side, goes
+through one.
+
+When the desk uses any, the capture writes `user.csv`: one row for every
+slot a channel or an output reads, in the desk's own words, and the
+summary says how many. A desk with USR 3 taking CH 10 after its fader,
+read by USB 29, gets:
+
+```
+slot,source,tap,leg,name
+USR 3,CH 10,POST,L+R,Lead post
+```
+
+and the summary line
+
+```
+  user.csv     1 USR slot: 1 user signal
+```
+
+| Column | What it says |
+|---|---|
+| `slot` | `USR 1` to `USR 56` |
+| `source` | for a user signal, a strip: `CH 10`, `AUX 2`, `BUS 8`, `MAIN 1`, `MTX 3`; for a user patch, an input socket as the input list spells it: `LCL 5`, `AES50-A 12`; `OFF` to take the slot out |
+| `tap` | a user signal's `PRE` or `POST`; empty for a user patch |
+| `leg` | a user signal's `L+R`, `L` or `R`; empty for a user patch |
+| `name` | the slot's name on the desk |
+
+A slot assigned on the desk that nothing reads gets no row; the capture
+says so at INFO. A desk that uses no slot gets no `user.csv`.
+
+**A build lays it on** after `busses.csv` and `outputs.csv`: a row wins for
+its slot over what the conventions made, a blank `tap`, `leg` or `name`
+keeps the plan's, `OFF` takes the slot out, and a slot the file doesn't
+name is left to the conventions. Each change is an INFO
+(`build.user-sheet`), for example *user.csv wins over the conventions:
+USR 3 takes CH 11 PRE L+R (Lead post) (was CH 10 POST L+R (Lead post)).*
+A row that cannot work stops the build, naming it: a slot past USR 56, a
+user patch given a strip or a tap, a user signal given a socket, a strip
+the desk does not have, a slot listed twice. A slot nothing reads yet is
+kept, so you can define a feed before you patch it; verify says so at INFO,
+in case the slot number was mistyped. The plan records the file's
+fingerprint, so editing it in another program makes the plan **Stale**
+until you rebuild or save it in Build.
+
+**Build's step 04 shows it** as its **User signals and patches** table,
+under Mains and Matrix: a row per slot, with what reads it (the outputs
+and channels fed from it) in **Read by**. **Add a slot** takes the
+lowest user signal the table does not have, at POST on both legs. A slot typed as a user patch drops its tap and leg.
+**Save** writes `user.csv` in the desk's words and updates the plan, with
+no model; a cell that cannot work locks it, with the reason under the row.
+What reads a slot is set in Outputs or Channels, not here.
 
 ## What stays out of the sheets
 
@@ -290,7 +350,7 @@ that reaches nothing or a dead link, is still reported.
 
 ## Editing the sheets
 
-Build's step 04 shows the two sheets as its three tables, every cell
+Build's step 04 shows the sheets as its tables, every cell
 editable:
 
 - **Channels** is `input.csv`: channel, patch, name, category, type, 48V,
@@ -299,6 +359,9 @@ editable:
   tap and outputs. **▸** opens its effects, preset, DCAs, mute groups,
   label and notes, and **Feeds**: where the row goes, worked out from the
   other rows' sources.
+- **User signals and patches** is `user.csv`: slot, source, tap, leg and
+  name. With no slot in use it says so, and **Add a slot** starts one
+  ([User signals and patches](#user-signals-and-patches-usercsv)).
 
 A cell left empty shows, in grey, what the plan has there. Type in a cell
 and the table marks it; **Save** writes the file and updates the plan, with

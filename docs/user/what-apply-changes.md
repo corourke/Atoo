@@ -122,7 +122,8 @@ them, and its name. A stereo channel on a pair of slots sets both to stereo.
 [Undo](undo.md) puts each slot back as it was. A plan
 [captured](capture.md#splits-and-recording-feeds) from a desk records every
 slot a channel or an output reads, so applied back to that desk nothing
-changes.
+changes; the show's [`user.csv`](capture.md#user-signals-and-patches-usercsv)
+says them, one row per slot.
 
 ## Direct Main routes: every Main is written, OFF included
 
