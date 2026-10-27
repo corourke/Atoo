@@ -128,9 +128,13 @@ When a channel, aux, bus, main or matrix **clips**, a red **ERROR** row,
 clip, then clears by itself. Watch shows no meter and no level: the row
 is the only sign.
 
-> **CH 1 "Kick"** clipped 2 times (a clip ends once the level stays below
-> -3 dBFS for 200 ms); the last was 1.0 s ago. This clears in 59 s unless
-> it clips again.
+> **CH 1 "Kick"** clipped 3 times; the longest was 0.5 s; the first was 17 s
+> ago and the last 0.9 s ago. This clears in 59 s unless it clips again.
+
+and, for a strip that clipped only once:
+
+> **CH 1** clipped once, for 1.3 s; that was 2.7 s ago. This clears in 57 s
+> unless it clips again.
 
 - One row per strip, however many sides, words or times it clipped. A
   clip inside the minute is the same row: it does not flash again, its
@@ -140,13 +144,19 @@ is the only sign.
   a decibel of full scale (-0.5 dBFS). That is Watch's reading of "clip",
   not the desk's: if the desk's own clip light and a row ever
   disagree, say so.
-- *Clipped N times* counts separate clips, not separate packets. A clip
-  goes on while the strip stays loud and ends only once the level has
-  been below -3 dBFS for more than 200 ms, so a signal hovering at full
-  scale is one clip, not hundreds.
-- When the packets are frequent enough to time a clip, the row says how
-  long it lasted (*clipped for about 1.2 s*); otherwise only that it
-  did.
+- The row always says how many times it clipped (*once* for one). A clip
+  ends once the level has been below the clip level (-0.5 dBFS) for
+  200 ms, so each snare hit that lights the desk's clip light is one
+  clip, and a signal flickering at full scale is one clip, not hundreds.
+  A short pause in the meter data does not end a clip; a pause of more
+  than a second does.
+- *The longest* is how long the longest of those clips lasted, from its
+  first clipped reading to its last, dips shorter than 200 ms included, as
+  the desk's clip light shows them. It is said when the packets are
+  frequent enough to time a clip; otherwise the row gives the count and
+  the times only.
+- *The first* and *the last* say when the first and the latest clip were,
+  so the time between them never reads as one clip's length.
 - The rows appear within one reading of the clip, so a clip is shown
   up to a reading after it happens, and cleared up to a reading after
   the minute is up.
@@ -163,6 +173,11 @@ is the only sign.
   [Demo show](demo.md)
   the clips are simulated: one strip clips now and then, and one that
   clips again shows its count rise.
+- To check the clip rows against the desk later, record what it sends:
+  `atoo watch --console 192.0.2.148 --record-meters meters.jsonl` writes
+  every meter packet, with its time, to `meters.jsonl` while the watch
+  runs. Nothing more is asked of the desk. Send the file with a report of
+  what the clip light did, and the rows can be replayed exactly.
 
 Below the table, two blocks fold to their title while a watch runs.
 Click a title (or its **Details** or **Edit**) to open it:
