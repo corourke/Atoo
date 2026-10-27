@@ -202,9 +202,33 @@ A change can also edit what is running; see
   pair on a WING starts on an odd socket), and a second socket another
   channel uses is not taken. Made mono again, the channel keeps its first
   socket and the second is left as the desk has it; the second input-list row
-  of the pair stays on the list, unused, and the change is not stopped for it. The other fields that say
-  *which* source a strip is (`source.input`, the strip number, an index) are
-  still refused: drop the channel and add it again.
+  of the pair stays on the list, unused, and the change is not stopped for it.
+- **A running channel can be moved to another strip.** *"Move the Kick to
+  ch 30"* returns ch 1 to free, as a dropped channel's strip is, and writes
+  the Kick whole on ch 30: its name, patch, processing, sends, DCA and mute
+  group go with it. *"Swap the Kick and the Snare"* moves both; each strip
+  is written once, by the channel that lands on it. A move to an aux strip
+  works the same way. The move is refused only for a strip that cannot take
+  the channel: one past the desk's range, one a running channel holds that
+  the change does not also move or drop (named, so you can say what to do
+  with it), or one the desk reads as somebody else's or did not answer for.
+  Undo puts both strips back.
+- **Which input-list row a strip takes can be set.** *"Ch 1 is now the Kick
+  Sub"* sets the strip's `source.input` (or `source.pair_input`, the second
+  row of a stereo pair). The patch stays where it is unless the change names
+  a socket, and an INFO says so: the cable is taken to be where it was.
+- **A bus, DCA, mute group or output can be renumbered.** *"Make the Drums
+  bus bus 14"* writes the bus whole on bus 14 and returns bus 5 to an
+  initialized desk's reading. Everything that pointed at it moves with it:
+  every channel's send into it, a DCA's or mute group's tags on its members,
+  the routes into a Main or Matrix and a Matrix's feed. Each object that moves
+  is named at INFO. *"Make the matrix a Main"* takes the lowest free Main
+  unless the change names one; routes to its old number stay there, and an
+  INFO names them. Two objects can swap numbers in one change. Refused only
+  for a number past the desk's range, or one another object holds that the
+  change does not also renumber or drop (named). The new number is judged
+  free from the plan on the desk, because the desk read covers strips, not
+  busses, DCAs, mute groups or outputs; an INFO says so.
 - **A channel's preset can be switched.** *"Use the Snare preset on the
   Kick"* expands the new preset over the running channel as a build would:
   the values that differ are written, a value the old preset set and the new
@@ -523,8 +547,8 @@ sax to MON3 at -10"*, *"rename ch 5 Kick In"*, *"HPF 100 on the vocals"*,
 the model:
 
 - **Code sets those fields and no others**, and refuses a field the
-  object cannot carry or a change may not set (a channel's strip number,
-  a bus's index), the whole change with it. Only the addresses whose
+  object cannot carry or a change may not set (the build's own record of
+  where a strip came from, say), the whole change with it. Only the addresses whose
   value moves are written; the rest of the strip is in the before/after
   read that proves nothing unrelated moved.
 - **A show built with presets edits like any other.** A channel or bus
@@ -535,12 +559,11 @@ the model:
   set those values themselves; asking a running channel or bus for a
   *different* preset switches it, as above, and writes only the values
   that move.
-- **A running strip's 48V and mic model can be set; which input it is
-  cannot.** *"48V on the snare"* and *"the vocal mic is an SM58"* are edits
-  of the strip's `source.phantom` and `source.model` (and `source.type`).
-  The source's input, the second row of a pair and whether it is stereo say
-  which source the strip is, so a change that sets them is refused: drop
-  the channel and add the new source instead.
+- **A running strip's 48V, mic model and input can be set.** *"48V on the
+  snare"* and *"the vocal mic is an SM58"* are edits of the strip's
+  `source.phantom` and `source.model` (and `source.type`); *"ch 1 is now the
+  Kick Sub"* is an edit of its `source.input`, and its patch stays unless
+  the change names a socket. Whether it is stereo is set as above.
 - **A stereo channel's 48V switches on both sockets or neither.** The desk
   does not take one side of a stereo channel on its own, so *"48V on the
   keys"* sets `source.phantom` and the review marks both sockets under
