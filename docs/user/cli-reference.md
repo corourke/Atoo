@@ -11,32 +11,18 @@
 
 # Command reference
 
-Every command and every option, generated from the code so it cannot
-drift. For how to *use* these together, start at
-[`README.md`](README.md).
+Every command and every option, generated from the code so it cannot drift. For how to *use* these together, start at [`README.md`](README.md).
 
 <!-- preamble:start -->
-`a2` is a short spelling of `atoo`: the same program, so `a2 build`
-and `atoo build` are one command. This page writes `atoo` throughout.
+`a2` is a short spelling of `atoo`: the same program, so `a2 build` and `atoo build` are one command. This page writes `atoo` throughout.
 
-`atoo --version` (or `a2 --version`) prints which copy of Atoo is
-running, and exits `0`: the version, the folder the code runs from and,
-for a git checkout, its branch, short commit and whether tracked files
-have uncommitted changes, then the Python it runs on. It is not an option
-of any command, so it is not in the tables below.
-[Which atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)
-reads it.
+`atoo --version` (or `a2 --version`) prints which copy of Atoo is running, and exits `0`: the version, the folder the code runs from and, for a git checkout, its branch, short commit and whether tracked files have uncommitted changes, then the Python it runs on. It is not an option of any command, so it is not in the tables below. [Which atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running) reads it.
 
-Every command that reads or writes a desk or calls a model (`build`,
-`apply`, `patch`, `amend`, `undo`, `ping`, `audit`, `watch`, `resolve`)
-prints the same first line on stderr, `atoo 0.2.5 (running from ...)`, before it does
-anything else, so the output of a run that went wrong always says which copy
-produced it.
+Every command that reads or writes a desk or calls a model (`build`, `apply`, `patch`, `amend`, `undo`, `ping`, `audit`, `watch`, `resolve`) prints the same first line on stderr, `atoo 0.2.5 (running from ...)`, before it does anything else, so the output of a run that went wrong always says which copy produced it.
 
 ## Exit codes
 
-This is the canonical statement; everywhere else in the docs points here.
-Exit codes are not argparse options, so they are not in the tables below.
+This is the canonical statement; everywhere else in the docs points here. Exit codes are not argparse options, so they are not in the tables below.
 
 | code | what it means |
 |---|---|
@@ -44,13 +30,9 @@ Exit codes are not argparse options, so they are not in the tables below.
 | `1` | it could not run -- a file it could not read, a desk that did not answer, a connection that dropped mid-run. **Plus, for `audit` and `watch` only, "it ran and found errors"** |
 | `2` | it ran and found problems -- `build`, `verify`, `compare`, `apply`, `patch`, `amend`. **Also** any command line that was rejected before a command started |
 
-One more `1`, for every command: when whatever is reading the output stops
-early (`atoo --help | head`, or quitting `less`), the command stops
-quietly with `1` -- no traceback, since nothing went wrong but the cut.
+One more `1`, for every command: when whatever is reading the output stops early (`atoo --help | head`, or quitting `less`), the command stops quietly with `1` -- no traceback, since nothing went wrong but the cut.
 
-There is no single sentence that covers all eleven commands, so here is
-each one. "Found problems" is the outcome worth scripting against, and
-which code carries it depends on the command:
+There is no single sentence that covers all eleven commands, so here is each one. "Found problems" is the outcome worth scripting against, and which code carries it depends on the command:
 
 | command | "it ran and found problems" is... | meaning |
 |---|---|---|
@@ -72,53 +54,26 @@ which code carries it depends on the command:
 
 It is a deliberate split, not an oversight.
 
-The commands on `2` all hold a plan: they compile one, check one,
-compare a desk against one, or write one. For those, "the plan and the
-desk disagree" is a genuinely separate outcome from "I could not do the
-job at all", and it is worth a code of its own.
+The commands on `2` all hold a plan: they compile one, check one, compare a desk against one, or write one. For those, "the plan and the desk disagree" is a genuinely separate outcome from "I could not do the job at all", and it is worth a code of its own.
 
-`audit` and `watch` hold no plan. They are read-only readings of whatever
-a desk currently is, against a fixed rule catalogue, and reporting
-something is the ordinary result rather than the exceptional one. They
-are a different kind of command, and they keep the code they have always
-returned.
+`audit` and `watch` hold no plan. They are read-only readings of whatever a desk currently is, against a fixed rule catalogue, and reporting something is the ordinary result rather than the exceptional one. They are a different kind of command, and they keep the code they have always returned.
 
 ### Telling the two meanings of `1` apart
 
-`audit` and `watch` return `1` both for "found errors" and for "could not
-run", so `$?` alone does not separate them. **What does: stdout.**
+`audit` and `watch` return `1` both for "found errors" and for "could not run", so `$?` alone does not separate them. **What does: stdout.**
 
-- A run that never started prints its reason on **stderr** and writes
-  **nothing at all** to stdout -- `couldn't read state file 'nope.json':
-  No such file or directory`.
-- A run that did its job prints to **stdout** -- `Audit findings: 1
-  error, 9 warning, 6 info.` from `audit`, and from `watch` its
-  `Watching ... every Ns` banner followed by a baseline and a line per
-  pass.
+- A run that never started prints its reason on **stderr** and writes **nothing at all** to stdout -- `couldn't read state file 'nope.json': No such file or directory`.
+- A run that did its job prints to **stdout** -- `Audit findings: 1 error, 9 warning, 6 info.` from `audit`, and from `watch` its `Watching ... every Ns` banner followed by a baseline and a line per pass.
 
-So `out=$(atoo audit --state s.json)` followed by a test on whether
-`$out` is empty distinguishes the two, and `atoo ping` first
-separates "the desk is unreachable" from either. (Do not test stderr
-instead: a run that resolved its console from the environment or from
-`~/.atoo.config` prints where it came from there, on a perfectly good run.)
+So `out=$(atoo audit --state s.json)` followed by a test on whether `$out` is empty distinguishes the two, and `atoo ping` first separates "the desk is unreachable" from either. (Do not test stderr instead: a run that resolved its console from the environment or from `~/.atoo.config` prints where it came from there, on a perfectly good run.)
 
 ### A rejected command line exits `2`, not `1`
 
-`2` is argparse's own code for a command line it will not accept, and
-Atoo does not override it. An unknown flag, a missing required
-option, a value that will not parse (`--interval notanumber`), an unknown
-subcommand: all `2`, from every command, including `audit` and `watch`.
+`2` is argparse's own code for a command line it will not accept, and Atoo does not override it. An unknown flag, a missing required option, a value that will not parse (`--interval notanumber`), an unknown subcommand: all `2`, from every command, including `audit` and `watch`.
 
-**"No console address" is `2` for the same reason.** The message that
-`ping`, `apply`, `amend`, `audit` and `watch` print when none of `--console`,
-`$ATOO_CONSOLE` and `~/.atoo.config` supplies one replaced
-argparse's own `required=True` error, and kept its code so a script that
-tested for it keeps working.
+**"No console address" is `2` for the same reason.** The message that `ping`, `apply`, `amend`, `audit` and `watch` print when none of `--console`, `$ATOO_CONSOLE` and `~/.atoo.config` supplies one replaced argparse's own `required=True` error, and kept its code so a script that tested for it keeps working.
 
-Atoo's *own* "you have to tell me which file" errors are `1`, not
-`2` -- `atoo verify` with neither `--plan` nor `--show`, `atoo
-apply` the same. Those are cases argparse no longer rejects, because the
-flag stopped being `required=True` once `--show` could supply it.
+Atoo's *own* "you have to tell me which file" errors are `1`, not `2` -- `atoo verify` with neither `--plan` nor `--show`, `atoo apply` the same. Those are cases argparse no longer rejects, because the flag stopped being `required=True` once `--show` could supply it.
 
 ### In a script
 
@@ -148,8 +103,7 @@ They come in two unrelated groups.
 
 ### Pointing commands at a console
 
-`--console <ip>` otherwise has to be retyped on every `ping`, `apply`,
-`amend`, `audit` and `watch`. Set it once instead:
+`--console <ip>` otherwise has to be retyped on every `ping`, `apply`, `amend`, `audit` and `watch`. Set it once instead:
 
 ```bash
 export ATOO_CONSOLE=192.0.2.16
@@ -164,25 +118,18 @@ atoo apply --show touringband --confirm
 | `ATOO_CONSOLE_TIMEOUT` | the same five | `1.0` seconds |
 | `ATOO_CONSOLE_WINDOW` | every command that reads a console, and the Watch page | `8` reads in flight at once; `1` reads one at a time |
 
-**Precedence:** an explicit `--console` beats the environment, which
-beats a `[console]` section in `~/.atoo.config`, which beats the
-built-in default. `atoo ui` is not in the list: its console address
-is typed into the browser, and its own `--port` is the web server's.
+**Precedence:** an explicit `--console` beats the environment, which beats a `[console]` section in `~/.atoo.config`, which beats the built-in default. `atoo ui` is not in the list: its console address is typed into the browser, and its own `--port` is the web server's.
 
-**A run that was not told its console on the command line says where it
-got one**, on stderr, once:
+**A run that was not told its console on the command line says where it got one**, on stderr, once:
 
 ```
 Using console 192.0.2.16 from ATOO_CONSOLE
 Using console 192.0.2.16 from /home/you/.atoo.config [console]
 ```
 
-That line is the point of the feature as much as the convenience is. The
-failure it prevents is a stale `export` in a shell, left over from last
-week's desk, on a command carrying `--confirm`.
+That line is the point of the feature as much as the convenience is. The failure it prevents is a stale `export` in a shell, left over from last week's desk, on a command carrying `--confirm`.
 
-The config-file form suits a desk you always use, where the environment
-variable suits a session:
+The config-file form suits a desk you always use, where the environment variable suits a session:
 
 ```toml
 [console]
@@ -191,29 +138,13 @@ port = 2223
 timeout = 1.0
 ```
 
-Every key is optional and independent -- a port with no address is a
-perfectly reasonable thing to set.
+Every key is optional and independent -- a port with no address is a perfectly reasonable thing to set.
 
-`ATOO_CONSOLE_WINDOW` is set in the environment only, not in the
-config file. It is how many reads Atoo keeps on the wire at once
-while it reads the desk -- the reset's read, a preview, `audit`, `watch`,
-`patch`'s and `amend`'s reads -- so a read takes about requests x round
-trip / window instead of requests x round trip. It is at most 64. Writes, and the
-readback of each write, are always one at a time. `1` is the old
-one-at-a-time read, exactly; a run with any other value than `8` prints it
-on stderr (`Using console window 1 from ATOO_CONSOLE_WINDOW`) -- and
-from the page, in the run's log on the Apply screen, or as a *Console
-window* note on Watch's *This watch* line. See
-[A desk read is slow](troubleshooting-desk.md#a-desk-read-is-slow).
+`ATOO_CONSOLE_WINDOW` is set in the environment only, not in the config file. It is how many reads Atoo keeps on the wire at once while it reads the desk -- the reset's read, a preview, `audit`, `watch`, `patch`'s and `amend`'s reads -- so a read takes about requests x round trip / window instead of requests x round trip. It is at most 64. Writes, and the readback of each write, are always one at a time. `1` is the old one-at-a-time read, exactly; a run with any other value than `8` prints it on stderr (`Using console window 1 from ATOO_CONSOLE_WINDOW`) -- and from the page, in the run's log on the Apply screen, or as a *Console window* note on Watch's *This watch* line. See [A desk read is slow](troubleshooting-desk.md#a-desk-read-is-slow).
 
 ### Choosing and tuning the model
 
-Most configure the AI provider that `atoo build` uses to generate a
-plan, and that `build --critic` uses for the review pass. Every other
-command ignores those entirely -- `verify`, `compare`, `apply`, `audit`
-and `watch` never call a model. The one exception is the OSC variable at
-the bottom of the table, which applies to every command that talks to a
-console and to none that do not.
+Most configure the AI provider that `atoo build` uses to generate a plan, and that `build --critic` uses for the review pass. Every other command ignores those entirely -- `verify`, `compare`, `apply`, `audit` and `watch` never call a model. The one exception is the OSC variable at the bottom of the table, which applies to every command that talks to a console and to none that do not.
 
 
 | Variable | Applies to | Default |
@@ -243,30 +174,16 @@ console and to none that do not.
 | `ATOO_PROMPT_DIR` | generate, critic | the packaged `atoo/prompts` |
 | `ATOO_OSC_REPLY_MATCH` | apply, audit, watch, compare, ui | on -- set to `off` to disable reply matching |
 
-**`ATOO_OSC_REPLY_MATCH=off` is an escape hatch, not a tuning knob.**
-UDP does not pair a reply with its request, so the client checks that a
-reply carries the address it asked for and drains anything else. Without
-that check, one duplicated datagram from the console makes every
-subsequent read return the *previous* read's value, silently and for the
-rest of the session. On one real run, 880 of 1142 reads were answered by
-the wrong leaf and the journal recorded 188 mismatches that had not
-happened.
+**`ATOO_OSC_REPLY_MATCH=off` is an escape hatch, not a tuning knob.** UDP does not pair a reply with its request, so the client checks that a reply carries the address it asked for and drains anything else. Without that check, one duplicated datagram from the console makes every subsequent read return the *previous* read's value, silently and for the rest of the session. On one real run, 880 of 1142 reads were answered by the wrong leaf and the journal recorded 188 mismatches that had not happened.
 
-Setting it to `off` restores the old take-the-next-datagram behaviour. The
-only reason to do that is a console that answers on an address this client
-does not predict, leaving reads timing out where they used to work. If you
-ever need it, that is worth reporting -- and a run made with it off cannot
-prove anything landed.
+Setting it to `off` restores the old take-the-next-datagram behaviour. The only reason to do that is a console that answers on an address this client does not predict, leaving reads timing out where they used to work. If you ever need it, that is worth reporting -- and a run made with it off cannot prove anything landed.
 <!-- preamble:end -->
 
 
 ## `atoo amend`
 
 <!-- preamble:start -->
-The same as `atoo patch --amended-plan FILE`, kept under this name
-with every flag it had: the change is a rebuilt plan rather than typed
-words. See
-[Patching from a rebuilt plan](amend.md).
+The same as `atoo patch --amended-plan FILE`, kept under this name with every flag it had: the change is a rebuilt plan rather than typed words. See [Patching from a rebuilt plan](amend.md).
 <!-- preamble:end -->
 
 ```
@@ -642,11 +559,7 @@ stable across rewordings; quote it in a bug report.
 ## `atoo capture`
 
 <!-- preamble:start -->
-For a desk you didn't build and won't rebuild: it reads the desk, or a
-`.snap` saved on it, and makes a show folder you can watch and edit, with
-no model and nothing written to the desk. What it writes, what it
-decides, and what it cannot hold yet: [Capturing a desk you didn't
-build](capture.md).
+For a desk you didn't build and won't rebuild: it reads the desk, or a `.snap` saved on it, and makes a show folder you can watch and edit, with no model and nothing written to the desk. What it writes, what it decides, and what it cannot hold yet: [Capturing a desk you didn't build](capture.md).
 <!-- preamble:end -->
 
 ```
@@ -706,11 +619,7 @@ _Not written yet._
 ## `atoo init`
 
 <!-- preamble:start -->
-The first command to run: a working folder with house conventions and a
-preset library in it (no show -- you make that with the UI's New show...), and
-`~/.atoo.config` pointed at it. It never overwrites anything. See
-[Set up Atoo](configuration.md#1-create-your-atoo-folder-atoo-init) for a real
-run.
+The first command to run: a working folder with house conventions and a preset library in it (no show -- you make that with the UI's New show...), and `~/.atoo.config` pointed at it. It never overwrites anything. See [Set up Atoo](configuration.md#1-create-your-atoo-folder-atoo-init) for a real run.
 <!-- preamble:end -->
 
 ```
@@ -799,12 +708,7 @@ instructions.md, once answered, so no future build has to work it out again.
 ## `atoo patch`
 
 <!-- preamble:start -->
-Type a change — *"trumpet, sax and trombone on LCL 21-23, Band DCA"* — and
-write only that to a desk that already has a show on it (or nothing yet).
-What you type is a **change**; "patch" in findings and plan fields keeps
-meaning socket routing. `plan.json` is never touched. The whole workflow,
-with a worked example you can run offline:
-[Patching a show that is already on the desk](patch.md).
+Type a change — *"trumpet, sax and trombone on LCL 21-23, Band DCA"* — and write only that to a desk that already has a show on it (or nothing yet). What you type is a **change**; "patch" in findings and plan fields keeps meaning socket routing. `plan.json` is never touched. The whole workflow, with a worked example you can run offline: [Patching a show that is already on the desk](patch.md).
 <!-- preamble:end -->
 
 ```
@@ -921,9 +825,7 @@ holds. A name the desk does not hold either is REFUSED.
 ## `atoo ping`
 
 <!-- preamble:start -->
-The first thing to run at a desk, and the first thing to run when
-something else cannot reach one. It asks the console who it is and
-prints the answer:
+The first thing to run at a desk, and the first thing to run when something else cannot reach one. It asks the console who it is and prints the answer:
 
 ```
 $ atoo ping --console 192.0.2.16
@@ -931,14 +833,9 @@ Console: WING,192.0.2.16,FOH,wing-compact,SN12345,3.1-0
 Detected model: WING Compact (wing-compact)
 ```
 
-It reads nothing else -- one request, no strip sweep, no writes -- so it
-is safe during a show, and it is instant even on a full-size desk.
+It reads nothing else -- one request, no strip sweep, no writes -- so it is safe during a show, and it is instant even on a full-size desk.
 
-The second line matters before an apply: `atoo apply` compares the
-plan's model with the desk's, and refuses a plan that patches a socket
-the desk's model does not have. This is how you see which model the desk
-says it is without running an apply to find out. A model it does not
-recognise is printed as the desk spelled it -- the string to report.
+The second line matters before an apply: `atoo apply` compares the plan's model with the desk's, and refuses a plan that patches a socket the desk's model does not have. This is how you see which model the desk says it is without running an apply to find out. A model it does not recognise is printed as the desk spelled it -- the string to report.
 
 A failure names which of the two things went wrong:
 
@@ -947,10 +844,7 @@ no reply from 192.0.2.16:2223 -- is the console reachable, and is its OSC remote
 couldn't reach 192.0.2.16:2223 -- OSError: [Errno 65] No route to host
 ```
 
-The first means the packets went out and nothing came back: the usual
-cause is that the console's OSC remote control is switched off. The
-second is the network refusing to carry them at all -- wrong address,
-wrong subnet, cable out.
+The first means the packets went out and nothing came back: the usual cause is that the console's OSC remote control is switched off. The second is the network refusing to carry them at all -- wrong address, wrong subnet, cable out.
 <!-- preamble:end -->
 
 ```
@@ -978,15 +872,9 @@ printed as the desk spelled it: that is the string to report.
 ## `atoo presets`
 
 <!-- preamble:start -->
-**What a preset is called is not what its file is called.** The name lives
-in the `info_text` field inside the `.chn`, because that is the label the
-engineer gave it on the desk — so `ls` does not tell you, and a
-conventions file that names a preset by its filename rather than its
-saved name finds no preset at all.
+**What a preset is called is not what its file is called.** The name lives in the `info_text` field inside the `.chn`, because that is the label the engineer gave it on the desk — so `ls` does not tell you, and a conventions file that names a preset by its filename rather than its saved name finds no preset at all.
 
-This is the command that tells you. See
-[Ask the library what it is called](presets.md#ask-the-library-what-it-is-called)
-for the output and what the `params` column means.
+This is the command that tells you. See [Ask the library what it is called](presets.md#ask-the-library-what-it-is-called) for the output and what the `params` column means.
 <!-- preamble:end -->
 
 ```
@@ -1033,9 +921,7 @@ back like every other write; they have not yet been confirmed on a desk.
 ## `atoo resolve`
 
 <!-- preamble:start -->
-An experiment. How to read the file it writes, and what
-`Decided:` means: [Conventions reference](conventions-reference.md#the-resolved-conventions).
-Where it sits in a build: [How a show gets built](pipeline.md#0-resolve-your-conventions-restated-once-as-rules).
+An experiment. How to read the file it writes, and what `Decided:` means: [Conventions reference](conventions-reference.md#the-resolved-conventions). Where it sits in a build: [How a show gets built](pipeline.md#0-resolve-your-conventions-restated-once-as-rules).
 <!-- preamble:end -->
 
 ```
@@ -1189,17 +1075,9 @@ The page is at /. /app redirects there.
 ## `atoo undo`
 
 <!-- preamble:start -->
-Takes one optional positional argument, `JOURNAL` — the journal to
-reverse. That is an entry in a show bundle's `journals/`,
-`<plan-stem>.apply-journal.json` beside a plan, or wherever `apply
---journal` put it. A `patch` or `amend` journal works the same
-way, and so does an undo's own journal, which is the redo. With `--show`
-and no `JOURNAL`, undo reverses the newest write in the bundle's
-`journals/`.
+Takes one optional positional argument, `JOURNAL` — the journal to reverse. That is an entry in a show bundle's `journals/`, `<plan-stem>.apply-journal.json` beside a plan, or wherever `apply --journal` put it. A `patch` or `amend` journal works the same way, and so does an undo's own journal, which is the redo. With `--show` and no `JOURNAL`, undo reverses the newest write in the bundle's `journals/`.
 
-Nothing is written without `--confirm`; the preview shows, per address,
-what it would restore and what it would refuse. See
-[Undoing a write](undo.md).
+Nothing is written without `--confirm`; the preview shows, per address, what it would restore and what it would refuse. See [Undoing a write](undo.md).
 <!-- preamble:end -->
 
 ```

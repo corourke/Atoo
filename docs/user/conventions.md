@@ -1,58 +1,30 @@
 # Writing conventions
 
-Your habits, in plain English, written down once and reused for every
-show. This is the file that makes the tool worth using.
+Your habits, in plain English, written down once and reused for every show. This is the file that makes the tool worth using.
 
-The [input list](input-lists.md) says what is plugged in tonight. The
-conventions file says what you always do with it: what order you patch
-in, what goes in a DCA, where the monitor busses go, how loud a send
-starts. Two files, and everything else Atoo produces comes from
-them.
+The [input list](input-lists.md) says what is plugged in tonight. The conventions file says what you always do with it: what order you patch in, what goes in a DCA, where the monitor busses go, how loud a send starts. Two files, and everything else Atoo produces comes from them.
 
 ## Start from the starter
 
-`atoo init` puts a starter conventions file in your Atoo
-folder (`~/Documents/Atoo/conventions.md`; in a checkout,
-`starter/conventions.md`). It is one engineer's band/club house style, a
-page long, with a comment on the lines worth explaining, and it states
-the choices a build would otherwise have to make for you: which inputs
-pair into stereo, wedge mixes mono and in-ears stereo, a colour per
-category, a channel preset per source, which DCA and mute group each
-kind of source joins. The [Demo show](demo.md) is built from it, so open
-the Demo to see what it produces. Make it yours: keep the lines you
-share, change the rest, and rename its presets to the ones in your own
-library.
+`atoo init` puts a starter conventions file in your Atoo folder (`~/Documents/Atoo/conventions.md`; in a checkout, `starter/conventions.md`). It is one engineer's band/club house style, a page long, with a comment on the lines worth explaining, and it states the choices a build would otherwise have to make for you: which inputs pair into stereo, wedge mixes mono and in-ears stereo, a colour per category, a channel preset per source, which DCA and mute group each kind of source joins. The [Demo show](demo.md) is built from it, so open the Demo to see what it produces. Make it yours: keep the lines you share, change the rest, and rename its presets to the ones in your own library.
 
 ## It is prose, not a format
 
-There is no grammar to learn. A model reads the file with the input
-list in front of it, and deterministic code then checks what it
-produced. Write the way you would brief a competent
-engineer who has never worked with you:
+There is no grammar to learn. A model reads the file with the input list in front of it, and deterministic code then checks what it produced. Write the way you would brief a competent engineer who has never worked with you:
 
-> - Channel order: drums, then bass, guitars, keys, horns, vocals, and
->   playback last.
+> - Channel order: drums, then bass, guitars, keys, horns, vocals, and playback last.
 > - Drum kit order: kick, snare, hi hat, toms from high to low, then overheads.
 > - Start every channel's head-amp gain at 20dB and its trim at 0dB.
 
 Those are three lines from the starter.
 
-**It is yours, not the show's.** You carry it from gig to gig, so it
-lives **outside** any show bundle
-([why](show-bundles.md#two-files-that-do-not-go-in-the-bundle)). What is
-specific to tonight goes in that show's `instructions.md`
-([below](#instructionsmd-layers-over-it)).
+**It is yours, not the show's.** You carry it from gig to gig, so it lives **outside** any show bundle ([why](show-bundles.md#two-files-that-do-not-go-in-the-bundle)). What is specific to tonight goes in that show's `instructions.md` ([below](#instructionsmd-layers-over-it)).
 
-**Name it something you can find.** `atoo-rules-<description>.md` is
-the suggested shape (`atoo-rules-house.md`,
-`atoo-rules-festival.md`). Never a leading dot: a hidden file is one
-nobody reviews.
+**Name it something you can find.** `atoo-rules-<description>.md` is the suggested shape (`atoo-rules-house.md`, `atoo-rules-festival.md`). Never a leading dot: a hidden file is one nobody reviews.
 
 ## A shape that works
 
-Headings are for you and for whoever reads the file next, not for the
-parser. This order matches how a show gets built, which is why the
-shipped example uses it:
+Headings are for you and for whoever reads the file next, not for the parser. This order matches how a show gets built, which is why the shipped example uses it:
 
 | Section | What you put in it |
 |---|---|
@@ -65,18 +37,11 @@ shipped example uses it:
 | Outputs | Main, and any matrix fed from it, with their physical sockets |
 | Watch | what should alert you during the show, if you use `atoo watch` |
 
-The starter calls them "Inputs", "Channels", "Processing", "Busses",
-"DCAs", "Mute Groups", "Outputs" and "Watch", and builds correctly. Use
-the words you think in. Headings are optional on the browser page too:
-Build's step 01 edits the file as one text, and offers an **Example**
-with the usual headings to copy from ([Build a
-show](build-a-show.md#2-check-your-house-rules-01-conventions)).
+The starter calls them "Inputs", "Channels", "Processing", "Busses", "DCAs", "Mute Groups", "Outputs" and "Watch", and builds correctly. Use the words you think in. Headings are optional on the browser page too: Build's step 01 edits the file as one text, and offers an **Example** with the usual headings to copy from ([Build a show](build-a-show.md#2-check-your-house-rules-01-conventions)).
 
 ## Notes the build ignores
 
-A note to yourself — a reminder, a reason, a rule switched off for
-now — goes in an HTML comment, `<!-- ... -->`, on one line or across
-several:
+A note to yourself — a reminder, a reason, a rule switched off for now — goes in an HTML comment, `<!-- ... -->`, on one line or across several:
 
 ```markdown
 ## Outputs
@@ -89,19 +54,11 @@ several:
 -->
 ```
 
-The build strips every comment from your conventions file and from a
-show's `instructions.md` before a model sees either, so nothing inside
-one is ever built. A `## ` heading inside a comment is commented out, too:
-the `## DCAs` above is not a heading. The browser page's editors show
-comments as you wrote them, and **View house file** shows them dimmed.
+The build strips every comment from your conventions file and from a show's `instructions.md` before a model sees either, so nothing inside one is ever built. A `## ` heading inside a comment is commented out, too: the `## DCAs` above is not a heading. The browser page's editors show comments as you wrote them, and **View house file** shows them dimmed.
 
-A `<!--` inside a code block or a `` `code span` `` is ordinary text,
-not a comment.
+A `<!--` inside a code block or a `` `code span` `` is ordinary text, not a comment.
 
-**An unfinished comment does not swallow the rest of the file.** If a
-`<!--` never closes, the build does not throw away every rule after it.
-It reads the rest of the file as written and warns you, naming the file
-and line:
+**An unfinished comment does not swallow the rest of the file.** If a `<!--` never closes, the build does not throw away every rule after it. It reads the rest of the file as written and warns you, naming the file and line:
 
 ```
 Comments in the conventions -- 1 note(s):
@@ -116,76 +73,34 @@ WARNING  house.md line 3: A comment opened here with <!-- never closes with
          (conventions.unclosed-comment)
 ```
 
-The same warning appears in the browser's Findings panel. A stray `-->`
-with no `<!--` is read as written (it might be an arrow) and noted at
-INFO.
+The same warning appears in the browser's Findings panel. A stray `-->` with no `<!--` is read as written (it might be an arrow) and noted at INFO.
 
-**Why not parentheses?** They often carry real rules: *"(but not
-drums)"* leaves channels out of a reverb. The model acts on a
-parenthesis that states a setting and treats one that gives a reason as
-background, but if a line must never be read at all, a comment is the
-only sure way.
+**Why not parentheses?** They often carry real rules: *"(but not drums)"* leaves channels out of a reverb. The model acts on a parenthesis that states a setting and treats one that gives a reason as background, but if a line must never be read at all, a comment is the only sure way.
 
 ## The one rule worth internalising: state it, or it is decided and said
 
-A value your conventions never mention goes one of two ways, and which
-way depends on whether the desk can work without it.
+A value your conventions never mention goes one of two ways, and which way depends on whether the desk can work without it.
 
-- **Most values are left alone.** A high-pass, an EQ band, a fader, a
-  colour, a preset: unstated means the plan leaves the field empty and
-  the desk keeps whatever it had. A board with last week's filter still
-  passes audio, so nothing is filled in with something plausible.
-- **Four values are decided, and every decision is announced.** A bus's
-  mono/stereo width, a send's pre/post, a mix or FX bus's route to the
-  Main, and whether two sources become a stereo pair all decide how the
-  show is *patched*, and a patch left to whatever the desk had may not
-  work. So the build makes the reasonable choice — from your conventions
-  first, then from what the bus is for and what things are called — and
-  tells you in an [INFO note](reading-findings.md#info-a-choice-made-and-said)
-  naming what it chose and why.
+- **Most values are left alone.** A high-pass, an EQ band, a fader, a colour, a preset: unstated means the plan leaves the field empty and the desk keeps whatever it had. A board with last week's filter still passes audio, so nothing is filled in with something plausible.
+- **Four values are decided, and every decision is announced.** A bus's mono/stereo width, a send's pre/post, a mix or FX bus's route to the Main, and whether two sources become a stereo pair all decide how the show is *patched*, and a patch left to whatever the desk had may not work. So the build makes the reasonable choice — from your conventions first, then from what the bus is for and what things are called — and tells you in an [INFO note](reading-findings.md#info-a-choice-made-and-said) naming what it chose and why.
 
-A **physical socket** is never decided that way: a socket is where a
-cable is, not a preference, so it is never guessed. An output whose patch
-nobody stated is still set up -- its feed, level and processing -- but
-routed to no socket, at WARNING (`output.no-patch`). That is right for a
-Matrix used inside the desk, as the phones or monitor source; if the
-output should reach a jack, state its patch.
+A **physical socket** is never decided that way: a socket is where a cable is, not a preference, so it is never guessed. An output whose patch nobody stated is still set up -- its feed, level and processing -- but routed to no socket, at WARNING (`output.no-patch`). That is right for a Matrix used inside the desk, as the phones or monitor source; if the output should reach a jack, state its patch.
 
-For example, a conventions file that names six monitor busses but never
-says how wide they are still gives an applicable plan. `verify` adds a
-note for each width it decided:
+For example, a conventions file that names six monitor busses but never says how wide they are still gives an applicable plan. `verify` adds a note for each width it decided:
 
 ```
   [info] busses[MON1]: width set to mono -- the conventions did not state it; decided by Atoo's fallback rule: it feeds a dedicated output on a single socket (A 21), and one jack carries one signal  (inferred.bus-width)
 ```
 
-A wedge on one socket is mono; an in-ear or a mix bus is stereo. If that
-is wrong for your show you will hear it at soundcheck, and one sentence
-settles it for every show after: *"these will all be MONO busses."* The
-plan, the Findings panel, `verify`, `apply` and `amend` all agree on the
-value that was chosen.
+A wedge on one socket is mono; an in-ear or a mix bus is stereo. If that is wrong for your show you will hear it at soundcheck, and one sentence settles it for every show after: *"these will all be MONO busses."* The plan, the Findings panel, `verify`, `apply` and `amend` all agree on the value that was chosen.
 
 The same principle, in the places it usually bites:
 
-- **Send mode is decided, and said.** `pre-fader` or `post-fader` is
-  yours to state, and should be. Where it is not, a send into a bus that
-  only feeds a physical output (a monitor mix) is made pre-fader, and
-  anything else post-fader — with an `inferred.send-mode` note naming the
-  bus and the channels.
-- **Send level defaults to unity, with a note.** A send your conventions
-  list with no level is set to unity (0 dB), with an
-  `inferred.send-level` note naming the bus and the channels. It is never
-  left empty, because the desk would then keep its own send level, and
-  a fresh desk's is -144: the send would be on and silent. Want a send
-  to start lower? Say so ("sends to INST Reverb all the way down",
-  "Snare Verb at -10dB").
-- **A rule that matches nothing is reported.** Name a channel in a DCA
-  that no input list row supplies and you get a warning, not silence —
-  that is how a hallucinated channel is caught.
+- **Send mode is decided, and said.** `pre-fader` or `post-fader` is yours to state, and should be. Where it is not, a send into a bus that only feeds a physical output (a monitor mix) is made pre-fader, and anything else post-fader — with an `inferred.send-mode` note naming the bus and the channels.
+- **Send level defaults to unity, with a note.** A send your conventions list with no level is set to unity (0 dB), with an `inferred.send-level` note naming the bus and the channels. It is never left empty, because the desk would then keep its own send level, and a fresh desk's is -144: the send would be on and silent. Want a send to start lower? Say so ("sends to INST Reverb all the way down", "Snare Verb at -10dB").
+- **A rule that matches nothing is reported.** Name a channel in a DCA that no input list row supplies and you get a warning, not silence — that is how a hallucinated channel is caught.
 
-The words Atoo understands for a level ("all the way down",
-"unity", "-10dB") are listed in the
-[conventions reference](conventions-reference.md#levels-in-the-words-you-would-say-them).
+The words Atoo understands for a level ("all the way down", "unity", "-10dB") are listed in the [conventions reference](conventions-reference.md#levels-in-the-words-you-would-say-them).
 
 ## Specific beats general
 
@@ -196,16 +111,11 @@ A category rule is a **default**, not a claim about every channel in it:
 - Kick gets a high-pass at 60Hz.
 ```
 
-The named channel wins over its category, and a category wins over a
-statement about everything. This is the normal shape of a real drum kit's
-conventions rather than an edge case — one real WING show's "Drums" DCA
-spanned high-passes from 32 Hz to 1500 Hz.
+The named channel wins over its category, and a category wins over a statement about everything. This is the normal shape of a real drum kit's conventions rather than an edge case — one real WING show's "Drums" DCA spanned high-passes from 32 Hz to 1500 Hz.
 
 ## Stereo pairs are a conventions decision
 
-The input list cannot say whether two sources are a pair — see
-[why](input-lists.md#columns-you-may-not-have). Your conventions
-decide it, and the exception usually matters more than the rule:
+The input list cannot say whether two sources are a pair — see [why](input-lists.md#columns-you-may-not-have). Your conventions decide it, and the exception usually matters more than the rule:
 
 ```
 - If you see Left/Right designations in the overhead (OH) names, do NOT
@@ -215,76 +125,43 @@ decide it, and the exception usually matters more than the rule:
   marked as stereo pair (L/R, Left/Right), patch as one stereo channel.
 ```
 
-The exception wins over the naming rule. Both of these say it plainly
-enough to be carried out as written. The shortest form that is, with the
-rows named `Keys L` / `Keys R`, `OH L` / `OH R`:
+The exception wins over the naming rule. Both of these say it plainly enough to be carried out as written. The shortest form that is, with the rows named `Keys L` / `Keys R`, `OH L` / `OH R`:
 
 ```
 Every L/R pair of inputs becomes one stereo channel.
 Keep OH L and OH R as two mono channels.
 ```
 
-The first sentence makes every L/R pair on the list one stereo channel;
-the second keeps the overheads apart. A pair the model had written
-otherwise is paired and said at INFO, and a pair kept apart is listed
-at INFO. A vaguer
-sentence (*"stereo-paired inputs become one stereo channel"*) leaves
-pairing to the model, which says what it chose.
-[Stating a stereo pair](input-lists.md#stating-a-stereo-pair-the-recipe)
-has the naming that goes with it. A later version adds a sheet for
-busses and outputs where mono or stereo is a column of its own.
+The first sentence makes every L/R pair on the list one stereo channel; the second keeps the overheads apart. A pair the model had written otherwise is paired and said at INFO, and a pair kept apart is listed at INFO. A vaguer sentence (*"stereo-paired inputs become one stereo channel"*) leaves pairing to the model, which says what it chose. [Stating a stereo pair](input-lists.md#stating-a-stereo-pair-the-recipe) has the naming that goes with it. A later version adds a sheet for busses and outputs where mono or stereo is a column of its own.
 
-What a pair can be *patched to*
-is the desk's business, not yours — two adjacent sockets, odd first — and
-that constraint lives on the [input list page](input-lists.md#a-stereo-pair-needs-two-adjacent-sockets-odd-first),
-because the cabling is where it can still be fixed.
+What a pair can be *patched to* is the desk's business, not yours — two adjacent sockets, odd first — and that constraint lives on the [input list page](input-lists.md#a-stereo-pair-needs-two-adjacent-sockets-odd-first), because the cabling is where it can still be fixed.
 
 ## Alternate inputs: virtual soundcheck
 
-Every WING strip has **two** input patches, a main one and an alternate,
-and a switch between them. The alternate is how virtual soundcheck
-works: WING LIVE records the show to the card, and the next day each
-channel's alternate plays its own track back with the stage silent. A
-card track is addressed like any socket, `CRD 1` to `CRD 64`.
+Every WING strip has **two** input patches, a main one and an alternate, and a switch between them. The alternate is how virtual soundcheck works: WING LIVE records the show to the card, and the next day each channel's alternate plays its own track back with the stage silent. A card track is addressed like any socket, `CRD 1` to `CRD 64`.
 
-A plan carries an alternate **only when you state one**. Say it in the
-conventions, or in `instructions.md` for one show, in the words you
-would use:
+A plan carries an alternate **only when you state one**. Say it in the conventions, or in `instructions.md` for one show, in the words you would use:
 
 ```
 - Virtual soundcheck: every channel's alternate input is its own WING
   LIVE track, CRD 1 upward in channel order.
 ```
 
-If you name the card and not the track numbers, they are counted for
-you: the next free `CRD` socket, in channel order, a stereo channel
-taking an odd/even pair, with an INFO note listing every one. Name the
-numbers ("Kick plays back from CRD 17") and they are used as written. A
-channel with no alternate stated keeps the one already on the desk, which
-breaks nothing: the strip works on its main input.
+If you name the card and not the track numbers, they are counted for you: the next free `CRD` socket, in channel order, a stereo channel taking an odd/even pair, with an INFO note listing every one. Name the numbers ("Kick plays back from CRD 17") and they are used as written. A channel with no alternate stated keeps the one already on the desk, which breaks nothing: the strip works on its main input.
 
-`verify` refuses an alternate the desk cannot take, such as a socket that
-does not exist or a stereo channel's alternate that is not an odd/even
-pair:
+`verify` refuses an alternate the desk cannot take, such as a socket that does not exist or a stereo channel's alternate that is not an odd/even pair:
 
 ```
   [error] channels[Kick].alt_patch: CRD 65 does not exist -- CRD inputs are 1..64 on a WING Compact  (alt-patch.socket-out-of-range)
 ```
 
-It warns when an alternate is someone else's main socket, because when
-the strip is switched over it hears their source.
+It warns when an alternate is someone else's main socket, because when the strip is switched over it hears their source.
 
-What `apply` writes, and why it also puts every strip back on its main
-input, is on [What a full apply changes](what-apply-changes.md#alternate-inputs-every-strip-back-on-its-main-input).
+What `apply` writes, and why it also puts every strip back on its main input, is on [What a full apply changes](what-apply-changes.md#alternate-inputs-every-strip-back-on-its-main-input).
 
 ## Splits and recording feeds
 
-A split is an output socket fed straight from an input socket, not from a
-bus, a Main or a Matrix: every input to a monitor desk on AES50-B, every input
-to the WING-LIVE card or to USB for a multitrack recording. It carries the
-input before the channel strip (the preamp's gain, but no EQ, dynamics or
-fader), which is what a recording and a virtual soundcheck want. Say it in
-the words you would use:
+A split is an output socket fed straight from an input socket, not from a bus, a Main or a Matrix: every input to a monitor desk on AES50-B, every input to the WING-LIVE card or to USB for a multitrack recording. It carries the input before the channel strip (the preamp's gain, but no EQ, dynamics or fader), which is what a recording and a virtual soundcheck want. Say it in the words you would use:
 
 ```
 ## Splits
@@ -293,33 +170,17 @@ the words you would use:
 - Record AES50-A 1-12 one to one to CRD 1-12.
 ```
 
-"Every input" means every input socket your channels are patched from, in
-channel order, a stereo channel's two sockets in turn, one output socket
-each. A range you name is used as written. The plan holds one entry per
-output socket, each said at INFO with the line it came from, and the build
-says them under the plan it wrote; for twelve inputs split to AES50-B and
-recorded to USB:
+"Every input" means every input socket your channels are patched from, in channel order, a stereo channel's two sockets in turn, one output socket each. A range you name is used as written. The plan holds one entry per output socket, each said at INFO with the line it came from, and the build says them under the plan it wrote; for twelve inputs split to AES50-B and recorded to USB:
 
 ```
 Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
 ```
 
-`--pretty` lists each run and what feeds it under **DIRECT OUTPUTS**. The show's
-[`outputs.csv`](capture.md#every-output-socket-outputscsv) wins over them where
-it names a socket. It is where every socket's source is kept, a bus's, a Main's
-or a Matrix's included; `busses.csv`'s Outputs column follows it. A show built
-from conventions has none until you save Build 04's
-[Outputs table](capture.md#the-outputs-table), which writes every socket the
-plan patches; from then on the file decides those sockets, and a changed
-convention no longer moves them.
+`--pretty` lists each run and what feeds it under **DIRECT OUTPUTS**. The show's [`outputs.csv`](capture.md#every-output-socket-outputscsv) wins over them where it names a socket. It is where every socket's source is kept, a bus's, a Main's or a Matrix's included; `busses.csv`'s Outputs column follows it. A show built from conventions has none until you save Build 04's [Outputs table](capture.md#the-outputs-table), which writes every socket the plan patches; from then on the file decides those sockets, and a changed convention no longer moves them.
 
 ### Processed feeds
 
-A split carries the input before the channel. A feed of a channel *after* its
-processing, a post-fader vocal to a stream recorder or the keys pre-fader to
-a video desk, goes through one of the desk's 24 user signals (`USR 1-24`),
-and the output is fed from that. Say which strip, which tap and which socket;
-leave the user signal to Atoo:
+A split carries the input before the channel. A feed of a channel *after* its processing, a post-fader vocal to a stream recorder or the keys pre-fader to a video desk, goes through one of the desk's 24 user signals (`USR 1-24`), and the output is fed from that. Say which strip, which tap and which socket; leave the user signal to Atoo:
 
 ```
 ## Feeds
@@ -327,23 +188,14 @@ leave the user signal to Atoo:
 - Keys to the video desk: the keys pre-fader, on USB 14-15, processed but not following the keys fader.
 ```
 
-Pre-fader is after the channel's EQ and dynamics, before its fader; post-fader
-follows the fader as well. The build takes the next user signal the show does
-not already use, and one feed of the same strip at the same tap is shared by
-every socket that asks for it. A stereo channel takes two, its left and its
-right, on the socket you name and the next. It says each at INFO, for the
-lines above:
+Pre-fader is after the channel's EQ and dynamics, before its fader; post-fader follows the fader as well. The build takes the next user signal the show does not already use, and one feed of the same strip at the same tap is shared by every socket that asks for it. A stereo channel takes two, its left and its right, on the socket you name and the next. It says each at INFO, for the lines above:
 
 - *USB 13 carries Lead Vox after its fader (post), through USR 1, the next free user signal, as '- Stream recorder: the lead vocal, post-fader, on USB 13' asks*
 - *USB 14-15 carries Keys before its fader (pre), through USR 2, USR 3, the next free user signals, as '- Keys to the video desk: the keys pre-fader, on USB 14-15' asks*
 
-A strip is named as the show names it; a stereo pair answers to its name
-without the L (`Keys` for `Keys L`). A strip the show doesn't have, or a feed
-when all 24 user signals are already used, is a warning naming the line, and
-that feed is not built.
+A strip is named as the show names it; a stereo pair answers to its name without the L (`Keys` for `Keys L`). A strip the show doesn't have, or a feed when all 24 user signals are already used, is a warning naming the line, and that feed is not built.
 
-`verify` refuses a split the desk cannot carry, such as a run past the end
-of its group or a socket a bus or a Main already uses:
+`verify` refuses a split the desk cannot carry, such as a run past the end of its group or a socket a bus or a Main already uses:
 
 ```
   [error] direct_outputs[USB 49]: USB output 49 does not exist -- USB outputs are 1..48 on a WING Compact  (output.socket-out-of-range)
@@ -355,27 +207,9 @@ of its group or a socket a bus or a Main already uses:
 - Lead Vox uses the "Lead Vocal" preset.
 ```
 
-Name the preset. Never write an EQ curve or a compressor ratio into the
-conventions file — that is what the preset is for, and duplicating it
-into prose is how the two drift apart. Matching forgives case and
-`-`/`_`/spaces ([how forgiving](presets.md#naming-one-and-how-forgiving-the-match-is)).
-`build` puts the preset's values into the plan, so you can read exactly
-what will be written before anything touches the desk. A value your
-conventions state for the same parameter (the channel's own high-pass)
-replaces the preset's for that one parameter, with a note
-([Your plan wins over the preset](presets.md#your-plan-wins-over-the-preset)).
-A preset named in the input list's
-[`preset` column](input-lists.md#the-preset-column) wins over one named
-here, for that channel.
+Name the preset. Never write an EQ curve or a compressor ratio into the conventions file — that is what the preset is for, and duplicating it into prose is how the two drift apart. Matching forgives case and `-`/`_`/spaces ([how forgiving](presets.md#naming-one-and-how-forgiving-the-match-is)). `build` puts the preset's values into the plan, so you can read exactly what will be written before anything touches the desk. A value your conventions state for the same parameter (the channel's own high-pass) replaces the preset's for that one parameter, with a note ([Your plan wins over the preset](presets.md#your-plan-wins-over-the-preset)). A preset named in the input list's [`preset` column](input-lists.md#the-preset-column) wins over one named here, for that channel.
 
-When your conventions name presets by kind -- one for alto sax, one for
-baritone -- and the input list just says `Sax`, the build takes the
-most common kind (an alto, so A Sax) rather than leaving the strip with
-no preset, and its notes name the other: call the row
-`Baritone sax` for B Sax. A tom with no qualifier is read as a rack
-tom, a guitar as electric. `patch` makes the same choice
-([patch.md](patch.md)). It is the model's choice from your wording, so
-read the note; a wrong guess costs a moment at soundcheck.
+When your conventions name presets by kind -- one for alto sax, one for baritone -- and the input list just says `Sax`, the build takes the most common kind (an alto, so A Sax) rather than leaving the strip with no preset, and its notes name the other: call the row `Baritone sax` for B Sax. A tom with no qualifier is read as a rack tom, a guitar as electric. `patch` makes the same choice ([patch.md](patch.md)). It is the model's choice from your wording, so read the note; a wrong guess costs a moment at soundcheck.
 
 ### Mix and FX busses: name a bus preset
 
@@ -387,30 +221,17 @@ read the note; a wrong guess costs a moment at soundcheck.
 - FX busses are STEREO, routed to Main at unity, faders at unity. Each FX bus takes the bus preset of the same name ("Vox Verb", "Snare Verb"), which carries its reverb or delay.
 ```
 
-Those are the starter's own lines. Naming the bus preset is all the
-conventions do; saving one, and what the build and `apply` do with it,
-is on [Bus presets: mix and FX busses](bus-presets.md). Say "the bus
-preset" (or "bus preset Vox Verb"), so it is not read as a channel
-preset; the two may share a name. Do not describe the reverb in words:
-Atoo cannot set an effect from a description.
+Those are the starter's own lines. Naming the bus preset is all the conventions do; saving one, and what the build and `apply` do with it, is on [Bus presets: mix and FX busses](bus-presets.md). Say "the bus preset" (or "bus preset Vox Verb"), so it is not read as a channel preset; the two may share a name. Do not describe the reverb in words: Atoo cannot set an effect from a description.
 
-For colours, including the names the desk does not have, see the
-[conventions reference](conventions-reference.md#the-desks-eighteen-colours).
+For colours, including the names the desk does not have, see the [conventions reference](conventions-reference.md#the-desks-eighteen-colours).
 
 ## A channel that is not on the input list
 
-A talkback mic, an ambient pair, a click from your own laptop: channels
-that are yours, not the band's. Ask for one in a sentence that names its
-socket ("Talkback on channel 40, source LCL 12"), in the show's
-`instructions.md` or, for every show, here. See [Channels that are not
-on the input list](extra-strips.md).
+A talkback mic, an ambient pair, a click from your own laptop: channels that are yours, not the band's. Ask for one in a sentence that names its socket ("Talkback on channel 40, source LCL 12"), in the show's `instructions.md` or, for every show, here. See [Channels that are not on the input list](extra-strips.md).
 
 ## `instructions.md` layers over it
 
-A show bundle can carry an `instructions.md`: how *this* show differs.
-The house conventions are always brought in, and the show's instructions
-layer over them, winning where the two disagree; where it is silent, the
-conventions apply in full ([Show bundles](show-bundles.md#two-files-that-do-not-go-in-the-bundle)).
+A show bundle can carry an `instructions.md`: how *this* show differs. The house conventions are always brought in, and the show's instructions layer over them, winning where the two disagree; where it is silent, the conventions apply in full ([Show bundles](show-bundles.md#two-files-that-do-not-go-in-the-bundle)).
 
 ```bash
 atoo build --show clubdate --conventions house.md
@@ -422,15 +243,11 @@ Conventions, in order -- each layer overrides the one above it:
   2. clubdate/instructions.md  (show bundle clubdate)
 ```
 
-`build` prints that stack every time, so a plan can always be
-explained afterwards. (The run above then stops with `no console model
-stated`, a separate flag — see [The command line](quickstart.md).)
+`build` prints that stack every time, so a plan can always be explained afterwards. (The run above then stops with `no console model stated`, a separate flag — see [The command line](quickstart.md).)
 
 ## A default conventions file across every show
 
-Naming the house file by hand every time — or, worse, copying it into
-every show's folder — is how three slightly different house files come
-to exist. Name it once in `~/.atoo.config`:
+Naming the house file by hand every time — or, worse, copying it into every show's folder — is how three slightly different house files come to exist. Name it once in `~/.atoo.config`:
 
 ```toml
 [conventions]
@@ -453,12 +270,7 @@ Conventions, in order -- each layer overrides the one above it:
   1. /home/you/conventions/house.md  (/home/you/.atoo.config)
 ```
 
-The default is consulted **last**: an explicit `--conventions`, or a
-conventions file `build` finds in the current directory, always wins
-without the config file even being read. A missing `~/.atoo.config`
-is normal and silent; one that is wrong prints one line saying what is
-wrong with it and is then ignored. The browser page can write the
-`[conventions]` line for you: see [Set up Atoo](configuration.md#the-config-file).
+The default is consulted **last**: an explicit `--conventions`, or a conventions file `build` finds in the current directory, always wins without the config file even being read. A missing `~/.atoo.config` is normal and silent; one that is wrong prints one line saying what is wrong with it and is then ignored. The browser page can write the `[conventions]` line for you: see [Set up Atoo](configuration.md#the-config-file).
 
 ## See also
 
@@ -468,5 +280,4 @@ wrong with it and is then ignored. The browser page can write the
 - [The command line](quickstart.md) — both files through to a proven desk
 - [Show bundles](show-bundles.md) — where `instructions.md` lives
 - `starter/conventions.md` — the complete starter, which builds the Demo show
-- [Conventions reference](conventions-reference.md) — the levels
-  vocabulary, the desk's colours, and the rules Atoo writes beside yours
+- [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colours, and the rules Atoo writes beside yours

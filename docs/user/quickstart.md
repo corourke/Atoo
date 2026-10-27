@@ -1,14 +1,8 @@
 # The command line
 
-Everything you did in the browser is also a command. The command line
-adds a few things the browser doesn't: you can check a saved reading of a
-desk with no desk attached, replay one in Watch, keep a record of a desk
-before and after a change, and script any of it.
+Everything you did in the browser is also a command. The command line adds a few things the browser doesn't: you can check a saved reading of a desk with no desk attached, replay one in Watch, keep a record of a desk before and after a change, and script any of it.
 
-This page runs one show from files to desk on your own WING, then shows
-some useful things to try. It uses your copy of the Demo show, and your
-desk's address saved in [Set up Atoo](configuration.md); the examples use
-`192.0.2.16`, so type your own if you didn't save it.
+This page runs one show from files to desk on your own WING, then shows some useful things to try. It uses your copy of the Demo show, and your desk's address saved in [Set up Atoo](configuration.md); the examples use `192.0.2.16`, so type your own if you didn't save it.
 
 ## Part 1: one show, from files to desk
 
@@ -38,8 +32,7 @@ atoo verify --show demo-show
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
 
-The last line is the verdict. Only `BLOCKED: do not apply.` stops an
-apply ([Reading findings](reading-findings.md)).
+The last line is the verdict. Only `BLOCKED: do not apply.` stops an apply ([Reading findings](reading-findings.md)).
 
 ### 3. Build it again (needs a model)
 
@@ -47,45 +40,34 @@ apply ([Reading findings](reading-findings.md)).
 atoo build --show demo-show
 ```
 
-A build takes a few minutes and shows its progress as it goes. It takes
-the desk model from the show's own plan; add `--console-model wing-full`
-or `wing-rack` to build for a different WING.
+A build takes a few minutes and shows its progress as it goes. It takes the desk model from the show's own plan; add `--console-model wing-full` or `wing-rack` to build for a different WING.
 
 ### 4. Read your desk
 
-These two write nothing, so they are safe on a desk that is running a
-show.
+These two write nothing, so they are safe on a desk that is running a show.
 
 ```bash
 a2 ping
 atoo audit --dump-state my-desk.state.json
 ```
 
-`ping` confirms the desk answers. `audit` reads the whole desk, checks it
-against the built-in rules, and saves what it read to
-`my-desk.state.json`. Check each finding against the desk.
+`ping` confirms the desk answers. `audit` reads the whole desk, checks it against the built-in rules, and saves what it read to `my-desk.state.json`. Check each finding against the desk.
 
 ### 5. Preview, then write
 
-**Only on a desk that is not running a show**, with its own show saved
-first. A full apply resets the desk, then writes the plan
-([What a full apply changes](what-apply-changes.md)).
+**Only on a desk that is not running a show**, with its own show saved first. A full apply resets the desk, then writes the plan ([What a full apply changes](what-apply-changes.md)).
 
 ```bash
 atoo apply --show demo-show
 ```
 
-This writes nothing: it reads the desk, shows what would change, and ends
-with `Nothing was written -- this was a preview. Re-run with --confirm to
-apply.` Then:
+This writes nothing: it reads the desk, shows what would change, and ends with `Nothing was written -- this was a preview. Re-run with --confirm to apply.` Then:
 
 ```bash
 atoo apply --show demo-show --confirm
 ```
 
-Every value is read back afterwards. The line that starts `APPLIED:`
-counts what was written, and a `MISMATCH` line names anything that didn't
-land ([Applying a plan](applying.md)).
+Every value is read back afterwards. The line that starts `APPLIED:` counts what was written, and a `MISMATCH` line names anything that didn't land ([Applying a plan](applying.md)).
 
 ### 6. Watch it
 
@@ -93,8 +75,7 @@ land ([Applying a plan](applying.md)).
 atoo watch --show demo-show --count 3
 ```
 
-Three readings, two seconds apart. Leave out `--count` to watch until you
-press `Ctrl-C`.
+Three readings, two seconds apart. Leave out `--count` to watch until you press `Ctrl-C`.
 
 ### 7. Undo, and put the desk back
 
@@ -103,13 +84,11 @@ atoo undo --show demo-show
 atoo undo --show demo-show --confirm
 ```
 
-The first previews the undo; the second does it. Then load the show you
-saved on the desk.
+The first previews the undo; the second does it. Then load the show you saved on the desk.
 
 ## Part 2: useful things
 
-**Check a desk with no desk attached.** `audit` reads a saved reading as
-well as a live desk. `atoo init` gives you one to try:
+**Check a desk with no desk attached.** `audit` reads a saved reading as well as a live desk. `atoo init` gives you one to try:
 
 ```bash
 atoo audit --state audit-demo/audit_demo_state.json
@@ -126,8 +105,7 @@ Audit findings: 7 warning, 3 info.
   ...
 ```
 
-**Replay a change in Watch.** Give Watch two saved readings, and it
-reports what changed between them, as it would live:
+**Replay a change in Watch.** Give Watch two saved readings, and it reports what changed between them, as it would live:
 
 ```bash
 atoo watch --state-sequence audit-demo/audit_demo_state_before.json,audit-demo/audit_demo_state.json
@@ -140,17 +118,14 @@ atoo watch --state-sequence audit-demo/audit_demo_state_before.json,audit-demo/a
   ...
 ```
 
-**Keep a record of a change.** Save a reading before and after you write
-to a desk, and you can see exactly what changed, or send both with a
-[report](reporting.md):
+**Keep a record of a change.** Save a reading before and after you write to a desk, and you can see exactly what changed, or send both with a [report](reporting.md):
 
 ```bash
 atoo audit --dump-state before.state.json
 atoo audit --dump-state after.state.json
 ```
 
-**Preview a typed change.** `atoo patch` does what Patch does in the
-browser. Without `--confirm` it only previews:
+**Preview a typed change.** `atoo patch` does what Patch does in the browser. Without `--confirm` it only previews:
 
 ```bash
 atoo patch --show demo-show "trumpet, sax and trombone on LCL 21-23, Band DCA"
@@ -162,22 +137,15 @@ atoo patch --show demo-show "trumpet, sax and trombone on LCL 21-23, Band DCA"
 atoo capture --console 192.0.2.16
 ```
 
-**See what your builds keep asking.** `atoo lessons` reads a show's
-builds and lists what the model kept having to guess, so you can add it to
-your conventions:
+**See what your builds keep asking.** `atoo lessons` reads a show's builds and lists what the model kept having to guess, so you can add it to your conventions:
 
 ```bash
 atoo lessons --show demo-show
 ```
 
-**Every command explains itself.** `atoo <command> --help` lists its
-options. The [Command reference](cli-reference.md) has every command and
-flag, and the [Rules reference](rules-reference.md) every rule `audit`
-and `watch` can report.
+**Every command explains itself.** `atoo <command> --help` lists its options. The [Command reference](cli-reference.md) has every command and flag, and the [Rules reference](rules-reference.md) every rule `audit` and `watch` can report.
 
-**Exit codes.** `0` is clean, `1` means it couldn't run, and `2` means it
-ran and found problems; `audit` and `watch` report findings with `1`
-([Exit codes](cli-reference.md#exit-codes)).
+**Exit codes.** `0` is clean, `1` means it couldn't run, and `2` means it ran and found problems; `audit` and `watch` report findings with `1` ([Exit codes](cli-reference.md#exit-codes)).
 
 ## Where next
 

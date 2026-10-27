@@ -1,19 +1,8 @@
 # Watch conditions: your own alerts
 
-The built-in rules know what a WING should look like; they do not know
-your show. A watch condition is a line you write about *this* rig saying
-**when to alert** — the Kick is not on LCL 5, the PA is muted, the Band DCA
-is pulled down — and Watch checks it on every pass. It alerts while it is
-true. Conditions are deterministic structured
-JSON, not prose and not a model: the runtime path has no AI in it at
-all. This page is the file format, used both by **Watch** in the browser
-and by `atoo watch`.
+The built-in rules know what a WING should look like; they do not know your show. A watch condition is a line you write about *this* rig saying **when to alert** — the Kick is not on LCL 5, the PA is muted, the Band DCA is pulled down — and Watch checks it on every pass. It alerts while it is true. Conditions are deterministic structured JSON, not prose and not a model: the runtime path has no AI in it at all. This page is the file format, used both by **Watch** in the browser and by `atoo watch`.
 
-Every transcript on this page runs against a captured state file, with
-no console attached. [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init) copies
-the captures into your Atoo folder, as `audit-demo/` (run it again if
-yours was made before they existed; it adds what is missing and touches
-nothing you have changed):
+Every transcript on this page runs against a captured state file, with no console attached. [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init) copies the captures into your Atoo folder, as `audit-demo/` (run it again if yours was made before they existed; it adds what is missing and touches nothing you have changed):
 
 ```bash
 cd ~/Documents/Atoo/audit-demo
@@ -40,8 +29,7 @@ cd ~/Documents/Atoo/audit-demo
 atoo watch --state-sequence audit_demo_state.json --watch-conditions one.watch.json --count 1
 ```
 
-The fixture's Kick is on LCL 1, not LCL 5, so the condition is true and
-fires at the severity the file itself asked for:
+The fixture's Kick is on LCL 1, not LCL 5, so the condition is true and fires at the severity the file itself asked for:
 
 ```
 [2026-10-26T01:02:10+00:00] baseline -- 12 finding(s) already present:
@@ -53,42 +41,22 @@ Audit findings: 1 error, 7 warning, 4 info.
 ... the 11 structural findings
 ```
 
-It is reported alongside the built-in rules, not instead of them: 11
-structural findings plus your one, sorted by severity, so your condition
-leads.
+It is reported alongside the built-in rules, not instead of them: 11 structural findings plus your one, sorted by severity, so your condition leads.
 
-**The line says which strip, what it is, and your description** —
-`CH 1 "Kick" is patched to LCL 1 -- Kick is not on LCL 5.` — and nothing
-else: not the condition's id, operator or value. So write the description
-as what is wrong when it fires, in your own words.
+**The line says which strip, what it is, and your description** — `CH 1 "Kick" is patched to LCL 1 -- Kick is not on LCL 5.` — and nothing else: not the condition's id, operator or value. So write the description as what is wrong when it fires, in your own words.
 
-**The file starts with `"version": 2`.** A condition used to state what
-should hold, and fire when it did not; a file written then means the
-opposite of what it says now, so Watch refuses one without the mark rather
-than misread it. The refusal names the file, says how each operator turns
-round, and ends with a command that converts the file in place:
+**The file starts with `"version": 2`.** A condition used to state what should hold, and fire when it did not; a file written then means the opposite of what it says now, so Watch refuses one without the mark rather than misread it. The refusal names the file, says how each operator turns round, and ends with a command that converts the file in place:
 
 ```
 my-show/watch.json: has no "version": 2, so it was written when a condition stated what should hold. A condition now states when to alert: it fires when it is true. Invert each condition: == and != swap, < becomes >=, >= becomes <, <= becomes >, > becomes <=; on dca and mute_group, == becomes "not in" and != becomes "in". Then add "version": 2 at the top. This does all of it to the file in place:
   python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); n={'==':'!=','!=':'==','<':'>=','>=':'<','<=':'>','>':'<='}; g={'==':'not in','!=':'in'}; [c.update(operator=(g if c.get('field') in ('dca','mute_group') else n)[c['operator']]) for c in d['watch_conditions']]; d['version']=2; json.dump(d, open(p,'w'), indent=2)" my-show/watch.json
 ```
 
-Paste that line, then reword the descriptions to say what is wrong: the
-command changes what each condition does, not what its description says.
+Paste that line, then reword the descriptions to say what is wrong: the command changes what each condition does, not what its description says.
 
-**A condition you wrote about a rig that is set up correctly produces
-nothing at all.** That silence is the feature, and it is why
-these are worth writing for the handful of things that would ruin a show
-rather than for everything you can think of.
+**A condition you wrote about a rig that is set up correctly produces nothing at all.** That silence is the feature, and it is why these are worth writing for the handful of things that would ruin a show rather than for everything you can think of.
 
-**In Watch, each condition has a small *i* beside its ID** that says the
-condition in plain English, for example *"Alerts as a warning when any DCA
-from 1 to 5 is muted."* It reads the same way round as the condition.
-It is made from the condition's cells (never from its description), covers
-every field, operator, range, name and bus, and says how the alert names
-the strip. A condition the file format would refuse has no sentence.
-[Watch a show](watch-a-show.md#3-say-what-matters-tonight-watch-conditions)
-shows where it is.
+**In Watch, each condition has a small *i* beside its ID** that says the condition in plain English, for example *"Alerts as a warning when any DCA from 1 to 5 is muted."* It reads the same way round as the condition. It is made from the condition's cells (never from its description), covers every field, operator, range, name and bus, and says how the alert names the strip. A condition the file format would refuse has no sentence. [Watch a show](watch-a-show.md#3-say-what-matters-tonight-watch-conditions) shows where it is.
 
 ## The field vocabulary
 
@@ -104,43 +72,18 @@ shows where it is.
 | `send_mode` | `"pre"`, `"post"` or `"group"`, with a `bus` | `==` `!=` |
 | `phantom` | `true` / `false` | `==` `!=` |
 
-The last four are [sends and 48V](#sends-and-48v). Only the two levels,
-`fader_db` and `send_db`, have an ordering worth comparing, so only they
-take `<` and friends. `dca` and `mute_group` ask about membership in words:
-**`not in` alerts when the channel is not in the group, `in` when it is.**
-`"field": "dca", "operator": "not in", "value": "Drums"` fires when the
-channel is not in the Drums DCA. The rest take `==` and `!=`: `"field":
-"patch", "operator": "!=", "value": "LCL 5"` fires when the channel is
-patched anywhere but LCL 5.
+The last four are [sends and 48V](#sends-and-48v). Only the two levels, `fader_db` and `send_db`, have an ordering worth comparing, so only they take `<` and friends. `dca` and `mute_group` ask about membership in words: **`not in` alerts when the channel is not in the group, `in` when it is.** `"field": "dca", "operator": "not in", "value": "Drums"` fires when the channel is not in the Drums DCA. The rest take `==` and `!=`: `"field": "patch", "operator": "!=", "value": "LCL 5"` fires when the channel is patched anywhere but LCL 5.
 
-`severity` is one of `info`, `warning` or `error`, and it is yours to
-set — the condition fires at whatever level you said it mattered.
+`severity` is one of `info`, `warning` or `error`, and it is yours to set — the condition fires at whatever level you said it mattered.
 
 Four rules about names:
 
-- **`channel` is matched by name, case-insensitively**, across the
-  channels and auxes. A name that matches no live channel, or two, is
-  skipped for that pass rather than guessed at. A strip can also be named
-  by its position, or by its kind and its name (`BUS Drums`) -- see the
-  next two sections.
-- **Groups are matched by name, never by index**, the same way. A
-  condition about a DCA called `FX` on a rig whose only `FX` is a *bus*
-  says nothing, rather than claiming a violation it could not check.
-- **The names matched are the last ones read.** A live watch reads names
-  at Start and every fifth pass (see
-  [Names are read at Start and refreshed](watch.md#names-are-read-at-start-and-refreshed)),
-  so a channel renamed mid-show is matched under its new name from the
-  next refresh.
-- **A socket is written exactly the way an input list's `patch` column
-  writes it** — `AES50-A 12`, `LCL 3`, `AES 1`, `CRD 64`. One vocabulary,
-  not a second one invented for this field. `AES 1` (AES/EBU) and
-  `AES50-A 1` are different sockets, which is why the network letter is
-  spelled out.
+- **`channel` is matched by name, case-insensitively**, across the channels and auxes. A name that matches no live channel, or two, is skipped for that pass rather than guessed at. A strip can also be named by its position, or by its kind and its name (`BUS Drums`) -- see the next two sections.
+- **Groups are matched by name, never by index**, the same way. A condition about a DCA called `FX` on a rig whose only `FX` is a *bus* says nothing, rather than claiming a violation it could not check.
+- **The names matched are the last ones read.** A live watch reads names at Start and every fifth pass (see [Names are read at Start and refreshed](watch.md#names-are-read-at-start-and-refreshed)), so a channel renamed mid-show is matched under its new name from the next refresh.
+- **A socket is written exactly the way an input list's `patch` column writes it** — `AES50-A 12`, `LCL 3`, `AES 1`, `CRD 64`. One vocabulary, not a second one invented for this field. `AES 1` (AES/EBU) and `AES50-A 1` are different sockets, which is why the network letter is spelled out.
 
-**A condition that could never fire is refused when the file loads**,
-rather than sitting quietly in your show file being silently useless.
-Ask for a socket a WING Compact does not have and you are told so, with
-every group and its range, before a single read happens:
+**A condition that could never fire is refused when the file loads**, rather than sitting quietly in your show file being silently useless. Ask for a socket a WING Compact does not have and you are told so, with every group and its range, before a single read happens:
 
 ```
 bad.watch.json: watch_conditions[0] ('kick-on-lcl99'): field 'patch' value 'LCL 99' is not a socket this console could have -- write it the way an input list's patch column does, e.g. "AES50-A 12", "LCL 3", "AES 1", "SC 24"; known groups: AES50-A 1..48, AES 1..2, AUX 1..8, AES50-B 1..48, AES50-C 1..48, CRD 1..64, LCL 1..24, MOD 1..64, OSC 1..2, PLAY 1..4, SC 1..32, USB 1..48, USR 1..56
@@ -162,10 +105,7 @@ Both exit `1` without reading anything.
 
 ## By position, range or kind
 
-`channel` can name a strip by where it is on
-the desk rather than by what it is called -- which is the only way to
-reach a strip nobody has named, and the only way to reach a bus, a DCA, a
-Main or a Matrix at all:
+`channel` can name a strip by where it is on the desk rather than by what it is called -- which is the only way to reach a strip nobody has named, and the only way to reach a bus, a DCA, a Main or a Matrix at all:
 
 | You write | It means |
 |---|---|
@@ -175,13 +115,9 @@ Main or a Matrix at all:
 | `DCA 10-16` | DCAs 10 to 16, both ends included |
 | `ALL AUX`, `ALL MAIN`, ... | every strip of that kind the console has |
 
-Case does not matter and the space is optional: `ch10`, `Ch 10` and
-`CH 10` are the same target, and the Watch editor and Save write it back
-as `CH 10`. `DCA 10-16` and `ALL AUX` are written that way too.
+Case does not matter and the space is optional: `ch10`, `Ch 10` and `CH 10` are the same target, and the Watch editor and Save write it back as `CH 10`. `DCA 10-16` and `ALL AUX` are written that way too.
 
-A range or `ALL` condition is checked on **each strip it covers**, and
-each strip it is true of is its own finding, citing the strip's
-position and its name when it has one. Saved as `positions.watch.json`:
+A range or `ALL` condition is checked on **each strip it covers**, and each strip it is true of is its own finding, citing the strip's position and its name when it has one. Saved as `positions.watch.json`:
 
 ```json
 {
@@ -213,10 +149,7 @@ position and its name when it has one. Saved as `positions.watch.json`:
 atoo watch --state-sequence audit_demo_state.json --watch-conditions positions.watch.json --count 1
 ```
 
-The fixture has three busses at 0 dB and one DCA at the floor, so the
-baseline has four findings of yours among the structural ones. The three
-busses make the same condition true in the same way, so they are one entry,
-with the count in brackets:
+The fixture has three busses at 0 dB and one DCA at the floor, so the baseline has four findings of yours among the structural ones. The three busses make the same condition true in the same way, so they are one entry, with the count in brackets:
 
 ```
 [ERROR] WATCH:drum-dca-down A drum DCA is pulled right down
@@ -227,33 +160,14 @@ with the count in brackets:
   Each has its fader at 0 dB -- A bus is above -5 dB.
 ```
 
-DCAs 2 to 4 are not in the fixture at all, so they say nothing: a strip
-that was never read is skipped, as an unmatched name is. A Main's and a
-Matrix's name is not read, so a finding about one reads `MAIN 1`.
+DCAs 2 to 4 are not in the fixture at all, so they say nothing: a strip that was never read is skipped, as an unmatched name is. A Main's and a Matrix's name is not read, so a finding about one reads `MAIN 1`.
 
 Things to know:
 
-- **A position always wins.** Text that reads as a position, range or
-  `ALL` form *is* that form, even if some channel happens to be named
-  `CH 10`. When one is, each pass also reports an `info` finding saying
-  the condition is watching the position, not that channel. A kind word
-  followed by a name is a [kind and a name](#by-kind-and-name), and
-  anything else is a name, as before.
-- **Which fields a kind takes.** Every field works on a channel or an
-  aux. A bus, Main, Matrix or DCA takes `muted` and `fader_db` only:
-  only channels and auxes have an input `patch`; a DCA cannot be in a DCA
-  or a mute group; and a bus, Main or Matrix can be, but `watch` does not
-  read their tags, so the condition could never fire.
-- **`Main` on its own means `MAIN 1`**, the main L/R. An `info` finding
-  reads: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make
-  it explicit*. The Watch screen's table rewrites the cell to `MAIN 1` and
-  shows the same note under it, not in red. No other kind has a
-  default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are
-  refused.
-- **What is refused when the file loads** -- each is a condition no
-  console could ever make true: a malformed target (`CH`, `BUS -`, `DCA 3-`), a
-  position the WING does not have (`CH 41`, `MAIN 5`, `DCA 17`), a
-  backwards range (`DCA 16-10`), and a field the kind does not have.
+- **A position always wins.** Text that reads as a position, range or `ALL` form *is* that form, even if some channel happens to be named `CH 10`. When one is, each pass also reports an `info` finding saying the condition is watching the position, not that channel. A kind word followed by a name is a [kind and a name](#by-kind-and-name), and anything else is a name, as before.
+- **Which fields a kind takes.** Every field works on a channel or an aux. A bus, Main, Matrix or DCA takes `muted` and `fader_db` only: only channels and auxes have an input `patch`; a DCA cannot be in a DCA or a mute group; and a bus, Main or Matrix can be, but `watch` does not read their tags, so the condition could never fire.
+- **`Main` on its own means `MAIN 1`**, the main L/R. An `info` finding reads: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make it explicit*. The Watch screen's table rewrites the cell to `MAIN 1` and shows the same note under it, not in red. No other kind has a default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are refused.
+- **What is refused when the file loads** -- each is a condition no console could ever make true: a malformed target (`CH`, `BUS -`, `DCA 3-`), a position the WING does not have (`CH 41`, `MAIN 5`, `DCA 17`), a backwards range (`DCA 16-10`), and a field the kind does not have.
 
 ```
 bad-target.watch.json: watch_conditions[0] ('spare-muted'): 'channel' 'CH 41': CH 41 does not exist -- a WING has CH 1-40
@@ -263,20 +177,13 @@ bad-target.watch.json: watch_conditions[0] ('spare-muted'): 'channel' 'CH 41': C
 bad-field.watch.json: watch_conditions[0] ('dca-patched'): field 'patch' does not apply to DCA 1: a DCA has no input patch -- DCA conditions take 'muted' or 'fader_db'
 ```
 
-The Watch screen's conditions table checks each row against the same
-rules as you type: a cell it would refuse is outlined in red with the
-reason under it, and Save refuses until it is fixed.
+The Watch screen's conditions table checks each row against the same rules as you type: a cell it would refuse is outlined in red with the reason under it, and Save refuses until it is fixed.
 
-Nothing here costs an extra console read: every bus, Main, Matrix and
-DCA's mute and fader were already part of each pass, and every bus and
-DCA's name part of each name refresh.
+Nothing here costs an extra console read: every bus, Main, Matrix and DCA's mute and fader were already part of each pass, and every bus and DCA's name part of each name refresh.
 
 ### Only active strips
 
-`ALL BUS` means every bus on the desk, so a rule like "no bus is muted"
-also fires on the busses the show never uses. Write the word **`ACTIVE`**
-in the cell and the condition is checked only on the strips that are
-active, at each pass:
+`ALL BUS` means every bus on the desk, so a rule like "no bus is muted" also fires on the busses the show never uses. Write the word **`ACTIVE`** in the cell and the condition is checked only on the strips that are active, at each pass:
 
 | You write | It means |
 |---|---|
@@ -284,33 +191,19 @@ active, at each pass:
 | `ACTIVE CH 1-24` | channels 1 to 24, while each is active |
 | `ACTIVE DCA 1-8`, `ACTIVE MTX 2` | those DCAs, or that Matrix, while active |
 
-The word can stand anywhere and in any case: `ALL ACTIVE BUS`,
-`ALL BUS ACTIVE` and `active all bus` are the same, and the Watch editor
-and Save write them as `ACTIVE ALL BUS`. A cell that is only `ACTIVE`
-names no strip and is refused.
+The word can stand anywhere and in any case: `ALL ACTIVE BUS`, `ALL BUS ACTIVE` and `active all bus` are the same, and the Watch editor and Save write them as `ACTIVE ALL BUS`. A cell that is only `ACTIVE` names no strip and is refused.
 
-A strip is **active** when it is on the open show's sheets, or in use on
-the desk:
+A strip is **active** when it is on the open show's sheets, or in use on the desk:
 
-- **On the show's sheets:** a channel or aux the show places, or a bus,
-  Main, Matrix, DCA or mute group it has, matched by position (a channel by
-  its strip, the rest by number). The sheets are read from the show's plan.
+- **On the show's sheets:** a channel or aux the show places, or a bus, Main, Matrix, DCA or mute group it has, matched by position (a channel by its strip, the rest by number). The sheets are read from the show's plan.
 - **In use on the desk:**
-  - a channel, aux or bus that is named, patched to a socket other than the
-    factory's, or sending; a bus also when something sends to it;
+  - a channel, aux or bus that is named, patched to a socket other than the factory's, or sending; a bus also when something sends to it;
   - a DCA or mute group with a member;
-  - a Main or Matrix that something sends or routes to, or that goes
-    somewhere itself (a Main's send to a Matrix, or an output socket
-    patched from it).
+  - a Main or Matrix that something sends or routes to, or that goes somewhere itself (a Main's send to a Matrix, or an output socket patched from it).
 
-With no show open, only the desk counts, and the "Watching without a plan"
-note says so. A strip that becomes active during the show is picked up at
-the next pass. The *i* beside the condition says it too: *Alerts as an
-error when any active BUS is muted. Active: on this show's sheets, or in
-use on the desk.*
+With no show open, only the desk counts, and the "Watching without a plan" note says so. A strip that becomes active during the show is picked up at the next pass. The *i* beside the condition says it too: *Alerts as an error when any active BUS is muted. Active: on this show's sheets, or in use on the desk.*
 
-A desk where bus 1 is named, and busses 2 and 3 are not, all three muted,
-saved as `active.state.json`:
+A desk where bus 1 is named, and busses 2 and 3 are not, all three muted, saved as `active.state.json`:
 
 ```json
 {
@@ -350,10 +243,7 @@ With no show, only bus 1 is active, because it is named on the desk:
   BUS 1 "Drums" is muted -- A bus is muted.
 ```
 
-Started with a show whose plan has a bus on number 3 (`atoo watch --show
-DIR --state-sequence active.state.json --count 1`, the condition in the
-show's `watch.json`), bus 3 is active too. Bus 2 is neither, and never
-fires:
+Started with a show whose plan has a bus on number 3 (`atoo watch --show DIR --state-sequence active.state.json --count 1`, the condition in the show's `watch.json`), bus 3 is active too. Bus 2 is neither, and never fires:
 
 ```
 [ERROR] WATCH:bus-muted A bus is muted (2)
@@ -361,23 +251,13 @@ fires:
   Each is muted -- A bus is muted.
 ```
 
-The built-in checks that ask whether a strip is in use (a fader at the
-floor, a bus with no inputs or no output, and the others the
-[Rules reference](rules-reference.md) lists) use the same "active", so a
-bus on the show's sheets is checked even before anything on the desk uses
-it. An `ACTIVE` condition does not replace them: both can fire on the same
-strip.
+The built-in checks that ask whether a strip is in use (a fader at the floor, a bus with no inputs or no output, and the others the [Rules reference](rules-reference.md) lists) use the same "active", so a bus on the show's sheets is checked even before anything on the desk uses it. An `ACTIVE` condition does not replace them: both can fire on the same strip.
 
-`ACTIVE` is always read as the word, never as part of a name: `ACTIVE
-Kick` watches the channel named Kick while it is active, and the editor
-says so under the cell. A strip whose own name has the word Active in it
-is watched by its position.
+`ACTIVE` is always read as the word, never as part of a name: `ACTIVE Kick` watches the channel named Kick while it is active, and the editor says so under the cell. A strip whose own name has the word Active in it is watched by its position.
 
 ## By kind and name
 
-A kind word followed by a name
-means **the one strip of that kind with that name**. It reaches a bus,
-DCA, Main or Matrix by name, which a name alone never does:
+A kind word followed by a name means **the one strip of that kind with that name**. It reaches a bus, DCA, Main or Matrix by name, which a name alone never does:
 
 | You write | It means |
 |---|---|
@@ -387,23 +267,11 @@ DCA, Main or Matrix by name, which a name alone never does:
 | `CH Kick` | the channel named Kick |
 | `MAIN PA`, `MTX Delay` | the Main named PA, the Matrix named Delay |
 
-The kind words are the ones positions use (`CH`/`CHN`/`CHAN`, `AUX`,
-`BUS`, `MAIN`, `MTX`/`MATRIX`, `DCA`). The kind word is written back in
-capitals (`bus drums` is saved as `BUS drums`). The name keeps your
-spelling and matches regardless of case.
+The kind words are the ones positions use (`CH`/`CHN`/`CHAN`, `AUX`, `BUS`, `MAIN`, `MTX`/`MATRIX`, `DCA`). The kind word is written back in capitals (`bus drums` is saved as `BUS drums`). The name keeps your spelling and matches regardless of case.
 
-**The name is looked up once, when Watch starts.** Its position is what
-gets watched after that. Every pass checks `BUS 1`, not "whichever bus
-is called Drums now", so watching by name adds no reads to each pass.
-The baseline says what each name matched, as an `info` finding. If
-someone renames or moves the strip after Start, Watch carries on
-watching the position it found; stop and start Watch to look the name up
-again.
+**The name is looked up once, when Watch starts.** Its position is what gets watched after that. Every pass checks `BUS 1`, not "whichever bus is called Drums now", so watching by name adds no reads to each pass. The baseline says what each name matched, as an `info` finding. If someone renames or moves the strip after Start, Watch carries on watching the position it found; stop and start Watch to look the name up again.
 
-A Main's and a Matrix's names are not part of a normal pass, so a
-`MAIN` or `MTX` name makes Watch read those names once, at Start, and
-never again. A capture played with `--state-sequence` has none of them,
-so there a `MAIN` or `MTX` name gets a warning that no name could be read.
+A Main's and a Matrix's names are not part of a normal pass, so a `MAIN` or `MTX` name makes Watch read those names once, at Start, and never again. A capture played with `--state-sequence` has none of them, so there a `MAIN` or `MTX` name gets a warning that no name could be read.
 
 Saved as `scoped.watch.json`:
 
@@ -446,9 +314,7 @@ Saved as `scoped.watch.json`:
 atoo watch --state-sequence audit_demo_state.json --watch-conditions scoped.watch.json --count 1
 ```
 
-The fixture has a bus *and* a DCA named Drums, so each condition looks
-only at strips of its own kind. It has no bus named Horns. Among the
-structural findings, the baseline has these lines of yours:
+The fixture has a bus *and* a DCA named Drums, so each condition looks only at strips of its own kind. It has no bus named Horns. Among the structural findings, the baseline has these lines of yours:
 
 ```
 [ERROR] WATCH:drum-dca-down The drum DCA is pulled right down
@@ -469,35 +335,21 @@ structural findings, the baseline has these lines of yours:
 
 Things to know:
 
-- **On the Watch screen these lines are not table rows.** The INFO
-  resolutions and the not-watched warnings go on the **This watch** line
-  under the table (*Resolved at Start: BUS Drums → BUS 1, DCA Drums → DCA
-  1*); the table keeps what is wrong on the desk.
-- **A name that matches two strips of its kind is not watched.** It gets
-  a warning naming every position it matched. Write the position you
-  mean instead.
-- **The kind and name wins over a channel named the same.** If a channel
-  is literally called `BUS Drums`, the condition still watches the bus
-  named Drums, and an `info` finding notes it. To watch that channel,
-  write `CH BUS Drums` or its position.
-- **A channel whose name begins with a kind word** -- "Main Vox" -- is
-  written `CH Main Vox`. Plain `Main Vox` means the Main named Vox.
-- **A digit after the kind word is a position**, so `BUS 2 Track` is
-  refused rather than read as a bus named "2 Track":
+- **On the Watch screen these lines are not table rows.** The INFO resolutions and the not-watched warnings go on the **This watch** line under the table (*Resolved at Start: BUS Drums → BUS 1, DCA Drums → DCA 1*); the table keeps what is wrong on the desk.
+- **A name that matches two strips of its kind is not watched.** It gets a warning naming every position it matched. Write the position you mean instead.
+- **The kind and name wins over a channel named the same.** If a channel is literally called `BUS Drums`, the condition still watches the bus named Drums, and an `info` finding notes it. To watch that channel, write `CH BUS Drums` or its position.
+- **A channel whose name begins with a kind word** -- "Main Vox" -- is written `CH Main Vox`. Plain `Main Vox` means the Main named Vox.
+- **A digit after the kind word is a position**, so `BUS 2 Track` is refused rather than read as a bus named "2 Track":
 
   ```
   bad-scoped.watch.json: watch_conditions[0] ('track-bus-up'): 'channel' 'BUS 2 Track' begins like a position but is not a well-formed one (a name after a kind word cannot begin with a number) -- to watch that strip, write its position, BUS 2
   ```
 
-- **Fields follow the kind**, as for positions: `patch` on `DCA Vocals`
-  is refused.
+- **Fields follow the kind**, as for positions: `patch` on `DCA Vocals` is refused.
 
 ## Sends and 48V
 
-Some rules are about one show's sends and its 48V, which the built-in rules
-cannot know, written as when to alert: *the click is off in an in-ear mix*,
-*Kick is above -6 dB in the drummer's mix*, *48V is off for the overheads*.
-Four fields say them.
+Some rules are about one show's sends and its 48V, which the built-in rules cannot know, written as when to alert: *the click is off in an in-ear mix*, *Kick is above -6 dB in the drummer's mix*, *48V is off for the overheads*. Four fields say them.
 
 | field | value | operators | about |
 |---|---|---|---|
@@ -506,8 +358,7 @@ Four fields say them.
 | `send_mode` | `"pre"`, `"post"` or `"group"` | `==` `!=` | whether that send is pre- or post-fader |
 | `phantom` | `true` / `false` | `==` `!=` | 48V on the socket the strip is patched to |
 
-The three `send_` fields need one more key, **`bus`**: where the send goes.
-It is written the way `channel` is.
+The three `send_` fields need one more key, **`bus`**: where the send goes. It is written the way `channel` is.
 
 | You write | It means |
 |---|---|
@@ -517,13 +368,7 @@ It is written the way `channel` is.
 | `MTX 3` | a send to Matrix 3 |
 | `MAIN 1` | the strip's route to Main 1 (a route has a switch and nothing else, so only `send_on` takes it) |
 
-A bus is matched by name against the names last read, case-insensitively,
-so a rename is picked up at the next refresh; a name that matches no bus,
-or two, says nothing that pass. A Main's and a Matrix's names are not read,
-so those are written by position. Only a channel or an aux has sends of
-this kind, and `bus` goes on the three `send_` fields and nowhere else. The
-loader refuses a missing `bus` or one on another field, a bus that does not
-exist, and a field the bus's kind cannot take, before Watch reads anything.
+A bus is matched by name against the names last read, case-insensitively, so a rename is picked up at the next refresh; a name that matches no bus, or two, says nothing that pass. A Main's and a Matrix's names are not read, so those are written by position. Only a channel or an aux has sends of this kind, and `bus` goes on the three `send_` fields and nowhere else. The loader refuses a missing `bus` or one on another field, a bus that does not exist, and a field the bus's kind cannot take, before Watch reads anything.
 
 Saved as `sends.watch.json`:
 
@@ -569,8 +414,7 @@ Saved as `sends.watch.json`:
 atoo watch --state-sequence audit_demo_state.json --watch-conditions sends.watch.json --count 1
 ```
 
-Among the structural findings, the baseline has two lines of yours. Kick and
-Snare both have their send to Drums on, so the first condition says nothing:
+Among the structural findings, the baseline has two lines of yours. Kick and Snare both have their send to Drums on, so the first condition says nothing:
 
 ```
 [ERROR] WATCH:playback-in-drums Playback is in the Drums mix
@@ -581,20 +425,9 @@ Snare both have their send to Drums on, so the first condition says nothing:
   CH 1 "Kick" has its send to BUS 1 "Drums" at 0 dB -- Kick is above -6 dB in the Drums mix.
 ```
 
-**One finding per strip it is true of.** A range on `channel` gives each
-strip its own finding, and a range on `bus` lists the busses that make it
-true inside one finding (*has its sends to BUS 5 "IEM 1" and BUS 6 "IEM
-2" switched off*). A send that was not read is skipped, so a strip with some
-of its sends unread is judged on the rest. `send_db` compares the level
-whether or not the send is switched on, so *is off* and *is at or below -10*
-are two conditions.
+**One finding per strip it is true of.** A range on `channel` gives each strip its own finding, and a range on `bus` lists the busses that make it true inside one finding (*has its sends to BUS 5 "IEM 1" and BUS 6 "IEM 2" switched off*). A send that was not read is skipped, so a strip with some of its sends unread is judged on the rest. `send_db` compares the level whether or not the send is switched on, so *is off* and *is at or below -10* are two conditions.
 
-**`phantom` is the 48V on the socket the strip is patched to** and, for a
-stereo source, the socket after it: the condition fires when either makes it
-true, and the finding names that one. It has nothing to say for a strip that
-is not patched, one patched from a card, USB or another group with no
-48V, one on its alternate input, or one whose 48V was not read. Save this
-small capture as `condenser.state.json`:
+**`phantom` is the 48V on the socket the strip is patched to** and, for a stereo source, the socket after it: the condition fires when either makes it true, and the finding names that one. It has nothing to say for a strip that is not patched, one patched from a card, USB or another group with no 48V, one on its alternate input, or one whose 48V was not read. Save this small capture as `condenser.state.json`:
 
 ```json
 {
@@ -647,18 +480,11 @@ atoo watch --state-sequence condenser.state.json --watch-conditions phantom.watc
 ...
 ```
 
-These cost no extra console read: a strip's sends, its Main routes, its
-patch and each socket's 48V and width are part of every pass already. The
-**Watch screen's** conditions table has the same four fields, with the
-**Bus** box under the Field for the `send_` ones.
+These cost no extra console read: a strip's sends, its Main routes, its patch and each socket's 48V and width are part of every pass already. The **Watch screen's** conditions table has the same four fields, with the **Bus** box under the Field for the `send_` ones.
 
 ## Conditions most shows want
 
-A handful of mistakes ruin a show, and the same handful turns up at most
-gigs. The [Demo show](demo.md)'s `watch.json` carries a set worth
-starting from. **A rule about a kind of strip is one condition on a
-range**, not one per strip: the report still names every strip that
-it is true of, by number and by its name on the desk.
+A handful of mistakes ruin a show, and the same handful turns up at most gigs. The [Demo show](demo.md)'s `watch.json` carries a set worth starting from. **A rule about a kind of strip is one condition on a range**, not one per strip: the report still names every strip that it is true of, by number and by its name on the desk.
 
 | Watch for | Condition | Severity |
 |---|---|---|
@@ -672,12 +498,9 @@ it is true of, by number and by its name on the desk.
 | a monitor send that is not pre-fader | `CH 1-8`, `send_mode` `!=` `"pre"`, `bus` `BUS 1-4` | warning |
 | 48V off on the condensers | `CH 5-6`, `phantom` `==` `false` | error |
 
-Write each description as what is wrong and nothing more (*A DCA is
-muted.*): the report adds the strip and what was read, as in
-`DCA 2 "Band" has its fader at -144 dB -- A DCA fader is below -30 dB.`
+Write each description as what is wrong and nothing more (*A DCA is muted.*): the report adds the strip and what was read, as in `DCA 2 "Band" has its fader at -144 dB -- A DCA fader is below -30 dB.`
 
-Here is the start of a house set, as a file of your own,
-`house.watch.json`:
+Here is the start of a house set, as a file of your own, `house.watch.json`:
 
 ```json
 {
@@ -705,49 +528,19 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions house.watch
 ...
 ```
 
-**Leave out what the built-in rules already watch**, or each fault comes
-up twice. Some of those rules run only when Watch has the show's plan
-(`--show`, or the Watch screen with a show open); the example above has
-none, so they did not run there:
+**Leave out what the built-in rules already watch**, or each fault comes up twice. Some of those rules run only when Watch has the show's plan (`--show`, or the Watch screen with a show open); the example above has none, so they did not run there:
 
-- **A channel patched from a bus, Main or Matrix that sends back to it**
-  is `R009` (an error), or `R010` while one step of the loop is off or at
-  the floor. No condition is needed for it.
-- **A stage box whose link drops** is `C008` (an error, when a channel or
-  output depends on the port) or `C009` (a warning: in error
-  with nothing patched to it); a port reading `UPD` is `C010` (information
-  only: the desk flags the stage box's firmware as older than it expects,
-  and audio still passes). No condition is needed for it.
-- **A channel that reaches no output** is `CV016`, with the plan.
-  Without it, no built-in rule covers a channel that reaches nothing, so
-  write `muted` `==` `true` on the channel that matters.
-- **A send switched off or flipped to post-fader, a Main route that is
-  wrong, or a send or route that is on and not in the plan** are `CV006`,
-  `CV007` and `CV018`, with the plan. They cover the plan's sends and Main
-  routes, so a condition for them would say the same thing twice.
-- **A condenser with its 48V off, or 48V on where the plan has none** is
-  `CV019`, with the plan. Without it, `C001` covers only 48V on a socket
-  nothing is patched to, and a `phantom` condition is the way to say which
-  channels must have it.
-- **Something muted that the plan leaves unmuted** is `CV017`, with
-  the plan, at WARNING. If you always watch with the plan, write a mute
-  condition only where the mute should be an ERROR, as the PA and the
-  lead vocal are above; the table's WARNING mute rows, the FX bus and
-  the wedge, are for watching without it.
-- **A DCA at -20 dB or lower with live strips in it** is `CH002`. A
-  DCA fader condition still earns its place when you want your own
-  threshold and severity. A send left on at -100 dB is `L001`.
-- **A DCA muted with live strips in it** is `CH004`, a note; with the plan,
-  a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when
-  you want it as a warning or an error.
-- **48V on an empty socket, two strips with one name** are `C001` and
-  `N001`. **An effect the plan inserts, bypassed** is `CV015`, with the
-  plan.
+- **A channel patched from a bus, Main or Matrix that sends back to it** is `R009` (an error), or `R010` while one step of the loop is off or at the floor. No condition is needed for it.
+- **A stage box whose link drops** is `C008` (an error, when a channel or output depends on the port) or `C009` (a warning: in error with nothing patched to it); a port reading `UPD` is `C010` (information only: the desk flags the stage box's firmware as older than it expects, and audio still passes). No condition is needed for it.
+- **A channel that reaches no output** is `CV016`, with the plan. Without it, no built-in rule covers a channel that reaches nothing, so write `muted` `==` `true` on the channel that matters.
+- **A send switched off or flipped to post-fader, a Main route that is wrong, or a send or route that is on and not in the plan** are `CV006`, `CV007` and `CV018`, with the plan. They cover the plan's sends and Main routes, so a condition for them would say the same thing twice.
+- **A condenser with its 48V off, or 48V on where the plan has none** is `CV019`, with the plan. Without it, `C001` covers only 48V on a socket nothing is patched to, and a `phantom` condition is the way to say which channels must have it.
+- **Something muted that the plan leaves unmuted** is `CV017`, with the plan, at WARNING. If you always watch with the plan, write a mute condition only where the mute should be an ERROR, as the PA and the lead vocal are above; the table's WARNING mute rows, the FX bus and the wedge, are for watching without it.
+- **A DCA at -20 dB or lower with live strips in it** is `CH002`. A DCA fader condition still earns its place when you want your own threshold and severity. A send left on at -100 dB is `L001`.
+- **A DCA muted with live strips in it** is `CH004`, a note; with the plan, a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when you want it as a warning or an error.
+- **48V on an empty socket, two strips with one name** are `C001` and `N001`. **An effect the plan inserts, bypassed** is `CV015`, with the plan.
 
-Where one of your conditions and a built-in rule both fire, Watch in the
-browser shows them as one row, yours
-([Read the table](watch-a-show.md#2-read-the-table)). What the plan's
-rules catch is in [Watching from the command line](watch.md).
+Where one of your conditions and a built-in rule both fire, Watch in the browser shows them as one row, yours ([Read the table](watch-a-show.md#2-read-the-table)). What the plan's rules catch is in [Watching from the command line](watch.md).
 
 ## Where the file comes from
 
@@ -755,11 +548,9 @@ In precedence order, first one wins:
 
 1. `--watch-conditions PATH`
 2. `watch.json` in the [show bundle](show-bundles.md) named by `--show`
-3. a standing house file, `[watch_conditions] default` in
-   [the config file](configuration.md#the-config-file)
+3. a standing house file, `[watch_conditions] default` in [the config file](configuration.md#the-config-file)
 
-A bundle build also **drafts** a starting `watch.json` for you, which you
-then edit — see [Show bundles](show-bundles.md#a-build-writes-back-into-the-bundle).
+A bundle build also **drafts** a starting `watch.json` for you, which you then edit — see [Show bundles](show-bundles.md#a-build-writes-back-into-the-bundle).
 
 ## See also
 

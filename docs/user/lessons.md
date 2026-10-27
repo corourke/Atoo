@@ -1,10 +1,6 @@
 # Learning from a batch of builds
 
-If the build keeps asking the same question show after show, your
-conventions have a gap. `atoo lessons` finds those questions. It
-reads a bundle's recent builds and groups everything they noted by
-topic, putting the topics that come up again and again first. Each one is
-a candidate for a line in `conventions.md` or a show's `instructions.md`.
+If the build keeps asking the same question show after show, your conventions have a gap. `atoo lessons` finds those questions. It reads a bundle's recent builds and groups everything they noted by topic, putting the topics that come up again and again first. Each one is a candidate for a line in `conventions.md` or a show's `instructions.md`.
 
 It only reads files and makes no model call.
 
@@ -32,29 +28,19 @@ Sources: current, 2026-09-30T01-45-34Z, 2026-09-29T23-06-37Z (3 builds).
   ...
 ```
 
-The example above is from a festival show the maintainers built several
-times; its build logs are not in the public repository. On your own show,
-run `atoo lessons --show <your show folder>` once it has been built a few
-times: each build leaves a log in its `builds/` folder.
+The example above is from a festival show the maintainers built several times; its build logs are not in the public repository. On your own show, run `atoo lessons --show <your show folder>` once it has been built a few times: each build leaves a log in its `builds/` folder.
 
 ## What it reads
 
-- The bundle's current `plan.json`: its build findings, critic findings,
-  inferred choices, notes and `verify` warnings.
-- Every build log in the bundle's `builds/` folder, newest first. Each
-  build writes one, including a build that failed or was stopped, and
-  the folder keeps the newest 5. `--last N` reads fewer.
-- With `--git N`, up to N older versions of `plan.json` from the
-  bundle's git history, if the bundle is a git repository.
+- The bundle's current `plan.json`: its build findings, critic findings, inferred choices, notes and `verify` warnings.
+- Every build log in the bundle's `builds/` folder, newest first. Each build writes one, including a build that failed or was stopped, and the folder keeps the newest 5. `--last N` reads fewer.
+- With `--git N`, up to N older versions of `plan.json` from the bundle's git history, if the bundle is a git repository.
 
-Items are grouped by the channel, bus, DCA or output they name, or else
-by the plan field involved.
+Items are grouped by the channel, bus, DCA or output they name, or else by the plan field involved.
 
 ## Where the thinking went
 
-The report opens with one line per role per build. Each line shows how
-the time covered by that role's thinking notes splits across five rough
-buckets, sorted by keyword:
+The report opens with one line per role per build. Each line shows how the time covered by that role's thinking notes splits across five rough buckets, sorted by keyword:
 
 | Bucket | What it catches |
 |---|---|
@@ -64,13 +50,9 @@ buckets, sorted by keyword:
 | writing | assembling the reply |
 | judgement | everything else |
 
-The buckets are keyword guesses. Use them to compare one build with
-another, not as a verdict on any one note. A lot of time in
-**conventions** is the useful signal: the model was working out what
-your text meant.
+The buckets are keyword guesses. Use them to compare one build with another, not as a verdict on any one note. A lot of time in **conventions** is the useful signal: the model was working out what your text meant.
 
-`--json` gives the same report as data, with the time split under
-`thinking_time`. Nothing is written anywhere.
+`--json` gives the same report as data, with the time split under `thinking_time`. Nothing is written anywhere.
 
 ## See also
 

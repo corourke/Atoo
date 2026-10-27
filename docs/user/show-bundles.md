@@ -1,17 +1,12 @@
 # Show bundles
 
-One directory per show. Every command then takes `--show DIR` instead of
-four or five file flags you have to remember to pass together and keep in
-sync by hand.
+One directory per show. Every command then takes `--show DIR` instead of four or five file flags you have to remember to pass together and keep in sync by hand.
 
-A bundle is a directory with **fixed filenames inside it and no manifest**
-— nothing to author, nothing to keep current. The names are the
-convention.
+A bundle is a directory with **fixed filenames inside it and no manifest** — nothing to author, nothing to keep current. The names are the convention.
 
 ## The four slots
 
-The [Demo show](demo.md) is one, and it ships with Atoo. From the
-top of an Atoo checkout:
+The [Demo show](demo.md) is one, and it ships with Atoo. From the top of an Atoo checkout:
 
 ```bash
 ls starter/demo-show/
@@ -24,8 +19,7 @@ plan.json
 watch.json
 ```
 
-A show you build also grows the folders in the second half of the table
-below (`journals/`, `builds/` and so on) as you use it.
+A show you build also grows the folders in the second half of the table below (`journals/`, `builds/` and so on) as you use it.
 
 | filename | what it is | who writes it |
 |---|---|---|
@@ -44,63 +38,23 @@ below (`journals/`, `builds/` and so on) as you use it.
 | `logs/` | a **directory**: text transcripts of a build and its verify, `<UTC time>-build.txt` and `<UTC time>-verify.txt`, one pair per run. The newest 5 runs are kept | a rebuild script of your own, if you keep one |
 | `backups/` | a **directory**: the file a **Change file** copy replaced, as `<name>.bak` — one per file, the newest replacing the last | the UI's file picker |
 
-**Only plan files and the files you write sit at the top level**:
-`input.csv`, `instructions.md`, `plan.json`,
-`watch.json`, and `plan.previous.json` / `plan.partial.json` while they
-exist. Everything else Atoo writes goes in one of the four folders,
-and the three that grow with every run — `journals/`, `builds/` and
-`logs/` — are pruned to their newest **5** entries straight after each
-write. For `logs/` an entry is one run, so the build and verify
-transcripts of a run are kept or removed together.
+**Only plan files and the files you write sit at the top level**: `input.csv`, `instructions.md`, `plan.json`, `watch.json`, and `plan.previous.json` / `plan.partial.json` while they exist. Everything else Atoo writes goes in one of the four folders, and the three that grow with every run — `journals/`, `builds/` and `logs/` — are pruned to their newest **5** entries straight after each write. For `logs/` an entry is one run, so the build and verify transcripts of a run are kept or removed together.
 
-The listing above is not a one-to-one match for that table, and neither
-is wrong: the Demo show has never been built, applied or had a file
-replaced from this copy, so it has no `builds/`, `journals/` or
-`backups/`.
+The listing above is not a one-to-one match for that table, and neither is wrong: the Demo show has never been built, applied or had a file replaced from this copy, so it has no `builds/`, `journals/` or `backups/`.
 
-The folders are not slots in the strict sense. `builds/` is
-covered in [the pipeline](pipeline.md); `plan.json` keeps only a pointer
-to its own build's file, at `meta.build_log_file`, and that file is never
-pruned while a plan points to it. See
-[the journal](journals.md) for what is inside
-`journals/`, and why undo reaches back at most 5 writes.
+The folders are not slots in the strict sense. `builds/` is covered in [the pipeline](pipeline.md); `plan.json` keeps only a pointer to its own build's file, at `meta.build_log_file`, and that file is never pruned while a plan points to it. See [the journal](journals.md) for what is inside `journals/`, and why undo reaches back at most 5 writes.
 
-Each entry in `journals/` is named `<UTC time>-<kind>-<desk>.json`, for
-example `20260924T190104.102728Z-amend-S2203A1.json`: the time first, so
-the files sort in the order the desks received them; the kind (`apply`,
-`patch`, `amend` or `undo`); and the **serial number** of the desk it wrote to, as
-the desk states it. A desk that states no serial is named by the address
-it was reached at instead (`...-apply-198.51.100.7.json`, with `_port<N>` on
-the end only for a port other than 2223). Anything that is not a letter,
-digit or dot becomes `_`. The serial rather than the IP, because the IP
-changes when the desk moves from the home network to the gig network and
-the desk does not. See [One plan, two desks](two-desks.md#one-plan-two-desks).
+Each entry in `journals/` is named `<UTC time>-<kind>-<desk>.json`, for example `20260924T190104.102728Z-amend-S2203A1.json`: the time first, so the files sort in the order the desks received them; the kind (`apply`, `patch`, `amend` or `undo`); and the **serial number** of the desk it wrote to, as the desk states it. A desk that states no serial is named by the address it was reached at instead (`...-apply-198.51.100.7.json`, with `_port<N>` on the end only for a port other than 2223). Anything that is not a letter, digit or dot becomes `_`. The serial rather than the IP, because the IP changes when the desk moves from the home network to the gig network and the desk does not. See [One plan, two desks](two-desks.md#one-plan-two-desks).
 
-`plan.json` has one writer: `build`, because it is made from the input
-list, the conventions and the instructions. A confirmed change or amend
-records what it put on a desk in that desk's entry under `journals/`, and
-the next change or amend of that desk reads it from there rather than
-from `plan.json` — which is also how a backup desk still gets channels
-the primary was changed with (see [Amending both desks](two-desks.md#amending-both-desks)).
-See [After a confirmed amend or change](amend.md#after-a-confirmed-amend-or-change-planjson-is-unchanged).
-For the rebuilt-plan route, build the
-rebuild to a different file (`--out my-show/rebuilt.plan.json`) rather
-than over `plan.json`: the amend needs both. On the command line
-that path is relative to where you run it, not to the bundle.
+`plan.json` has one writer: `build`, because it is made from the input list, the conventions and the instructions. A confirmed change or amend records what it put on a desk in that desk's entry under `journals/`, and the next change or amend of that desk reads it from there rather than from `plan.json` — which is also how a backup desk still gets channels the primary was changed with (see [Amending both desks](two-desks.md#amending-both-desks)). See [After a confirmed amend or change](amend.md#after-a-confirmed-amend-or-change-planjson-is-unchanged). For the rebuilt-plan route, build the rebuild to a different file (`--out my-show/rebuilt.plan.json`) rather than over `plan.json`: the amend needs both. On the command line that path is relative to where you run it, not to the bundle.
 
-**A missing slot is an ordinary state, not an error.** There is no
-`plan.json` until the first build and no `journals/` until the first
-confirmed write, and a bundle in that state is a perfectly good
-bundle. Each command asks only for the slots it actually needs.
+**A missing slot is an ordinary state, not an error.** There is no `plan.json` until the first build and no `journals/` until the first confirmed write, and a bundle in that state is a perfectly good bundle. Each command asks only for the slots it actually needs.
 
-A snapshot is **not** a bundle slot: it is a capture of one moment
-rather than one of the show's standing artifacts, so `compare` always
-wants it named explicitly.
+A snapshot is **not** a bundle slot: it is a capture of one moment rather than one of the show's standing artifacts, so `compare` always wants it named explicitly.
 
 ## What `--show` saves you
 
-`verify` is the clearest case, because both of its file arguments are
-bundle slots — the plan and the input list both come from the directory:
+`verify` is the clearest case, because both of its file arguments are bundle slots — the plan and the input list both come from the directory:
 
 ```
 atoo verify --show docs/user/demo/touringband
@@ -118,14 +72,9 @@ atoo verify --show docs/user/demo/touringband
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
 
-The transcripts on this page run from the top of an Atoo checkout,
-on `docs/user/demo/touringband`, a touring band's show frozen so that
-what is printed here stays true. On your own show it is `--show my-show`.
+The transcripts on this page run from the top of an Atoo checkout, on `docs/user/demo/touringband`, a touring band's show frozen so that what is printed here stays true. On your own show it is `--show my-show`.
 
-**Every command that reads a show's files takes `--show`:** `build`,
-`verify`, `compare`, `apply`, `patch`, `amend`, `undo`, `audit`, `watch`,
-`ui` and `lessons`. (`ping` needs only an address, and `presets` reads
-your preset library, not a show.)
+**Every command that reads a show's files takes `--show`:** `build`, `verify`, `compare`, `apply`, `patch`, `amend`, `undo`, `audit`, `watch`, `ui` and `lessons`. (`ping` needs only an address, and `presets` reads your preset library, not a show.)
 
 `compare` takes the plan from the bundle and the snapshot from you:
 
@@ -148,16 +97,9 @@ atoo compare --show docs/user/demo/touringband \
 Only fields the plan actually states are compared -- a null fader is not an assertion about where the fader should be.
 ```
 
-Exit `2`. Those differences are real. The capture was saved from a
-desk running an earlier build of this show, and `plan.json` has since
-been rebuilt from an edited input list and `instructions.md`, so the two
-now disagree about sends, DCA membership, mutes, high-passes and one
-name. Three of the differences — Tom1, BassDI and EG 1 patched one socket off — go back to
-the capture itself. That is what makes it a usable example rather than a
-green screenshot.
+Exit `2`. Those differences are real. The capture was saved from a desk running an earlier build of this show, and `plan.json` has since been rebuilt from an edited input list and `instructions.md`, so the two now disagree about sends, DCA membership, mutes, high-passes and one name. Three of the differences — Tom1, BassDI and EG 1 patched one socket off — go back to the capture itself. That is what makes it a usable example rather than a green screenshot.
 
-`watch` picks up `watch.json`, which nothing on the command line named.
-Against the audit demo capture, `starter/audit-demo/` in the repository (`atoo init` copies it to `~/Documents/Atoo/audit-demo/`):
+`watch` picks up `watch.json`, which nothing on the command line named. Against the audit demo capture, `starter/audit-demo/` in the repository (`atoo init` copies it to `~/Documents/Atoo/audit-demo/`):
 
 ```bash
 atoo watch --show docs/user/demo/touringband --state-sequence starter/audit-demo/audit_demo_state.json
@@ -172,24 +114,11 @@ Audit findings: 8 warning, 9 info.
 ... the 17 findings
 ```
 
-Drop `--show` and the same command reports **15**. The bundle adds two
-from its own `watch.json`, which nothing on the command line named: its
-`Kick` condition fires (`CH 1 "Kick" is not muted`), and its
-`main-fader-floor` condition adds a note that it read `Main` as
-`MAIN 1`. Its plan adds one more, an info, `CV018`: the capture has BUS 1
-"Drums" routed to Main 1, and the rebuilt plan's bus 1 is a monitor
-bus with no Main route. It also takes one away: with the bundle's plan,
-L002 is quiet about CH 7's fader at the floor, because the plan puts that
-fader there. See [Watch conditions](watch-conditions.md) for what those findings
-mean.
+Drop `--show` and the same command reports **15**. The bundle adds two from its own `watch.json`, which nothing on the command line named: its `Kick` condition fires (`CH 1 "Kick" is not muted`), and its `main-fader-floor` condition adds a note that it read `Main` as `MAIN 1`. Its plan adds one more, an info, `CV018`: the capture has BUS 1 "Drums" routed to Main 1, and the rebuilt plan's bus 1 is a monitor bus with no Main route. It also takes one away: with the bundle's plan, L002 is quiet about CH 7's fader at the floor, because the plan puts that fader there. See [Watch conditions](watch-conditions.md) for what those findings mean.
 
 ## An explicit flag always beats the bundle
 
-`--show DIR --plan elsewhere.json` reads `elsewhere.json`. This is the
-same precedence a flag already has over a default in
-`~/.atoo.config`, and it is how you check one show's plan against
-another show's input list — usually by accident, and usually
-informatively:
+`--show DIR --plan elsewhere.json` reads `elsewhere.json`. This is the same precedence a flag already has over a default in `~/.atoo.config`, and it is how you check one show's plan against another show's input list — usually by accident, and usually informatively:
 
 ```
 atoo verify --show docs/user/demo/touringband --plan starter/demo-show/plan.json
@@ -204,121 +133,39 @@ atoo verify --show docs/user/demo/touringband --plan starter/demo-show/plan.json
 
 ## Two files that do not go in the bundle
 
-**Your conventions file stays outside it.** Conventions are your standing
-house style — how *you* set up a board, re-run against every show you
-ever do. A copy in every show directory would defeat the point, so the
-bundle has no slot for one and you name it each time with `--conventions`,
-or once in `~/.atoo.config`. See [Writing
-conventions](conventions.md).
+**Your conventions file stays outside it.** Conventions are your standing house style — how *you* set up a board, re-run against every show you ever do. A copy in every show directory would defeat the point, so the bundle has no slot for one and you name it each time with `--conventions`, or once in `~/.atoo.config`. See [Writing conventions](conventions.md).
 
-**`instructions.md` is the opposite, and it does go in the bundle.** It
-is how *this one* show works — `touringband/instructions.md` adds two
-stereo IEM mixes, MON5 and MON6, and high-passes the vocals at 100Hz
-tonight rather than the house 120Hz. Both layers reach the model on a build, and the
-build says which wins — your house style is the default, anything the
-show restates replaces it **for this show only**, and where
-`instructions.md` is silent the conventions apply in full. Whenever there
-is more than one layer the build prints them in order, and records the
-same list in the plan itself at `meta.conventions_stack` — because a plan
-you cannot explain afterwards is worse than one you have to think about.
+**`instructions.md` is the opposite, and it does go in the bundle.** It is how *this one* show works — `touringband/instructions.md` adds two stereo IEM mixes, MON5 and MON6, and high-passes the vocals at 100Hz tonight rather than the house 120Hz. Both layers reach the model on a build, and the build says which wins — your house style is the default, anything the show restates replaces it **for this show only**, and where `instructions.md` is silent the conventions apply in full. Whenever there is more than one layer the build prints them in order, and records the same list in the plan itself at `meta.conventions_stack` — because a plan you cannot explain afterwards is worse than one you have to think about.
 
-Neither file has to be made by hand first. In `atoo ui`, Build step
-01's **New file** makes an empty house conventions file (and can name it
-in `~/.atoo.config` for you), and step 03's **New file** makes an
-empty `instructions.md` in the open bundle when it has none. Both
-refuse to overwrite anything. Each step edits its file as one text, and
-offers an **Example** beside the editor — a starting layout of headings
-and comments, with no rules — that reaches the file only if you insert
-it and Save. See
-[Build's first three steps](build-a-show.md).
+Neither file has to be made by hand first. In `atoo ui`, Build step 01's **New file** makes an empty house conventions file (and can name it in `~/.atoo.config` for you), and step 03's **New file** makes an empty `instructions.md` in the open bundle when it has none. Both refuse to overwrite anything. Each step edits its file as one text, and offers an **Example** beside the editor — a starting layout of headings and comments, with no rules — that reaches the file only if you insert it and Save. See [Build's first three steps](build-a-show.md).
 
-**A file you already have is copied in, not pointed at.** In the UI,
-choosing an input list or an instructions file from outside the open
-bundle with a Build tile's **Change file** copies it into the bundle as
-its `input.csv` or `instructions.md`, and reports it: *"Copied
-~/lists/band.csv into festival/input.csv -- the bundle now owns its copy;
-edits to the original won't reach it."* A bundle that already has one is
-asked first (replace it, keeping the old one as `backups/input.csv.bak`; keep the
-bundle's; or cancel), never overwritten silently. So **New show…** and
-then an input list from your downloads folder gives you a complete,
-self-contained bundle. The house conventions file is the exception, for
-the reason above: it is used where it is, never copied. See
-[the file browser](build-a-show.md#1-make-the-show).
+**A file you already have is copied in, not pointed at.** In the UI, choosing an input list or an instructions file from outside the open bundle with a Build tile's **Change file** copies it into the bundle as its `input.csv` or `instructions.md`, and reports it: *"Copied ~/lists/band.csv into festival/input.csv -- the bundle now owns its copy; edits to the original won't reach it."* A bundle that already has one is asked first (replace it, keeping the old one as `backups/input.csv.bak`; keep the bundle's; or cancel), never overwritten silently. So **New show…** and then an input list from your downloads folder gives you a complete, self-contained bundle. The house conventions file is the exception, for the reason above: it is used where it is, never copied. See [the file browser](build-a-show.md#1-make-the-show).
 
-**`watch.json` goes with the bundle the same way.** Watch's
-**Watch conditions** names the bundle's `watch.json`, and its **Change file**
-copies a watch-conditions file from outside into the bundle as
-`watch.json` — the same question before replacing one, the same
-`backups/watch.json.bak`, the same note in the Findings panel. **New file** makes an
-empty `watch.json` in the bundle when it has none, and **Save** writes the
-bundle's. With no bundle open, a file is used where it is. See
-[Watch conditions](watch-a-show.md#3-say-what-matters-tonight-watch-conditions).
+**`watch.json` goes with the bundle the same way.** Watch's **Watch conditions** names the bundle's `watch.json`, and its **Change file** copies a watch-conditions file from outside into the bundle as `watch.json` — the same question before replacing one, the same `backups/watch.json.bak`, the same note in the Findings panel. **New file** makes an empty `watch.json` in the bundle when it has none, and **Save** writes the bundle's. With no bundle open, a file is used where it is. See [Watch conditions](watch-a-show.md#3-say-what-matters-tonight-watch-conditions).
 
-That record says where each file is **relative to the bundle** — usually
-`../house-rules.md` — along with its absolute path and a fingerprint
-(sha256) of what it held. So when you open the bundle in the UI, step 01
-shows the conventions file this show was built from, not whatever your
-config names today, and tells you if that file has been edited since, has
-moved, or is gone. Move the bundle and its house file together and it
-still finds it.
+That record says where each file is **relative to the bundle** — usually `../house-rules.md` — along with its absolute path and a fingerprint (sha256) of what it held. So when you open the bundle in the UI, step 01 shows the conventions file this show was built from, not whatever your config names today, and tells you if that file has been edited since, has moved, or is gone. Move the bundle and its house file together and it still finds it.
 
-A build records the same fingerprint of `input.csv`, at `meta.input_list`.
-With all three recorded, the UI can say a plan is
-**stale** — `input.csv`, `instructions.md` or the house file has changed
-since it was built — and offer **Rebuild plan**; `atoo apply --show`
-and the Apply screen's pre-flight say so as a WARNING. All three files
-can be edited in the UI — see
-[Editing the three files](build-a-show.md).
+A build records the same fingerprint of `input.csv`, at `meta.input_list`. With all three recorded, the UI can say a plan is **stale** — `input.csv`, `instructions.md` or the house file has changed since it was built — and offer **Rebuild plan**; `atoo apply --show` and the Apply screen's pre-flight say so as a WARNING. All three files can be edited in the UI — see [Editing the three files](build-a-show.md).
 
 ## A build writes back into the bundle
 
-Point `build` at the directory and the plan lands *in* it, rather than
-beside whatever `--out` happened to name:
+Point `build` at the directory and the plan lands *in* it, rather than beside whatever `--out` happened to name:
 
 ```bash
 atoo build --console-model wing-compact --show my-show --conventions conventions.md
 ```
 
-The flag is for the first build. Once the show has a `plan.json`, `atoo
-build --show my-show` takes the model from it, with an INFO.
+The flag is for the first build. Once the show has a `plan.json`, `atoo build --show my-show` takes the model from it, with an INFO.
 
-After that the directory is one draggable thing holding the whole show.
-The build also leaves its own log in `builds/` — one file per build,
-kept even when the build fails or is stopped, the newest 5 at a time; see
-[the pipeline](pipeline.md).
+After that the directory is one draggable thing holding the whole show. The build also leaves its own log in `builds/` — one file per build, kept even when the build fails or is stopped, the newest 5 at a time; see [the pipeline](pipeline.md).
 
-A bundle build drafts `watch.json` too — a short list of things worth an
-alert if they move mid-show, written by a pass that reads the finished
-plan. Each drafted entry is marked `"source": "drafted"`, and **the file
-is yours**: edit it, delete from it, raise a severity. A later build
-**merges** rather than overwrites. It keeps a description you rewrote, and
-it does not restore a condition you deleted — a top-level `drafted` list
-records everything that has ever been proposed, which is what makes a
-deletion stick. Without it, a rule you removed on purpose would look
-exactly like one that was never drafted.
+A bundle build drafts `watch.json` too — a short list of things worth an alert if they move mid-show, written by a pass that reads the finished plan. Each drafted entry is marked `"source": "drafted"`, and **the file is yours**: edit it, delete from it, raise a severity. A later build **merges** rather than overwrites. It keeps a description you rewrote, and it does not restore a condition you deleted — a top-level `drafted` list records everything that has ever been proposed, which is what makes a deletion stick. Without it, a rule you removed on purpose would look exactly like one that was never drafted.
 
-**A build does not add a rule you already have**, however the draft
-spells it. Two conditions are the same when they cover the same strips
-(a name is looked up in the plan, so `MAIN PA` and `MAIN 1` are one
-strip, and a `DCA 1-5` covers `DCA Vocals`) and ask the same field,
-operator and value. The id, the wording and the severity do not matter.
-The build says which drafted condition it left out and which of yours
-already says the same. A different threshold on the same strip is not
-the same rule: it is added, and the build notes that the two overlap.
+**A build does not add a rule you already have**, however the draft spells it. Two conditions are the same when they cover the same strips (a name is looked up in the plan, so `MAIN PA` and `MAIN 1` are one strip, and a `DCA 1-5` covers `DCA Vocals`) and ask the same field, operator and value. The id, the wording and the severity do not matter. The build says which drafted condition it left out and which of yours already says the same. A different threshold on the same strip is not the same rule: it is added, and the build notes that the two overlap.
 
-Two things a watch-conditions draft will not do: fail your build (a plan
-that built and a draft that did not is a warning, not an error), and write
-anything it cannot validate. Each drafted condition is checked on its
-own: a key a condition does not have is dropped, a condition naming a
-field outside the vocabulary is left out, each with an `INFO
-watch-conditions draft:` line saying which, and the rest are kept. A draft with nothing
-usable in it writes nothing, and leaves any existing `watch.json` as it
-was.
+Two things a watch-conditions draft will not do: fail your build (a plan that built and a draft that did not is a warning, not an error), and write anything it cannot validate. Each drafted condition is checked on its own: a key a condition does not have is dropped, a condition naming a field outside the vocabulary is left out, each with an `INFO watch-conditions draft:` line saying which, and the rest are kept. A draft with nothing usable in it writes nothing, and leaves any existing `watch.json` as it was.
 
-`apply --confirm` writes back too — a new, timestamped entry in
-`journals/`, which it never overwrites. The newest 5 entries are kept,
-so undo reaches back at most 5 writes ([the journal stack](journals.md#the-stack));
-copy one aside if a particular run must outlive that.
+`apply --confirm` writes back too — a new, timestamped entry in `journals/`, which it never overwrites. The newest 5 entries are kept, so undo reaches back at most 5 writes ([the journal stack](journals.md#the-stack)); copy one aside if a particular run must outlive that.
 
 ## When a directory is not a bundle
 
@@ -328,11 +175,9 @@ Each command names the slot it could not find:
 demo-show is not a usable show bundle: no 'plan.json' in it. A bundle is a directory with fixed filenames inside (input.csv, instructions.md, plan.json, watch.json) -- see docs/user/show-bundles.md.
 ```
 
-The mistake this guards against is laying a bundle out by hand and naming
-the input list after the show. The filenames are not suggestions.
+The mistake this guards against is laying a bundle out by hand and naming the input list after the show. The filenames are not suggestions.
 
-`--input`, `--plan` and the rest work without a bundle too. A bundle is
-an extra way to invoke, not a replacement.
+`--input`, `--plan` and the rest work without a bundle too. A bundle is an extra way to invoke, not a replacement.
 
 ## See also
 

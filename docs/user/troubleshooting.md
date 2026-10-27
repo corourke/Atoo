@@ -50,10 +50,7 @@ Find the symptom, then go to its page.
 
 ## `atoo` cannot reach the console
 
-**Start with `atoo ping`.** Every command that talks to a desk opens
-the same way, so if `ping` cannot reach it, nothing else will either --
-and `ping` tells you that in one round trip instead of after a full
-console read:
+**Start with `atoo ping`.** Every command that talks to a desk opens the same way, so if `ping` cannot reach it, nothing else will either -- and `ping` tells you that in one round trip instead of after a full console read:
 
 ```
 $ atoo ping --console 192.0.2.16
@@ -61,76 +58,40 @@ Console: WING,192.0.2.16,FOH,wing-compact,SN12345,3.1-0
 Detected model: WING Compact (wing-compact)
 ```
 
-That is a healthy desk. It reads nothing and writes nothing, so it is
-safe to run during a show.
+That is a healthy desk. It reads nothing and writes nothing, so it is safe to run during a show.
 
 There are two ways it fails, and they have different causes.
 
-**`no reply from 192.0.2.16:2223 -- is the console reachable, and is its
-OSC remote enabled?`**
+**`no reply from 192.0.2.16:2223 -- is the console reachable, and is its OSC remote enabled?`**
 
 The packets went out and nothing came back. In order of likelihood:
 
-1. **OSC remote control is switched off on the desk.** This is the usual
-   one. It is a setting on the console, not on your laptop, and a console
-   that is otherwise working normally will sit there silently with it off.
+1. **OSC remote control is switched off on the desk.** This is the usual one. It is a setting on the console, not on your laptop, and a console that is otherwise working normally will sit there silently with it off.
 2. **Wrong IP.** The desk states its own address on its network screen.
-3. **Something is dropping UDP on port 2223** -- a firewall on your
-   laptop, or a network that isolates clients from each other. WING's OSC
-   is UDP, so nothing "refuses" the connection; it just vanishes.
+3. **Something is dropping UDP on port 2223** -- a firewall on your laptop, or a network that isolates clients from each other. WING's OSC is UDP, so nothing "refuses" the connection; it just vanishes.
 4. **A non-default port.** Pass `--port` if the desk was moved off 2223.
 
-**`couldn't reach 192.0.2.16:2223 -- OSError: [Errno 65] No route to
-host`**
+**`couldn't reach 192.0.2.16:2223 -- OSError: [Errno 65] No route to host`**
 
-The network refused to carry the packets at all, which is a different and
-usually simpler problem: wrong subnet, wrong address entirely, or the
-cable/Wi-Fi is not on the console's network. The message after the dash
-comes from the operating system -- `No route to host`, `Connection
-refused` and `Network is unreachable` each mean what they say.
+The network refused to carry the packets at all, which is a different and usually simpler problem: wrong subnet, wrong address entirely, or the cable/Wi-Fi is not on the console's network. The message after the dash comes from the operating system -- `No route to host`, `Connection refused` and `Network is unreachable` each mean what they say.
 
-**If `ping` succeeds but another command fails**, the problem is not
-connectivity, and the rest of this page is where to look.
+**If `ping` succeeds but another command fails**, the problem is not connectivity, and the rest of this page is where to look.
 
 ## A command exited non-zero and I cannot tell why
 
-**The codes are not uniform across commands**, so start from the
-[exit-code table in the command reference](cli-reference.md#exit-codes),
-which is the canonical statement. The three cases that surprise people:
+**The codes are not uniform across commands**, so start from the [exit-code table in the command reference](cli-reference.md#exit-codes), which is the canonical statement. The three cases that surprise people:
 
-**`audit` or `watch` exited `1`.** That is not a failure to run; for
-those two commands it is *the finding report*. They exit `1` when a rule
-or a watch condition reaches error severity, where `build`,
-`verify`, `compare` and `apply` use `2` for "ran and found problems".
-Read what the command printed — this is a desk with something wrong on
-it, not a broken invocation. The split is deliberate: those
-two hold no plan, they are read-only readings of a desk, so reporting
-something is their ordinary result.
+**`audit` or `watch` exited `1`.** That is not a failure to run; for those two commands it is *the finding report*. They exit `1` when a rule or a watch condition reaches error severity, where `build`, `verify`, `compare` and `apply` use `2` for "ran and found problems". Read what the command printed — this is a desk with something wrong on it, not a broken invocation. The split is deliberate: those two hold no plan, they are read-only readings of a desk, so reporting something is their ordinary result.
 
-**`audit` or `watch` exited `1` and printed nothing useful.** Then it is
-the *other* meaning of `1`: it never started. Check stdout — a run that
-could not start writes nothing there and puts its reason on stderr
-(`couldn't read state file 'x.json': No such file or directory`), where a
-run that found errors writes its findings to stdout. In a cron job that
-merges the two streams, look for the `Audit findings:` line: no such
-line, no audit happened.
+**`audit` or `watch` exited `1` and printed nothing useful.** Then it is the *other* meaning of `1`: it never started. Check stdout — a run that could not start writes nothing there and puts its reason on stderr (`couldn't read state file 'x.json': No such file or directory`), where a run that found errors writes its findings to stdout. In a cron job that merges the two streams, look for the `Audit findings:` line: no such line, no audit happened.
 
-**Something exited `2` and you expected `1`.** `2` is also argparse's own
-code for a command line it will not accept — an unknown flag, a value it
-cannot parse, a missing required option — and for "no console address"
-on `ping`, `apply`, `audit` and `watch`, which kept argparse's code on
-purpose.
-A `2` with a `usage:` line on stderr is a typo in the command, not a
-finding.
+**Something exited `2` and you expected `1`.** `2` is also argparse's own code for a command line it will not accept — an unknown flag, a value it cannot parse, a missing required option — and for "no console address" on `ping`, `apply`, `audit` and `watch`, which kept argparse's code on purpose. A `2` with a `usage:` line on stderr is a typo in the command, not a finding.
 
-**Something exited `1` after `| head`, or after you quit `less`.** The
-reader stopped before the output did, so the command stopped too,
-quietly. Nothing went wrong but the cut.
+**Something exited `1` after `| head`, or after you quit `less`.** The reader stopped before the output did, so the command stopped too, quietly. Nothing went wrong but the cut.
 
 ## `atoo: command not found`
 
-That is an install problem: see
-[Troubleshooting](install.md#troubleshooting).
+That is an install problem: see [Troubleshooting](install.md#troubleshooting).
 
 ## See also
 

@@ -1,7 +1,6 @@
 # Words Atoo uses
 
-One name for each thing, as the browser and the command line say it.
-A label in **bold** is what you see on screen; `code` is what you type.
+One name for each thing, as the browser and the command line say it. A label in **bold** is what you see on screen; `code` is what you type.
 
 ## Your files
 

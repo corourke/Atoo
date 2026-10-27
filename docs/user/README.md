@@ -2,10 +2,7 @@
 
 Atoo is said "A-two": your A2, the second engineer at the desk.
 
-Atoo turns an input list and your own written conventions into a
-complete show setup for a Behringer WING, writes it to the desk,
-validates every value, and watches the desk for mistakes. A full browser
-UI is included or use it on the command line.
+Atoo turns an input list and your own written conventions into a complete show setup for a Behringer WING, writes it to the desk, validates every value, and watches the desk for mistakes. A full browser UI is included or use it on the command line.
 
 ## Start here
 

@@ -2,18 +2,11 @@
 
 The CSV that says what is plugged into the desk for one show.
 
-It is the only file that changes every week. Your
-[conventions](conventions.md) say how you build a show; the input list
-says what is on stage tonight.
+It is the only file that changes every week. Your [conventions](conventions.md) say how you build a show; the input list says what is on stage tonight.
 
-Every example on this page runs from the top of an Atoo checkout, on
-the touring band's list frozen there under `docs/user/demo/touringband/`.
-With your own list, use its path instead.
+Every example on this page runs from the top of an Atoo checkout, on the touring band's list frozen there under `docs/user/demo/touringband/`. With your own list, use its path instead.
 
-A **socket** is the physical connector on the desk (`LCL 3`,
-`AES50-A 12`, `USB 47`); a **patch** is the connection between a channel
-or bus and a socket. So the list's `patch` column says where each source
-is patched, and what goes in it is a socket.
+A **socket** is the physical connector on the desk (`LCL 3`, `AES50-A 12`, `USB 47`); a **patch** is the connection between a channel or bus and a socket. So the list's `patch` column says where each source is patched, and what goes in it is a socket.
 
 ## The columns
 
@@ -43,99 +36,60 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). A filled cell **wins** over the conventions and instructions, as `preset` does: a build places the channel there and puts it in those DCAs and mute groups. [`atoo capture`](capture.md) writes them from a desk, and a Save in Build's step 04 carries them into the plan. See [below](#the-channel-dca-and-mute_group-columns). |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
 
-**Column order does not matter**: every column is read by its header.
-Atoo writes `order` first when there is one, then `patch`, because
-it is what you check against the stage box, and `notes` last.
+**Column order does not matter**: every column is read by its header. Atoo writes `order` first when there is one, then `patch`, because it is what you check against the stage box, and `notes` last.
 
 ### A `Line` row on a head amp, when your conventions say no gain
 
-If your conventions and instructions state **no** head-amp gain anywhere,
-a model sometimes still puts a mic's 20 dB on a row of type `Line` (a
-laptop, a playback feed) patched to a head amp, where it would clip the
-preamp. The build then gives that channel 0 dB, with an INFO
-(`reply.line-gain`):
+If your conventions and instructions state **no** head-amp gain anywhere, a model sometimes still puts a mic's 20 dB on a row of type `Line` (a laptop, a playback feed) patched to a head amp, where it would clip the preamp. The build then gives that channel 0 dB, with an INFO (`reply.line-gain`):
 
 ```
 channel 'Playback': a Line source on A 16, a head amp, so its gain is 0 dB, not the 20 dB the plan had -- that is a mic's gain, and a line-level feed with it would clip the preamp. Chosen from the source type, because no gain is stated in your conventions or instructions. Say a gain for 'Playback' (say, 'gain 6 dB') if you want another.
 ```
 
-Where you do state a gain — the Category table's, or any line saying gain,
-including "set the head-amp gain on each channel to 20dB" — it applies to
-line sources too, and stands. [Patch](patch.md#the-rules) holds a change to
-the same rule.
+Where you do state a gain — the Category table's, or any line saying gain, including "set the head-amp gain on each channel to 20dB" — it applies to line sources too, and stands. [Patch](patch.md#the-rules) holds a change to the same rule.
 
 ## One row per physical input
 
-Every input socket on a WING is mono. So a row is one mono source, and a
-**stereo source is two rows**:
+Every input socket on a WING is mono. So a row is one mono source, and a **stereo source is two rows**:
 
 ```
 AES50-A 15,Keys L,keys,DI,,FALSE,
 AES50-A 16,Keys R,keys,DI,,FALSE,
 ```
 
-Whether those two become one linked stereo strip or two mono ones is
-decided by your conventions, and they can only see what you wrote in
-`name`. So name the pair so it reads as one.
+Whether those two become one linked stereo strip or two mono ones is decided by your conventions, and they can only see what you wrote in `name`. So name the pair so it reads as one.
 
 ### Stating a stereo pair: the recipe
 
-1. **Name the two rows the same, ending in `L` and `R`** (or `Left` and
-   `Right`): `Keys L` / `Keys R`, `Playback Left` / `Playback Right`,
-   `OH L` / `OH R`. The side is the last word; everything before it is
-   the same on both rows. `Gtr (stage left)` and `Gtr (stage right)` are
-   two guitars, not a pair.
+1. **Name the two rows the same, ending in `L` and `R`** (or `Left` and `Right`): `Keys L` / `Keys R`, `Playback Left` / `Playback Right`, `OH L` / `OH R`. The side is the last word; everything before it is the same on both rows. `Gtr (stage left)` and `Gtr (stage right)` are two guitars, not a pair.
 2. **Put this sentence in your conventions**, word for word:
 
    ```
    Every L/R pair of inputs becomes one stereo channel.
    ```
 
-   Every such pair on the list becomes one stereo channel, named for what
-   the two rows share (`Keys`), whatever the model wrote; where it had
-   written the pair otherwise, an INFO line says it was paired.
-3. **For a pair that stays two mono channels, name it in a sentence of
-   its own**, for example overheads you process separately:
+   Every such pair on the list becomes one stereo channel, named for what the two rows share (`Keys`), whatever the model wrote; where it had written the pair otherwise, an INFO line says it was paired.
+3. **For a pair that stays two mono channels, name it in a sentence of its own**, for example overheads you process separately:
 
    ```
    Keep OH L and OH R as two mono channels.
    ```
 
-   A sentence that names the pair and says *mono channels* keeps it
-   apart, also said at INFO.
+   A sentence that names the pair and says *mono channels* keeps it apart, also said at INFO.
 
-Without a sentence that plain (*"stereo-paired inputs become one stereo
-channel"* does not say which inputs), pairing is left to the model, and
-the build says at INFO that it chose. The rule and its exceptions are
-covered in [Writing conventions](conventions.md#stereo-pairs-are-a-conventions-decision).
+Without a sentence that plain (*"stereo-paired inputs become one stereo channel"* does not say which inputs), pairing is left to the model, and the build says at INFO that it chose. The rule and its exceptions are covered in [Writing conventions](conventions.md#stereo-pairs-are-a-conventions-decision).
 
-The two rows need not state a socket. When they do not, the build pairs
-them on the next free odd-even pair.
+The two rows need not state a socket. When they do not, the build pairs them on the next free odd-even pair.
 
 ### A stereo pair has one 48V value
 
-The desk switches a stereo channel's two sockets together: write 48V to
-one and the other reads back already on. So a stereo channel cannot be
-built with a condenser on one socket and a dynamic on the other. When the
-two rows disagree, the build gives the pair **one value, on if either row
-says `TRUE`**, and tells you which row asked, with a note:
+The desk switches a stereo channel's two sockets together: write 48V to one and the other reads back already on. So a stereo channel cannot be built with a condenser on one socket and a dynamic on the other. When the two rows disagree, the build gives the pair **one value, on if either row says `TRUE`**, and tells you which row asked, with a note:
 
-> channels[OH]: 48V is on for both sockets of the stereo channel: 'OH L'
-> asks for it and 'OH R' does not, and the desk switches a pair's two
-> sockets together, so the pair takes the value either row wants (split
-> the pair into two mono channels if you want 'OH R' without 48V)
-> (`reply.pair-phantom`)
+> channels[OH]: 48V is on for both sockets of the stereo channel: 'OH L' asks for it and 'OH R' does not, and the desk switches a pair's two sockets together, so the pair takes the value either row wants (split the pair into two mono channels if you want 'OH R' without 48V) (`reply.pair-phantom`)
 
-A condenser left without 48V is silent, and a dynamic given it is
-unharmed, so "on" is the choice that costs least. If you do want one of
-them without 48V, keep them as two mono channels. Rows that agree say
-nothing.
+A condenser left without 48V is silent, and a dynamic given it is unharmed, so "on" is the choice that costs least. If you do want one of them without 48V, keep them as two mono channels. Rows that agree say nothing.
 
-**A passive ribbon on either side of a powered pair is refused**, because
-48V destroys the element and switching it off afterwards does not undo
-that. The refusal names the ribbon's row. This one is from the demo show
-with `Keys L` made a condenser and `Keys R` a Royer R-121 (a copy of its
-input list and plan, in `/tmp`):
+**A passive ribbon on either side of a powered pair is refused**, because 48V destroys the element and switching it off afterwards does not undo that. The refusal names the ribbon's row. This one is from the demo show with `Keys L` made a condenser and `Keys R` a Royer R-121 (a copy of its input list and plan, in `/tmp`):
 
 ```bash
 sed 's/Keys L,keys,DI,,FALSE/Keys L,keys,DI,,TRUE/; s/Keys R,keys,DI,,FALSE/Keys R,keys,DI,Royer R-121,FALSE/' docs/user/demo/touringband/input.csv > /tmp/ribbon.csv
@@ -157,67 +111,31 @@ atoo verify --plan /tmp/plan-ribbon.json --input /tmp/ribbon.csv
   [info] plan: 'Magenta' is the desk's Pink (11): ...
 ```
 
-(The first lines; the rest are the demo's usual notes, and the last line is
-`BLOCKED: do not apply.`)
+(The first lines; the rest are the demo's usual notes, and the last line is `BLOCKED: do not apply.`)
 
-A plan built before this rule can state two different values for a pair.
-`atoo verify` reports it as a warning (`phantom.pair-differs`) and
-`atoo apply` writes the one value, on if either is; rebuild to have the
-plan say so itself.
+A plan built before this rule can state two different values for a pair. `atoo verify` reports it as a warning (`phantom.pair-differs`) and `atoo apply` writes the one value, on if either is; rebuild to have the plan say so itself.
 
-**A channel that is yours rather than the band's** (a talkback mic, an
-ambient pair) does not need a row: ask for it in words, with its socket.
-See [Channels that are not on the input list](extra-strips.md).
+**A channel that is yours rather than the band's** (a talkback mic, an ambient pair) does not need a row: ask for it in words, with its socket. See [Channels that are not on the input list](extra-strips.md).
 
-**A row you want left out of the build** takes `-` in its `order` cell
-([below](#the-order-column-band-numbers-and-skipping-a-row)). Every other
-row is built unless something you wrote says to leave it out: the row's
-`notes` (*"not patched for this event"*), the conventions or the show's
-instructions. The build checks the model quoted you word for word, and
-`verify` warns about the row, quoting you
-(`reconcile.deliberately-unassigned`).
+**A row you want left out of the build** takes `-` in its `order` cell ([below](#the-order-column-band-numbers-and-skipping-a-row)). Every other row is built unless something you wrote says to leave it out: the row's `notes` (*"not patched for this event"*), the conventions or the show's instructions. The build checks the model quoted you word for word, and `verify` warns about the row, quoting you (`reconcile.deliberately-unassigned`).
 
 ## The `channel`, `dca` and `mute_group` columns
 
-Three optional columns that say where an input sits on the desk: the
-channel it is on (`1` to `40`, or `Aux 1` to `Aux 8`), and the DCAs and mute
-groups it is in, each a `;`-separated list of their names. A stereo source's
-two rows give the same channel.
+Three optional columns that say where an input sits on the desk: the channel it is on (`1` to `40`, or `Aux 1` to `Aux 8`), and the DCAs and mute groups it is in, each a `;`-separated list of their names. A stereo source's two rows give the same channel.
 
 ```
 channel,patch,name,category,type,model,phantom,dca,mute_group,notes
 9,AES50-A 19,Kick,Drum LEVELS,Mic,,FALSE,Drum LEVELS,ALL,
 ```
 
-**A filled cell wins** over your conventions and instructions, as the
-`preset` column does. Each change it makes is a note in the build's report:
+**A filled cell wins** over your conventions and instructions, as the `preset` column does. Each change it makes is a note in the build's report:
 
-- **`channel`** puts the channel on that strip. A channel the conventions
-  had put there takes the strip the moved one left, so nothing is lost and
-  no strip holds two inputs. An aux strip has no high-pass, so a channel
-  moved onto one has none.
-- **`dca`** and **`mute_group`** are the channel's whole membership. A name
-  your conventions do not declare is declared, and takes the next free DCA
-  or mute group. A name your conventions spell another way only in capitals
-  or spaces is the same group, and takes your spelling: with `DRUMS` in the
-  list and `Drums` in the conventions, the DCA is named `DRUMS` on every
-  channel in it, and the report says *DCA 'Drums' is named 'DRUMS', as the
-  input list spells it.* Rows that spell one group two ways take the first
-  row's spelling, said once. A Save in Build's step 04 does the same.
-- **Two rows naming one strip** are refused, naming them, unless they are a
-  stereo source's two rows (one strip). Where a stereo source's rows name
-  different strips, the first row's wins, and the report names both.
+- **`channel`** puts the channel on that strip. A channel the conventions had put there takes the strip the moved one left, so nothing is lost and no strip holds two inputs. An aux strip has no high-pass, so a channel moved onto one has none.
+- **`dca`** and **`mute_group`** are the channel's whole membership. A name your conventions do not declare is declared, and takes the next free DCA or mute group. A name your conventions spell another way only in capitals or spaces is the same group, and takes your spelling: with `DRUMS` in the list and `Drums` in the conventions, the DCA is named `DRUMS` on every channel in it, and the report says *DCA 'Drums' is named 'DRUMS', as the input list spells it.* Rows that spell one group two ways take the first row's spelling, said once. A Save in Build's step 04 does the same.
+- **Two rows naming one strip** are refused, naming them, unless they are a stereo source's two rows (one strip). Where a stereo source's rows name different strips, the first row's wins, and the report names both.
 - A blank cell leaves it to the conventions.
 
-[`atoo capture`](capture.md) writes them when it reads a desk you didn't
-build, and that show's plan agrees with them. Edit them in Build's step 04
-and its **Save** carries them into the plan as well
-([Editing the sheets](capture.md#editing-the-sheets)). A cell changed
-anywhere else (a spreadsheet, a text editor) reaches the plan at the next
-build, or the next Save in step 04. Until then the plan does not follow it,
-and `atoo verify` warns, rather than let a cell that had no effect look
-honoured. On the show [capture](capture.md) made, with Kick moved to
-channel 3 in the sheet outside step 04:
+[`atoo capture`](capture.md) writes them when it reads a desk you didn't build, and that show's plan agrees with them. Edit them in Build's step 04 and its **Save** carries them into the plan as well ([Editing the sheets](capture.md#editing-the-sheets)). A cell changed anywhere else (a spreadsheet, a text editor) reaches the plan at the next build, or the next Save in step 04. Until then the plan does not follow it, and `atoo verify` warns, rather than let a cell that had no effect look honoured. On the show [capture](capture.md) made, with Kick moved to channel 3 in the sheet outside step 04:
 
 ```bash
 sed -i 's/^9,AES50-A 19,Kick,/3,AES50-A 19,Kick,/' /tmp/shows/church-full-2026-10-24/input.csv
@@ -230,17 +148,13 @@ atoo verify --show /tmp/shows/church-full-2026-10-24
 ...
 ```
 
-A channel the desk does not have (`41`, `Aux 9`) is refused, naming the
-row.
+A channel the desk does not have (`41`, `Aux 9`) is refused, naming the row.
 
 ## Columns you may not have
 
-A file carrying either of these is **refused, not ignored** — the file would
-otherwise load, the column would have no effect, and the plan would
-quietly contradict the sheet.
+A file carrying either of these is **refused, not ignored** — the file would otherwise load, the column would have no effect, and the plan would quietly contradict the sheet.
 
-**`ch` or `channel_number`.** The desk channel goes in the `channel`
-column, above.
+**`ch` or `channel_number`.** The desk channel goes in the `channel` column, above.
 
 ```bash
 sed '1s/^socket,/ch,socket,/; 2,$s/^/1,/' docs/user/demo/touringband/input.csv > /tmp/with-ch.csv
@@ -251,20 +165,13 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
 couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8')
 ```
 
-**No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is
-a decision, not a property of an input — and it is a decision your
-conventions already make, usually with an exception attached ("overheads
-stay mono, they get separate processing"). Stating it per row puts the
-answer in the one place that cannot see the rule.
+**No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is a decision, not a property of an input — and it is a decision your conventions already make, usually with an exception attached ("overheads stay mono, they get separate processing"). Stating it per row puts the answer in the one place that cannot see the rule.
 
 ## The `patch` column
 
-**A column headed `socket` is read as `patch`**, so a list headed either
-way loads the same. A new list Atoo writes is headed `patch`; saving
-an existing file keeps whichever header it already has.
+**A column headed `socket` is read as `patch`**, so a list headed either way loads the same. A new list Atoo writes is headed `patch`; saving an existing file keeps whichever header it already has.
 
-A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups
-Atoo recognises:
+A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognises:
 
 | Written | What it is |
 |---|---|
@@ -279,20 +186,12 @@ Atoo recognises:
 | `AES` | AES/EBU |
 | `PLAY` | the player |
 
-The long forms parse too — `Local 3`, `Card 1`, `Module 2`, `User 25`,
-`StageConnect 4` — and case and hyphens are not significant, so
-`aes50-a 12` and `AES50-A 12` are the same socket.
+The long forms parse too — `Local 3`, `Card 1`, `Module 2`, `User 25`, `StageConnect 4` — and case and hyphens are not significant, so `aes50-a 12` and `AES50-A 12` are the same socket.
 
 Two spellings that look reasonable and are refused on purpose:
 
-- **"SD card" is not `CRD`.** `CRD` is the expansion card bay. The SD card
-  is WING LIVE's storage, which is not an input group at all. What a
-  WING LIVE card *plays back* does arrive on `CRD`, but only when WING
-  LIVE is the card fitted — which is exactly what the words "SD card" do
-  not say.
-- **"Dante" is not a group.** Dante is sold both as an expansion card
-  (`CRD`) and as an internal module (`MOD`), so the word does not say
-  which bay it means. Write `CRD n` or `MOD n`.
+- **"SD card" is not `CRD`.** `CRD` is the expansion card bay. The SD card is WING LIVE's storage, which is not an input group at all. What a WING LIVE card *plays back* does arrive on `CRD`, but only when WING LIVE is the card fitted — which is exactly what the words "SD card" do not say.
+- **"Dante" is not a group.** Dante is sold both as an expansion card (`CRD`) and as an internal module (`MOD`), so the word does not say which bay it means. Write `CRD n` or `MOD n`.
 
 Anything unrecognised is reported, never guessed at:
 
@@ -307,29 +206,17 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/dante.csv
 
 ### `CRD` and `MOD` are bays, and a bay can be empty
 
-Both are slots that a card may or may not be fitted into. A plan that
-patches a channel from an empty bay is refused by `apply` against a desk
-that has nothing in that slot, rather than written into a channel that
-would hear nothing — see
-[What a full apply changes](what-apply-changes.md#expansion-bays-crd-and-mod).
+Both are slots that a card may or may not be fitted into. A plan that patches a channel from an empty bay is refused by `apply` against a desk that has nothing in that slot, rather than written into a channel that would hear nothing — see [What a full apply changes](what-apply-changes.md#expansion-bays-crd-and-mod).
 
 ### Leaving the patch blank
 
-Legitimate, and common early in the week when the cabling is not settled.
-A row with no patch gets a socket chosen for it during the build, and the
-plan records the difference: `"stated": true` is where *you* said the
-cable is, `false` is where Atoo put it. `atoo build --pretty`
-prints the second kind as `Patch: A 1 (auto)`, and `apply` says it again
-as it writes -- once, naming the strips, since the warning is the same
-for each (the journal keeps one line per strip). From an apply of a
-23-channel show:
+Legitimate, and common early in the week when the cabling is not settled. A row with no patch gets a socket chosen for it during the build, and the plan records the difference: `"stated": true` is where *you* said the cable is, `false` is where Atoo put it. `atoo build --pretty` prints the second kind as `Patch: A 1 (auto)`, and `apply` says it again as it writes -- once, naming the strips, since the warning is the same for each (the journal keeps one line per strip). From an apply of a 23-channel show:
 
 ```
   - ch 1-23 (23 channels): patch socket was not stated in the input list and was assigned during generation -- verify before trusting this write
 ```
 
-Which is the whole point of the distinction: a socket you stated can be
-checked against the stage box, and one that was chosen for you has to be.
+Which is the whole point of the distinction: a socket you stated can be checked against the stage box, and one that was chosen for you has to be.
 
 ## The `order` column: band numbers, and skipping a row
 
@@ -343,21 +230,11 @@ Optional, and first when it is there. A cell holds one of three things:
 
 Anything else is refused, naming the row.
 
-**The number does not set the desk channel.** Which strip a source lands
-on is still your conventions' to compute. The number goes to the model
-with its row, as data, so your instructions can use it — *"Patch the
-inputs according to the band's channel order numbers."* Without such a
-sentence it changes nothing.
+**The number does not set the desk channel.** Which strip a source lands on is still your conventions' to compute. The number goes to the model with its row, as data, so your instructions can use it — *"Patch the inputs according to the band's channel order numbers."* Without such a sentence it changes nothing.
 
-**A skipped row is left out of the build entirely.** It is not sent to
-the model, nothing is built for it, and `verify` does not count it as a
-missing input. The build says once, at INFO, which rows it left out
-(`input-list.skipped`). That is what makes it useful for a festival
-list: keep every band's full list, and switch rows off and on between
-sets rather than deleting and retyping them.
+**A skipped row is left out of the build entirely.** It is not sent to the model, nothing is built for it, and `verify` does not count it as a missing input. The build says once, at INFO, which rows it left out (`input-list.skipped`). That is what makes it useful for a festival list: keep every band's full list, and switch rows off and on between sets rather than deleting and retyping them.
 
-Here is the touring band's list with an `order` column, and its TRAX row
-skipped:
+Here is the touring band's list with an `order` column, and its TRAX row skipped:
 
 ```bash
 python3 - <<'EOF'
@@ -382,9 +259,7 @@ order,socket,name,category,type,model,phantom,notes
 -,AES50-A 8,TRAX,tracks,Line,,FALSE,
 ```
 
-The plan was built before TRAX was skipped, so it still has a TRAX
-channel. `verify` gives a warning (the desk would work, with a
-strip nobody plugs into; the notes are left out here with `grep`):
+The plan was built before TRAX was skipped, so it still has a TRAX channel. `verify` gives a warning (the desk would work, with a strip nobody plugs into; the notes are left out here with `grep`):
 
 ```bash
 atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/festival.csv | grep -v '^  \[info\]'
@@ -401,8 +276,7 @@ APPLICABLE: warnings only.
 
 A rebuild leaves it out, and the skipped row is not reported missing.
 
-A cell that is neither a number, `-`, nor empty stops the list from
-loading:
+A cell that is neither a number, `-`, nor empty stops the list from loading:
 
 ```bash
 sed 's/^-,/x,/' /tmp/festival.csv > /tmp/bad-order.csv
@@ -413,36 +287,17 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/bad-order.c
 couldn't read input list '/tmp/bad-order.csv': row 21: column 'order' must be the band's input number (1, 2, ...), '-' to skip the row, or blank -- got 'x'
 ```
 
-A skipped row is still checked like any other — switching it back on
-should never turn up an error nobody saw — with one exception: it may
-share its name with a row that is on, so two bands' `Kick` rows can sit
-in one list with one of them skipped. A list with **every** row skipped
-has nothing to build, and is refused.
+A skipped row is still checked like any other — switching it back on should never turn up an error nobody saw — with one exception: it may share its name with a row that is on, so two bands' `Kick` rows can sit in one list with one of them skipped. A list with **every** row skipped has nothing to build, and is refused.
 
-In the browser, Build step 02's **Order** cell has a **Skip** box: tick
-it and the cell reads `-` and the row dims; untick it and the number
-comes back. On a read-only show a skipped row's Order cell reads
-**SKIP**.
+In the browser, Build step 02's **Order** cell has a **Skip** box: tick it and the cell reads `-` and the row dims; untick it and the number comes back. On a read-only show a skipped row's Order cell reads **SKIP**.
 
 ## The `preset` column
 
-Optional. A value names a preset in your
-[preset library](presets.md), matched as a name in your conventions is
-([how forgiving that is](presets.md#naming-one-and-how-forgiving-the-match-is)),
-so `kick in` finds **Kick In**. Like a stated patch, **the list wins**
-over the conventions, and the build notes it at INFO when it replaces a
-different preset. A name the library has not got is a `preset.unknown`
-warning, and the strip is built without it.
+Optional. A value names a preset in your [preset library](presets.md), matched as a name in your conventions is ([how forgiving that is](presets.md#naming-one-and-how-forgiving-the-match-is)), so `kick in` finds **Kick In**. Like a stated patch, **the list wins** over the conventions, and the build notes it at INFO when it replaces a different preset. A name the library has not got is a `preset.unknown` warning, and the strip is built without it.
 
-Of a stereo pair's two rows, one naming the preset is enough. If they
-name different ones, the **first** row's wins (the row the channel is
-named from), and `verify` warns `preset.input-list-pair-disagrees`.
+Of a stereo pair's two rows, one naming the preset is enough. If they name different ones, the **first** row's wins (the row the channel is named from), and `verify` warns `preset.input-list-pair-disagrees`.
 
-`verify` warns when a channel's preset is not the one its row states
-(`preset.contradicts-input-list`): a warning, not an error, because the
-desk works either way. Here is the Kick row given a preset, checked
-against a plan built before the list said so (the notes are left out
-with `grep`):
+`verify` warns when a channel's preset is not the one its row states (`preset.contradicts-input-list`): a warning, not an error, because the desk works either way. Here is the Kick row given a preset, checked against a plan built before the list said so (the notes are left out with `grep`):
 
 ```bash
 python3 - <<'EOF'
@@ -470,18 +325,13 @@ AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,,kick in
 APPLICABLE: warnings only.
 ```
 
-A rebuild puts the starter preset **Kick In** on the Kick channel. In
-the browser, Build step 02's **Preset** column offers your library's
-names.
+A rebuild puts the starter preset **Kick In** on the Kick channel. In the browser, Build step 02's **Preset** column offers your library's names.
 
 ## A stereo pair needs two adjacent sockets, odd first
 
 `LCL 15`+`LCL 16`, never `LCL 7`+`LCL 12` and never `LCL 2`+`LCL 3`.
 
-This is the desk's routing hardware, not an Atoo rule: a WING forms a
-stereo pair only from consecutive `[odd, even]` sockets. It is a
-constraint on the **cabling**, so it is cheapest to fix while writing the
-list. `verify` refuses a plan that patches a pair the other way round:
+This is the desk's routing hardware, not an Atoo rule: a WING forms a stereo pair only from consecutive `[odd, even]` sockets. It is a constraint on the **cabling**, so it is cheapest to fix while writing the list. `verify` refuses a plan that patches a pair the other way round:
 
 ```bash
 python3 - <<'EOF'
@@ -511,59 +361,27 @@ atoo verify --plan /tmp/even-first.plan.json --input /tmp/even-first.csv
 BLOCKED: do not apply.
 ```
 
-Exit code 2. Better here than at soundcheck: move one cable, or use `USR`
-below.
+Exit code 2. Better here than at soundcheck: move one cable, or use `USR` below.
 
 ## When the cabling cannot give you an adjacent pair
 
-The two halves land on different stage boxes. Or they are two playback
-tracks 32 apart on one card. The desk's own way round this is a **user
-signal** or **user patch**: two consecutive slots of its `USR` group,
-each pointed at any source you like, then patched as an ordinary pair.
+The two halves land on different stage boxes. Or they are two playback tracks 32 apart on one card. The desk's own way round this is a **user signal** or **user patch**: two consecutive slots of its `USR` group, each pointed at any source you like, then patched as an ordinary pair.
 
-A plan states those slots in a top-level `user_sources` section, and
-`verify` checks them — including the odd-first rule, which is not
-bypassed anywhere.
+A plan states those slots in a top-level `user_sources` section, and `verify` checks them — including the odd-first rule, which is not bypassed anywhere.
 
-`apply` writes each slot (what it takes, and its name) before the
-channel that patches it, and sets both slots of a stereo pair to stereo;
-Undo puts them back. How a slot set this way sounds at the strip has not
-yet been checked on a desk.
+`apply` writes each slot (what it takes, and its name) before the channel that patches it, and sets both slots of a stereo pair to stereo; Undo puts them back. How a slot set this way sounds at the strip has not yet been checked on a desk.
 
 ## Checking a list before the desk exists
 
-There is no `atoo check-input-list`; the input list is checked
-wherever it is used. The two useful moments:
+There is no `atoo check-input-list`; the input list is checked wherever it is used. The two useful moments:
 
-- **`atoo build`** reads it first, so a malformed file stops the run
-  before a model call is spent.
-- **`atoo verify --plan p.json --input list.csv`** reconciles a
-  built plan against it: every input became a channel, no channel was
-  invented ([unless you asked for it](extra-strips.md)), phantom power
-  is safe for the microphones named, every
-  stated socket matches what the plan patched, and every stated preset
-  is the one the plan names. Without `--input`, `verify`
-  says out loud that it checked none of that
-  (`reconcile.not-checked`) rather than passing quietly. `atoo patch`
-  and `atoo amend` with `--show` read the show's `input.csv` for the
-  same reason; a typed change is held to it more loosely than a rebuild
-  (see [Patch](patch.md)).
-- **`atoo ui`**, Build step 02, shows the list as an editable
-  table. Save rewrites only the rows you changed and will not write over
-  an edit made in another program since the page read the file. Name,
-  Category and Type are required; Save asks once before writing a list
-  that will not load. Rows can be added, and moved by dragging or with
-  Alt+↑ / Alt+↓. See [Build a show](build-a-show.md). On a read-only
-  show, the [Demo](demo.md), the table is plain text: no boxes to type
-  in, no handles or row buttons, and **Save** and **Discard changes**
-  (at the top of the table, as in the other editors) are locked with
-  *Locked: the Demo show is read-only* beside them.
+- **`atoo build`** reads it first, so a malformed file stops the run before a model call is spent.
+- **`atoo verify --plan p.json --input list.csv`** reconciles a built plan against it: every input became a channel, no channel was invented ([unless you asked for it](extra-strips.md)), phantom power is safe for the microphones named, every stated socket matches what the plan patched, and every stated preset is the one the plan names. Without `--input`, `verify` says out loud that it checked none of that (`reconcile.not-checked`) rather than passing quietly. `atoo patch` and `atoo amend` with `--show` read the show's `input.csv` for the same reason; a typed change is held to it more loosely than a rebuild (see [Patch](patch.md)).
+- **`atoo ui`**, Build step 02, shows the list as an editable table. Save rewrites only the rows you changed and will not write over an edit made in another program since the page read the file. Name, Category and Type are required; Save asks once before writing a list that will not load. Rows can be added, and moved by dragging or with Alt+↑ / Alt+↓. See [Build a show](build-a-show.md). On a read-only show, the [Demo](demo.md), the table is plain text: no boxes to type in, no handles or row buttons, and **Save** and **Discard changes** (at the top of the table, as in the other editors) are locked with *Locked: the Demo show is read-only* beside them.
 
 ## See also
 
-- [Writing conventions](conventions.md) — the other half, and the file
-  that decides what happens to these rows
+- [Writing conventions](conventions.md) — the other half, and the file that decides what happens to these rows
 - [The command line](quickstart.md) — an input list through to a proven desk
 - [Show bundles](show-bundles.md) — where `input.csv` lives for one show
-- [Channels that are not on the input list](extra-strips.md) — talkback,
-  playback and the strips you add at every show
+- [Channels that are not on the input list](extra-strips.md) — talkback, playback and the strips you add at every show

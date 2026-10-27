@@ -12,59 +12,23 @@ Console: none configured -- set one in the bundle bar (Change…) before Ping, A
 Working folder: ~/Documents/Atoo
 ```
 
-The first line says which copy of Atoo this is and where it runs from
-([`atoo --version`](install-from-checkout.md#4-which-atoo-am-i-running) adds the branch and
-commit), and the page repeats it at the bottom. The page opens at `http://127.0.0.1:8420/`;
-Build, Apply and Watch are three modes of that one page. With `--no-browser`, or where no
-browser can be opened, the start prints the address instead. The `Plan:` line appears only
-with `--plan` (or `--show` on a bundle that has a `plan.json`); the plan is on Build step
-04, which can also open one from a path. The `Console:` line is always
-there: with a console configured it names the address and where it came
-from (`--console`, `ATOO_CONSOLE` or `~/.atoo.config`), and the
-bundle bar's **Change…** sets another without a restart. The
-`Working folder:` line is the folder [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init)
-made, where **Open…** and **New show…** start; before `init` it says there is none, and how to make one.
+The first line says which copy of Atoo this is and where it runs from ([`atoo --version`](install-from-checkout.md#4-which-atoo-am-i-running) adds the branch and commit), and the page repeats it at the bottom. The page opens at `http://127.0.0.1:8420/`; Build, Apply and Watch are three modes of that one page. With `--no-browser`, or where no browser can be opened, the start prints the address instead. The `Plan:` line appears only with `--plan` (or `--show` on a bundle that has a `plan.json`); the plan is on Build step 04, which can also open one from a path. The `Console:` line is always there: with a console configured it names the address and where it came from (`--console`, `ATOO_CONSOLE` or `~/.atoo.config`), and the bundle bar's **Change…** sets another without a restart. The `Working folder:` line is the folder [`atoo init`](configuration.md#1-create-your-atoo-folder-atoo-init) made, where **Open…** and **New show…** start; before `init` it says there is none, and how to make one.
 
 ### It exits immediately
 
 Three causes, and each names itself:
 
-**`the web UI needs the 'ui' extra`** — the server is an optional
-dependency, so the engine installs without FastAPI and uvicorn. Exits
-`1`. The message names the fix for where Atoo is running:
+**`the web UI needs the 'ui' extra`** — the server is an optional dependency, so the engine installs without FastAPI and uvicorn. Exits `1`. The message names the fix for where Atoo is running:
 
-- **A clone, outside a virtualenv** (Homebrew's Python, on a Mac): it
-  gives the four steps, `cd` into the clone, `python3 -m venv .venv`,
-  `source .venv/bin/activate`, `python3 -m pip install -e ".[ui]"`. Run
-  them in that order. A `pip install` on its own is refused there with
-  `error: externally-managed-environment`; never work round it with
-  `--break-system-packages`.
-- **A clone, inside its virtualenv**: just `python3 -m pip install -e
-  ".[ui]"`.
-- **An installed copy**: install it again with the extra, [step 2 of
-  Installing Atoo](install.md#2-install-atoo) with `--force` after
-  `install` (`uv tool install --force --python 3.12`, or `pipx install --force` for a
-  pipx install). That is the fix whatever the message suggests: a copy
-  installed with uv has no `pip` of its own.
+- **A clone, outside a virtualenv** (Homebrew's Python, on a Mac): it gives the four steps, `cd` into the clone, `python3 -m venv .venv`, `source .venv/bin/activate`, `python3 -m pip install -e ".[ui]"`. Run them in that order. A `pip install` on its own is refused there with `error: externally-managed-environment`; never work round it with `--break-system-packages`.
+- **A clone, inside its virtualenv**: just `python3 -m pip install -e ".[ui]"`.
+- **An installed copy**: install it again with the extra, [step 2 of Installing Atoo](install.md#2-install-atoo) with `--force` after `install` (`uv tool install --force --python 3.12`, or `pipx install --force` for a pipx install). That is the fix whatever the message suggests: a copy installed with uv has no `pip` of its own.
 
-From a clone, check first that the `atoo` that ran is the clone's
-(`atoo --version`, [Which atoo am I
-running?](install-from-checkout.md#4-which-atoo-am-i-running)); the
-steps are in [Installing from a
-checkout](install-from-checkout.md#1-check-your-python). A virtualenv made from a stock Mac's
-`python3`, which is 3.9, cannot install Atoo: that page's step 1 checks
-the version first, and its [When the install
-fails](install-from-checkout.md#when-the-install-fails) has the fix for
-`File "setup.py" or "setup.cfg" not found`.
+From a clone, check first that the `atoo` that ran is the clone's (`atoo --version`, [Which atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running)); the steps are in [Installing from a checkout](install-from-checkout.md#1-check-your-python). A virtualenv made from a stock Mac's `python3`, which is 3.9, cannot install Atoo: that page's step 1 checks the version first, and its [When the install fails](install-from-checkout.md#when-the-install-fails) has the fix for `File "setup.py" or "setup.cfg" not found`.
 
-**`couldn't read plan file 'x.json': No such file or directory`**, and
-the same for `--watch-conditions` — both files are loaded before the
-server binds anything, on purpose, so a typo fails in a tenth of a second
-instead of after you have opened a browser. Exits `1`.
+**`couldn't read plan file 'x.json': No such file or directory`**, and the same for `--watch-conditions` — both files are loaded before the server binds anything, on purpose, so a typo fails in a tenth of a second instead of after you have opened a browser. Exits `1`.
 
-**`couldn't serve on 127.0.0.1:8420 -- Address already in use.`** —
-another program has the port. The message tells you the way out, and
-exits `1`:
+**`couldn't serve on 127.0.0.1:8420 -- Address already in use.`** — another program has the port. The message tells you the way out, and exits `1`:
 
 ```
 $ atoo ui --port 8420
@@ -72,50 +36,25 @@ couldn't serve on 127.0.0.1:8420 -- Address already in use.
 Something else is already using that port; try `atoo ui --port 8421`.
 ```
 
-An earlier `atoo ui` still running on the port is not this
-failure: a second one says `Atoo is already running at
-http://127.0.0.1:8420/ -- open that page.`, opens it, and exits `0`. To
-stop the first, press Ctrl-C in its terminal.
+An earlier `atoo ui` still running on the port is not this failure: a second one says `Atoo is already running at http://127.0.0.1:8420/ -- open that page.`, opens it, and exits `0`. To stop the first, press Ctrl-C in its terminal.
 
-**No URL is printed when the server cannot start.** Atoo binds the
-port before it announces anything, so an address on your screen is an
-address that answers.
+**No URL is printed when the server cannot start.** Atoo binds the port before it announces anything, so an address on your screen is an address that answers.
 
-A bad `--host` fails in the same place and names itself the same way —
-`couldn't serve on 203.0.113.254:8420 -- Cannot assign requested address.`
-— without the "try another port" advice, because the port is not what is
-wrong.
+A bad `--host` fails in the same place and names itself the same way — `couldn't serve on 203.0.113.254:8420 -- Cannot assign requested address.` — without the "try another port" advice, because the port is not what is wrong.
 
 ### The page loads but shows nothing
 
-**Watch mode is empty until you start a watch.** It holds no state of
-its own between runs — the session is the run — so a freshly opened page
-with no console address typed in is doing exactly what it should.
+**Watch mode is empty until you start a watch.** It holds no state of its own between runs — the session is the run — so a freshly opened page with no console address typed in is doing exactly what it should.
 
-**A few 404s in the browser's network tab are normal**, and none is a
-fault: `/favicon.ico`, which the browser asks for unprompted;
-`/api/watch-conditions`, which answers "nothing loaded" that way when no
-watch-conditions file was given; and `/api/apply/preflight`, which
-answers "no plan loaded" that way when no show is open.
+**A few 404s in the browser's network tab are normal**, and none is a fault: `/favicon.ico`, which the browser asks for unprompted; `/api/watch-conditions`, which answers "nothing loaded" that way when no watch-conditions file was given; and `/api/apply/preflight`, which answers "no plan loaded" that way when no show is open.
 
-**If a field or a panel is blank where you expected a value**, that is
-worth reporting rather than working around. The page renders a missing
-field as an empty string rather than complaining, so a blank element is the exact symptom of a plan field the page is
-reading under a name the rest of the tool no longer uses. Say which
-element, and which plan you opened.
+**If a field or a panel is blank where you expected a value**, that is worth reporting rather than working around. The page renders a missing field as an empty string rather than complaining, so a blank element is the exact symptom of a plan field the page is reading under a name the rest of the tool no longer uses. Say which element, and which plan you opened.
 
 ### Build step 04 says Failed
 
-Step 04's **Build plan** runs `atoo build --show` on the open bundle,
-exactly as the command would from a terminal, and a build that writes no
-plan ends **Failed** with a `build.failed` error in the Findings panel. The message
-is the build's own last word on why, and the whole of what it said is in
-the log on step 04. By far the commonest cause is that **a build needs a
-model and cannot reach one**: a key that is wrong, or a host that does not
-answer.
+Step 04's **Build plan** runs `atoo build --show` on the open bundle, exactly as the command would from a terminal, and a build that writes no plan ends **Failed** with a `build.failed` error in the Findings panel. The message is the build's own last word on why, and the whole of what it said is in the log on step 04. By far the commonest cause is that **a build needs a model and cannot reach one**: a key that is wrong, or a host that does not answer.
 
-With no model set up at all, a build never starts. **Build plan** and
-**Rebuild plan** are locked, and beside **Build plan** the page says:
+With no model set up at all, a build never starts. **Build plan** and **Rebuild plan** are locked, and beside **Build plan** the page says:
 
 ```
 a build needs a model, and none is set up here (no API key: set ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) before starting `atoo ui`, or ATOO_AI_PROVIDER=ollama for a local model)
@@ -123,70 +62,31 @@ a build needs a model, and none is set up here (no API key: set ANTHROPIC_API_KE
 
 The plan you have stays as it is, so Apply can still write it.
 
-Set the key, or point `ATOO_AI_PROVIDER` at another backend (see
-[`build` says "generation failed"](troubleshooting-build.md#build-says-generation-failed)) **in the shell
-you start `atoo ui` from** — the page runs the build inside that
-server process, with its environment. Restart the server after changing
-it.
+Set the key, or point `ATOO_AI_PROVIDER` at another backend (see [`build` says "generation failed"](troubleshooting-build.md#build-says-generation-failed)) **in the shell you start `atoo ui` from** — the page runs the build inside that server process, with its environment. Restart the server after changing it.
 
-**Done, but the Findings panel is full of errors** is a different thing: the plan
-was written (exit `2`), and verify found errors in it, which is what those
-findings are. `atoo apply` will refuse it until they are fixed. Each
-finding carries a jump link to the plan table's row it is about -- the
-jump opens the row -- and one about your conventions text links to the
-conventions or instructions editor, with the line it quotes selected.
+**Done, but the Findings panel is full of errors** is a different thing: the plan was written (exit `2`), and verify found errors in it, which is what those findings are. `atoo apply` will refuse it until they are fixed. Each finding carries a jump link to the plan table's row it is about -- the jump opens the row -- and one about your conventions text links to the conventions or instructions editor, with the line it quotes selected.
 
-**Build plan is refused outright** before anything runs when no console
-model is chosen (a build will not guess which WING it is for), when no
-bundle is open, when step 03 was pointed at an instructions file outside
-the bundle — `atoo build` reads the bundle's own `instructions.md`
-and nothing else, so the page will not build from a text it is not
-showing — or when there is no house conventions file or no input list.
-Those last two are only a to-do on their tiles until you press Build
-plan; the refusal is what puts the ERROR (`build.no-conventions`,
-`build.conventions-missing` or `build.input-list-missing`) in the Findings panel,
-with a jump to the tile.
+**Build plan is refused outright** before anything runs when no console model is chosen (a build will not guess which WING it is for), when no bundle is open, when step 03 was pointed at an instructions file outside the bundle — `atoo build` reads the bundle's own `instructions.md` and nothing else, so the page will not build from a text it is not showing — or when there is no house conventions file or no input list. Those last two are only a to-do on their tiles until you press Build plan; the refusal is what puts the ERROR (`build.no-conventions`, `build.conventions-missing` or `build.input-list-missing`) in the Findings panel, with a jump to the tile.
 
 ### The page says it is out of date
 
-A red **This page is out of date** banner across every mode means the
-`atoo ui` behind the tab was restarted, or another tab opened a
-different show. Until you press **Reload page**, every button that writes
-or runs is off, Watch's **Start watching** and **Save** included, so a
-tab left open on one show cannot write another show's plan. It does not
-reload by itself, so you can copy anything you had typed first.
+A red **This page is out of date** banner across every mode means the `atoo ui` behind the tab was restarted, or another tab opened a different show. Until you press **Reload page**, every button that writes or runs is off, Watch's **Start watching** and **Save** included, so a tab left open on one show cannot write another show's plan. It does not reload by itself, so you can copy anything you had typed first.
 
 ### Write to console or Undo newest write stays locked
 
-A locked button has no colour and a dashed edge. **Locked:** beside it
-says why, and it is one of these:
+A locked button has no colour and a dashed edge. **Locked:** beside it says why, and it is one of these:
 
-- **Writing is switched off in the Demo show.** The Demo is read-only,
-  on a simulated desk: Preview works, writing and Undo never do.
-  Choosing a console address in the bar (**Change…**, then **Address**)
-  leaves the Demo; then open or create a show of your own.
-- **No console address**, or **No show bundle open**: set the one it
-  names in the bar.
-- **Nothing to undo on this desk**: History has no write standing on the
-  console in the bar.
-- **Preview first**, or **Step 1 or the console changed since the
-  preview**: press **Preview** in step 2 again.
-- **The pre-flight verify has N error(s)**: fix the plan on
-  **Build** and rebuild, or, if you know why, tick **Skip the pre-flight
-  verify** under **Options** in step 1.
-- **Tick Arm first**: the **Arm** checkbox in step 3. It clears
-  itself after each write, and Undo needs it too.
-- **Preview the undo first**, or **Preview the undo again**: Undo is
-  only offered for an undo you have just previewed. Press **Preview undo**
-  on the newest row of History; do it again if a write, an undo, the
-  console or the newest row has changed since.
+- **Writing is switched off in the Demo show.** The Demo is read-only, on a simulated desk: Preview works, writing and Undo never do. Choosing a console address in the bar (**Change…**, then **Address**) leaves the Demo; then open or create a show of your own.
+- **No console address**, or **No show bundle open**: set the one it names in the bar.
+- **Nothing to undo on this desk**: History has no write standing on the console in the bar.
+- **Preview first**, or **Step 1 or the console changed since the preview**: press **Preview** in step 2 again.
+- **The pre-flight verify has N error(s)**: fix the plan on **Build** and rebuild, or, if you know why, tick **Skip the pre-flight verify** under **Options** in step 1.
+- **Tick Arm first**: the **Arm** checkbox in step 3. It clears itself after each write, and Undo needs it too.
+- **Preview the undo first**, or **Preview the undo again**: Undo is only offered for an undo you have just previewed. Press **Preview undo** on the newest row of History; do it again if a write, an undo, the console or the newest row has changed since.
 
 ### Another computer can open the page, but only to watch
 
-`atoo ui --host <address>` lets a second machine on the venue
-network open the page. That machine can watch, but it cannot build,
-apply, patch, undo, save or browse this laptop's files: those answer
-only the laptop the server runs on.
+`atoo ui --host <address>` lets a second machine on the venue network open the page. That machine can watch, but it cannot build, apply, patch, undo, save or browse this laptop's files: those answer only the laptop the server runs on.
 
 ## See also
 

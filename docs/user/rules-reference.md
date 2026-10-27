@@ -11,42 +11,19 @@
 # Rules reference
 
 <!-- preamble:start -->
-Every rule `atoo audit` and Watch can report, listed by its code. A finding
-ends with the code of the rule that produced it (`R005`, `CV016`), so this is
-where to look one up: what the rule checks, how serious it is, and whether it
-needs the show's plan.
+Every rule `atoo audit` and Watch can report, listed by its code. A finding ends with the code of the rule that produced it (`R005`, `CV016`), so this is where to look one up: what the rule checks, how serious it is, and whether it needs the show's plan.
 
 Each rule says:
 
-- **Its severity.** An **Error** is a desk that cannot work as it stands, a
-  **Warning** is probably not what you meant, and an **Info** is worth knowing
-  but needs nothing done. [Reading findings](reading-findings.md) has more on
-  each.
-- **When it runs.** *With or without a plan* means it reads the desk alone, in
-  `atoo audit` and in Watch. *Needs the plan* means it compares the desk with
-  the show's plan, so it runs only when you give it one: `atoo audit --plan`,
-  and Watch started with the show. *Watch only* means it speaks during a live
-  Watch.
-- **What to do about it**, where the [troubleshooting
-  page](troubleshooting-audit.md) has a section for it.
+- **Its severity.** An **Error** is a desk that cannot work as it stands, a **Warning** is probably not what you meant, and an **Info** is worth knowing but needs nothing done. [Reading findings](reading-findings.md) has more on each.
+- **When it runs.** *With or without a plan* means it reads the desk alone, in `atoo audit` and in Watch. *Needs the plan* means it compares the desk with the show's plan, so it runs only when you give it one: `atoo audit --plan`, and Watch started with the show. *Watch only* means it speaks during a live Watch.
+- **What to do about it**, where the [troubleshooting page](troubleshooting-audit.md) has a section for it.
 
-With a plan, a finding about a strip the plan never mentions can be left out,
-and a rule stands down where the plan states the setting it would judge,
-because the comparison with the plan checks that instead. `S001` counts what
-was left out, and why. Findings whose code
-starts `WATCH:` come from your own [watch conditions](watch-conditions.md),
-and say in their own words what they check.
+With a plan, a finding about a strip the plan never mentions can be left out, and a rule stands down where the plan states the setting it would judge, because the comparison with the plan checks that instead. `S001` counts what was left out, and why. Findings whose code starts `WATCH:` come from your own [watch conditions](watch-conditions.md), and say in their own words what they check.
 
-**"In use"**, wherever a rule below says it, means **active**: on the open
-show's sheets, or in use on the desk. A channel, aux or bus is in use on the
-desk when it is named, patched to a socket other than the factory's, or
-sending, and a bus also when something sends to it. So a bus the show's sheets
-have is checked even before anything on the desk uses it. With no show open,
-only the desk counts. A watch condition can use the same test with the word
-`ACTIVE` ([Only active strips](watch-conditions.md#only-active-strips)).
+**"In use"**, wherever a rule below says it, means **active**: on the open show's sheets, or in use on the desk. A channel, aux or bus is in use on the desk when it is named, patched to a socket other than the factory's, or sending, and a bus also when something sends to it. So a bus the show's sheets have is checked even before anything on the desk uses it. With no show open, only the desk counts. A watch condition can use the same test with the word `ACTIVE` ([Only active strips](watch-conditions.md#only-active-strips)).
 
-This page is generated from the rules themselves, so it lists every one the
-version you are reading the docs for can report.
+This page is generated from the rules themselves, so it lists every one the version you are reading the docs for can report.
 <!-- preamble:end -->
 
 ## Routing
