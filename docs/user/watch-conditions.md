@@ -271,6 +271,108 @@ Nothing here costs an extra console read: every bus, Main, Matrix and
 DCA's mute and fader were already part of each pass, and every bus and
 DCA's name part of each name refresh.
 
+### Only active strips
+
+`ALL BUS` means every bus on the desk, so a rule like "no bus is muted"
+also fires on the busses the show never uses. Write the word **`ACTIVE`**
+in the cell and the condition is checked only on the strips that are
+active, at each pass:
+
+| You write | It means |
+|---|---|
+| `ACTIVE ALL BUS` | every bus that is active |
+| `ACTIVE CH 1-24` | channels 1 to 24, while each is active |
+| `ACTIVE DCA 1-8`, `ACTIVE MTX 2` | those DCAs, or that Matrix, while active |
+
+The word can stand anywhere and in any case: `ALL ACTIVE BUS`,
+`ALL BUS ACTIVE` and `active all bus` are the same, and the Watch editor
+and Save write them as `ACTIVE ALL BUS`. A cell that is only `ACTIVE`
+names no strip and is refused.
+
+A strip is **active** when it is on the open show's sheets, or in use on
+the desk:
+
+- **On the show's sheets:** a channel or aux the show places, or a bus,
+  Main, Matrix, DCA or mute group it has, matched by position (a channel by
+  its strip, the rest by number). The sheets are read from the show's plan.
+- **In use on the desk:**
+  - a channel, aux or bus that is named, patched to a socket other than the
+    factory's, or sending; a bus also when something sends to it;
+  - a DCA or mute group with a member;
+  - a Main or Matrix that something sends or routes to, or that goes
+    somewhere itself (a Main's send to a Matrix, or an output socket
+    patched from it).
+
+With no show open, only the desk counts, and the "Watching without a plan"
+note says so. A strip that becomes active during the show is picked up at
+the next pass. The *i* beside the condition says it too: *Alerts as an
+error when any active BUS is muted. Active: on this show's sheets, or in
+use on the desk.*
+
+A desk where bus 1 is named, and busses 2 and 3 are not, all three muted,
+saved as `active.state.json`:
+
+```json
+{
+  "/bus/1/name": "Drums", "/bus/1/mute": 1, "/bus/1/fdr": 0.0,
+  "/bus/2/name": "", "/bus/2/mute": 1, "/bus/2/fdr": 0.0,
+  "/bus/3/name": "", "/bus/3/mute": 1, "/bus/3/fdr": 0.0
+}
+```
+
+and the condition, saved as `active.watch.json`:
+
+```json
+{
+  "version": 2,
+  "watch_conditions": [
+    {
+      "id": "bus-muted",
+      "description": "A bus is muted",
+      "channel": "ACTIVE ALL BUS",
+      "field": "muted",
+      "operator": "==",
+      "value": true,
+      "severity": "error"
+    }
+  ]
+}
+```
+
+```bash
+atoo watch --state-sequence active.state.json --watch-conditions active.watch.json --count 1
+```
+
+With no show, only bus 1 is active, because it is named on the desk:
+
+```
+[ERROR] WATCH:bus-muted A bus is muted
+  BUS 1 "Drums" is muted -- A bus is muted.
+```
+
+Started with a show whose plan has a bus on number 3 (`atoo watch --show
+DIR --state-sequence active.state.json --count 1`, the condition in the
+show's `watch.json`), bus 3 is active too. Bus 2 is neither, and never
+fires:
+
+```
+[ERROR] WATCH:bus-muted A bus is muted (2)
+  BUS 1 "Drums", BUS 3
+  Each is muted -- A bus is muted.
+```
+
+The built-in checks that ask whether a strip is in use (a fader at the
+floor, a bus with no inputs or no output, and the others the
+[Rules reference](rules-reference.md) lists) use the same "active", so a
+bus on the show's sheets is checked even before anything on the desk uses
+it. An `ACTIVE` condition does not replace them: both can fire on the same
+strip.
+
+`ACTIVE` is always read as the word, never as part of a name: `ACTIVE
+Kick` watches the channel named Kick while it is active, and the editor
+says so under the cell. A strip whose own name has the word Active in it
+is watched by its position.
+
 ## By kind and name
 
 A kind word followed by a name

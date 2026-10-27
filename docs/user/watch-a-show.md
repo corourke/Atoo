@@ -356,8 +356,13 @@ Each row is one check on one channel, bus or DCA:
 | `Playback` | `fader_db` | `<=` | `-60` | warning |
 | `DCA Band` | `fader_db` | `<` | `-20` | warning |
 | `MAIN PA` | `muted` | `==` | `true` | error |
+| `ACTIVE ALL BUS` | `muted` | `==` | `true` | error |
 
-A row says **when to alert**: it fires while it is true. **Alert when** is
+A row says **when to alert**: it fires while it is true. The word
+**`ACTIVE`** in the Channel cell checks only the strips that are active:
+on this show's sheets, or in use on the desk. The last row alerts on a
+muted bus the show uses, not on a spare one
+([Only active strips](watch-conditions.md#only-active-strips)). **Alert when** is
 the field, one of `muted`, `fader_db`, `dca`, `mute_group`, `patch`,
 `send_on`, `send_db`, `send_mode` or `phantom`. The three `send_` fields
 are about a channel's send to a bus, and show a **Bus** box under the
@@ -398,7 +403,8 @@ no **Change file** or **+ Add condition**, and **Save** is locked with
 *Locked: the Demo show is read-only*.
 
 [Your own alerts: watch conditions](watch-conditions.md)
-has the full reference: matching by position, range or name.
+has the full reference: matching by position, range or name, and only
+active strips.
 
 ## When it does not work
 

@@ -37,6 +37,14 @@ was left out, and why. Findings whose code
 starts `WATCH:` come from your own [watch conditions](watch-conditions.md),
 and say in their own words what they check.
 
+**"In use"**, wherever a rule below says it, means **active**: on the open
+show's sheets, or in use on the desk. A channel, aux or bus is in use on the
+desk when it is named, patched to a socket other than the factory's, or
+sending, and a bus also when something sends to it. So a bus the show's sheets
+have is checked even before anything on the desk uses it. With no show open,
+only the desk counts. A watch condition can use the same test with the word
+`ACTIVE` ([Only active strips](watch-conditions.md#only-active-strips)).
+
 This page is generated from the rules themselves, so it lists every one the
 version you are reading the docs for can report.
 <!-- preamble:end -->
