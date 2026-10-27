@@ -198,7 +198,12 @@ channel,patch,name,category,type,model,phantom,dca,mute_group,notes
   moved onto one has none.
 - **`dca`** and **`mute_group`** are the channel's whole membership. A name
   your conventions do not declare is declared, and takes the next free DCA
-  or mute group.
+  or mute group. A name your conventions spell another way only in capitals
+  or spaces is the same group, and takes your spelling: with `DRUMS` in the
+  list and `Drums` in the conventions, the DCA is named `DRUMS` on every
+  channel in it, and the report says *DCA 'Drums' is named 'DRUMS', as the
+  input list spells it.* Rows that spell one group two ways take the first
+  row's spelling, said once. A Save in Build's step 04 does the same.
 - **Two rows naming one strip** are refused, naming them, unless they are a
   stereo source's two rows (one strip). Where a stereo source's rows name
   different strips, the first row's wins, and the report names both.
@@ -221,7 +226,7 @@ atoo verify --show /tmp/shows/church-full-2026-10-24
 
 ```
 ...
-  [warning] channels[Kick]: the input list puts 'Kick' on channel 3, and the plan has it on 9 -- the plan does not follow the cell, so it has had no effect on this plan  (input-list.column-not-followed)
+  [warning] channels[Kick]: The input list puts Kick on channel 3, but the plan has it on 9: the plan was changed after it was built, or the list after the plan. Rebuild, or Save the input list in Build 04, to apply the cell; or clear the cell if the plan is right  (input-list.column-not-followed)
 ...
 ```
 
