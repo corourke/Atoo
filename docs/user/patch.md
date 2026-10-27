@@ -210,9 +210,19 @@ A change can also edit what is running; see
   the values that differ are written, a value the old preset set and the new
   one does not goes back to what an initialized strip reads, and a field the
   plan states itself (a high-pass you typed, say) stays as stated. A preset
-  the library does not have is refused, with that reason. Switching a *bus's*
-  preset is still shown as `MODIFIED`, not written (it has an effect engine
-  to allocate).
+  the library does not have is refused, with that reason. A channel built
+  with no preset can be given one the same way.
+- **A bus's preset can be switched, effect and all.** *"Use the Snare Verb
+  preset on the Vox Verb bus"* expands the bus preset over the running bus
+  in the same way, and loads its effect into an FX engine nothing else on
+  the plan inserts: the one the preset was saved from when that one is free,
+  else the next free engine that can hold it. The engine's model, its
+  parameters and the bus's insert are written; an engine the bus no longer
+  inserts keeps its old effect, inserted nowhere, as the desk has it. The
+  engine is judged free from the plan on the desk, since the desk read
+  covers strips, not FX engines. When every engine that can hold the effect
+  is in use, the change is refused, naming them. See
+  [A bus preset on a running bus](#a-bus-preset-on-a-running-bus).
 - **A channel can be inserted, and then the strips after it move.**
   *"Add HiHat after Snare"* puts HiHat on the next free strip and moves
   nothing; *"insert HiHat after Snare and renumber the channels after
@@ -522,10 +532,9 @@ the model:
   moved, muted or given a new fader like any other, and the preset's
   values on it are left exactly as they were: they are not among the
   fields the change names, so none of them is written. A change cannot
-  set those values themselves, and asking a running channel or bus for a
-  *different* preset is shown as `MODIFIED`, not written (the values on
-  it are the old preset's); set the processing fields themselves, or
-  rebuild.
+  set those values themselves; asking a running channel or bus for a
+  *different* preset switches it, as above, and writes only the values
+  that move.
 - **A running strip's 48V and mic model can be set; which input it is
   cannot.** *"48V on the snare"* and *"the vocal mic is an SM58"* are edits
   of the strip's `source.phantom` and `source.model` (and `source.type`).
@@ -590,6 +599,72 @@ the model:
   change is refused.
 - **Undo puts every edited field back**: the journal records each
   address's value before the write, as it does for every write.
+
+## A bus preset on a running bus
+
+The Demo's **Vox Verb** bus carries the *Vox Verb* bus preset: a V-REV in
+FX5 on its pre-insert. `docs/user/demo/demo-show/snare-verb.change-set.json`
+is the change *"use the Snare Verb preset on the Vox Verb bus"*, as a model
+compiles it: one field, the bus's `preset`. Run it from the top of an Atoo
+checkout, with no desk and no model:
+
+```
+atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/snare-verb.change-set.json --state atoo/web/demo_states/before.json
+```
+
+```
+  INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
+
+Change: Snare Verb on the Vox Verb bus
+  INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
+  this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
+
+14 unchanged, 1 edited
+  EDITED           bus 'Vox Verb': only the field(s) the change names are written (preset, preset_values); nothing else on this bus is touched, and the rest of it is in the untouched proof
+  fields changed on objects already on the desk (only these; nothing else on them is written):
+    bus 'Vox Verb': preset "Vox Verb" -> "Snare Verb"
+    bus 'Vox Verb': preset_values {"preset": "Vox Verb", "file": "FX Vox Verb.bus", "library": "starter/presets", "sha256": "2e283e8906b0bd3a7723e450f4... -> {"preset": "Snare Verb", "file": "FX Snare Verb.bus", "library": "starter/presets", "sha256": "bf3c8a07f670470940c6ac...
+  INFO bus 7 ('Vox Verb')'s pre-insert: GATED goes into FX8 -- the engine the preset was saved from
+  INFO bus 'Vox Verb': the bus preset 'Snare Verb' (FX Snare Verb.bus) replaces the old one's processing values and effects; its GATED goes into FX8; what the old preset set and this one does not goes back to what an initialized strip reads; no preset leaf changes value
+  INFO bus 'Vox Verb': FX8 was judged free from the plan on the desk alone -- the occupancy read covers strips, not FX engines
+  INFO bus 'Vox Verb': preset "Vox Verb" -> "Snare Verb" -- no console address carries it, so nothing is written to the desk for it; it is kept (in the plan the journal entry holds) only when the same change writes something else
+  INFO bus 'Vox Verb': FX5 is no longer inserted on it; it keeps the old preset's effect and its values, inserted nowhere, as the desk has it
+  INFO bus 'Vox Verb': the change edits preset "Vox Verb" -> "Snare Verb"; preset_values {"preset": "Vox Verb", "file": "FX Vox Verb.bus", "library": "starter/presets", "sha256": "2e283e8906b0bd3a7723e450f4... -> {"preset": "Snare Verb", "file": "FX Snare Verb.bus", "library": "starter/presets", "sha256": "bf3c8a07f670470940c6ac...
+
+12 address(es) will be written; 1613 belonging to objects this amend does not own will NOT be.
+  12 of them CHANGE A RUNNING OBJECT -- only the fields the change names:
+    /fx/8/mdl: bus 7 (Vox Verb): FX8 effect GATED
+    /fx/8/fxmix: bus 7 (Vox Verb): FX8 GATED fxmix
+    /fx/8/pdel: bus 7 (Vox Verb): FX8 GATED pdel
+    /fx/8/att: bus 7 (Vox Verb): FX8 GATED att
+    /fx/8/dcy: bus 7 (Vox Verb): FX8 GATED dcy
+    /fx/8/dens: bus 7 (Vox Verb): FX8 GATED dens
+    /fx/8/diff: bus 7 (Vox Verb): FX8 GATED diff
+    /fx/8/sprd: bus 7 (Vox Verb): FX8 GATED sprd
+    /fx/8/lc: bus 7 (Vox Verb): FX8 GATED lc
+    /fx/8/hsf: bus 7 (Vox Verb): FX8 GATED hsf
+    /fx/8/hsg: bus 7 (Vox Verb): FX8 GATED hsg
+    /bus/7/preins/ins: bus 7 (Vox Verb): pre-insert -> FX8 (GATED)
+  INFO input.csv: 16 of its 16 row(s) are used by the changed plan and were checked as a full build checks them (stated sockets and presets, phantom power against the microphone); 1 channel(s) of the changed plan are not on it (Music) -- added by this change, an earlier one or the conventions -- and are taken as they stand, not called invented. A row the plan does not use is not called dropped: a change does not rebuild the show
+
+Pre-flight verify of the changed plan against the WING Compact the plan is for (reviewed offline: no desk was asked): no findings.
+  ...
+```
+
+The *Snare Verb* preset was saved with its GATED in FX8, which nothing on
+the plan inserts, so it goes there; FX5 keeps the V-REV, inserted nowhere.
+The two presets set the same bus processing, so no bus value moves; between
+two presets that differ, the INFO lists the leaves that move. Only FX8 and
+the bus's insert are written, and Undo puts back what the desk held before:
+the model FX8 had, and that model's own parameters, which the desk drops
+when the model changes.
+
+When every engine that can hold the effect is already inserted somewhere,
+the change is refused, naming them: *"the bus preset 'Snare Verb' inserts
+GATED on its pre-insert, and every FX engine that can hold it (FX1-8) is
+already in use on the desk"*. Take an effect off another bus first, to free
+one.
 
 ## Keeping a change for good: `--promote`
 

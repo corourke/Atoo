@@ -1,0 +1,28 @@
+{
+  "name": "Snare Verb on the Vox Verb bus",
+  "add": {
+    "channels": [],
+    "busses": {},
+    "dcas": {},
+    "mute_groups": {},
+    "outputs": {}
+  },
+  "drop": {
+    "channels": [],
+    "busses": [],
+    "dcas": [],
+    "mute_groups": [],
+    "outputs": []
+  },
+  "modify": [
+    {
+      "object": "bus",
+      "name": "Vox Verb",
+      "change": "Snare Verb preset",
+      "fields": {
+        "preset": "Snare Verb"
+      }
+    }
+  ],
+  "notes": []
+}
