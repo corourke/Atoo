@@ -125,7 +125,7 @@ atoo verify --show docs/user/demo/touringband --plan starter/demo-show/plan.json
 ```
 
 ```
-30 error(s), 0 warning(s), 3 note(s)
+31 error(s), 0 warning(s), 3 note(s)
 
   [error] channels[Rack Tom]: source 'Rack Tom' is not on the input list -- the plan invented an input that nobody is going to plug in  (reconcile.invented-source)
   ...

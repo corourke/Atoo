@@ -361,15 +361,25 @@ atoo verify --plan /tmp/even-first.plan.json --input /tmp/even-first.csv
 BLOCKED: do not apply.
 ```
 
-Exit code 2. Better here than at soundcheck: move one cable, or use `USR` below.
+Exit code 2. That plan was edited by hand. A **build** from the same list does not stop here: it patches the pair through the desk's user patches, below.
 
 ## When the cabling cannot give you an adjacent pair
 
-The two halves land on different stage boxes. Or they are two playback tracks 32 apart on one card. The desk's own way round this is a **user signal** or **user patch**: two consecutive slots of its `USR` group, each pointed at any source you like, then patched as an ordinary pair.
+The two halves land on `LCL 4` and `LCL 5`, or on different stage boxes, or on two playback tracks 32 apart on one card. The desk's own way round this is a **user patch**: two consecutive slots of its `USR` group, from USR 25 to USR 56 and odd first, each taking one input socket as it is. The channel is patched to the two slots as an ordinary pair.
 
-A plan states those slots in a top-level `user_sources` section, and `verify` checks them — including the odd-first rule, which is not bypassed anywhere.
+**The build does this for you.** When the two rows of a pair state sockets the desk cannot pair, the build makes one stereo channel, patched to the first free pair of user patch slots, each slot taking its row's socket. It says so at INFO:
 
-`apply` writes each slot (what it takes, and its name) before the channel that patches it, and sets both slots of a stereo pair to stereo; Undo puts them back. How a slot set this way sounds at the strip has not yet been checked on a desk.
+*'Keys L' (LCL 4) and 'Keys R' (LCL 5) can't be one stereo pair as cabled -- the pair starts on 4, an even socket (a pair always starts on an odd one) -- so 'Keys' is patched through user patch USR 25-26, which take LCL 4 and LCL 5*
+
+- **The build summary** shows the patch as `USR 25-26 (LCL 4 + LCL 5)`.
+- **Phantom power and gain** are set on the two sockets, `LCL 4` and `LCL 5`, not on the slots.
+- **The slots your `user.csv` names** are left alone ([User signals and patches](capture.md#user-signals-and-patches-usercsv)).
+- **A pair the desk can form directly** (`LCL 3` and `LCL 4`) stays a direct patch.
+- **With no pair of slots free**, the two rows are built as two mono channels, with an INFO saying why.
+
+A plan can also state slots by hand, in its top-level `user_sources` section. `verify` checks them, including the odd-first rule, which is not bypassed anywhere, and checks each row's stated socket against the socket its slot takes.
+
+`apply` writes each slot (what it takes, and its name) before the channel that patches it, and sets both slots of a stereo pair to stereo; Undo puts them back. How a pair set this way sounds at the strip has not yet been checked on a desk.
 
 ## Checking a list before the desk exists
 
