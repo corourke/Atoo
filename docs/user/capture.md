@@ -194,7 +194,7 @@ A slot assigned on the desk that nothing reads gets no row; the capture says so 
 
 **A build lays it on** after `busses.csv` and `outputs.csv`: a row wins for its slot over what the conventions made, a blank `tap`, `leg` or `name` keeps the plan's, `OFF` takes the slot out, and a slot the file doesn't name is left to the conventions. Each change is an INFO (`build.user-sheet`), for example *user.csv wins over the conventions: USR 3 takes CH 11 PRE L+R (Lead post) (was CH 10 POST L+R (Lead post)).* A row that cannot work stops the build, naming it: a slot past USR 56, a user patch given a strip or a tap, a user signal given a socket, a strip the desk does not have, a slot listed twice. A slot nothing reads yet is kept, so you can define a feed before you patch it; verify says so at INFO, in case the slot number was mistyped. The plan records the file's fingerprint, so editing it in another program makes the plan **Stale** until you rebuild or save it in Build.
 
-**Build's step 04 shows it** as its **User signals and patches** table, under Mains and Matrix: a row per slot, with what reads it (the outputs and channels fed from it) in **Read by**. **Add a slot** takes the lowest user signal the table does not have, at POST on both legs. A slot typed as a user patch drops its tap and leg. **Save** writes `user.csv` in the desk's words and updates the plan, with no model; a cell that cannot work locks it, with the reason under the row. What reads a slot is set in Outputs or Channels, not here.
+**Build's step 04 shows it** as its **User signals and patches** table, under Mains and Matrix: a row per slot, with what reads it (the outputs and channels fed from it) in **Read by**. **Add a slot** takes the lowest user signal the table does not have, at POST on both legs. A slot typed as a user patch drops its tap and leg. **✕** takes a slot out ([Removing a row](#removing-a-row)). **Save** writes `user.csv` in the desk's words and updates the plan, with no model; a cell that cannot work locks it, with the reason under the row. What reads a slot is set in Outputs or Channels, not here.
 
 ## What stays out of the sheets
 
@@ -233,13 +233,36 @@ A cell that cannot work on the desk turns red, with the reason under its row, be
 
 Nothing goes to the desk until you apply the plan. A role, a label or a note changes nothing on the desk.
 
+### Removing a row
+
+Every row of Busses, Mains and Matrix, Outputs, and User signals and patches has a **✕** at its end, as Channels does. A folded run in Outputs has one too, for all its sockets. Press it and the row says `OFF`: a bus's, Main's or Matrix's **Name**, or a socket's or a slot's **Source**. The row stays, dimmed and tagged **removed**, until you save or press **Discard**. A row you added and have not saved goes at once.
+
+**Save** carries it out and never refuses it. The object leaves the plan, and what pointed at it follows, each said in the plan's notes (step 04's **Details**, *Notes on the desk sheets*):
+
+- a **bus** or **Matrix**: every send into it comes off, and the sockets it fed are no longer fed;
+- a **Main**: every route to it comes off, a Matrix it fed loses it as a source, and its sockets are no longer fed;
+- other rows' **sources** stop naming it, in the plan and in `busses.csv`;
+- a bus that went only to a removed Main now feeds nothing. That is said, naming the bus, but not refused: route it somewhere before you apply;
+- a **socket** is disconnected;
+- a **slot** comes out, and what still reads it is named: *USR 3 taken out (was CH 10 POST L+R (Lead post)); USB 29 still reads it, so it carries nothing until patched from something else.*
+
+On the church show the examples above capture, open it with `atoo ui --show /tmp/shows/church-full-2026-10-24`, press **✕** on Bus 9 (Presentr) in Busses, and press **Save busses.csv**. It says:
+
+*Saved church-full-2026-10-24/busses.csv: 1 row(s) changed. outputs.csv follows: LCL 1 removed; LCL 2 removed. The plan is updated: Bus 9 removed.*
+
+and in the notes:
+
+*Bus 9 'Presentr' is removed, as busses.csv says (OFF): it is returned to free; Guide, Drums, Drums Comp, VOCALS, Tracks, Reverb, CHORUS, DrumGATEVerb no longer send to it; LCL 1, LCL 2 are no longer fed from it.*
+
+**The `OFF` line stays in the file**, so a rebuild leaves the object out too, even when your conventions or instructions still ask for it, as any filled cell wins over them. To bring it back, type over `OFF` (a name, or a source) and save, or delete its line from the file and rebuild.
+
 ### The Outputs table
 
 One row per output socket: the socket, what feeds it in the desk's words (`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up together, fed by sources that go up together, fold into one line of read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a bus's two sides. Press **▸** to open the run and edit its rows. A run holding an edited or refused row stays open.
 
 The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double gray for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted gray for a send, the monitor or the oscillator. The square beside the source is the desk's own color for it, as [the desk shows it](#the-desks-colors).
 
-To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket** adds a row. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. **Save outputs.csv** writes the file and updates the plan, with no model: the file is written in the desk's output order and words, with your notes, and a socket you took `OFF` has no row. Moving a bus, a Main or a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
+To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket** adds a row. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. **Save outputs.csv** writes the file and updates the plan, with no model: the file is written in the desk's output order and words, with your notes, and a socket you took `OFF` keeps its `OFF` row, so a rebuild leaves it disconnected ([Removing a row](#removing-a-row)). Moving a bus, a Main or a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
 
 ### While Watch runs
 
