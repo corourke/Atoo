@@ -18,7 +18,7 @@ Every command and every option, generated from the code so it cannot drift. For 
 
 `atoo --version` (or `a2 --version`) prints which copy of Atoo is running, and exits `0`: the version, the folder the code runs from and, for a git checkout, its branch, short commit and whether tracked files have uncommitted changes, then the Python it runs on. It is not an option of any command, so it is not in the tables below. [Which atoo am I running?](install-from-checkout.md#4-which-atoo-am-i-running) reads it.
 
-Every command that reads or writes a desk or calls a model (`build`, `apply`, `patch`, `amend`, `undo`, `ping`, `audit`, `watch`, `resolve`) prints the same first line on stderr, `atoo 0.2.5 (running from ...)`, before it does anything else, so the output of a run that went wrong always says which copy produced it.
+Every command that reads or writes a desk or calls a model (`build`, `apply`, `patch`, `amend`, `undo`, `ping`, `audit`, `watch`, `resolve`) prints the same first line on stderr, `atoo 0.2.6 (running from ...)`, before it does anything else, so the output of a run that went wrong always says which copy produced it.
 
 ## Exit codes
 

@@ -223,7 +223,7 @@ The second line is the model call's usage: tokens in and out, and what it cost.
 
 Deleting the file does the same at the next build. Editing it by hand works, and the edit lasts until the next time it goes stale, when it is overwritten — so an edit worth keeping belongs in your conventions. `atoo build --no-resolve` (or `ATOO_RESOLVE=0`) builds from your conventions and the domain knowledge as they are, without it.
 
-Commit it beside your conventions: it is the reading every show was built from. Its header records the three checksums it is fresh against and which Atoo made it (`atoo: 0.2.5 (8779a67)`, the version and git commit). The checksums ignore line endings and Unicode spelling, so the same files read fresh on any machine. If a machine finds the file stale when you expected it fresh, the message names the Atoo that made it and the one reading it -- usually a checkout that has not been pulled yet.
+Commit it beside your conventions: it is the reading every show was built from. Its header records the three checksums it is fresh against and which Atoo made it (`atoo: 0.2.6 (8779a67)`, the version and git commit). The checksums ignore line endings and Unicode spelling, so the same files read fresh on any machine. If a machine finds the file stale when you expected it fresh, the message names the Atoo that made it and the one reading it -- usually a checkout that has not been pulled yet.
 
 ### The Category table
 

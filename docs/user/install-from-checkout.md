@@ -59,7 +59,7 @@ atoo --version
 ```
 
 ```text
-atoo 0.2.5 (running from ~/Atoo/atoo; branch my-branch, a1b2c3d, clean)
+atoo 0.2.6 (running from ~/Atoo/atoo; branch my-branch, a1b2c3d, clean)
 Python 3.13.16 at ~/Atoo/.venv/bin/python3
 ```
 
@@ -68,7 +68,7 @@ The first line is the answer: the version, the folder the code runs from, and, f
 The installed copy's first line is different, and names no branch:
 
 ```text
-atoo 0.2.5 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.6 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 ```
 
 That is a private copy of a release, which never follows `git checkout`. If you see it while testing a branch, the virtualenv is not active in this terminal: run the `source` line from step 2 in the clone. Without `git` on the machine, a clone says `a git checkout, but git is not installed` in place of the branch.

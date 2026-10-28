@@ -6,7 +6,7 @@ A healthy start says which Atoo is running, opens the page in your browser, and 
 
 ```text
 $ atoo ui --plan touringband/plan.json
-atoo 0.2.5 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
+atoo 0.2.6 (installed copy at ~/.local/share/uv/tools/atoo/lib/python3.12/site-packages/atoo)
 Plan: touringband/plan.json -- on Build step 04
 Console: none configured -- set one in the bundle bar (Change…) before Ping, Apply or a live Watch.
 Working folder: ~/Documents/Atoo
