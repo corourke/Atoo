@@ -56,7 +56,8 @@ def _label(path: "Path | None", display) -> str:
 
 
 def assess(plan: object, *, conventions: "Path | None", instructions: "Path | None",
-           input_list: "Path | None", display=None) -> dict:
+           input_list: "Path | None", display=None, bus_sheet: "Path | None" = None,
+           outputs_sheet: "Path | None" = None, user_sheet: "Path | None" = None) -> dict:
     """Compare what ``plan`` records against the three files a build would
     read now.
 
@@ -81,8 +82,14 @@ def assess(plan: object, *, conventions: "Path | None", instructions: "Path | No
         reasons.append({"slot": slot, "code": code, "message": message})
 
     # ---- the house conventions, and instructions.md -------------------
+    # A plan captured from a desk (`atoo capture`) was made from no
+    # conventions and no instructions, so there is nothing to compare:
+    # "cannot tell" would offer a rebuild that replaces the capture.
+    captured = meta.get("made_from") in ("desk", "snap")
     house = layers.get("conventions")
-    if not house or not house.get("sha256"):
+    if captured:
+        pass
+    elif not house or not house.get("sha256"):
         unknown.append({
             "slot": "conventions",
             "message": "This plan records no fingerprint of the conventions it was built "
@@ -143,6 +150,57 @@ def assess(plan: object, *, conventions: "Path | None", instructions: "Path | No
             changed("input_list", "plan.input-list-edited",
                     f"{_label(input_list, display)} changed after this plan was built.")
 
+    # ---- the bus sheet ----------------------------------
+    # Recorded by `atoo capture` and by a Save in step 04. A plan that
+    # records none was not made from one, so there is nothing to say.
+    recorded_sheet = meta.get("bus_sheet") if isinstance(meta.get("bus_sheet"), dict) else None
+    if recorded_sheet and recorded_sheet.get("sha256"):
+        sheet = bus_sheet
+        now = conventions_ref.file_sha256(sheet) if sheet is not None else None
+        if now is None:
+            changed("bus_sheet", "plan.bus-sheet-gone",
+                    "There is no busses.csv now; this plan was made from "
+                    f"{recorded_sheet.get('bundle_relative_path') or recorded_sheet.get('path')}.")
+        elif now != recorded_sheet["sha256"]:
+            changed("bus_sheet", "plan.bus-sheet-edited",
+                    f"{_label(sheet, display)} changed after this plan was made, outside "
+                    "step 04's Save; Save in step 04's Busses table, or a rebuild, updates the "
+                    "plan from it.")
+
+    # ---- the outputs sheet ------------------------------
+    # The same, for `outputs.csv`: recorded by `atoo capture` and by a
+    # build made from it.
+    recorded_outputs = (meta.get("outputs_sheet") if isinstance(meta.get("outputs_sheet"), dict)
+                        else None)
+    if recorded_outputs and recorded_outputs.get("sha256"):
+        sheet = outputs_sheet
+        now = conventions_ref.file_sha256(sheet) if sheet is not None else None
+        if now is None:
+            changed("outputs_sheet", "plan.outputs-sheet-gone",
+                    "There is no outputs.csv now; this plan was made from "
+                    f"{recorded_outputs.get('bundle_relative_path') or recorded_outputs.get('path')}.")
+        elif now != recorded_outputs["sha256"]:
+            changed("outputs_sheet", "plan.outputs-sheet-edited",
+                    f"{_label(sheet, display)} changed after this plan was made; a rebuild "
+                    "updates the plan from it.")
+
+    # ---- the user sheet ---------------------------------
+    # The same, for `user.csv`: recorded by `atoo capture`, by a build made
+    # from it, and by a Save in step 04's table.
+    recorded_user = meta.get("user_sheet") if isinstance(meta.get("user_sheet"), dict) else None
+    if recorded_user and recorded_user.get("sha256"):
+        sheet = user_sheet
+        now = conventions_ref.file_sha256(sheet) if sheet is not None else None
+        if now is None:
+            changed("user_sheet", "plan.user-sheet-gone",
+                    "There is no user.csv now; this plan was made from "
+                    f"{recorded_user.get('bundle_relative_path') or recorded_user.get('path')}.")
+        elif now != recorded_user["sha256"]:
+            changed("user_sheet", "plan.user-sheet-edited",
+                    f"{_label(sheet, display)} changed after this plan was made, outside "
+                    "step 04's Save; Save in step 04's User signals and patches table, or a "
+                    "rebuild, updates the plan from it.")
+
     state = STALE if reasons else (UNKNOWN if unknown else CURRENT)
     return {"state": state, "reasons": reasons, "unknown": unknown,
             "built_at": meta.get("generated_at")}
@@ -188,6 +246,9 @@ def assess_bundle(plan: object, show, conventions: "Path | None" = None) -> dict
     return assess(plan, conventions=conventions,
                   instructions=show.path(bundle_module.INSTRUCTIONS),
                   input_list=show.path(bundle_module.INPUT_LIST),
+                  bus_sheet=show.directory / bundle_module.BUSSES,
+                  outputs_sheet=show.directory / bundle_module.OUTPUTS,
+                  user_sheet=show.directory / bundle_module.USER,
                   display=lambda p: _bundle_display(p, show))
 
 

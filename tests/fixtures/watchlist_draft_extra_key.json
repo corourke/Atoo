@@ -7,7 +7,7 @@
       "index": 1,
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
@@ -16,7 +16,7 @@
       "channel": "Lead Vox",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
@@ -24,7 +24,7 @@
       "description": "An invented field: refused on its own",
       "channel": "Kick",
       "field": "gain",
-      "operator": "==",
+      "operator": "!=",
       "value": 20,
       "severity": "warning"
     }

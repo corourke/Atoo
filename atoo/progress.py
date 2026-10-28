@@ -1,7 +1,7 @@
 """Say what a long, silent console read is doing while it does it.
 
-A live `audit --console` asks a WING Compact for 6,195
-addresses -- one at a time, then; 323 requests by node dump, pipelined
+A live `audit --console` asks a WING Compact for 6,197
+addresses -- one at a time, then; 325 requests by node dump, pipelined
 eight in flight, today -- and, until this
 module existed, printed **nothing at all** until it was finished. Run at the desk
 mid-session, it could not be told from a hang.

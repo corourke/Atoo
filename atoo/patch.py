@@ -546,6 +546,18 @@ def _object_names(section: dict) -> set[str]:
     return names - {""}
 
 
+def changes_nothing(change_set: dict) -> bool:
+    """A change set that adds, drops and edits nothing. An instruction typed
+    to change the desk that compiles to this was not carried out: a model
+    that judged it impossible (a send to a bus the desk does not have) and
+    said so in `notes` instead of writing it for the code to refuse."""
+    for section in ("add", "drop"):
+        body = change_set.get(section)
+        if isinstance(body, dict) and any(body.get(key) for key, _ in OBJECT_KINDS):
+            return False
+    return not change_set.get("modify")
+
+
 def retraction_note(change_set: dict) -> str | None:
     """The first of the reply's notes that says the reply is not the answer."""
     for note in change_set.get("notes") or []:
@@ -560,7 +572,10 @@ def reply_shortfall(change_text: str, base: dict, change_set: dict) -> str | Non
     retracts the reply, and fewer additions than the words name (quoted
     names, or a count the words state). A quoted name the reply writes
     anywhere, or that is already on the desk, is not missing, and an L/R
-    pair merged into one stereo "Choir" counts as both."""
+    pair merged into one stereo "Choir" counts as both. A quoted name longer
+    than the console shows counts as written when its cut form is: the reply
+    has already been read, and a strip's name cut to its sixteen characters
+    (`_cut_cosmetic_names`, said at INFO)."""
     note = retraction_note(change_set)
     if note:
         return (f'the reply\'s own note says it is not the answer: "{note.strip()}". '
@@ -579,6 +594,9 @@ def reply_shortfall(change_text: str, base: dict, change_set: dict) -> str | Non
     for quoted in quotes:
         name = _norm(quoted)
         if not name or name in seen:
+            continue
+        if len(quoted) > facts.NAME_MAX_CHARS and _norm(
+                quoted[:facts.NAME_MAX_CHARS].rstrip() or quoted[:facts.NAME_MAX_CHARS]) in seen:
             continue
         side = _SIDE.match(quoted)
         if side and any(_norm(c.get("name")) == _norm(side.group(1)) for c in channels):
@@ -666,7 +684,7 @@ def _repair(provider, system: str, user: str, schema, reply: str, problem: str,
     if infos is not None:
         infos.append(f"the first reply was not accepted ({first_line}); it was sent back once with "
                      "that message and the second reply is the one used -- both calls are in the "
-                     "usage lines above, the second labelled 'change-repair'")
+                     "usage lines above, the second labeled 'change-repair'")
     return change_set
 
 
@@ -871,7 +889,7 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
         if clash:
             warnings.append(
                 f"channel {where}: the change names {text}, which {clash[0]} already uses -- "
-                "honoured as named (one socket can feed two strips on a WING), but check "
+                "honored as named (one socket can feed two strips on a WING), but check "
                 "that is what was meant")
         else:
             infos.append(f"channel {where}: patched to {text}, the socket the change named")
@@ -937,23 +955,28 @@ _WORD = dict(OBJECT_KINDS)
 
 #: The console root of each kind of named object the desk holds a name for.
 _DESK_ROOT = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
+#: An output is a Main or a Matrix: the roots its name is read under, and the
+#: plan's `kind` for each.
+_OUTPUT_ROOTS = {"main": "main", "mtx": "matrix"}
+_OUTPUT_NUMBER = re.compile(r"^\s*(main|matrix|mtx)\s*(\d+)\s*$", re.IGNORECASE)
 _DESK_CAPACITY = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
 _TAG_OF = {"dcas": "D", "mute_groups": "M"}
 
 
 def unknown_names(base: dict, change_set: dict) -> dict[str, list[str]]:
-    """The busses, DCAs and mute groups the change names (drops, edits, and the
-    references of the channels it adds or edits) that the plan on the desk
+    """The busses, DCAs, mute groups and outputs the change names (drops, edits,
+    and the references of the channels it adds or edits) that the plan on the desk
     does not know: `{plan key: [names]}`. A desk Atoo did not set up holds
     them anyway; `adopt_desk_objects` reads what it holds."""
     wanted: dict[str, list[str]] = {}
 
     def want(key: str, name: object) -> None:
-        if key in _DESK_ROOT and name is not None and str(name) not in (base.get(key) or {}):
+        if (key in _DESK_ROOT or key == "outputs") and name is not None \
+                and str(name) not in (base.get(key) or {}):
             if str(name) not in wanted.setdefault(key, []):
                 wanted[key].append(str(name))
 
-    for key in _DESK_ROOT:
+    for key in (*_DESK_ROOT, "outputs"):
         for name in (change_set.get("drop") or {}).get(key) or []:
             want(key, name)
     for channel in (change_set.get("add") or {}).get("channels") or []:
@@ -963,7 +986,7 @@ def unknown_names(base: dict, change_set: dict) -> dict[str, list[str]]:
         if not isinstance(request, dict):
             continue
         kind = _KEY_OF.get(str(request.get("object")))
-        if kind in _DESK_ROOT:
+        if kind in _DESK_ROOT or kind == "outputs":
             want(kind, request.get("name"))
         fields = request.get("fields")
         if isinstance(fields, dict):
@@ -977,36 +1000,250 @@ def name_reads(base: dict, change_set: dict, known: dict) -> list[tuple[str, str
     kinds the change names an unknown object of, unless `known` has it."""
     reads: list[tuple[str, str]] = []
     for key in unknown_names(base, change_set):
-        root = _DESK_ROOT[key]
-        reads.extend((f"/{root}/{n}/name", "s") for n in range(1, facts.CAPACITY[root] + 1)
-                     if f"/{root}/{n}/name" not in known)
+        for root in ((_DESK_ROOT[key],) if key != "outputs" else tuple(_OUTPUT_ROOTS)):
+            reads.extend((f"/{root}/{n}/name", "s") for n in range(1, facts.CAPACITY[root] + 1)
+                         if f"/{root}/{n}/name" not in known)
     return reads
 
 
 def member_reads(base: dict, change_set: dict, known: dict) -> list[tuple[str, str]]:
     """Then, once the names are in `known`: for an unknown bus the change drops,
-    which strips send into it, and for an unknown DCA or mute group it drops,
-    every strip's tags. Only these objects, never a sweep."""
+    which strips send into it; for an unknown DCA or mute group it drops,
+    every strip's tags; for an unknown Matrix it drops, which strips, busses
+    and Mains send into it; for an unknown bus whose destination it edits,
+    which Mains the bus is routed to; and for an unknown Main or Matrix it
+    renumbers, every setting of it and every send or route into it. Only
+    these objects, never a sweep."""
     reads: list[tuple[str, str]] = []
     dropped = change_set.get("drop") or {}
     strips = [(bank, n) for bank in ("ch", "aux") for n in range(1, facts.CAPACITY[bank] + 1)]
     for key, names in _found_on_desk(unknown_names(base, change_set), known).items():
         for name, index in names.items():
+            if key == "busses" and _edits_destination(change_set, name):
+                reads.extend(pair for pair in _bus_route_reads(index)
+                             if pair[0] not in known and pair not in reads)
+            if key == "outputs" and _output_renumber(change_set, name) is not None:
+                seen = set(reads)
+                for leaf in _output_move_leaves(_model_of(base), *index):
+                    pair = (leaf.address, leaf.value_type)
+                    if leaf.address not in known and pair not in seen:
+                        reads.append(pair)
+                        seen.add(pair)
             if name not in (dropped.get(key) or []):
                 continue
-            for bank, n in strips:
-                pair = ((f"/{bank}/{n}/send/{index}/on", "i") if key == "busses"
-                        else (f"/{bank}/{n}/tags", "s"))
+            if key == "outputs":
+                kind, index = index
+                if kind != "matrix":
+                    continue      # what feeds a Main is the strips' own routes
+                senders = strips + [("bus", n) for n in range(1, facts.CAPACITY["bus"] + 1)] \
+                    + [("main", n) for n in range(1, facts.CAPACITY["main"] + 1)]
+                pairs = [(f"/{bank}/{n}/send/MX{index}/on", "i") for bank, n in senders]
+            else:
+                pairs = [(f"/{bank}/{n}/send/{index}/on", "i") if key == "busses"
+                         else (f"/{bank}/{n}/tags", "s") for bank, n in strips]
+            for pair in pairs:
                 if pair[0] not in known and pair not in reads:
                     reads.append(pair)
     return reads
 
 
+def _edits_destination(change_set: dict, name: str) -> bool:
+    """Whether the change edits where bus `name` goes."""
+    for request in change_set.get("modify") or []:
+        if isinstance(request, dict) and _KEY_OF.get(str(request.get("object"))) == "busses" \
+                and str(request.get("name")) == name \
+                and any(str(path).split(".")[0] in ("destination", "destinations")
+                        for path in request.get("fields") or {}):
+            return True
+    return False
+
+
+def _bus_route_reads(index: int) -> list[tuple[str, str]]:
+    """Which Mains a bus is routed to: what an edit of its destination needs,
+    so a route it leaves is switched off as for a bus the plan built."""
+    return [(f"/bus/{index}/main/{m}/on", "i") for m in range(1, facts.CAPACITY["main"] + 1)]
+
+
+def _model_of(plan: dict) -> str | None:
+    meta = plan.get("meta") if isinstance(plan.get("meta"), dict) else {}
+    return meta.get("console_model")
+
+
+def _output_renumber(change_set: dict, name: str) -> int | None:
+    """The number the change gives output `name`, when it names one."""
+    for request in change_set.get("modify") or []:
+        if isinstance(request, dict) and _KEY_OF.get(str(request.get("object"))) == "outputs" \
+                and str(request.get("name")) == name \
+                and isinstance((request.get("fields") or {}).get("index"), int):
+            return request["fields"]["index"]
+    return None
+
+
+def _without_index(change_set: dict, name: str) -> dict:
+    """The change with output `name`'s renumber taken out, the request
+    dropped when that was all it asked: `_renumber_adopted_output` did it."""
+    change_set = copy.deepcopy(change_set)
+    kept = []
+    for request in change_set.get("modify") or []:
+        if isinstance(request, dict) and _KEY_OF.get(str(request.get("object"))) == "outputs" \
+                and str(request.get("name")) == name:
+            request["fields"] = {k: v for k, v in (request.get("fields") or {}).items()
+                                 if k != "index"}
+            if not request["fields"]:
+                continue
+        kept.append(request)
+    change_set["modify"] = kept
+    return change_set
+
+
+def _output_senders(kind: str, index: int) -> list[str]:
+    """The prefixes of everything that feeds Main or Matrix `index`: every
+    strip's, bus's and Main's send into a Matrix; every strip's and bus's
+    route to a Main."""
+    if kind == "matrix":
+        return [f"/{bank}/{n}/send/MX{index}/" for bank in ("ch", "aux", "bus", "main")
+                for n in range(1, facts.CAPACITY[bank] + 1)]
+    return [f"/{bank}/{n}/main/{index}/" for bank in ("ch", "aux", "bus")
+            for n in range(1, facts.CAPACITY[bank] + 1)]
+
+
+def _output_move_leaves(model: str | None, kind: str, index: int) -> list:
+    """Every leaf a renumber of an adopted Main or Matrix carries: the
+    object's own, in the order a reset writes them, and every send or route
+    into it. Scoped to that object, never a sweep."""
+    from atoo import initialize
+    root = "main" if kind == "main" else "mtx"
+    leaves = list(initialize.freed_leaves(model, f"/{root}/{index}/"))
+    for prefix in _output_senders(kind, index):
+        leaves.extend(initialize.freed_leaves(model, prefix))
+    return leaves
+
+
+def _renumber_adopted_output(plan: dict, name: str, kind: str, old: int, new: int,
+                             known: dict, model: str | None, vacating: set, infos: list,
+                             landings: list, clears: list, changes: list,
+                             follows: dict) -> bool:
+    """Renumber a Main or Matrix the plan does not know
+    from what the desk read: every setting of the object, and every send or
+    route into it, written on the new number at the value read, and the old
+    number returned to the initialized reading -- the move `_renumber` makes
+    for an object the plan built, from the desk instead of the plan.
+
+    False when the planned road should judge the number instead: out of
+    range, the same number, or held by an output of the plan -- it refuses
+    those saying why. A number the desk holds under a name the plan does not
+    know is refused here, as somebody else's -- unless another object read off
+    the desk is renumbered away from it by the same change (`vacating`, a
+    swap). The writes on the new number are `landings`, those on the old one
+    `clears`: the caller drops a clear where another renumber lands."""
+    from atoo import initialize
+    root = "main" if kind == "main" else "mtx"
+    word = "Main" if kind == "main" else "Matrix"
+    if not 1 <= new <= facts.CAPACITY[root] or new == old or any(
+            isinstance(o, dict) and o.get("kind") == kind and o.get("index") == new
+            and (kind, new) not in vacating
+            for n, o in (plan.get("outputs") or {}).items() if n != name):
+        return False
+    held = known.get(f"/{root}/{new}/name")
+    if isinstance(held, str) and held.strip() and (kind, new) not in vacating:
+        changes.append(Change(
+            ChangeKind.REFUSED, "output", repr(name),
+            f"the change renumbers it to {word} {new}, which the desk holds as {held!r} -- not "
+            "this plan's, so it is not written over; say what to do with it too, and both are "
+            "carried out", asked_by="the change"))
+        return True
+    stage = {"name": apply_module.STAGE_NAMES, "fdr": apply_module.STAGE_FADER_MUTE,
+             "mute": apply_module.STAGE_FADER_MUTE}
+    feed_stage = apply_module.STAGE_SENDS if kind == "matrix" else apply_module.STAGE_ROUTING
+    moved, unread, senders = 0, 0, []
+    groups = [(f"/{root}/{old}/", f"/{root}/{new}/", None)] + [
+        (prefix, target, " ".join(prefix.strip("/").split("/")[:2]))
+        for prefix, target in zip(_output_senders(kind, old), _output_senders(kind, new))]
+    for source, target, sender in groups:
+        leaves = initialize.freed_leaves(model, source)
+        values = {leaf.address: known.get(leaf.address) for leaf in leaves}
+        if sender is not None:
+            if values.get(f"{source}on") in (None, 0, "0", "OFF"):
+                continue      # nothing feeds it from here
+            senders.append(sender)
+        of = f" of {sender}'s feed" if sender else ""
+        for leaf in leaves:
+            value = values[leaf.address]
+            if value is None:
+                unread += 1
+                continue
+            rel = leaf.address[len(source):]
+            at = stage.get(rel, apply_module.STAGE_PROCESSING) if sender is None else feed_stage
+            landings.append(apply_module.WriteTarget(
+                target + rel, leaf.value_type,
+                f"{word} {old} ({name!r}) renumbered to {word} {new}: {rel}{of}, as the desk "
+                "held it", apply_module._const(value), at))
+            moved += 1
+            # The old number reads as an initialized one, and nothing feeds
+            # it any more: a feed's switch goes off even where an initialized
+            # desk has it on (every strip routed to Main 1).
+            left = 0 if sender is not None and rel == "on" else leaf.value
+            if value != left:
+                clears.append(apply_module.WriteTarget(
+                    leaf.address, leaf.value_type,
+                    f"{word} {old} ({name!r}) renumbered: {rel}{of} on its old number -> "
+                    + ("off" if left == 0 and rel == "on" else "as initialized"),
+                    apply_module._const(left), at))
+    plan["outputs"][name]["index"] = new
+    # The plan's own records that name it by number follow it (the caller,
+    # once for every renumber); their routes on the desk moved with the feed
+    # above, so they are records only, not edits.
+    follows.setdefault(kind, {})[old] = (new, name)
+    fed = (f" and the feed into it from {', '.join(senders[:8])}"
+           + (f" and {len(senders) - 8} more" if len(senders) > 8 else "")) if senders else ""
+    changes.append(Change(
+        ChangeKind.EDITED, "output", repr(name),
+        f"renumbered ({word} {old} -> {new}) from what the desk read: every setting of "
+        f"{word} {old}{fed} written on {word} {new}, and {word} {old} returned to the "
+        "initialized reading", asked_by="the change"))
+    infos.append(
+        f"output {name!r}: renumbered from {word} {old} to {word} {new} from what the desk read "
+        f"({moved} setting(s)); the output sockets it feeds were not read, so they still take "
+        f"{word} {old} -- name them in the change to move them too. Undo puts it all back"
+        + (f". {unread} setting(s) the desk did not answer for were not moved" if unread else ""))
+    return True
+
+
+def _adopted_bus(name: str, index: int, known: dict, change_set: dict, dropped: bool) -> tuple:
+    """The entry for a bus the plan does not know, and the INFO it is said
+    with. Where the change edits its destination, the Mains the desk routes it
+    to are its destination, so the routes it leaves are switched off;
+    otherwise its destination was not read and is null, and nothing of it is
+    written but what the change names."""
+    entry = {"index": index, "provenance": amend_engine.READ_FROM_DESK, "destination": None}
+    note = ""
+    if _edits_destination(change_set, name):
+        mains = [m for m in range(1, facts.CAPACITY["main"] + 1)
+                 if known.get(f"/bus/{index}/main/{m}/on") not in (None, 0, "0", "OFF")]
+        if len(mains) == 1:
+            entry["destination"] = {"type": "main", "index": mains[0]}
+        elif mains:
+            del entry["destination"]
+            entry["destinations"] = [{"type": "main", "index": m} for m in mains]
+        note = ("; the desk routes it to " + (", ".join(f"Main {m}" for m in mains)
+                                              if mains else "no Main"))
+    if not dropped:
+        note += ("; nothing else of it was read, so only what the change names is written "
+                 "and the rest of it stays as the desk has it")
+    return entry, note
+
+
 def _found_on_desk(unknown: dict[str, list[str]], known: dict) -> dict[str, dict[str, int]]:
     """`{plan key: {name asked for: desk index}}` for each unknown name the desk
     holds under that name (case aside; the lowest index when two hold it)."""
-    found: dict[str, dict[str, int]] = {}
+    found: dict[str, dict] = {}
     for key, names in unknown.items():
+        if key == "outputs":
+            for name in names:
+                spot = _output_on_desk(name, known)
+                if spot is not None:
+                    found.setdefault(key, {})[name] = spot
+            continue
         root = _DESK_ROOT[key]
         held = {n: known.get(f"/{root}/{n}/name") for n in range(1, facts.CAPACITY[root] + 1)}
         for name in names:
@@ -1018,34 +1255,96 @@ def _found_on_desk(unknown: dict[str, list[str]], known: dict) -> dict[str, dict
     return found
 
 
-def adopt_desk_objects(base: dict, change_set: dict, known: dict) -> tuple[dict, list[str], list[str]]:
-    """The plan on the desk, with each bus, DCA or mute group the change names
-    that the plan does not know but the desk holds put in as the desk has it: `(plan, infos, warnings)`.
+def _output_on_desk(name: str, known: dict) -> tuple[str, int] | None:
+    """`(kind, index)` of the Main or Matrix the desk holds under `name` (case
+    aside), else of the one "Matrix 1" / "Main 2" names by its number, else
+    None."""
+    for root, kind in _OUTPUT_ROOTS.items():
+        for n in range(1, facts.CAPACITY[root] + 1):
+            held = known.get(f"/{root}/{n}/name")
+            if isinstance(held, str) and held.strip() \
+                    and held.strip().casefold() == name.strip().casefold():
+                return kind, n
+    match = _OUTPUT_NUMBER.match(name)
+    if match:
+        kind = "main" if match.group(1).lower() == "main" else "matrix"
+        number = int(match.group(2))
+        if 1 <= number <= facts.CAPACITY["main" if kind == "main" else "mtx"]:
+            return kind, number
+    return None
+
+
+def adopt_desk_objects(base: dict, change_set: dict,
+                       known: dict) -> tuple[dict, dict, list[str], list[str], list, list, set]:
+    """The plan on the desk, with each bus, DCA, mute group or output the
+    change names that the plan does not know but the desk holds put in as the
+    desk has it (outputs by `_adopt_output`):
+    `(plan, change_set, infos, warnings, writes, changes, read)`.
 
     The entry is the desk's index and nothing the desk was not asked: a bus
     the change drops then goes through the same road as one the plan built --
     returned to free from the model's capture -- and the strips of the plan
     that send into it, or belong to a DCA or mute group it drops, are given
     that membership so the change takes it away. A strip the plan does not
-    hold that does the same is named in a WARNING and left as it is: the
-    plan has no record of it to edit."""
+    hold that does the same has it taken away too, from what the desk read: its send into the bus switched off, or the group's
+    tag taken out of its tags -- `writes`, which the review writes, journals
+    and Undo restores, said at INFO. The plan gains no record of the strip.
+
+    A Main or Matrix the change renumbers is moved here, from what the desk
+    read (`_renumber_adopted_output`): its writes join `writes`, its verdict
+    is in `changes`, the addresses it writes in `read` (the plan's own render
+    of it is not written beside them), and `change_set` comes back without
+    that renumber."""
     unknown = unknown_names(base, change_set)
     found = _found_on_desk(unknown, known)
     if not found:
-        return base, [], []
+        return base, change_set, [], [], [], [], set()
     plan = copy.deepcopy(base)
     infos: list[str] = []
     warnings: list[str] = []
+    writes: list = []
+    changes: list = []
+    read: set = set()
     dropped = change_set.get("drop") or {}
     for key, names in found.items():
         word = _WORD[key]
         plan.setdefault(key, {})
+        if key == "outputs":
+            for name, (kind, index) in names.items():
+                _adopt_output(plan, name, kind, index, known,
+                              name in (dropped.get(key) or []), infos, writes)
+            # Renumbers of objects read off the desk land before any clear:
+            # two that swap numbers each write the other's old number, once.
+            vacating = {spot for name, spot in names.items()
+                        if _output_renumber(change_set, name) is not None}
+            landings: list = []
+            clears: list = []
+            follows: dict = {}
+            for name, (kind, index) in names.items():
+                new = _output_renumber(change_set, name)
+                if new is not None and _renumber_adopted_output(
+                        plan, name, kind, index, new, known, _model_of(base), vacating,
+                        infos, landings, clears, changes, follows):
+                    change_set = _without_index(change_set, name)
+            for key in ("channels", "busses", "outputs"):
+                plan.setdefault(key, [] if key == "channels" else {})
+            for kind, moves in follows.items():
+                _follow_number(plan, kind, moves, infos)
+            landed = {t.address for t in landings}
+            writes.extend(landings + [t for t in clears if t.address not in landed])
+            read.update(t.address for t in landings + clears)
+            continue
         for name, index in names.items():
-            plan[key][name] = {"index": index, "adopted": "read from the desk"}
+            note = ""
+            if key == "busses":
+                plan[key][name], note = _adopted_bus(name, index, known, change_set,
+                                                     name in (dropped.get(key) or []))
+            else:
+                plan[key][name] = {"index": index, "provenance": amend_engine.READ_FROM_DESK}
             infos.append(
                 f"{word} {name!r} is not in the plan on the desk, but the desk holds it as "
                 f"{word} {index} ({known.get(f'/{_DESK_ROOT[key]}/{index}/name')!r}), so the "
-                "change is carried out against that")
+                "change is carried out against that" + note)
             if name not in (dropped.get(key) or []):
                 continue
             by_slot = {(str(c.get("bank", "ch")), c.get("channel")): c
@@ -1064,6 +1363,7 @@ def adopt_desk_objects(base: dict, change_set: dict, known: dict) -> tuple[dict,
                     channel = by_slot.get((bank, n))
                     if channel is None:
                         unrecorded.append(f"{bank} {n}")
+                        writes.append(_unrecorded_write(key, name, index, bank, n))
                     elif key == "busses":
                         channel.setdefault("bus_sends", []).append(
                             {"bus": name, "mode": None, "level_db": None})
@@ -1071,14 +1371,94 @@ def adopt_desk_objects(base: dict, change_set: dict, known: dict) -> tuple[dict,
                         field_name = "dca" if key == "dcas" else "mute_group"
                         channel.setdefault(field_name, []).append(name)
             if unrecorded:
-                warnings.append(
+                infos.append(
                     f"{word} {name!r}: "
                     + ("a send into it" if key == "busses" else "membership of it")
                     + f" on {', '.join(unrecorded[:8])}"
                     + (f" and {len(unrecorded) - 8} more" if len(unrecorded) > 8 else "")
-                    + " is on the desk but not in the plan, which has no record of those strips "
-                    "to edit, so it is left as the desk has it")
-    return plan, infos, warnings
+                    + (", a strip" if len(unrecorded) == 1 else ", strips")
+                    + " the plan has no record of, is "
+                    + ("switched off" if key == "busses" else "taken off")
+                    + " there too, from what the desk read; Undo puts it back")
+    return plan, change_set, infos, warnings, writes, changes, read
+
+
+def _adopt_output(plan: dict, name: str, kind: str, index: int, known: dict, dropped: bool,
+                  infos: list, writes: list) -> None:
+    """A Main or Matrix the plan does not know, put in as the desk holds it. Its sockets are not read: they stay patched as the
+    desk has them, said at INFO. For a Matrix the change drops, every send into
+    it the desk read is switched off -- a write, whether or not the plan holds
+    the strip, bus or Main it comes from, since the plan has no record of the
+    send -- reviewed, journalled and undone with the rest of the change."""
+    root = "main" if kind == "main" else "mtx"
+    word = "Main" if kind == "main" else "Matrix"
+    held = known.get(f"/{root}/{index}/name")
+    plan["outputs"][name] = {"kind": kind, "index": index, "socket": None,
+                             "provenance": amend_engine.READ_FROM_DESK}
+    infos.append(f"output {name!r} is not in the plan on the desk, but the desk holds it as "
+                 f"{word} {index}" + (f" ({held!r})" if isinstance(held, str) and held else "")
+                 + ", so the change is carried out against that; the output sockets it feeds "
+                 "are not in the plan, and are left patched as the desk has them")
+    if not dropped:
+        return
+    if kind == "main":
+        infos.append(f"output {name!r}: the strips and busses routed to Main {index} keep "
+                     "their routes as the desk has them; the Main itself reads as an "
+                     "initialized one")
+        return
+    owned = {("ch" if str(c.get("bank", "ch")) == "ch" else "aux", c.get("channel"))
+             for c in plan.get("channels") or [] if isinstance(c, dict)}
+    owned |= {("bus", e.get("index")) for e in (plan.get("busses") or {}).values()
+              if isinstance(e, dict)}
+    owned |= {("main", e.get("index")) for e in (plan.get("outputs") or {}).values()
+              if isinstance(e, dict) and e.get("kind") == "main"}
+    sent: list[str] = []
+    unrecorded: list[str] = []
+    senders = [(b, n) for b in ("ch", "aux") for n in range(1, facts.CAPACITY[b] + 1)] \
+        + [("bus", n) for n in range(1, facts.CAPACITY["bus"] + 1)] \
+        + [("main", n) for n in range(1, facts.CAPACITY["main"] + 1)]
+    for bank, n in senders:
+        on = known.get(f"/{bank}/{n}/send/MX{index}/on")
+        if not on or on in (0, "0", "OFF"):
+            continue
+        mine = (bank, n) in owned
+        (sent if mine else unrecorded).append(f"{bank} {n}")
+        writes.append(apply_module.WriteTarget(
+            f"/{bank}/{n}/send/MX{index}/on", "i",
+            f"{bank} {n}" + ("" if mine else " (not in the plan)")
+            + f": no longer sends to Matrix {index} ({name!r}), dropped by the change",
+            apply_module._const(0), apply_module.STAGE_SENDS))
+
+    def listed(where: list[str]) -> str:
+        return ", ".join(where[:8]) + (f" and {len(where) - 8} more" if len(where) > 8 else "")
+
+    if sent:
+        infos.append(f"output {name!r}: the send into it on {listed(sent)}, which the desk "
+                     "reads as on, is switched off, from what the desk read; Undo puts it back")
+    if unrecorded:
+        infos.append(f"output {name!r}: a send into it on {listed(unrecorded)}"
+                     + (", a strip" if len(unrecorded) == 1 else ", strips")
+                     + " the plan has no record of, is switched off there too, from what the "
+                     "desk read; Undo puts it back")
+
+
+def _unrecorded_write(key: str, name: str, index: int, bank: str, n: int):
+    """The write that takes a dropped bus, DCA or mute group off a strip the
+    plan has no record of: its send switched off, or the group's token taken
+    out of its tags, leaving every other token where it is."""
+    base = f"/{bank}/{n}"
+    word = _WORD[key]
+    if key == "busses":
+        return apply_module.WriteTarget(
+            f"{base}/send/{index}/on", "i",
+            f"{bank} {n} (not in the plan): no longer sends to {word} {index} ({name!r}), "
+            "dropped by the change", apply_module._const(0), apply_module.STAGE_SENDS)
+    dcas, mutes = ([index], []) if key == "dcas" else ([], [index])
+    return apply_module.WriteTarget(
+        f"{base}/tags", "s",
+        f"{bank} {n} (not in the plan): taken out of {word} {index} ({name!r}), dropped by "
+        "the change", lambda current, d=dcas, m=mutes: apply_module._released_tags(current, d, m),
+        apply_module.STAGE_TAGS)
 
 
 def _restated(what: str) -> str:
@@ -1232,7 +1612,9 @@ def _drop_output(merged: dict, name: str, result: MergeResult) -> None:
     result.infos.append(
         f"the change drops output {name!r}"
         + (f" ({kind} {index})" if kind and index else "")
-        + ": carried out -- the output is returned to free and its socket reads as an initialized desk's"
+        + ": carried out -- the output is returned to free and "
+        + ("its sockets stay patched as the desk has them" if out.get("provenance") == amend_engine.READ_FROM_DESK
+           else "its socket reads as an initialized desk's")
         + (f"; {', '.join(map(repr, still_fed))} is fed from that Main and keeps its own settings"
            if still_fed else ""))
 
@@ -1250,17 +1632,9 @@ SOURCE_RECORD = ("which sentence asked for the strip, and on what condition, is 
 #: a field and everything under it.
 _FROZEN_FIELDS = {
     "channels": {
-        "channel": "moving a running channel to another strip is a renumber, which a change "
-                   "never does -- drop it and add it where you want it",
-        "bank": "moving a running channel to another bank is a renumber",
-        # Of a running strip's source, a change sets what the engineer
-        # reasonably changes in the setup window -- `phantom`, `pair_phantom`,
-        # `model`, `type` -- and not what says WHICH source the strip is.
-        "source.input": "the source is how a running strip is recognised -- drop the channel "
-                        "and add the new source; the settable parts of a source are "
-                        "source.phantom, source.model and source.type",
-        "source.pair_input": "the second row of a stereo pair is how its strip is recognised "
-                             "-- drop the channel and add the new source",
+        # Which input-list row a running strip takes (`source.input`,
+        # `source.pair_input`) is set like any field;
+        # where the build recorded the row from is not.
         "source.from": SOURCE_RECORD,
         "source.quote": SOURCE_RECORD,
         "source.condition": SOURCE_RECORD,
@@ -1268,15 +1642,10 @@ _FROZEN_FIELDS = {
         "provenance": "provenance is the build's own record, not a setting",
         "inferred": "the inferred marks are the build's own record, not a setting",
     },
-    "busses": {"index": "renumbering a running bus moves every send into it",
-               "preset_values": PRESET_RECORD,
+    "busses": {"preset_values": PRESET_RECORD,
                "provenance": "provenance is the build's own record, not a setting",
                "inferred": "the inferred marks are the build's own record, not a setting"},
-    "dcas": {"index": "renumbering a running DCA moves every strip's tag"},
-    "mute_groups": {"index": "renumbering a running mute group moves every strip's tag"},
-    "outputs": {"index": "renumbering a running output makes it a different Main or Matrix",
-                "kind": "a Main does not become a Matrix -- drop it and add the new one",
-                "provenance": "provenance is the build's own record, not a setting",
+    "outputs": {"provenance": "provenance is the build's own record, not a setting",
                 "inferred": "the inferred marks are the build's own record, not a setting"},
 }
 
@@ -1288,8 +1657,12 @@ _FROZEN_FIELDS = {
 #: a show built with a preset.
 _OBJECT_SCHEMAS = {"channels": plan_schema.PLAN_CHANNEL_SCHEMA,
                    "busses": plan_schema.PLAN_BUS_SCHEMA,
-                   "dcas": plan_schema.DCA_SCHEMA, "mute_groups": {"type": "object"},
-                   "outputs": plan_schema.OUTPUT_SCHEMA}
+                   "dcas": plan_schema.DCA_SCHEMA,
+                   # A mute group is a name and its number: the number is all
+                   # a change can set on it.
+                   "mute_groups": {"type": "object", "properties": {
+                       "index": {"type": "integer", "minimum": 1}}},
+                   "outputs": plan_schema.PLAN_OUTPUT_SCHEMA}
 
 #: Where a running object names its preset, per kind of object.
 _PRESET_NAME_PATH = {"channels": "processing.preset", "busses": "preset"}
@@ -1310,6 +1683,7 @@ def _switch_channel_preset(edited: dict, new, presets, name, word: str, slot,
     or False with a REFUSED/MODIFIED change appended when it cannot be done:
     the preset is not in the library, or there is no library to read."""
     from atoo import preset_expand
+    old_values = copy.deepcopy(edited["processing"].get("preset_values"))
     edited["processing"]["preset"] = new
     if not new:
         edited["processing"].pop("preset_values", None)
@@ -1335,7 +1709,92 @@ def _switch_channel_preset(edited: dict, new, presets, name, word: str, slot,
         f"{word} {name!r}: the preset {values['preset']!r} ({values['file']}) replaces the "
         f"old one's {len(values['leaves'])} processing values; what the old preset set and "
         "this one does not goes back to what an initialized strip reads, and fields the "
-        "plan states itself stay as the plan states them")
+        "plan states itself stay as the plan states them" + _moved_leaves(old_values, values))
+    return values
+
+
+def _moved_leaves(old: dict | None, new: dict | None) -> str:
+    """"; the leaves that move: eq/1g, dyn/thr and 4 more" -- the preset
+    leaves whose value the switch changes, set or taken away."""
+    before = (old or {}).get("leaves") or {}
+    after = (new or {}).get("leaves") or {}
+    moved = [leaf for leaf in dict.fromkeys([*before, *after])
+             if before.get(leaf, _UNSET) != after.get(leaf, _UNSET)]
+    if not moved:
+        return "; no preset leaf changes value"
+    shown = ", ".join(moved[:8]) + (f" and {len(moved) - 8} more" if len(moved) > 8 else "")
+    return f"; the leaves that move: {shown}"
+
+
+_UNSET = object()
+
+
+def _switch_bus_preset(merged: dict, edited: dict, new, presets, name, word: str, slot,
+                       changes: list, infos: list, warnings: list):
+    """Expand `new` over a running bus's `edited` copy, in place, and give
+    its effects FX engines the rest of the desk leaves free: the new
+    `preset_values` (None for a bus left with no preset), or False with a
+    REFUSED/MODIFIED change appended when it cannot be done -- no library to
+    read, a preset the library does not have, or an effect no free engine can
+    hold."""
+    from atoo import bus_presets, fx_engines
+    from atoo.presets import INSERT_POINT_NAMES
+
+    old_values = copy.deepcopy(bus_presets.preset_values(edited))
+    edited[bus_presets.PRESET_KEY] = new
+    if not new:
+        edited.pop(bus_presets.VALUES_KEY, None)
+        infos.append(f"{word} {name!r}: the preset is taken off -- what the old preset set "
+                     "goes back to what an initialized strip reads, and its effect comes off "
+                     "the insert; the FX engine keeps the model, inserted nowhere")
+        return None
+    if presets is None:
+        changes.append(Change(
+            ChangeKind.MODIFIED, word, repr(name),
+            f"preset -> {new!r} -- not written: no preset library is loaded to read the "
+            "preset's values from", slot=slot))
+        return False
+    findings = bus_presets.expand_bus(name, edited, presets)
+    values = bus_presets.preset_values(edited)
+    if values is None:
+        changes.append(Change(
+            ChangeKind.REFUSED, word, repr(name),
+            f"the change gives it the bus preset {new!r}, and the preset library has no bus "
+            "preset of that name -- there are no values to write", slot=slot))
+        return False
+    # Engines every other strip inserts stay theirs; so do this bus's own
+    # inserts (a capture's, or the bus sheet's fx cell) at the points they hold.
+    view = {**merged, "busses": {**(merged.get("busses") or {}), name: edited}}
+    taken = bus_presets.claimed_engines(view, skip={name})
+    for ins in bus_presets.own_inserts(edited):
+        if isinstance(ins.get("engine"), int) and ins.get("model") is not None:
+            taken.setdefault(ins["engine"], bus_presets.insert_owner(name, edited,
+                                                                     ins.get("point")))
+    findings.extend(bus_presets.allocate_engines(view, only={name}, taken=taken))
+    for ins in bus_presets.inserts(edited):
+        model = ins.get("model")
+        if fx_engines.is_known_model(model) and ins.get("engine") is None:
+            legal = fx_engines.engines_for(model)
+            changes.append(Change(
+                ChangeKind.REFUSED, word, repr(name),
+                f"the bus preset {new!r} inserts {model} on its "
+                f"{INSERT_POINT_NAMES.get(ins.get('point'), ins.get('point'))}, and every FX "
+                f"engine that can hold it (FX{fx_engines.engine_range_text(legal)}) is already "
+                "in use on the desk", slot=slot))
+            return False
+    for finding in findings:
+        (infos if finding.severity == "info" else warnings).append(finding.message)
+    effects = "".join(f"; its {ins['model']} goes into FX{ins['engine']}"
+                      for ins in bus_presets.inserts(edited) if ins.get("engine"))
+    infos.append(
+        f"{word} {name!r}: the bus preset {values['preset']!r} ({values['file']}) replaces the "
+        f"old one's processing values and effects{effects}; what the old preset set and this "
+        "one does not goes back to what an initialized strip reads"
+        + _moved_leaves(old_values, values))
+    for ins in bus_presets.inserts(edited):
+        if ins.get("engine"):
+            infos.append(f"{word} {name!r}: FX{ins['engine']} was judged free from the plan on "
+                         "the desk alone -- the occupancy read covers strips, not FX engines")
     return values
 
 
@@ -1365,6 +1824,16 @@ def _settle_stereo(original: dict, edited: dict, used: dict, console_model: str 
             patch["sockets"] = sockets[:1]
             infos.append(f"channel {name!r}: made mono on {group} {sockets[0]}; {group} "
                          f"{sockets[1]}, its other half, is left exactly as the desk has it")
+        # The second row of the pair is no longer this channel's: it stays on the input
+        # list, unused, and a change is not called to account for a row the plan does not
+        # use (`verify_plan.rows_for_a_change`). Leaving `pair_input` would hold the
+        # engineer to a row they just said to leave alone.
+        source = edited.get("source")
+        if isinstance(source, dict) and source.get("pair_input"):
+            infos.append(f"channel {name!r}: its second input-list row {source['pair_input']!r} "
+                         "is no longer on any channel; it stays on the list, unused")
+            source.pop("pair_input", None)
+            source.pop("pair_phantom", None)
         return None
     if len(sockets) == 2:
         problem = facts.stereo_pair_problem(sockets)
@@ -1473,6 +1942,270 @@ def _find_object(merged: dict, key: str, ref: str, on_desk: dict):
     return None, None
 
 
+def _edit_added(merged: dict, key: str, ref: str, fields: dict, on_desk: dict, word: str,
+                asked: str, changes: list, infos: list) -> bool:
+    """An edit of something this same change adds ("insert HiHat after Snare,
+    HPF 200 on it"): set on the new entry, which is
+    written whole as it is added. True when it was found and dealt with --
+    set, or refused for a field it cannot carry -- False when the change adds
+    nothing of that name either."""
+    if key == "channels":
+        entry = _find_channel([c for c in merged["channels"] if id(c) not in on_desk["channels"]],
+                              ref)
+        name = str(entry.get("name")) if entry is not None else ref
+    else:
+        added = {n: e for n, e in (merged.get(key) or {}).items() if n not in on_desk[key]}
+        name = next((n for n in added if _norm(n) == _norm(ref)), None)
+        entry = added.get(name) if name is not None else None
+    if not isinstance(entry, dict):
+        return False
+    edited = copy.deepcopy(entry)
+    frozen = _FROZEN_FIELDS.get(key, {})
+    problems = []
+    for path, value in fields.items():
+        path = str(path).strip()
+        why = _frozen_reason(frozen, path)
+        if why:
+            problems.append(f"its {path} is not something a change sets: {why}")
+            continue
+        amend_engine.set_path(edited, path, value)
+    problems = problems or validate_schema(edited, _OBJECT_SCHEMAS[key], path=f"{word} {name!r}")
+    if problems:
+        changes.append(Change(
+            ChangeKind.REFUSED, word, repr(name),
+            f"the change adds it and edits it ({asked}), and {'; '.join(problems[:4])}"))
+        return True
+    entry.clear()
+    entry.update(edited)
+    infos.append(f"{word} {name!r} is added by this change; {asked or 'the edit'} "
+                 f"({', '.join(map(str, fields))}) is set on it and written with it")
+    return True
+
+
+def _renumber(merged: dict, key: str, name: str, original: dict, edited: dict,
+              paths: list[str], renumbering: set[str], model: str | None,
+              infos: list) -> str | None:
+    """A running bus, DCA, mute group or output given a new number, or an
+    output made a Main or a Matrix: the number checked,
+    and for a new kind with no number named, the lowest free one of that kind
+    chosen and said. Returns why it cannot be done -- a number past the
+    desk's range, or one another object holds that the change does not also
+    renumber -- or None. What the new number moves on other objects (the
+    sends and tags into it) is the back half's to write and say
+    (`amend._plan_edits`)."""
+    word = _WORD[key]
+    kind = edited.get("kind") if key == "outputs" else None
+    if key == "outputs" and kind not in ("main", "matrix"):
+        return None if edited.get("index") == original.get("index") else (
+            f"an output of kind {kind!r} has no number on the desk to give it")
+    if key == "outputs":
+        cap = _capacity(CONSOLE_MAIN_CAPACITY if kind == "main" else CONSOLE_MATRIX_CAPACITY,
+                        model, 4 if kind == "main" else 8)
+        word = "Main" if kind == "main" else "Matrix"
+        same = lambda o: isinstance(o, dict) and o.get("kind") == kind  # noqa: E731
+    else:
+        cap = _capacity({"busses": CONSOLE_BUS_CAPACITY, "dcas": CONSOLE_DCA_CAPACITY,
+                         "mute_groups": CONSOLE_MUTE_GROUP_CAPACITY}[key], model,
+                        {"busses": 16, "dcas": 16, "mute_groups": 8}[key])
+        same = lambda o: isinstance(o, dict)  # noqa: E731
+    holders = {o.get("index"): n for n, o in merged[key].items()
+               if n != name and same(o) and n not in renumbering}
+    if key == "outputs" and kind != original.get("kind") and "index" not in paths:
+        free = _free_index(set(holders), cap)
+        if free is None:
+            return f"every {word} on this console is already in use"
+        edited["index"] = free
+        paths.append("index")
+        infos.append(f"output {name!r} becomes {word} {free}, the lowest {word} the plan on the "
+                     "desk leaves free -- name the number to choose it")
+        return None
+    index = edited.get("index")
+    if index == original.get("index") and kind == original.get("kind"):
+        return None
+    if isinstance(index, bool) or not isinstance(index, int) or not 1 <= index <= cap:
+        return f"this console has {_PLURAL.get(word, word + 's')} 1 to {cap} -- there is no {word} {index}"
+    if index in holders:
+        return (f"{word} {index} is {holders[index]!r}'s, which the change does not renumber or "
+                "drop -- say what to do with it too, and both are carried out")
+    infos.append(f"{_WORD[key]} {name!r}: {word} {index} was judged free from the plan on the "
+                 f"desk alone -- the occupancy read covers strips, not "
+                 f"{_PLURAL.get(word, word + 's')}")
+    return None
+
+
+_PLURAL = {"bus": "busses", "dca": "DCAs", "mute group": "mute groups", "Main": "Mains",
+           "Matrix": "Matrices"}
+
+
+def _is_ref(value, kind: str, index) -> bool:
+    return isinstance(value, dict) and value.get("type") == kind and value.get("index") == index
+
+
+def _routes_to(merged: dict, kind: str, index) -> list[str]:
+    """Who routes to Main/Matrix `index` by its number: channels' `main_routes`,
+    busses' `destination(s)`, outputs' `fed_by`, in words."""
+    who = []
+    for channel in merged["channels"]:
+        if kind == "main" and any(isinstance(r, dict) and r.get("index") == index
+                                  for r in channel.get("main_routes") or []):
+            who.append(f"channel {channel.get('name')!r}")
+    for name, bus in merged["busses"].items():
+        if isinstance(bus, dict) and (_is_ref(bus.get("destination"), kind, index) or any(
+                _is_ref(d, kind, index) for d in bus.get("destinations") or [])):
+            who.append(f"bus {name!r}")
+    for name, out in merged["outputs"].items():
+        if isinstance(out, dict) and _is_ref(out.get("fed_by"), kind, index):
+            who.append(f"output {name!r}")
+    return who
+
+
+def _follow_number(merged: dict, kind: str, moves: dict[int, tuple[int, str]],
+                   infos: list) -> list:
+    """Mains or Matrices renumbered (`moves`: {old number: (new number,
+    name)}): every route the plan names BY NUMBER (a channel's `main_routes`,
+    a bus's `destination`/`destinations`, an output's `fed_by`) follows its
+    object, one edit per field that changes. Every move is made at once, so
+    two that swap numbers each carry their own routes and no route moves
+    twice. Matrix sends name a Matrix by its key, and follow by themselves."""
+    def moved(value):
+        if isinstance(value, dict) and value.get("index") in moves and (
+                value.get("type") == kind or (kind == "main" and "type" not in value)):
+            return {**value, "index": moves[value["index"]][0]}
+        return value
+
+    edits, who = [], {old: [] for old in moves}
+    renumbered = {name for _new, name in moves.values()}
+    owners = [("channels", c, str(c.get("name")), f"{c.get('bank', 'ch')}:{c.get('channel')}")
+              for c in merged["channels"]]
+    owners += [("busses", e, n, None) for n, e in merged["busses"].items() if isinstance(e, dict)]
+    owners += [("outputs", e, n, None) for n, e in merged["outputs"].items()
+               if isinstance(e, dict) and n not in renumbered]
+    fields = {"channels": ("main_routes",) if kind == "main" else (),
+              "busses": ("destination", "destinations"), "outputs": ("fed_by",)}
+    for key, obj, who_name, slot in owners:
+        for path in fields[key]:
+            value = obj.get(path)
+            after = [moved(v) for v in value] if isinstance(value, list) else moved(value)
+            if after == value:
+                continue
+            obj[path] = after
+            edits.append(amend_engine.FieldEdit(key=key, name=who_name, path=path,
+                                                old=copy.deepcopy(value), new=after, slot=slot))
+            for v in (value if isinstance(value, list) else [value]):
+                if isinstance(v, dict) and moved(v) != v:
+                    who[v["index"]].append(f"{_WORD[key]} {who_name!r}")
+    word = "Main" if kind == "main" else "Matrix"
+    for old, (new, name) in moves.items():
+        if who[old]:
+            infos.append(f"output {name!r}: {', '.join(dict.fromkeys(who[old]))} routed to "
+                         f"{word} {old} by number, and follow it to {word} {new}")
+    return edits
+
+
+#: The fields of a running channel that say WHERE it is: setting either moves it.
+_MOVE_FIELDS = ("channel", "bank")
+
+
+def _channel_moves(merged: dict, change_set: dict, occupancy, changes: list,
+                   infos: list) -> dict:
+    """A change that names a running channel's strip or bank ("move the Kick
+    to ch 20") moves it: the modify entry becomes a drop
+    of the channel and an add of it, every other field the entry names set
+    on it, so the back half returns the old strip to free and builds the
+    channel whole on the new one (`MergeResult.moved`), as a drop and an add
+    of one source in one change already are.
+
+    Refused only for a strip that cannot take it: one past the desk's range,
+    one another running channel holds, or one the desk read as somebody
+    else's or could not read -- each named. Moving onto a strip something
+    else is on would overwrite what the change does not name. Returns the
+    change set to merge (a copy when anything moved)."""
+    moves = [(i, m) for i, m in enumerate(change_set.get("modify") or [])
+             if isinstance(m, dict) and _KEY_OF.get(str(m.get("object") or "")) == "channels"
+             and isinstance(m.get("fields"), dict)
+             and any(str(p).strip() in _MOVE_FIELDS for p in m["fields"])]
+    if not moves:
+        return change_set
+    change_set = copy.deepcopy(change_set)
+    add = change_set.setdefault("add", {})
+    drop = change_set.setdefault("drop", {})
+    by_label = {s.label: s for s in occupancy or ()}
+    # A strip whose channel this same change moves away or drops is free to
+    # take ("swap the Kick and the Snare").
+    leaving = {_norm(n) for n in drop.get("channels") or []} | {
+        _norm(m.get("name")) for _i, m in moves}
+    taken_out: list[int] = []
+    for i, entry in moves:
+        found = _find_channel(merged["channels"], str(entry.get("name") or ""))
+        if found is None:
+            continue    # `_merge_modify` refuses a name that is not on the desk
+        name = str(found.get("name"))
+        fields = {str(p).strip(): v for p, v in entry["fields"].items()}
+        bank = fields.get("bank", found.get("bank") or "ch")
+        number = fields.get("channel", found.get("channel"))
+        here = f"{found.get('bank') or 'ch'}:{found.get('channel')}"
+        there = f"{bank}:{number}"
+        word = "aux" if bank == "aux" else "channel"
+        capacity = facts.CAPACITY.get(str(bank))
+        why = None
+        if capacity is None:
+            why = f"there is no strip bank {bank!r} on this console (ch, aux)"
+        elif isinstance(number, bool) or not isinstance(number, int) or not 1 <= number <= capacity:
+            why = f"this console has {word} strips 1 to {capacity} -- there is no {there}"
+        elif there == here:
+            fields.pop("channel", None)
+            fields.pop("bank", None)
+        else:
+            holder = next((c for c in merged["channels"] if c is not found
+                           and f"{c.get('bank') or 'ch'}:{c.get('channel')}" == there
+                           and _norm(c.get("name")) not in leaving), None)
+            status = by_label.get(there)
+            if holder is not None:
+                why = (f"{there} holds channel {holder.get('name')!r}, which the change does not "
+                       "move or drop -- say what to do with it too, and both are carried out")
+            elif status is not None and status.state.value not in ("free", "ours"):
+                held = status.name or status.source_name
+                what = (f"something that is not this show's ({held!r})" if held
+                        else "something that is not this show's")
+                why = (f"the desk reads {there} as holding {what}"
+                       if status.state.value == "theirs" else
+                       f"the desk did not answer for {there}, so it counts as occupied")
+        if why:
+            changes.append(Change(
+                ChangeKind.REFUSED, "channel", repr(name),
+                f"the change moves it from {here} to {there}, and {why}", slot=here))
+            taken_out.append(i)
+            continue
+        if "channel" not in fields and "bank" not in fields:
+            entry["fields"] = fields    # named its own strip: nothing to move
+            continue
+        moved = copy.deepcopy(found)
+        problems = []
+        for path, value in fields.items():
+            why_not = _frozen_reason(_FROZEN_FIELDS["channels"], path)
+            if why_not:
+                problems.append(f"its {path} is not something a change sets: {why_not}")
+                continue
+            amend_engine.set_path(moved, path, value)
+        if problems:
+            changes.append(Change(
+                ChangeKind.REFUSED, "channel", repr(name),
+                f"the change moves it and {'; '.join(problems)} -- refused rather than "
+                "half-written", slot=here))
+            taken_out.append(i)
+            continue
+        drop.setdefault("channels", []).append(name)
+        add.setdefault("channels", []).append(moved)
+        taken_out.append(i)
+        others = [p for p in fields if p not in _MOVE_FIELDS]
+        if others:
+            infos.append(f"channel {name!r}: moved to {there} with {', '.join(others)} as the "
+                         "change set them -- written with the rest of the strip there")
+    change_set["modify"] = [m for i, m in enumerate(change_set.get("modify") or [])
+                            if i not in taken_out]
+    return change_set
+
+
 def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: list,
                   infos: list, warnings: list, occupancy, on_desk: dict,
                   renumbered_ids: frozenset | set = frozenset(), presets=None,
@@ -1490,6 +2223,16 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
     reason: an entry naming no fields, and a fader or mute the change's own
     words do not name."""
     edits: list = []
+    # Main and Matrix renumbers, by kind: {old number: (new number, name)}.
+    follows: dict[str, dict[int, tuple[int, str]]] = {}
+    # Objects this change renumbers, each freeing its number for another
+    # ("swap busses 5 and 6").
+    renumbering: dict[str, set[str]] = {}
+    for request in change_set.get("modify") or []:
+        key = _KEY_OF.get(str(request.get("object") or ""))
+        fields = request.get("fields") if isinstance(request.get("fields"), dict) else {}
+        if key in _NAMED_KINDS and {"index", "kind"} & {str(p).strip() for p in fields}:
+            renumbering.setdefault(key, set()).add(str(request.get("name") or ""))
     for request in change_set.get("modify") or []:
         word = str(request.get("object") or "object")
         key = _KEY_OF.get(word)
@@ -1505,6 +2248,9 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                 "field to set, so nothing can be written without guessing"))
             continue
         found, slot = _find_object(merged, key, ref, on_desk)
+        if found is None and _edit_added(merged, key, ref, fields, on_desk, word, asked,
+                                         changes, infos):
+            continue
         if found is None:
             changes.append(Change(
                 ChangeKind.REFUSED, word, repr(ref),
@@ -1540,6 +2286,11 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                     problems.append(f"{path}: {path.rsplit('.', 1)[0]} is not an object")
                     continue
             amend_engine.set_path(edited, path, value)
+        if not problems and key in _NAMED_KINDS and ("index" in paths or "kind" in paths):
+            problem = _renumber(merged, key, name, original, edited, paths, renumbering.get(
+                key, set()), console_model, infos)
+            if problem:
+                problems.append(problem)
         if not problems and key == "channels" and "source.stereo" in paths:
             others = [c for c in merged["channels"] if c is not original]
             problem = _settle_stereo(
@@ -1593,7 +2344,7 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                                   amend_engine.get_path(edited, path)))
         kept: list[tuple[str, object, object]] = []
         for path, old, new in leaves:
-            if record is not None and path == _PRESET_NAME_PATH[key] and key == "channels":
+            if key == "channels" and path == _PRESET_NAME_PATH[key]:
                 # Switching a running channel's preset: the new
                 # preset is expanded over the channel as a build does, the
                 # leaves it sets are written, and what the old preset set and
@@ -1603,21 +2354,28 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                                                 changes, infos, warnings)
                 if values is False:
                     amend_engine.set_path(edited, path, old)
-                    edited["processing"]["preset_values"] = copy.deepcopy(record)
+                    if record is not None:
+                        edited["processing"]["preset_values"] = copy.deepcopy(record)
+                    else:
+                        edited["processing"].pop("preset_values", None)
                     continue
                 kept.append((path, old, new))
                 kept.append(("processing.preset_values", record, values))
                 continue
-            if record is not None and path == _PRESET_NAME_PATH[key]:
-                amend_engine.set_path(edited, path, old)
-                changes.append(Change(
-                    ChangeKind.MODIFIED, word, repr(name),
-                    f"{path} {amend_engine.format_value(path, old)} -> "
-                    f"{amend_engine.format_value(path, new)} -- not written: the values of "
-                    f"preset {old!r} were written into this {word} when it was built, and "
-                    "switching a running preset would leave the plan naming one preset and "
-                    "carrying the values of another. Rebuild to change it, or set the "
-                    "processing fields themselves", slot=slot))
+            if key == "busses" and path == _PRESET_NAME_PATH[key]:
+                # Switching a running bus's preset: its values
+                # and its effects, each effect in an engine the desk leaves free.
+                values = _switch_bus_preset(merged, edited, new, presets, name, word, slot,
+                                            changes, infos, warnings)
+                if values is False:
+                    amend_engine.set_path(edited, path, old)
+                    if record is not None:
+                        edited["preset_values"] = copy.deepcopy(record)
+                    else:
+                        edited.pop("preset_values", None)
+                    continue
+                kept.append((path, old, new))
+                kept.append(("preset_values", record, values))
                 continue
             if path.split(".")[0] == "fader":
                 muted = path.endswith("muted")
@@ -1657,7 +2415,7 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                 warnings.append(
                     f"channel {name!r} on {slot}: the change repatches it to "
                     f"{amend_engine.format_value('patch', patch)}, which {clash[0]} already "
-                    "uses -- honoured as named (one socket can feed two strips on a WING), but "
+                    "uses -- honored as named (one socket can feed two strips on a WING), but "
                     "check that is what was meant")
 
         if key == "channels":
@@ -1669,9 +2427,30 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                          "rewritten whole on its new number, so the edit "
                          f"({', '.join(p for p, _o, _n in kept)}) is written with it")
             continue
+        if key == "channels" and not any(p.split(".")[0] == "patch" for p, _o, _n in kept):
+            for path, old, new in kept:
+                if path in ("source.input", "source.pair_input"):
+                    infos.append(
+                        f"channel {name!r} on {slot}: its input-list row {old!r} -> {new!r}; the "
+                        "change names no socket, so its patch stays "
+                        f"{amend_engine.format_value('patch', edited.get('patch'))} -- the "
+                        "cable is taken to be where it was. Name the socket to move it")
+        if key == "outputs" and any(p == "index" for p, _o, _n in kept) \
+                and edited.get("kind") == original.get("kind"):
+            follows.setdefault(edited.get("kind"), {})[original.get("index")] = (
+                edited.get("index"), name)
+        elif key == "outputs" and any(p == "kind" for p, _o, _n in kept):
+            routed = _routes_to(merged, original.get("kind"), original.get("index"))
+            if routed:
+                infos.append(
+                    f"output {name!r} is no longer {original.get('kind')} "
+                    f"{original.get('index')}; {', '.join(routed)} still route there, to that "
+                    "number on the desk -- route them to it in a change if they should feed it")
         for path, old, new in kept:
             edits.append(amend_engine.FieldEdit(key=key, name=str(name), path=path,
                                                 old=old, new=new, slot=slot))
+    for kind, moves in follows.items():
+        edits.extend(_follow_number(merged, kind, moves, infos))
     return edits
 
 
@@ -1812,7 +2591,7 @@ def _plan_insert(merged: dict, kept: list[dict], text: str | None,
             f"the change inserts {names} at ch {point}, so the {len(moves)} channel(s) from "
             f"ch {min(moves)} to ch {max(moves)} move down to ch {min(moves.values())}-"
             f"ch {max(moves.values())}: each strip is rewritten whole on its new number (its "
-            "patch, name, colour, processing, sends, DCA and mute-group membership go with it), "
+            "patch, name, color, processing, sends, DCA and mute-group membership go with it), "
             "and every strip that moves is listed below. A fader or mute the plan does not "
             "state is not carried: that strip's fader goes to -inf and it is unmuted, so raise "
             "it again."
@@ -1892,6 +2671,9 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     # `modify` entry may name.
     on_desk: dict = {"channels": {id(c) for c in merged["channels"]},
                      **{key: set(merged[key]) for key in _NAMED_KINDS}}
+    # 0. A running channel the change moves to another strip or bank is
+    #    dropped and added again.
+    change_set = _channel_moves(merged, change_set, occupancy, changes, infos)
     add = change_set.get("add") or {}
     drop = change_set.get("drop") or {}
 
@@ -1971,7 +2753,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                         changes.append(Change(
                             ChangeKind.REFUSED, word, repr(name),
                             f"the change puts it on {word} {named}, and this console has "
-                            f"{word}s 1 to {capacities[key]} -- there is no {word} {named}"))
+                            f"{_PLURAL.get(word, word + 's')} 1 to {capacities[key]} -- there "
+                            f"is no {word} {named}"))
                         continue
                     if named not in taken:
                         index = named
@@ -2148,8 +2931,12 @@ def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
     did not touch that channel must not forget it."""
     adopted_infos: list[str] = []
     adopted_warnings: list[str] = []
+    adopted_writes: list = []
+    adopted_changes: list = []
+    adopted_read: set = set()
     if desk_objects is not None:
-        base, adopted_infos, adopted_warnings = adopt_desk_objects(base, change_set, desk_objects)
+        (base, change_set, adopted_infos, adopted_warnings, adopted_writes,
+         adopted_changes, adopted_read) = adopt_desk_objects(base, change_set, desk_objects)
     merge = merge_change(base, change_set, occupancy=occupancy, console_model=console_model,
                          presets=presets, text=text, aes50_devices=aes50_devices,
                          gain_texts=gain_texts)
@@ -2159,7 +2946,15 @@ def plan_patch(base: dict, change_set: dict, occupancy, *, allow_strips=None,
         renumbered=merge.renumbered, inserted=merge.inserted, freed_busses=merge.freed_busses,
         freed_objects=merge.freed_objects,
         explicit_drops=merge.explicit_drops)
-    amendment.changes = merge.changes + amendment.changes
+    amendment.changes = adopted_changes + merge.changes + amendment.changes
+    # A dropped bus's send, or a dropped group's tag, on a strip the plan has
+    # no record of: written beside the change's own,
+    # journalled and undone like them -- unless the change is refused, when
+    # nothing is written at all.
+    for target in adopted_writes:
+        amendment.edit_extra.append(target)
+        amendment.edit_scope.grant(target.address, target.description)
+    amendment.read_from_desk |= adopted_read
     amendment.infos = adopted_infos + merge.infos + amendment.infos
     amendment.warnings = adopted_warnings + merge.warnings + amendment.warnings
 

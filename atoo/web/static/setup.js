@@ -139,24 +139,6 @@
     return `${socket.group} ${(socket.sockets || []).join("-")}`;
   }
 
-  function socketsDesc(sockets) {
-    if (!sockets || !sockets.length) return "patch?";
-    return sockets.map(socketDesc).join(" + ");
-  }
-
-  // Every patch of an output or a bus's dedicated output -- plan_compat.
-  // output_patches: `patches` (the fan-out) when not empty, else the one
-  // `patch`. A plan built before the rename calls them `sockets` and
-  // `socket`, and those plans are on disk, so both are read.
-  function outputPatches(entry) {
-    if (!entry) return [];
-    const many = (entry.patches && entry.patches.length) ? entry.patches
-      : ((entry.sockets && entry.sockets.length) ? entry.sockets : null);
-    if (many) return many;
-    const one = entry.patch !== undefined ? entry.patch : entry.socket;
-    return one ? [one] : [];
-  }
-
   // An input-list row's patch cell. The server names it `patch` whatever
   // the file's header says; `socket` is read too, for a payload from
   // .
@@ -169,23 +151,6 @@
     if (!patch) return "-";
     const desc = socketDesc({ group: patch.group, sockets: patch.sockets });
     return patch.stated ? desc : `${desc} (auto)`;
-  }
-
-  function destinationDesc(destination) {
-    if (!destination) return "(unresolved)";
-    if (destination.type === "main") return "→ Main";
-    if (destination.type === "matrix") {
-      return "→ Matrix (wrong field — state this on the matrix's own " +
-        "outputs[].fed_by instead)";
-    }
-    const label = destination.label ? `"${destination.label}"` : "(unlabeled)";
-    return `→ Dedicated output ${label}, ${socketsDesc(outputPatches(destination))}`;
-  }
-
-  function fedByDesc(fedBy) {
-    if (!fedBy) return "?";
-    if (fedBy.type === "main") return `Main ${fedBy.index}`;
-    return `bus ${fedBy.name}`;
   }
 
   // A note's source in brackets, except the model's own -- most notes
@@ -333,7 +298,7 @@
     if (!colour) return DASH;
     if (colour.index == null) {
       return '<span class="colour-chip colour-unknown"></span>' +
-        `${esc(colour.stated)} <span class="setup-dim">— not a desk colour; not written</span>`;
+        `${esc(colour.stated)} <span class="setup-dim">— not a desk color; not written</span>`;
     }
     const name = colour.name || colour.stated || "";
     return `<span class="colour-chip" data-colour="${esc(String(name).toLowerCase())}"></span>` +
@@ -355,11 +320,11 @@
     let title;
     if (colour && colour.index != null && colour.name) {
       attr = ` data-colour="${esc(String(colour.name).toLowerCase())}"`;
-      title = `Colour: ${colour.name} (col ${colour.index})`;
+      title = `Color: ${colour.name} (col ${colour.index})`;
     } else if (colour && colour.stated) {
-      title = `Colour: ${colour.stated} is not a desk colour; not written`;
+      title = `Color: ${colour.stated} is not a desk color; not written`;
     } else {
-      title = noColourNote || "Colour: none in the plan";
+      title = noColourNote || "Color: none in the plan";
     }
     if (sub) title += " — the second socket of this stereo pair";
     return `<span class="${cls}"${attr} title="${esc(title)}">${esc(label)}</span>`;
@@ -378,7 +343,7 @@
     }
     let text = `${codes} — the strip itself (<code>clink</code> = 0: ${esc(home.why || "")})`;
     if (home.shared_with && home.shared_with.length > 1) {
-      text += `; the socket is labelled for all of ${esc(home.shared_with.join(", "))}`;
+      text += `; the socket is labeled for all of ${esc(home.shared_with.join(", "))}`;
     }
     return text;
   }
@@ -405,7 +370,7 @@
       ["Preset", p.preset ? esc(p.preset + presetCount(p)) : DASH],
       rest !== "-" ? ["Processing", esc(rest)] : null,
       ["Fader", ch.fader ? `<span class="readout">${esc(faderDesc(ch.fader))}</span>` : DASH],
-      ["Colour", colourDesc(display.colour)],
+      ["Color", colourDesc(display.colour)],
       ["Sends", sendsDesc(ch)],
       mains ? ["Direct route", esc(mains)] : null,
     ]);
@@ -417,7 +382,6 @@
       // (a plan built before it has no `alt_patch` at all).
       ch.alt_patch ? ["Alternate", esc(patchDesc(ch.alt_patch))] : null,
       ["Written to", writtenToDesc(ch, display.name_home)],
-      row ? ["Notes", notesDesc(row, editable)] : null,
     ]);
     return first + second + renderProvenance(ch.provenance);
   }
@@ -491,59 +455,107 @@
     }));
   }
 
-  const INPUT_COLS = ["category", "type", "model", "phantom", "notes"];
+  // ---- the Channels table: the input list's own columns ------------------
+  //
+  // One editable view (mockup revision 3; the maintainer: "Can we
+  // just combine it into one, editable view?"): the sheet's columns, every one
+  // editable through step 02's own cells. A blank cell is blank in the file;
+  // its placeholder is what the plan has there -- what the conventions or
+  // the last build put -- so nothing the plan does is hidden. The rest of
+  // a row (model, preset, notes, and the plan's own detail) folds open.
+  const SHEET_COLS = ["channel", "patch", "name", "category", "type", "phantom", "dca", "mute_group"];
+  const SHEET_HEADS = { channel: "Channel", patch: "Patch", name: "Name", category: "Category",
+    type: "Type", phantom: "48V", dca: "DCA", mute_group: "Mute group" };
 
-  // `deskName` is html for under the Name cell: the name the plan puts on
-  // the strip, when it is not the input's own (a separate Strip column
-  // would be redundant).
-  function inputCells(row, editable, deskName) {
+  // What the plan has for a row's sheet cells, as the sheet would write them.
+  function planCellValues(ch, d, pairIndex) {
+    if (!ch) return {};
+    const sockets = (d && d.sockets) || [];
+    return {
+      channel: ch.bank === "aux" ? `Aux ${ch.channel}` : String(ch.channel == null ? "" : ch.channel),
+      patch: sockets[pairIndex || 0] || "",
+      dca: (ch.dca || []).join("; "),
+      mute_group: (ch.mute_group || []).join("; "),
+    };
+  }
+
+  // The input socket's own colour on the desk, beside a Patch cell
+  // (`outputs_sheet.display`): what a strip linked to it shows.
+  function socketChip(text) {
+    const s = outParseSocket(text);
+    const colour = s ? ((outSheet.display || {}).sockets || {})[`${s.group} ${s.n}`] : null;
+    return colour ? `<span class="colour-chip sock-chip" data-colour="${esc(colour)}" ` +
+      `title="${esc(colour.charAt(0).toUpperCase() + colour.slice(1))}, the socket's own color on the desk"></span>` : "";
+  }
+
+  // `after` is html for under the Name cell: the name the plan puts on the
+  // strip when it is not the input's own, or why the row is not on a strip.
+  function sheetCells(row, editable, planValues, after) {
     const v = row.values;
-    const cell = (col, extra) => {
-      const cls = "cell-input" + (col === "name" ? "" : " cell-input-extra") + (extra ? " " + extra : "");
-      const after = col === "name" && deskName ? deskName : "";
-      if (!editable) {
-        const text = col === "phantom" ? (v.phantom ? "✓" : "") : (v[col] || "");
-        return `<td class="${cls}">${text ? esc(text) : (col === "phantom" ? "" : DASH)}${after}</td>`;
+    const shown = planValues || {};
+    return SHEET_COLS.map((col) => {
+      const extra = col === "name" && after ? after : "";
+      // `cell-input` only on a cell that holds an input: a text cell keeps
+      // the table's own 8 by 12 padding.
+      const cls = `${editable ? "cell-input " : ""}col-sheet-${col.replace("_", "-")}`;
+      if (!editable && col === "phantom") {
+        // The same neutral tag step 02 draws for 48V when it is read-only.
+        return `<td class="${cls}">${v.phantom ? '<span class="prop" title="Phantom power (48V) on">48V</span>' : ""}</td>`;
       }
-      if (col === "notes") return `<td class="${cls}">${noteButton(row)}</td>`;
+      if (!editable) {
+        const text = v[col] || "";
+        const fallback = !text && shown[col]
+          ? `<span class="setup-dim ct-from-plan" title="Blank in the input list: the plan's">${esc(shown[col])}</span>`
+          : DASH;
+        return `<td class="${cls}">${col === "patch" ? socketChip(text || shown.patch) : ""}` +
+          `${text ? esc(text) : fallback}${extra}</td>`;
+      }
       if (col === "phantom") {
-        return `<td class="${cls}"><input type="checkbox" data-input-col="phantom" ` +
-          `data-input-key="${esc(row.key)}" aria-label="Phantom power"${v.phantom ? " checked" : ""}></td>`;
+        return `<td class="${cls} col-phantom"><input type="checkbox" data-input-col="phantom" ` +
+          `data-input-key="${esc(row.key)}" aria-label="Phantom power (48V)"${v.phantom ? " checked" : ""}></td>`;
       }
       const list = col === "type" ? ' list="input-type-options"'
         : (col === "category" ? ' list="input-category-options"' : "");
-      return `<td class="${cls}"><input type="text" data-input-col="${col}" data-input-key="${esc(row.key)}"` +
-        `${list} aria-label="${col}" value="${esc(v[col] || "")}">${after}</td>`;
-    };
-    let html = cell("name");
-    html += cell("category") + cell("type") + cell("model") + cell("phantom", "col-phantom") +
-      cell("notes", "col-notes");
-    html += editable
-      ? '<td class="cell-input cell-input-extra col-remove"><button type="button" class="btn-icon" ' +
+      const placeholder = shown[col]
+        ? ` placeholder="${esc(shown[col])}" title="Blank in the input list; the plan has ${esc(shown[col])}"`
+        : "";
+      return `<td class="${cls}">${col === "patch" ? socketChip(v.patch || shown.patch) : ""}` +
+        `<input type="text" data-input-col="${col}" data-input-key="${esc(row.key)}"` +
+        `${list}${placeholder} aria-label="${esc(SHEET_HEADS[col])}" value="${esc(v[col] || "")}">${extra}</td>`;
+    }).join("") + (editable
+      ? '<td class="cell-input col-remove"><button type="button" class="btn-icon" ' +
         `data-input-remove="${esc(row.key)}" title="Remove row" aria-label="Remove row">✕</button></td>`
-      : '<td class="cell-input cell-input-extra col-remove"></td>';
-    return html;
+      : '<td class="col-remove"></td>');
   }
 
-  function noInputCells(note) {
-    return `<td class="cell-input"><span class="setup-dim">${esc(note)}</span></td>` +
-      '<td class="cell-input cell-input-extra"></td>'.repeat(6);
+  // A plan channel no input-list row feeds (a talkback strip the
+  // instructions asked for): its cells as the plan has them, read-only.
+  function planOnlyCells(ch, d, note) {
+    const values = planCellValues(ch, d);
+    const cell = (col, html) => `<td class="col-sheet-${col.replace("_", "-")}">${html}</td>`;
+    return cell("channel", esc(values.channel)) +
+      cell("patch", values.patch ? `${socketChip(values.patch)}<span class="socket-chip">${esc(values.patch)}</span>` : DASH) +
+      cell("name", `${esc(ch.name)} <span class="setup-dim" title="${esc(note)}">· no row</span>`) +
+      cell("category", DASH) + cell("type", esc((ch.source && ch.source.type) || "")) +
+      phantomCell(ch).replace('class="cell-plan col-plan-phantom"', 'class="col-sheet-phantom"') +
+      cell("dca", listOrDash(ch.dca)) + cell("mute-group", listOrDash(ch.mute_group)) +
+      '<td class="col-remove"></td>';
   }
 
-  // The Plan group: Patch (where the input is patched -- the input list's
-  // `patch` column), Phantom (as the plan sets it), DCAs,
-  // Mute Groups. There is no Strip column (it would be redundant): the strip's number and colour are the Ch chip, a name
-  // the plan changed is under the Name cell, a stereo pair's second row
-  // says whose it is, and "unassigned" / "not in this plan" sit beside
-  // the patch they qualify.
-  function planCells(patch, phantom, dcas, mutes) {
-    return `<td class="cell-plan col-patch">${patch}</td>${phantom}<td class="cell-plan">${dcas}</td>` +
-      `<td class="cell-plan">${mutes}</td><td class="cell-plan-collapsed-note">Plan collapsed</td>`;
+  // The input-list cells a row folds open: model, preset and notes.
+  function inputDetail(row, editable) {
+    if (!row) return "";
+    const v = row.values;
+    const field = (col, label) => [label, editable
+      ? `<input type="text" class="detail-input" data-input-col="${col}" data-input-key="${esc(row.key)}"` +
+        `${col === "preset" ? ' list="input-preset-options"' : ""} aria-label="${esc(label)}" ` +
+        `value="${esc(v[col] || "")}">`
+      : (v[col] ? esc(v[col]) : DASH)];
+    return kv([field("model", "Model"), field("preset", "Preset"), ["Notes", notesDesc(row, editable)]])
+      .replace('<dl class="setup-kv">', '<dl class="setup-kv sheet-kv">');
   }
 
-  const NO_PHANTOM = '<td class="cell-plan col-plan-phantom"></td>';
-  const PLAN_COLS = 4;  // Patch, Phantom, DCAs, Mute Groups
-  const CHANNEL_COLS = 15;
+  const CHANNEL_COLS = 12;  // Ch, expand, the eight sheet columns, remove, Findings
 
   // `plan.unassigned_inputs` holds bare names in a plan built before
   // 2026-09-29, and `{input, quote, from}` since: the words that said to
@@ -567,14 +579,11 @@
       // channel, one band.
       if (item.type !== "pair") alt = !alt;
       const altCls = alt ? "" : "alt";
-      const patchText = (label) => label ? `<span class="socket-chip">${esc(label)}</span>` : DASH;
       if (item.type === "channel") {
         const ch = item.ch;
         const row = item.input;
-        const patch = (row && patchOf(row.values)) || (item.d.sockets || []).join(" + ");
         // The name the plan puts on the desk, under the input's own name --
-        // only when the two differ ("Keys L" -> "Keys L/R"): the same name
-        // twice was the Strip column's redundancy.
+        // only when the two differ ("Keys L" -> "Keys L/R").
         const deskName = row && row.values.name !== ch.name
           ? `<span class="meta ct-desk-name" title="The strip's name in the plan -- what the desk will ` +
             `show, not the input's own">on desk: ${esc(ch.name)}</span>`
@@ -590,29 +599,28 @@
         html += `<td class="col-num">${numChip(item.d.label, item.d.colour)}` +
           `${stereo ? stBadge(ch) : ""}${changeChip(cardId("channel", ch.name))}</td>`;
         html += expandCell("channel", ch.name);
-        html += row ? inputCells(row, editable, deskName)
-          : noInputCells(item.sharesWith
-            ? `${ch.name} — shares ${patchOf(item.sharesWith.values) || "its patch"} with ${item.sharesWith.values.name}`
-            : `${ch.name} — no input-list row`);
-        html += planCells(patchText(patch), phantomCell(ch), listOrDash(ch.dca), listOrDash(ch.mute_group));
+        html += row ? sheetCells(row, editable, planCellValues(ch, item.d, 0), deskName)
+          : planOnlyCells(ch, item.d, item.sharesWith
+            ? `${ch.name} has no input-list row of its own: it shares ` +
+              `${patchOf(item.sharesWith.values) || "its patch"} with ${item.sharesWith.values.name}`
+            : `${ch.name} has no input-list row: the plan made it (the instructions, or a row ` +
+              "since renamed or removed)");
         html += findingsCell(cardId("channel", ch.name));
         html += "</tr>";
-        html += detailRow("channel", ch.name, CHANNEL_COLS, channelDetail(ch, item.d, row, editable));
+        html += detailRow("channel", ch.name, CHANNEL_COLS,
+          inputDetail(row, editable) + channelDetail(ch, item.d, row, editable));
       } else if (item.type === "pair") {
         const row = item.input;
         // The partner row: the same chip, drawn quieter, with "↳ ST" under
         // the first row's ST, and a bracket down the left of both rows
         // (`.row-stereo` / `.row-pair`) -- one channel on two input rows.
         html += `<tr class="row-primary row-pair ${altCls}" data-input-key="${esc(row.key)}" ` +
-          `data-pair-of="${esc(cardId("channel", item.ch.name))}">`;
+          `data-pair-of="${esc(cardId("channel", item.ch.name))}" ` +
+          `title="The second input of ${esc(item.ch.name)}'s stereo pair: the same strip">`;
         html += `<td class="col-num">${numChip(item.d.label, item.d.colour, null, true)}` +
           `${stBadge(item.ch, true)}</td>`;
         html += '<td class="col-expand"></td>';
-        html += inputCells(row, editable);
-        html += planCells(`${patchText(patchOf(row.values) || item.socket)} <span class="ct-strip-name ct-pair-note" title="The ` +
-                          `second input of ${esc(item.ch.name)}'s stereo pair: the same strip">` +
-                          `second input of ${esc(item.ch.name)}</span>`,
-                          phantomCell(item.ch), DASH, DASH);
+        html += sheetCells(row, editable, planCellValues(item.ch, item.d, 1), "");
         html += '<td class="col-findings"></td>';
         html += "</tr>";
       } else {
@@ -628,15 +636,14 @@
           : onPurpose
           ? '<span class="ct-unassigned" title="The plan leaves this input off the desk on purpose ' +
             '(plan.unassigned_inputs)">unassigned</span>'
-          : '<span class="setup-dim" title="Added or renamed since this plan was built -- rebuild ' +
-            'to place it">not in this plan</span>';
+          : '<span class="setup-dim ct-unplanned-note" title="Added or renamed since this plan was ' +
+            'built: Save places it when its Channel cell names a channel; otherwise rebuild">' +
+            "not in this plan</span>";
         html += `<tr class="row-primary row-unplanned${skipped ? " row-skipped" : ""} ${altCls}" ` +
           `data-input-key="${esc(row.key)}">`;
         html += `<td class="col-num">${DASH}</td>`;
         html += '<td class="col-expand"></td>';
-        html += inputCells(row, editable);
-        html += planCells(`${patchOf(row.values) ? patchText(patchOf(row.values)) + " " : ""}${mark}`,
-          NO_PHANTOM, "", "");
+        html += sheetCells(row, editable, {}, mark);
         html += '<td class="col-findings"></td>';
         html += "</tr>";
       }
@@ -650,7 +657,8 @@
     const rows = (plan.channels || []).map((ch, i) => {
       const s = ch.source || {};
       const values = { patch: "", name: s.input || ch.name, category: "", type: s.type || "",
-                       model: s.model || "", phantom: !!s.phantom, notes: "" };
+                       model: s.model || "", phantom: !!s.phantom, notes: "", channel: "",
+                       dca: "", mute_group: "" };
       return { key: "plan-" + i, line: null, values: values, original: { name: s.input || "" },
                patchKey: null };
     });
@@ -658,7 +666,7 @@
     (plan.unassigned_inputs || []).map(unassignedName).forEach((name, i) => {
       rows.push({ key: "plan-unassigned-" + i, line: null, patchKey: null, original: { name: name },
                   values: { patch: "", name: name, category: "", type: "", model: "",
-                            phantom: false, notes: "" } });
+                            phantom: false, notes: "", channel: "", dca: "", mute_group: "" } });
     });
     return rows;
   }
@@ -667,37 +675,15 @@
     const inputs = editableInputs();
     const editable = !!inputs;
     const rows = channelRows(plan, display, inputs || inputsFromPlan(plan), editable);
-    const slim = !tableState.inputOpen;
-    const planCollapsed = !tableState.planOpen;
-    const cls = "ct" + (slim ? " ct--input-slim" : "") + (planCollapsed ? " ct--plan-collapsed" : "");
     return '<div class="table-wrap ct-wrap">' +
-      `<table class="${cls}" id="plan-channels-table" data-editable="${editable ? "1" : "0"}">` +
+      `<table class="ct ct-sheet" id="plan-channels-table" data-editable="${editable ? "1" : "0"}">` +
       "<thead><tr>" +
-      '<th class="col-num" rowspan="2" title="The channel number the plan puts this input on, ' +
-      'in the colour it sets">Ch</th>' +
-      '<th class="col-expand" rowspan="2"><span class="visually-hidden">Expand</span></th>' +
-      `<th class="grp-th grp-input" id="grpth-input" colspan="${slim ? 1 : 7}">` +
-      `<button type="button" class="grp-toggle" id="grp-toggle-input" data-group="input" ` +
-      `aria-expanded="${slim ? "false" : "true"}"><span class="chevron">&#9656;</span> Input</button></th>` +
-      `<th class="grp-th grp-plan" id="grpth-plan" colspan="${planCollapsed ? 1 : PLAN_COLS}">` +
-      `<button type="button" class="grp-toggle" id="grp-toggle-plan" data-group="plan" ` +
-      `aria-expanded="${planCollapsed ? "false" : "true"}"><span class="chevron">&#9656;</span> Plan ` +
-      '<span class="grp-count">(+ detail)</span></button></th>' +
-      FINDINGS_TH.replace("<th ", '<th rowspan="2" ') +
-      "</tr><tr>" +
-      '<th class="subhead-input">Name</th>' +
-      '<th class="subhead-input subhead-input-extra">Category</th>' +
-      '<th class="subhead-input subhead-input-extra">Type</th>' +
-      '<th class="subhead-input subhead-input-extra">Model</th>' +
-      '<th class="subhead-input subhead-input-extra">Phantom</th>' +
-      '<th class="subhead-input subhead-input-extra">Notes</th>' +
-      '<th class="subhead-input subhead-input-extra"><span class="visually-hidden">Remove</span></th>' +
-      '<th class="subhead-plan col-patch">Patch</th>' +
-      '<th class="subhead-plan col-plan-phantom" title="Phantom power (48V) as the plan sets it -- ' +
-      'what apply writes, from the input list\'s phantom column">Phantom</th>' +
-      '<th class="subhead-plan">DCAs</th>' +
-      '<th class="subhead-plan">Mute Groups</th>' +
-      '<th class="subhead-plan-collapsed-note">Plan collapsed</th>' +
+      '<th class="col-num" title="The channel the plan puts this input on, in the color it sets">Ch</th>' +
+      '<th class="col-expand"><span class="visually-hidden">Expand</span></th>' +
+      SHEET_COLS.map((col) => `<th class="subhead-sheet col-sheet-${col.replace("_", "-")}">` +
+        `${esc(SHEET_HEADS[col])}</th>`).join("") +
+      '<th class="col-remove"><span class="visually-hidden">Remove</span></th>' +
+      FINDINGS_TH +
       `</tr></thead><tbody id="plan-rows">${rows}</tbody></table></div>`;
   }
 
@@ -722,77 +708,710 @@
     }).join("; ");
   }
 
-  function busTable(busses, display) {
-    const names = Object.keys(busses);
-    let rows = "";
-    names.forEach((name, i) => {
-      const b = busses[name];
-      const destinations = (b.destinations && b.destinations.length)
-        ? b.destinations
-        : (b.destination ? [b.destination] : []);
-      const desc = destinations.length
-        ? destinations.map(destinationDesc).join(" + ")
-        : destinationDesc(null);
-      const width = b.mono === true ? "mono" : (b.mono === false ? "stereo" : null);
-      const bd = display[name] || {};
-      rows += rowOpen("bus", name, i % 2 ? "alt" : "");
-      rows += `<td class="col-num">${numChip(bd.label, bd.colour)}${changeChip(cardId("bus", name))}</td>`;
-      rows += expandCell("bus", name);
-      rows += `<td class="ct-name">${esc(name)}</td>`;
-      rows += `<td>${width ? esc(width) : DASH}</td>`;
-      rows += `<td>${esc(desc)}</td>`;
-      rows += `<td>${listOrDash(b.dca)}</td><td>${listOrDash(b.mute_group)}</td>`;
-      rows += findingsCell(cardId("bus", name)) + "</tr>";
-      rows += detailRow("bus", name, 8, kv([
-        ["Fader", b.fader ? `<span class="readout">${esc(faderDesc(b.fader))}</span>` : DASH],
-        b.processing ? ["Processing", esc(processingDesc(b.processing))] : null,
-        b.preset ? ["Bus preset", esc(busPresetDesc(b))] : null,
-        busEffectDesc(b) ? ["Effect", esc(busEffectDesc(b))] : null,
-        ["Description", b.description ? esc(b.description) : DASH],
-      ]) + renderProvenance(b.provenance));
+  // ---- the Busses and Mains and Matrix tables: the bus sheet -------------
+  //
+  // `busses.csv`, one row per bus, Main and Matrix. Both tables
+  // edit the one file, so they share one editor (`busSheet`) and one Save.
+  // A row shows the sheet's own columns; a blank cell's placeholder is what
+  // the plan has (`derived`, `sheets.bus_rows_from_plan`), and the rest of
+  // the row -- its sources and their tap, fx, preset, DCAs, mute groups,
+  // label, notes, and the read-only Feeds -- folds open under it. Its
+  // Outputs are read-only badges: outputs.csv says what feeds each socket,
+  // and the Outputs table edits it (revision 3).
+  const BUS_ROW_COLS = ["name", "role", "width", "outputs"];
+  const BUS_DETAIL_COLS = [["sources", "Sources"], ["tap", "Tap"], ["fx", "FX"], ["preset", "Preset"],
+    ["dca", "DCA"], ["mute_group", "Mute group"], ["label", "Label"], ["notes", "Notes"]];
+  const BUS_HEADS = { name: "Name", role: "Role", width: "Width", sources: "Sources", tap: "Tap",
+    outputs: "Outputs" };
+  const BUS_NOTE = "Save writes the busses.csv file and updates the build plan.";
+  const busSheet = {
+    loaded: false, source: null, derived: [], roles: { bus: [], output: [] }, rows: [],
+    dirty: false, refusals: [], checking: null, note: "", noteKind: "", editable: false,
+  };
+
+  // `Bus 3`, `Main 1`, `Matrix 6` (or `Mtx 6`, `MX6`): the row's object.
+  function busLabel(text) {
+    const m = /^\s*(bus|main|matrix|mtx|mx)\s*(\d+)?\s*$/i.exec(String(text || ""));
+    if (!m) return String(text || "").trim();
+    const kind = { bus: "Bus", main: "Main", matrix: "Matrix", mtx: "Matrix", mx: "Matrix" }[m[1].toLowerCase()];
+    return m[2] ? `${kind} ${Number(m[2])}` : kind;
+  }
+
+  function busKindOf(label) {
+    return /^Bus\b/.test(label) ? "bus" : (/^(Main|Matrix)\b/.test(label) ? "output" : "bus");
+  }
+
+  // The sheet as the server read it, and a row for every plan object it has
+  // no row for (blank, so its cells show the plan's values).
+  function loadBusSheetPayload(data) {
+    busSheet.loaded = true;
+    busSheet.source = data.bus_sheet || null;
+    busSheet.derived = data.derived || [];
+    busSheet.roles = data.roles || { bus: [], output: [] };
+    busSheet.rows = ((busSheet.source && busSheet.source.records) || []).map((r) => ({
+      label: busLabel(r.values.bus), line: r.line,
+      values: Object.assign({}, r.values), original: Object.assign({}, r.values),
+    }));
+    busSheet.derived.forEach((d) => {
+      if (!busSheet.rows.some((r) => r.label === d.bus)) {
+        busSheet.rows.push({ label: d.bus, line: null, values: { bus: d.bus }, original: { bus: d.bus } });
+      }
     });
-    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact" id="plan-busses-table">' +
-      '<thead><tr><th class="col-num" title="The bus number apply writes it to, in the colour it sets">#</th>' +
+    busSheet.dirty = false;
+    busSheet.refusals = [];
+    // The sheet says something this plan has not taken in (a rebuild, or an
+    // edit in a spreadsheet): Save lays it on, with nothing typed here.
+    busSheet.behind = !!data.plan_behind;
+  }
+
+  function busRow(label) {
+    return busSheet.rows.find((r) => r.label === label) || null;
+  }
+
+  function derivedRow(label) {
+    return busSheet.derived.find((d) => d.bus === label) || null;
+  }
+
+  function busCellEdited(row, col) {
+    return (row.values[col] || "") !== (row.original[col] || "");
+  }
+
+  function busRefusals(label, col) {
+    return busSheet.refusals.filter((r) => r.sheet === "busses.csv" && r.row === label &&
+      (col === undefined || r.column === col));
+  }
+
+  function busCell(row, col, derived, editable) {
+    const value = row.values[col] || "";
+    const shown = derived ? (col === "name" ? (derived.name || derived.key) : derived[col]) || "" : "";
+    const marks = (busCellEdited(row, col) ? " is-edited" : "") +
+      (busRefusals(row.label, col).length ? " is-refused" : "");
+    const attrs = `data-bus-row="${esc(row.label)}" data-bus-col="${col}" aria-label="${esc(row.label)} ${esc(BUS_HEADS[col] || col)}"`;
+    if (col === "outputs") return busOutputBadges(row.label, derived);
+    if (!editable) {
+      return value ? esc(value)
+        : (shown ? `<span class="setup-dim ct-from-plan" title="Blank in busses.csv: the plan's">${esc(shown)}</span>` : DASH);
+    }
+    if (col === "role" || col === "width" || col === "tap") {
+      const choices = col === "role" ? (busKindOf(row.label) === "bus" ? busSheet.roles.bus : busSheet.roles.output)
+        : (col === "width" ? ["mono", "stereo"] : ["pre", "post"]);
+      const options = choices.slice();
+      if (value && options.indexOf(value) === -1) options.push(value);
+      const blank = shown ? `(${shown})` : "—";
+      return `<select class="cell-select${marks}" ${attrs}>` +
+        `<option value=""${value ? "" : " selected"}>${esc(blank)}</option>` +
+        options.map((o) => `<option value="${esc(o)}"${o === value ? " selected" : ""}>${esc(o)}</option>`).join("") +
+        "</select>";
+    }
+    const placeholder = shown ? ` placeholder="${esc(shown)}"` : "";
+    const wide = col === "sources" ? " cell-wide" : "";
+    return `<input type="text" class="cell-text${wide}${marks}" ${attrs}${placeholder} value="${esc(value)}"` +
+      ` title="${esc(value || (shown ? "Blank in busses.csv; the plan has " + shown : ""))}">`;
+  }
+
+  // Where a row goes, worked out from the other rows' sources (spec §1:
+  // "Where it goes is shown, not stored").
+  function busFeeds(label, key) {
+    const names = [label.toLowerCase(), String(key || "").toLowerCase()];
+    return busSheet.rows.filter((r) => r.label !== label).filter((r) => {
+      const d = derivedRow(r.label) || {};
+      const text = r.values.sources || d.sources || "";
+      return text.split(";").some((part) => {
+        const name = part.replace(/\((pre|post)\)\s*$/i, "").trim().toLowerCase();
+        return name && names.indexOf(name) !== -1;
+      });
+    }).map((r) => {
+      const d = derivedRow(r.label);
+      const name = r.values.name || (d && (d.name || d.key)) || "";
+      return name && name !== r.label ? `${r.label} ${name}` : r.label;
+    });
+  }
+
+  function busDetail(row, derived, entry, editable) {
+    const fields = BUS_DETAIL_COLS.map(([col, head]) => {
+      if (col === "dca" && busKindOf(row.label) !== "bus") return null;
+      if (col === "sources" || col === "tap") return [head, busCell(row, col, derived, editable)];
+      const shown = derived && derived[col] ? derived[col] : "";
+      const value = row.values[col] || "";
+      const html = editable
+        ? `<input type="text" class="detail-input${busCellEdited(row, col) ? " is-edited" : ""}" ` +
+          `data-bus-row="${esc(row.label)}" data-bus-col="${col}" aria-label="${esc(row.label)} ${esc(head)}"` +
+          `${shown ? ` placeholder="${esc(shown)}"` : ""} value="${esc(value)}">`
+        : (value ? esc(value) : (shown ? esc(shown) : DASH));
+      return [head, html];
+    });
+    const feeds = busFeeds(row.label, derived && derived.key);
+    fields.push(["Feeds", (feeds.length ? esc(feeds.join(", ")) : DASH) +
+      ' <span class="setup-dim">worked out from the other rows\' sources; edit those to change it</span>']);
+    const sheet = kv(fields).replace('<dl class="setup-kv">', '<dl class="setup-kv sheet-kv">');
+    if (!entry) return sheet;
+    return sheet + kv([
+      entry.fader ? ["Fader", `<span class="readout">${esc(faderDesc(entry.fader))}</span>`] : null,
+      entry.processing ? ["Processing", esc(processingDesc(entry.processing))] : null,
+      entry.preset ? ["Bus preset", esc(busPresetDesc(entry))] : null,
+      busEffectDesc(entry) ? ["Effect", esc(busEffectDesc(entry))] : null,
+    ]) + renderProvenance(entry.provenance);
+  }
+
+  const BUS_COLS = 10;  // #, expand, the six sheet columns, the refusal-free Findings, spare
+
+  // One table's rows: every plan object of `kind` ("bus" / "output"), in the
+  // plan's order, then any sheet row the plan does not have yet.
+  function busSheetRows(kind, entries, display, cardKind) {
+    const editable = busSheet.editable;
+    const drawn = {};
+    let html = "";
+    let i = 0;
+    const draw = (label, key, entry, derived) => {
+      const row = busRow(label) || { label: label, line: null, values: { bus: label }, original: { bus: label } };
+      drawn[label] = true;
+      const bd = (display && key != null && display[key]) || {};
+      const id = cardId(cardKind, key != null ? key : label);
+      html += rowOpen(cardKind, key != null ? key : label, (i % 2 ? "alt" : "") +
+        (busRefusals(label).length ? " row-refused" : ""), ` data-bus-label="${esc(label)}"`);
+      html += `<td class="col-num">${numChip(bd.label || label.replace(/^Bus /, "B").replace(/^Main /, "M")
+        .replace(/^Matrix /, "MX"), bd.colour, cardKind === "output"
+        ? "Color: none stated — Apply leaves the desk's" : null)}` +
+        `${key != null ? changeChip(cardId(cardKind, key)) : ""}</td>`;
+      html += expandCell(cardKind, key != null ? key : label);
+      BUS_ROW_COLS.forEach((col) => {
+        html += `<td class="${editable && col !== "outputs" ? "cell-input " : ""}col-bus-${col}">${busCell(row, col, derived, editable)}` +
+          (col === "name" && !entry ? ' <span class="setup-dim ct-unplanned-note">not in this plan: Save ' +
+            "adds it</span>" : "") + "</td>";
+      });
+      html += findingsCell(id) + "</tr>";
+      busRefusals(label).forEach((r) => {
+        html += `<tr class="row-refusal" data-refusal-for="${esc(label)}"><td colspan="2"></td>` +
+          `<td colspan="${BUS_COLS - 2}">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
+          `${esc(r.reason)}</td></tr>`;
+      });
+      html += detailRow(cardKind, key != null ? key : label, BUS_COLS, busDetail(row, derived, entry, editable));
+      i += 1;
+    };
+    busSheet.derived.filter((d) => (kind === "bus") === (d.kind === "bus")).forEach((d) => {
+      draw(d.bus, d.key, entries[d.key], d);
+    });
+    // Without the bus sheet's payload yet, the plan's own objects.
+    if (!busSheet.loaded) {
+      Object.keys(entries).forEach((key) => {
+        const e = entries[key] || {};
+        const label = kind === "bus" ? `Bus ${e.index}` : `${e.kind === "main" ? "Main" : "Matrix"} ${e.index}`;
+        if (!drawn[label]) draw(label, key, e, null);
+      });
+    }
+    busSheet.rows.filter((r) => !drawn[r.label] && (kind === "bus") === (busKindOf(r.label) === "bus"))
+      .forEach((r) => draw(r.label, null, null, null));
+    return html;
+  }
+
+  function busTableHead(kind) {
+    return "<thead><tr>" +
+      `<th class="col-num" title="${kind === "bus" ? "The bus number apply writes it to, in the color it sets"
+        : "The Main (M) or Matrix (MX) this row is"}">#</th>` +
       '<th class="col-expand"><span class="visually-hidden">Expand</span></th>' +
-      "<th>Bus</th><th>Width</th><th>Destination</th><th>DCAs</th><th>Mute Groups</th>" +
-      FINDINGS_TH + "</tr></thead>" +
-      `<tbody>${rows}</tbody></table></div>`;
+      BUS_ROW_COLS.map((col) => `<th class="col-bus-${col}">${esc(BUS_HEADS[col])}</th>`).join("") +
+      FINDINGS_TH + "</tr></thead>";
+  }
+
+  function busTable(busses, display) {
+    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact ct-sheet" id="plan-busses-table">' +
+      busTableHead("bus") + `<tbody>${busSheetRows("bus", busses, display, "bus")}</tbody></table></div>`;
   }
 
   function outputTable(outputs, display) {
-    const names = Object.keys(outputs);
-    let rows = "";
-    names.forEach((name, i) => {
-      const o = outputs[name];
-      const sockets = outputPatches(o);
-      const od = display[name] || {};
-      rows += rowOpen("output", name, i % 2 ? "alt" : "");
-      rows += `<td class="col-num">${numChip(od.label, od.colour,
-        "Colour: none — the plan sets no colour on a Main or a Matrix")}${changeChip(cardId("output", name))}</td>`;
-      rows += expandCell("output", name);
-      rows += `<td class="ct-name">${esc(name)}</td>`;
-      rows += `<td>${o.kind ? esc(o.kind) : DASH}</td>`;
-      rows += `<td>${sockets.length ? `<span class="socket-chip">${esc(socketsDesc(sockets))}</span>` : DASH}</td>`;
-      rows += `<td>${o.kind === "matrix" ? esc(fedByDesc(o.fed_by)) : DASH}</td>`;
-      rows += findingsCell(cardId("output", name)) + "</tr>";
-      rows += detailRow("output", name, 7, kv([
-        o.fader ? ["Fader", `<span class="readout">${esc(faderDesc(o.fader))}</span>`] : null,
-        o.processing ? ["Processing", esc(processingDesc(o.processing))] : null,
-        ["Description", o.description ? esc(o.description) : DASH],
-      ]) + renderProvenance(o.provenance));
+    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact ct-sheet" id="plan-outputs-table">' +
+      busTableHead("output") + `<tbody>${busSheetRows("output", outputs, display, "output")}</tbody></table></div>`;
+  }
+
+  // The Save, Discard and Unsaved badge in a block's header, and the note at
+  // the top of its box. Busses and Mains and Matrix write one file, so each carries
+  // the same controls, wired to the one editor.
+  function busControls() {
+    if (!busSheet.editable) return "";
+    const locked = busSheet.refusals.length
+      ? `Save is locked: ${busSheet.refusals.length} cell(s) cannot work on the desk -- see the red rows.`
+      : "";
+    return `<span class="state is-warn bus-dirty-badge"${busSheet.dirty ? "" : " hidden"}>Unsaved changes</span>` +
+      `<button type="button" class="btn btn-secondary btn-sm" data-bus-discard${busSheet.dirty ? "" : " hidden"}>Discard</button>` +
+      // Hidden until there is something to save, as the
+      // Channels Save is; locked, with the reason, while a cell is refused.
+      `<button type="button" class="btn btn-primary btn-sm" data-bus-save title="${esc(locked || "Save busses.csv")}"` +
+      `${busSheet.dirty || busSheet.behind ? "" : " hidden"}` +
+      `${busSheet.refusals.length ? " disabled" : ""}>Save busses.csv</button>`;
+  }
+
+  function busNoteBox() {
+    const locked = busSheet.refusals.length
+      ? '<div class="sheet-refusals" role="alert"><strong>Save is locked:</strong> ' +
+        `${busSheet.refusals.length} cell(s) cannot work on the desk, each named in red under its row.</div>`
+      : "";
+    const note = locked + (busSheet.note
+      ? `<div class="save-note is-${esc(busSheet.noteKind || "ok")}" role="status">${esc(busSheet.note)}</div>` : "");
+    const behind = busSheet.editable && busSheet.behind && !busSheet.dirty
+      ? '<div class="save-note is-warn" role="status">busses.csv says things this plan does not ' +
+        "have yet (a rebuild replaced them, or it was edited in another program). Save lays the " +
+        "sheet onto the plan.</div>" : "";
+    return `<div class="sheet-note">${busSheet.editable ? esc(BUS_NOTE)
+      : "Read-only: " + esc(busReadOnlyWhy())}</div>${behind}${note}`;
+  }
+
+  // The plan on screen is the open show's own plan.json, and the show is
+  // not the demo: only then are its sheets edited here.
+  function planIsBundlesHere() {
+    const b = SP_ && SP_.bundle ? SP_.bundle() : null;
+    return !!(b && !b.demo && planIsBundles());
+  }
+
+  function busReadOnlyWhy() {
+    if (SP_ && SP_.bundle && SP_.bundle() && SP_.bundle().demo) return "the demo show cannot be edited.";
+    if (!(SP_ && SP_.bundle && SP_.bundle())) return "there is no show open, so there is no busses.csv to edit.";
+    return "this plan is not the open show's plan.json, so it is shown as the plan has it.";
+  }
+
+  // ---- the User signals and patches table: user.csv --------
+  //
+  // One row per USR slot the show uses, in the desk's words: the slot, what
+  // it takes (a strip for a user signal, an input socket for a user patch),
+  // a user signal's tap and leg, and its name. What reads a slot -- an
+  // output fed from it, a channel patched from it -- is shown, as badges,
+  // and set in Outputs or Channels. Save writes the whole file.
+  const USER_COLS = ["slot", "source", "tap", "leg", "name"];
+  const USER_NOTE = "The desk's USR slots this show uses, one row each, in the desk's words. A " +
+    "user signal (USR 1-24) takes a channel, aux, bus, Main or Matrix before or after its fader; a " +
+    "user patch (USR 25-56) takes an input socket as it is. An output or a channel fed from a slot " +
+    "reads it: that is set in Outputs or Channels. Type OFF as the source to take a slot out. " +
+    "Save writes user.csv and updates the build plan.";
+  const userSheet = {
+    loaded: false, source: null, rows: [], original: [], readers: {}, dirty: false,
+    refusals: [], note: "", noteKind: "", behind: false, editable: false,
+  };
+
+  function userSlotNumber(text) {
+    const m = /^\s*(?:usr\s*)?(\d+)\s*$/i.exec(String(text || ""));
+    return m ? Number(m[1]) : null;
+  }
+
+  function userKind(n) {
+    if (n >= 1 && n <= 24) return "user signal";
+    if (n >= 25 && n <= 56) return "user patch";
+    return "";
+  }
+
+  function loadUserSheetPayload(data) {
+    userSheet.loaded = true;
+    userSheet.source = data.user_sheet || null;
+    const rows = (userSheet.source && userSheet.source.present ? userSheet.source.rows : data.derived) || [];
+    userSheet.rows = rows.map((r) => Object.assign({}, r));
+    userSheet.original = rows.map((r) => Object.assign({}, r));
+    userSheet.readers = data.readers || {};
+    userSheet.dirty = false;
+    userSheet.refusals = [];
+    userSheet.behind = !!data.plan_behind;
+  }
+
+  function userRowEdited(i, col) {
+    const now = userSheet.rows[i] || {};
+    const was = userSheet.original[i] || {};
+    return (now[col] || "") !== (was[col] || "");
+  }
+
+  function userRefusals(label, col) {
+    return userSheet.refusals.filter((r) => r.row === label && (col === undefined || r.column === col));
+  }
+
+  // Consecutive sockets of one group as one badge: `CRD 27-28`.
+  function socketSpans(list) {
+    const spans = [];
+    list.forEach((words) => {
+      const m = /^(.*\D)\s*(\d+)$/.exec(String(words));
+      if (!m) { spans.push([words, null, null]); return; }
+      const group = m[1].trim();
+      const n = Number(m[2]);
+      const last = spans[spans.length - 1];
+      if (last && last[0] === group && last[2] === n - 1) last[2] = n;
+      else spans.push([group, n, n]);
     });
-    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact" id="plan-outputs-table">' +
-      '<thead><tr><th class="col-num" title="The Main (M) or Matrix (MX) this output is">#</th>' +
+    return spans.map(([g, a, b]) => (a == null ? g : (a === b ? `${g} ${a}` : `${g} ${a}-${b}`)));
+  }
+
+  // The name beside a source: the strip's, or the channel on the socket.
+  function userSourceName(plan, slot, text) {
+    const m = /^\s*(CH|AUX|BUS|MAIN|MTX)\s*(\d+)\s*$/i.exec(String(text || ""));
+    if (m) {
+      const group = m[1].toUpperCase();
+      const n = Number(m[2]);
+      if (group === "CH" || group === "AUX") {
+        const bank = group === "CH" ? "ch" : "aux";
+        const ch = (plan.channels || []).find((c) => c.channel === n && (c.bank || "ch") === bank);
+        return ch ? ch.name || "" : "";
+      }
+      if (group === "BUS") {
+        const key = Object.keys(plan.busses || {}).find((k) => (plan.busses[k] || {}).index === n);
+        return key || "";
+      }
+      const kind = group === "MAIN" ? "main" : "matrix";
+      const key = Object.keys(plan.outputs || {}).find((k) => (plan.outputs[k] || {}).kind === kind &&
+        (plan.outputs[k] || {}).index === n);
+      return key || "";
+    }
+    const s = /^\s*(?:AES50-)?([A-Z]+)\s*(\d+)\s*$/i.exec(String(text || ""));
+    if (!s) return "";
+    const group = s[1].toUpperCase();
+    const n = Number(s[2]);
+    const ch = (plan.channels || []).find((c) => c.patch && c.patch.group === group &&
+      (c.patch.sockets || []).indexOf(n) !== -1);
+    return ch ? ch.name || "" : "";
+  }
+
+  function userSelect(i, col, value, choices, extra) {
+    const options = choices.slice();
+    if (value && options.indexOf(value) === -1) options.push(value);
+    return `<select class="cell-select${extra}" data-user-row="${i}" data-user-col="${col}" ` +
+      `aria-label="${esc((userSheet.rows[i] || {}).slot || "new slot")} ${col}">` +
+      `<option value=""${value ? "" : " selected"}>—</option>` +
+      options.map((o) => `<option value="${esc(o)}"${o === value ? " selected" : ""}>${esc(o)}</option>`).join("") +
+      "</select>";
+  }
+
+  function userTable(plan) {
+    const editable = userSheet.editable;
+    let html = "";
+    userSheet.rows.forEach((row, i) => {
+      const n = userSlotNumber(row.slot);
+      const label = n != null ? `USR ${n}` : (row.slot || "");
+      const kind = n != null ? userKind(n) : "";
+      const refused = userRefusals(label);
+      const mark = (col) => (userRowEdited(i, col) ? " is-edited" : "") +
+        (userRefusals(label, col).length ? " is-refused" : "");
+      const field = (col, value, size) => editable
+        ? `<input type="text" class="cell-text${mark(col)}" data-user-row="${i}" data-user-col="${col}" ` +
+          `aria-label="${esc(label || "new slot")} ${col}" value="${esc(value || "")}"${size || ""}>`
+        : (value ? esc(value) : DASH);
+      const isPatch = kind === "user patch";
+      const tapLeg = (col, choices) => {
+        if (isPatch && !(row[col] || "")) return `<span class="setup-dim">${DASH}</span>`;
+        return editable ? userSelect(i, col, row[col] || "", choices, mark(col)) : (row[col] ? esc(row[col]) : DASH);
+      };
+      const reads = socketSpans(userSheet.readers[String(n)] || []);
+      const name = userSourceName(plan, n, row.source);
+      html += `<tr class="row-primary${i % 2 ? " alt" : ""}${refused.length ? " row-refused" : ""} user-row" ` +
+        `data-user-label="${esc(label)}">` +
+        `<td class="col-user-slot">${editable && userRowEdited(i, "slot") && !(userSheet.original[i] || {}).slot
+          ? field("slot", row.slot, ' size="7"') : `<span class="badge-ro user-slot">${esc(label)}</span>`}` +
+        (kind ? ` <span class="user-kind">${esc(kind)}</span>` : "") + "</td>" +
+        `<td class="cell-input col-user-source">${field("source", row.source)}` +
+        (name ? ` <span class="setup-dim user-src-name">${esc(name)}</span>` : "") + "</td>" +
+        `<td class="cell-input col-user-tap">${tapLeg("tap", ["PRE", "POST"])}</td>` +
+        `<td class="cell-input col-user-leg">${tapLeg("leg", ["L+R", "L", "R"])}</td>` +
+        `<td class="cell-input col-user-name">${field("name", row.name)}</td>` +
+        `<td class="col-user-readby">${reads.length
+          ? reads.map((r) => `<span class="badge-ro" title="${esc(r)} is fed from ${esc(label)}">${esc(r)}</span>`).join("")
+          : `<span class="setup-dim">read by nothing yet${editable ? ": patch an output or a channel to " + esc(label) : ""}</span>`}</td>` +
+        "</tr>";
+      refused.forEach((r) => {
+        html += `<tr class="row-refusal"><td></td><td colspan="5">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
+          `${esc(r.reason)}</td></tr>`;
+      });
+    });
+    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact ct-sheet" id="plan-user-table">' +
+      "<thead><tr>" +
+      '<th class="col-user-slot">Slot</th>' +
+      '<th class="col-user-source" title="What the slot takes: a strip (user signal) or an input socket (user patch)">Source</th>' +
+      '<th class="col-user-tap" title="A user signal\'s tap: before (PRE) or after (POST) its fader">Tap</th>' +
+      '<th class="col-user-leg" title="Which side of a stereo strip: both summed, left or right">Leg</th>' +
+      '<th class="col-user-name">Name</th>' +
+      '<th class="col-user-readby" title="The outputs and channels fed from this slot: set those in Outputs or Channels">Read by</th>' +
+      `</tr></thead><tbody>${html}</tbody></table></div>`;
+  }
+
+  function userControls() {
+    if (!userSheet.editable) return "";
+    const locked = userSheet.refusals.length
+      ? `Save is locked: ${userSheet.refusals.length} cell(s) cannot work on the desk -- see the red rows.`
+      : "";
+    return `<span class="state is-warn user-dirty-badge"${userSheet.dirty ? "" : " hidden"}>Unsaved changes</span>` +
+      `<button type="button" class="btn btn-secondary btn-sm" data-user-discard${userSheet.dirty ? "" : " hidden"}>Discard</button>` +
+      `<button type="button" class="btn btn-primary btn-sm" data-user-save title="${esc(locked || "Save user.csv")}"` +
+      `${userSheet.dirty || userSheet.behind ? "" : " hidden"}${userSheet.refusals.length ? " disabled" : ""}>Save user.csv</button>` +
+      '<button type="button" class="btn btn-secondary btn-sm" data-user-add>Add a slot</button>';
+  }
+
+  function userNoteBox() {
+    const locked = userSheet.refusals.length
+      ? '<div class="sheet-refusals" role="alert"><strong>Save is locked:</strong> ' +
+        `${userSheet.refusals.length} cell(s) cannot work on the desk, each named in red under its row.</div>`
+      : "";
+    const note = userSheet.note
+      ? `<div class="save-note is-${esc(userSheet.noteKind || "ok")}" role="status">${esc(userSheet.note)}</div>` : "";
+    const behind = userSheet.editable && userSheet.behind && !userSheet.dirty
+      ? '<div class="save-note is-warn" role="status">user.csv says things this plan does not have ' +
+        "yet (a rebuild replaced them, or it was edited in another program). Save lays the sheet " +
+        "onto the plan.</div>" : "";
+    return `<div class="sheet-note">${userSheet.editable ? esc(USER_NOTE)
+      : "Read-only: " + esc(busReadOnlyWhy().replace("busses.csv", "user.csv"))}</div>${behind}${locked}${note}`;
+  }
+
+  // ---- the Outputs table: outputs.csv --------------------
+  //
+  // One row per output socket the desk patches, in the desk's words: the
+  // socket, what feeds it, notes. Runs of sockets that go up together, fed
+  // by sources that go up together, show folded as one line of read-only
+  // badges; open one to edit its rows. A show with no outputs.csv yet shows
+  // the plan's own rows, and its first Save writes the file. The row's left
+  // edge says what feeds it; the swatch is the desk's own colour for the
+  // source.
+  const OUT_COLS = ["output", "source", "notes"];
+  const OUT_NOTE = "Every output socket the desk patches, one row each: what feeds it, in the " +
+    "desk's own words. Runs that go up together show as one line; open one to edit its rows. Type " +
+    "OFF as the source to disconnect a socket. Save writes outputs.csv and updates the build plan.";
+  const OUT_KINDS = [["split", "straight from an input socket"], ["mix", "a bus, Main or Matrix"],
+    ["usr", "a user signal or patch (USR)"], ["other", "a send, the monitor or the oscillator"]];
+  const outSheet = {
+    loaded: false, source: null, rows: [], original: [], display: { sockets: {}, objects: {} },
+    dirty: false, refusals: [], note: "", noteKind: "", behind: false, editable: false, open: {},
+  };
+  const OUT_OBJECT_WORDS = { bus: "Bus", main: "Main", matrix: "Matrix", mtx: "Matrix", mx: "Matrix" };
+
+  // `LCL 3` -> {group: "LCL", n: 3}; `AES50-B 12` keeps its whole group.
+  function outParseSocket(text) {
+    const m = /^\s*(AES50-[ABC]|[A-Z]+)\s*(\d+)\s*$/i.exec(String(text || ""));
+    return m ? { group: m[1].toUpperCase(), n: Number(m[2]) } : null;
+  }
+
+  // A source cell: an input socket (`split`), a bus's, Main's or Matrix's
+  // side (`mix`, with its object, `Bus 9`), a user signal or patch (`usr`),
+  // or a send, the monitor or the oscillator (`other`). Null for OFF, a
+  // blank, or words the server will refuse.
+  function outParseSource(text) {
+    const t = String(text || "").trim();
+    let m = /^(bus|main|matrix|mtx|mx)\s*(\d+)\s*([LR])$/i.exec(t);
+    if (m) {
+      const kind = OUT_OBJECT_WORDS[m[1].toLowerCase()];
+      const n = Number(m[2]);
+      return { kind: "mix", group: kind, n: 2 * n - (m[3].toUpperCase() === "L" ? 1 : 0),
+        obj: `${kind} ${n}`, side: m[3].toUpperCase() };
+    }
+    m = /^(USR|SEND|MON|OSC)\s*(\d+)$/i.exec(t);
+    if (m) return { kind: m[1].toUpperCase() === "USR" ? "usr" : "other", group: m[1].toUpperCase(), n: Number(m[2]) };
+    const s = outParseSocket(t);
+    return s && !/^OFF$/i.test(t) ? { kind: "split", group: s.group, n: s.n } : null;
+  }
+
+  function outLabel(row) {
+    const s = outParseSocket(row && row.output);
+    return s ? `${s.group} ${s.n}` : String((row && row.output) || "").trim();
+  }
+
+  function loadOutputsSheetPayload(data) {
+    outSheet.loaded = true;
+    outSheet.source = data.outputs_sheet || null;
+    const rows = (outSheet.source ? outSheet.source.rows : data.derived) || [];
+    outSheet.rows = rows.map((r) => Object.assign({}, r));
+    outSheet.original = rows.map((r) => Object.assign({}, r));
+    outSheet.display = data.display || { sockets: {}, objects: {} };
+    outSheet.dirty = false;
+    outSheet.refusals = [];
+    outSheet.behind = !!data.plan_behind;
+  }
+
+  function outRowEdited(i, col) {
+    const now = outSheet.rows[i] || {};
+    const was = outSheet.original[i] || {};
+    return (now[col] || "") !== (was[col] || "");
+  }
+
+  function outRefusals(label, col) {
+    return outSheet.refusals.filter((r) => r.row === label && (col === undefined || r.column === col));
+  }
+
+  // The rows as runs, from the sheet as it was read (an edit does not fold
+  // or unfold the table under the cursor): consecutive sockets of one group,
+  // fed by consecutive sources of one group, a bus's, Main's or Matrix's run
+  // staying on its one object. Each run is a list of row indexes.
+  function outRuns() {
+    const runs = [];
+    outSheet.rows.forEach((_row, i) => {
+      const row = outSheet.original[i] || {};
+      const out = outParseSocket(row.output);
+      const src = outParseSource(row.source);
+      const last = runs.length ? runs[runs.length - 1] : null;
+      const prev = last ? outSheet.original[last[last.length - 1]] || {} : null;
+      const pOut = prev && outParseSocket(prev.output);
+      const pSrc = prev && outParseSource(prev.source);
+      if (out && src && pOut && pSrc && out.group === pOut.group && out.n === pOut.n + 1 &&
+          src.kind === pSrc.kind && src.group === pSrc.group && src.n === pSrc.n + 1 &&
+          (src.kind !== "mix" || src.obj === pSrc.obj)) {
+        last.push(i);
+      } else {
+        runs.push([i]);
+      }
+    });
+    return runs;
+  }
+
+  function outRunWords(run) {
+    const first = outSheet.original[run[0]] || {};
+    const last = outSheet.original[run[run.length - 1]] || {};
+    const a = outParseSocket(first.output);
+    const b = outParseSocket(last.output);
+    const src = outParseSource(first.source);
+    const end = outParseSource(last.source);
+    const output = `${a.group} ${a.n}-${b.n}`;
+    const source = src.kind === "mix" ? `${src.obj} L-R` : `${src.group} ${src.n}-${end.n}`;
+    return [output, source];
+  }
+
+  function outSwatch(src) {
+    const d = outSheet.display || {};
+    let colour = null;
+    if (src && src.kind === "mix") colour = ((d.objects || {})[src.obj] || {}).colour;
+    else if (src && src.kind === "split") colour = (d.sockets || {})[`${src.group} ${src.n}`];
+    if (!colour) return '<span class="out-no-swatch" aria-hidden="true"></span>';
+    const what = src.kind === "mix" ? src.obj : `${src.group} ${src.n}`;
+    return `<span class="colour-chip" data-colour="${esc(colour)}" ` +
+      `title="${esc(colour.charAt(0).toUpperCase() + colour.slice(1))}, the desk's color for ${esc(what)}"></span>`;
+  }
+
+  function outObjectName(src) {
+    if (!src || src.kind !== "mix") return "";
+    const name = (((outSheet.display || {}).objects || {})[src.obj] || {}).name || "";
+    return name && name !== src.obj ? ` <span class="setup-dim out-objname">${esc(name)}</span>` : "";
+  }
+
+  function outRowHtml(i, alt, member) {
+    const row = outSheet.rows[i];
+    const label = outLabel(row);
+    const editable = outSheet.editable;
+    const src = outParseSource(row.source);
+    const refused = outRefusals(label);
+    const mark = (col) => (outRowEdited(i, col) ? " is-edited" : "") +
+      (outRefusals(label, col).length ? " is-refused" : "");
+    const field = (col, extra) => editable
+      ? `<input type="text" class="cell-text${mark(col)}${extra || ""}" data-out-row="${i}" ` +
+        `data-out-col="${col}" aria-label="${esc(label || "new socket")} ${col}" value="${esc(row[col] || "")}"` +
+        ` title="${esc(row[col] || "")}">`
+      : `<span class="out-text">${row[col] ? esc(row[col]) : DASH}</span>`;
+    let html = `<tr class="row-primary out-row out-kind-${src ? src.kind : "none"}${alt ? " alt" : ""}` +
+      `${member ? " out-run-member" : ""}${refused.length ? " row-refused" : ""}" data-out-label="${esc(label)}">` +
+      '<td class="col-expand"></td>' +
+      `<td class="cell-input col-out-output">${field("output")}</td>` +
+      `<td class="cell-input col-out-source"><span class="out-arrow" aria-hidden="true">&larr;</span>` +
+      `${outSwatch(src)}${field("source")}${outObjectName(src)}</td>` +
+      `<td class="cell-input col-out-notes">${field("notes")}</td>` +
+      findingsCell(cardId("socket", label)) + "</tr>";
+    refused.forEach((r) => {
+      html += `<tr class="row-refusal"><td></td><td colspan="4">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
+        `${esc(r.reason)}</td></tr>`;
+    });
+    return html;
+  }
+
+  function outRunHtml(run, alt, open) {
+    const [output, source] = outRunWords(run);
+    const src = outParseSource((outSheet.original[run[0]] || {}).source);
+    const key = (outSheet.original[run[0]] || {}).output || "";
+    const what = open ? "hide" : "show";
+    const cell = (text) => open ? `<span class="out-run-text">${esc(text)}</span>`
+      : `<span class="badge-ro out-badge" title="Open the run to edit its ${run.length} sockets">${esc(text)}</span>`;
+    return `<tr class="row-primary out-run ${open ? "out-run-open" : "out-run-closed"} ` +
+      `out-kind-${src ? src.kind : "none"}${alt ? " alt" : ""}" data-out-run="${esc(key)}">` +
+      `<td class="col-expand"><button type="button" class="row-expand-btn" data-out-toggle="${esc(key)}" ` +
+      `aria-expanded="${open ? "true" : "false"}" aria-label="${esc(output)}: ${what} its ${run.length} rows">` +
+      '<span class="chevron" aria-hidden="true">&#9656;</span></button></td>' +
+      `<td class="col-out-output">${cell(output)}</td>` +
+      `<td class="col-out-source"><span class="out-arrow" aria-hidden="true">&larr;</span>` +
+      `${outSwatch(src)}${cell(source)}${outObjectName(src)}</td>` +
+      '<td class="col-out-notes"></td><td class="col-findings"></td></tr>';
+  }
+
+  function outputsTable() {
+    let html = "";
+    let alt = false;
+    outRuns().forEach((run) => {
+      if (run.length === 1) {
+        html += outRowHtml(run[0], alt, false);
+      } else {
+        const key = (outSheet.original[run[0]] || {}).output || "";
+        // A run with an edited or refused row stays open: its rows are where
+        // the edit is.
+        const busy = run.some((i) => OUT_COLS.some((c) => outRowEdited(i, c)) ||
+          outRefusals(outLabel(outSheet.rows[i])).length);
+        const open = !!outSheet.open[key] || busy;
+        html += outRunHtml(run, alt, open);
+        if (open) run.forEach((i, j) => { html += outRowHtml(i, j % 2 === 1, true); });
+      }
+      alt = !alt;
+    });
+    return '<div class="table-wrap ct-wrap"><table class="ct ct-compact ct-sheet" id="plan-sockets-table">' +
+      "<thead><tr>" +
       '<th class="col-expand"><span class="visually-hidden">Expand</span></th>' +
-      "<th>Output</th><th>Kind</th><th>Patch</th><th>Fed by</th>" + FINDINGS_TH + "</tr></thead>" +
-      `<tbody>${rows}</tbody></table></div>`;
+      '<th class="col-out-output" title="The output socket, as the desk names it">Output</th>' +
+      '<th class="col-out-source" title="What feeds it: one of the desk\'s source groups and a number">Source</th>' +
+      '<th class="col-out-notes">Notes</th>' + FINDINGS_TH +
+      `</tr></thead><tbody>${html}</tbody></table></div>`;
+  }
+
+  function outControls() {
+    if (!outSheet.editable) return "";
+    const locked = outSheet.refusals.length
+      ? `Save is locked: ${outSheet.refusals.length} cell(s) cannot work on the desk -- see the red rows.`
+      : "";
+    const unsaved = outSheet.dirty || outSheet.behind || !(outSheet.source && outSheet.source.present);
+    return `<span class="state is-warn out-dirty-badge"${outSheet.dirty ? "" : " hidden"}>Unsaved changes</span>` +
+      `<button type="button" class="btn btn-secondary btn-sm" data-out-discard${outSheet.dirty ? "" : " hidden"}>Discard</button>` +
+      `<button type="button" class="btn btn-primary btn-sm" data-out-save title="${esc(locked || "Save outputs.csv")}"` +
+      `${unsaved ? "" : " hidden"}${outSheet.refusals.length ? " disabled" : ""}>Save outputs.csv</button>` +
+      '<button type="button" class="btn btn-secondary btn-sm" data-out-add>Add a socket</button>';
+  }
+
+  function outNoteBox() {
+    const locked = outSheet.refusals.length
+      ? '<div class="sheet-refusals" role="alert"><strong>Save is locked:</strong> ' +
+        `${outSheet.refusals.length} cell(s) cannot work on the desk, each named in red under its row.</div>`
+      : "";
+    const note = outSheet.note
+      ? `<div class="save-note is-${esc(outSheet.noteKind || "ok")}" role="status">${esc(outSheet.note)}</div>` : "";
+    const fresh = outSheet.editable && outSheet.source && !outSheet.source.present && !outSheet.dirty
+      ? '<div class="save-note is-warn" role="status">This show has no outputs.csv yet -- these are ' +
+        "the plan's outputs. Save writes outputs.csv, which will then take priority over " +
+        "conventions and instructions during a build.</div>" : "";
+    const behind = outSheet.editable && outSheet.behind && !outSheet.dirty
+      ? '<div class="save-note is-warn" role="status">outputs.csv says things this plan does not have ' +
+        "yet (a rebuild replaced them, or it was edited in another program). Save lays the sheet " +
+        "onto the plan.</div>" : "";
+    const legend = '<div class="out-legend" aria-label="What the edge of a row says">' +
+      OUT_KINDS.map(([kind, words]) => `<span class="out-key out-kind-${kind}">${esc(words)}</span>`).join("") +
+      '<span class="out-key-note"><span class="colour-chip" data-colour="red"></span>' +
+      "the desk's own color for the source</span></div>";
+    return `<div class="sheet-note">${outSheet.editable ? esc(OUT_NOTE)
+      : "Read-only: " + esc(busReadOnlyWhy().replace("busses.csv", "outputs.csv"))}</div>` +
+      `${fresh}${behind}${locked}${note}${legend}`;
+  }
+
+  // A bus's, Main's or Matrix's sockets, as the Outputs table has them now:
+  // read-only badges in its Busses or Mains and Matrix row (edit them in
+  // Outputs).
+  function busOutputBadges(label, derived) {
+    let words = [];
+    if (outSheet.loaded) {
+      outSheet.rows.forEach((row) => {
+        const src = outParseSource(row.source);
+        if (src && src.kind === "mix" && src.obj === label) words.push(outLabel(row));
+      });
+      words = socketSpans(words);
+    } else if (derived && derived.outputs) {
+      words = String(derived.outputs).split(/[;,]/).map((w) => w.trim()).filter((w) => w);
+    }
+    if (!words.length) return `<span class="setup-dim">${DASH}</span>`;
+    return words.map((w) => `<span class="badge-ro" title="${esc(w)} carries ${esc(label)}; edit it in Outputs">` +
+      `${esc(w)}</span>`).join("");
   }
 
   // ---- the table's own controls ----------------------------------------
   // Kept across a redraw (an edit in step 02, a Save, a rebuild): which
   // column groups are open, and which rows.
 
-  const tableState = { inputOpen: false, planOpen: true, open: {} };
+  const tableState = { open: {} };
 
   function setDetail(row, open) {
     if (!row || !row.id) return;
@@ -805,24 +1424,6 @@
     else delete tableState.open[row.id];
   }
 
-  function setGroup(group, open) {
-    const table = document.getElementById("plan-channels-table");
-    if (!table) return;
-    if (group === "input") {
-      tableState.inputOpen = open;
-      table.classList.toggle("ct--input-slim", !open);
-      const th = document.getElementById("grpth-input");
-      if (th) th.colSpan = open ? 7 : 1;
-    } else {
-      tableState.planOpen = open;
-      table.classList.toggle("ct--plan-collapsed", !open);
-      const th = document.getElementById("grpth-plan");
-      if (th) th.colSpan = open ? PLAN_COLS : 1;
-    }
-    const button = document.getElementById("grp-toggle-" + group);
-    if (button) button.setAttribute("aria-expanded", String(open));
-  }
-
   function restoreOpenRows() {
     Object.keys(tableState.open).forEach((id) => setDetail(document.getElementById(id), true));
   }
@@ -831,17 +1432,29 @@
   // does not have to re-bind anything.
   function bindTableEvents(container) {
     container.addEventListener("click", (ev) => {
+      // An Outputs run folds and unfolds its own rows.
+      const runToggle = ev.target.closest("[data-out-toggle]");
+      if (runToggle) { toggleOutRun(runToggle.dataset.outToggle); return; }
       const expand = ev.target.closest(".row-expand-btn");
       if (expand) {
         const row = expand.closest("tr.row-primary");
         setDetail(row, expand.getAttribute("aria-expanded") !== "true");
         return;
       }
-      const toggle = ev.target.closest(".grp-toggle");
-      if (toggle) {
-        setGroup(toggle.dataset.group, toggle.getAttribute("aria-expanded") !== "true");
+      if (ev.target.closest("[data-bus-save]")) {
+        saveBusSheet();
         return;
       }
+      if (ev.target.closest("[data-bus-discard]")) {
+        discardBusSheet();
+        return;
+      }
+      if (ev.target.closest("[data-user-save]")) { saveUserSheet(); return; }
+      if (ev.target.closest("[data-user-discard]")) { discardUserSheet(); return; }
+      if (ev.target.closest("[data-user-add]")) { addUserSlot(); return; }
+      if (ev.target.closest("[data-out-save]")) { saveOutputsSheet(); return; }
+      if (ev.target.closest("[data-out-discard]")) { discardOutputsSheet(); return; }
+      if (ev.target.closest("[data-out-add]")) { addOutSocket(); return; }
       const note = ev.target.closest("[data-note-key]");
       if (note && SP_ && SP_.inputEditor && SP_.inputEditor.editNote) {
         SP_.inputEditor.editNote(note.dataset.noteKey, note);
@@ -859,6 +1472,21 @@
     });
     const edit = (ev) => {
       const input = ev.target;
+      if (input.dataset && input.dataset.busCol) {
+        if ((input.tagName === "SELECT") !== (ev.type === "change")) return;
+        editBusCell(input);
+        return;
+      }
+      if (input.dataset && input.dataset.userCol) {
+        if ((input.tagName === "SELECT") !== (ev.type === "change")) return;
+        editUserCell(input);
+        return;
+      }
+      if (input.dataset && input.dataset.outCol) {
+        if (ev.type === "change") return;
+        editOutCell(input);
+        return;
+      }
       if (!input.dataset || !input.dataset.inputCol || !SP_ || !SP_.inputEditor) return;
       const col = input.dataset.inputCol;
       if ((col === "phantom") !== (ev.type === "change")) return;
@@ -904,7 +1532,7 @@
   // what reaches a finding whose own link goes elsewhere: Apply's
   // pre-flight verify of plan.json links to its own panel, but
   // `channels[Snare].patch` is still Snare's row.
-  const WHERE_KINDS = { channels: "channel", busses: "bus", outputs: "output" };
+  const WHERE_KINDS = { channels: "channel", busses: "bus", outputs: "output", direct_outputs: "socket" };
 
   function findingRowIds(f) {
     const ids = {};
@@ -918,7 +1546,7 @@
         ids[j.target.slice(1)] = true;
       }
     });
-    const m = /^(channels|busses|outputs)\[([^\]]+)\]/.exec(f.where || "");
+    const m = /^(channels|busses|outputs|direct_outputs)\[([^\]]+)\]/.exec(f.where || "");
     if (m) ids[cardId(WHERE_KINDS[m[1]], m[2])] = true;
     return ids;
   }
@@ -1164,17 +1792,27 @@
     const log = renderBuildLog(meta.build_log);
     if (!allNotes.length && !log) return "";
     const bits = [];
-    if (showNotes.length) bits.push(`${showNotes.length} note${showNotes.length === 1 ? "" : "s"} from the model`);
+    // Who wrote each note: a capture's choices, and a step 04
+    // Save's, are not the model's.
+    const NOTE_AUTHORS = [["capture", "from the capture"], ["sheets", "on the desk sheets"]];
+    const byAuthor = NOTE_AUTHORS.map(([source, words]) =>
+      [words, showNotes.filter((n) => n && n.source === source)]);
+    const fromModel = showNotes.filter((n) => !(n && NOTE_AUTHORS.some(([s]) => s === n.source)));
+    const count = (n, words) => `${n} note${n === 1 ? "" : "s"} ${words}`;
+    if (fromModel.length) bits.push(count(fromModel.length, "from the model"));
+    byAuthor.forEach(([words, notes]) => { if (notes.length) bits.push(count(notes.length, words)); });
     if (detailNotes.length) {
       bits.push(`${detailNotes.length} line${detailNotes.length === 1 ? "" : "s"} on how the reply was read`);
     }
     if (log) bits.push("the build log");
     let html = '<details class="fold-details" id="plan-notes-details">' +
       `<summary>Details<span class="meta"> · ${esc(bits.join(" · "))}</span></summary>`;
-    if (showNotes.length) {
-      html += '<p class="sub-label">Notes from the model</p><ul class="setup-notes">' +
-        showNotes.map((n) => `<li>${esc(noteLine(n))}</li>`).join("") + "</ul>";
-    }
+    [["Notes from the model", fromModel]].concat(byAuthor.map(([words, notes]) =>
+      ["Notes " + words, notes])).forEach(([label, notes]) => {
+      if (!notes.length) return;
+      html += `<p class="sub-label">${esc(label)}</p><ul class="setup-notes">` +
+        notes.map((n) => `<li>${esc(noteLine(n))}</li>`).join("") + "</ul>";
+    });
     if (detailNotes.length) {
       html += '<p class="sub-label">Build details <span class="meta">how the reply was read, for debugging</span></p>' +
         '<ul class="setup-notes">' +
@@ -1362,43 +2000,80 @@
       'aria-label="Help: reading the channel table" aria-expanded="false" ' +
       'aria-controls="help-plan-table">?</button>' +
       '<span class="help-popover" id="help-plan-table" role="note" hidden>' +
-      "Ch is the channel number, in the colour the plan sets. Input " +
-      "collapsed to Name; Plan columns (Patch, Phantom, DCAs, Mute Groups) expanded. ST marks a stereo " +
-      "channel, on the first of its two input rows. ADDED, CHANGED or MOVED marks a strip this " +
-      "build changed against the plan it replaced; yellow when nothing it is made from changed. " +
-      "The Findings column counts each row's findings in the Findings panel; " +
-      "click a badge to find them there. Expand a row for HPF / colour / sends / where the name is " +
-      "actually written / notes / provenance.</span></span>";
+      "Ch is the channel the plan puts the input on, in the color it sets. The other columns are " +
+      "the input list's own, every one editable: a blank cell's gray text is what the plan has there. " +
+      "ST marks a stereo channel, on the first of its two input rows. ADDED, CHANGED or MOVED marks a " +
+      "strip this build changed against the plan it replaced. The Findings column counts each row's " +
+      "findings in the Findings panel; click a badge to find them there. Expand a row for its model, " +
+      "preset and notes, and the plan's HPF / color / sends / where the name is actually written / " +
+      "provenance.</span></span>";
     let html = blockHead("Channels", chNote, help) +
       '<section class="panel box plan-table-section" id="plan-channels-block">' +
       '<div id="plan-input-toolbar-slot"></div>' +
       channelTable(plan, display || []) + "</section>";
 
+    // Busses and Mains and Matrix: the bus sheet. Editable where the Channels are --
+    // the open show's own plan.json -- and Save sits on the first of the
+    // two blocks; both write busses.csv.
+    busSheet.editable = planIsBundlesHere();
     const busses = plan.busses || {};
     const busNames = Object.keys(busses);
-    if (busNames.length) {
-      const mono = busNames.filter((n) => busses[n] && busses[n].mono === true).length;
-      const st = busNames.filter((n) => busses[n] && busses[n].mono === false).length;
-      const note = [String(busNames.length)].concat(mono ? [`${mono} mono`] : [])
-        .concat(st ? [`${st} stereo`] : []).join(" · ");
-      html += blockHead("Busses", note) +
-        '<section class="panel box plan-table-section">' +
-        busTable(busses, busDisplay || {}) + "</section>";
-    }
-
+    const sheetBusRows = busSheet.rows.filter((r) => busKindOf(r.label) === "bus").length;
     const outputs = plan.outputs || {};
     const outputNames = Object.keys(outputs);
-    if (outputNames.length) {
+    const sheetOutputRows = busSheet.rows.filter((r) => busKindOf(r.label) === "output").length;
+    const sheetFile = busSheet.editable ? " · busses.csv" : "";
+    let controlsShown = false;
+    if (busNames.length || sheetBusRows) {
+      const mono = busNames.filter((n) => busses[n] && busses[n].mono === true).length;
+      const st = busNames.filter((n) => busses[n] && busses[n].mono === false).length;
+      const note = [String(Math.max(busNames.length, sheetBusRows))].concat(mono ? [`${mono} mono`] : [])
+        .concat(st ? [`${st} stereo`] : []).join(" · ") + sheetFile;
+      html += blockHead("Busses", note, `<span class="block-head-spacer"></span>${busControls()}`) +
+        '<section class="panel box plan-table-section" id="plan-busses-block">' + busNoteBox() +
+        busTable(busses, busDisplay || {}) + "</section>";
+      controlsShown = true;
+    }
+    if (outputNames.length || sheetOutputRows) {
       const kinds = {};
       outputNames.forEach((n) => {
         const k = (outputs[n] && outputs[n].kind) || "other";
         kinds[k] = (kinds[k] || 0) + 1;
       });
       const note = [String(outputNames.length)]
-        .concat(Object.keys(kinds).map((k) => `${kinds[k]} ${k}`)).join(" · ");
-      html += blockHead("Outputs", note) +
-        '<section class="panel box plan-table-section">' +
+        .concat(Object.keys(kinds).map((k) => `${kinds[k]} ${k}`)).join(" · ") + sheetFile;
+      html += blockHead("Mains and Matrix", note,
+        controlsShown ? "" : `<span class="block-head-spacer"></span>${busControls()}`) +
+        '<section class="panel box plan-table-section" id="plan-outputs-block">' +
+        (controlsShown ? `<div class="sheet-note">${esc(busSheet.editable ? BUS_NOTE
+          : "Read-only: " + busReadOnlyWhy())}</div>` : busNoteBox()) +
         outputTable(outputs, outputDisplay || {}) + "</section>";
+    }
+    // Outputs: outputs.csv. Every patched output socket; a show
+    // with no outputs.csv shows the plan's, and a Save writes the file.
+    outSheet.editable = planIsBundlesHere();
+    if (outSheet.rows.length || outSheet.editable) {
+      const n = outSheet.rows.length;
+      const lines = outRuns().length;
+      html += blockHead("Outputs",
+        `${n} socket${n === 1 ? "" : "s"} · ${lines} line${lines === 1 ? "" : "s"}` +
+        `${outSheet.editable ? " · outputs.csv" : ""}`,
+        `<span class="block-head-spacer"></span>${outControls()}`) +
+        '<section class="panel box plan-table-section" id="plan-sockets-block">' + outNoteBox() +
+        (n ? outputsTable() : '<div class="sheet-note setup-dim">No output socket is patched. Add a ' +
+          "socket to send a split, a recording feed or a bus to one.</div>") + "</section>";
+    }
+    // User signals and patches: user.csv. Shown once the show
+    // has a slot in use, or can have one added here.
+    userSheet.editable = planIsBundlesHere();
+    if (userSheet.rows.length || userSheet.editable) {
+      const n = userSheet.rows.length;
+      html += blockHead("User signals and patches",
+        `${n} slot${n === 1 ? "" : "s"}${userSheet.editable ? " · user.csv" : ""}`,
+        `<span class="block-head-spacer"></span>${userControls()}`) +
+        '<section class="panel box plan-table-section" id="plan-user-block">' + userNoteBox() +
+        (n ? userTable(plan) : '<div class="sheet-note setup-dim">No USR slot in use. Add a slot to ' +
+          "define a processed feed or a user patch.</div>") + "</section>";
     }
     container.innerHTML = html;
     const slot = document.getElementById("plan-input-toolbar-slot");
@@ -1516,6 +2191,17 @@
 
   // ---- the plan tile and the plan ----------------------------------------
 
+  // A build is a model call: with none set up, Build plan and both Rebuilds
+  // are locked, saying why -- a build that cannot run must not be pressed
+  // (`build_model`, from the Build payload).
+  function buildModelWhy() {
+    const sources = SP.buildSources ? SP.buildSources() : null;
+    const model = sources && sources.build_model;
+    if (!model || model.ready !== false) return "";
+    return "a build needs a model, and none is set up here (" +
+      (model.why || "no model configured") + ")";
+  }
+
   function renderPlanTile() {
     const badge = el("badge-plan");
     const hint = el("hint-plan");
@@ -1533,14 +2219,17 @@
     badge.title = planIsStale() ? staleReasons().join(" ") : "";
     hint.textContent = bundle ? bundle.name + "/plan.json" : "no show bundle open";
     hint.title = (current && current.path) || "";
-    runBtn.disabled = run.state === "running" || !bundle || !!bundle.demo || SP.isStale();
+    const noModel = buildModelWhy();
+    runBtn.disabled = run.state === "running" || !bundle || !!bundle.demo || SP.isStale()
+      || !!noModel;
     // A locked control says why, in words.
     const lock = el("run-build-lock");
     if (lock) {
       const why = run.state === "running" ? "a build is running"
         : !bundle ? "open or create a show first"
         : bundle.demo ? "the Demo show is read-only"
-        : SP.isStale() ? "this page is out of date; reload it" : "";
+        : SP.isStale() ? "this page is out of date; reload it"
+        : noModel ? noModel : "";
       lock.textContent = why;
       lock.hidden = !why;
     }
@@ -1618,7 +2307,8 @@
     }
     if (rebuild) {
       rebuild.textContent = stalePlan ? "Rebuild plan" : "Rebuild to record it";
-      rebuild.disabled = running || !SP.bundle() || SP.isStale();
+      rebuild.disabled = running || !SP.bundle() || SP.isStale() || !!buildModelWhy();
+      rebuild.title = buildModelWhy();
     }
     // The status line's plan badge beside a Rebuild button, on the tile.
     // It says only what the tile's own badge does not: a stale plan or a build under way is already the tile's
@@ -1640,7 +2330,8 @@
     }
     if (statusRebuild) {
       statusRebuild.hidden = !stalePlan || running;
-      statusRebuild.disabled = !SP.bundle() || SP.isStale();
+      statusRebuild.disabled = !SP.bundle() || SP.isStale() || !!buildModelWhy();
+      statusRebuild.title = buildModelWhy();
     }
     renderApplyDifference();
   }
@@ -1676,7 +2367,31 @@
   function rebuild() {
     SP.activateMode("build");
     if (SP.activateStep) SP.activateStep("plan");
-    startBuild();
+    buildAsking();
+  }
+
+  // A captured show's plan was read from the desk, and a
+  // build replaces it: Build plan asks first, with Cancel focused. A built
+  // plan builds at once, as before.
+  const capturedBuild = el("captured-build-dialog");
+  function isCapturedPlan() {
+    const meta = (current && current.plan && current.plan.meta) || {};
+    return meta.made_from === "desk" || meta.made_from === "snap";
+  }
+  function buildAsking() {
+    if (!isCapturedPlan() || !capturedBuild || typeof capturedBuild.showModal !== "function") {
+      startBuild();
+      return;
+    }
+    capturedBuild.showModal();
+    el("captured-build-cancel").focus();
+  }
+  if (capturedBuild) {
+    el("captured-build-cancel").addEventListener("click", () => capturedBuild.close());
+    el("captured-build-continue").addEventListener("click", () => {
+      capturedBuild.close();
+      startBuild();
+    });
   }
 
   // Step 04's Input cells are step 02's editor (`SP.inputEditor`): the
@@ -1689,10 +2404,9 @@
     const editable = !!(table && table.dataset.editable === "1");
     const mode = el("plan-input-mode");
     if (mode) {
+      // The maintainer's words (mockup revision 3).
       mode.textContent = editable
-        ? "The Input columns are step 02's input list: an edit here is the same edit, "
-          + "saved to the bundle's input.csv by the same Save -- the plan then reads Stale "
-          + "until it is rebuilt."
+        ? "Save writes the input.csv file and updates the build plan."
         : (SP.bundle() && SP.bundle().demo
           ? "Read-only: the demo show cannot be edited -- the inputs are shown as the "
             + "plan recorded them."
@@ -1705,8 +2419,8 @@
     const link = el("plan-input-edit-link");
     if (link) link.hidden = editable || !SP.bundle() || !!(SP.bundle() && SP.bundle().demo);
     const dirty = editable && SP.inputEditor && SP.inputEditor.dirty();
-    // Hidden until there is something to save, and only where these cells are
-    // the editable list.
+    // Hidden until there is something to save as the bus
+    // sheet's Save is, and only where these cells are the editable list.
     ["plan-input-save-btn", "plan-input-discard-btn"].forEach((id) => {
       const node = el(id);
       if (node) node.hidden = !editable || !dirty;
@@ -1714,13 +2428,476 @@
     const badge = el("plan-input-dirty-badge");
     if (badge) badge.hidden = !dirty;
     const save = el("plan-input-save-btn");
-    if (save) save.disabled = !dirty || SP.isStale();
+    if (save) {
+      save.disabled = !dirty || SP.isStale() || inputRefusals.length > 0;
+      save.title = inputRefusals.length
+        ? `Save is locked: ${inputRefusals.length} cell(s) cannot work on the desk -- see the list above the table.`
+        : "Save input.csv";
+    }
+    paintInputRefusals();
     const discard = el("plan-input-discard-btn");
     if (discard) discard.disabled = !dirty;
   }
 
+  // ---- what a Save would refuse, before it is pressed ----------------------
+  // `POST /api/build/sheets/check` lays the unsaved sheet onto the plan and
+  // says what cannot work on the desk, with nothing written. A refused cell
+  // is red, its reason under its row, and Save is locked with the reason.
+
+  let inputRefusals = [];
+  let inputCheckTimer = null;
+  let busCheckTimer = null;
+
+  async function checkSheet(sheet, rows) {
+    try {
+      const r = await fetch("/api/build/sheets/check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sheet: sheet, rows: rows,
+                               expected_bundle: SP.bundle() ? SP.bundle().directory : null }),
+      });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function scheduleInputCheck() {
+    clearTimeout(inputCheckTimer);
+    if (!SP.inputEditor || !SP.inputEditor.collect || !planIsBundlesHere()) return;
+    if (!SP.inputEditor.dirty()) {
+      inputRefusals = [];
+      renderInputToolbar();
+      return;
+    }
+    inputCheckTimer = setTimeout(async () => {
+      const data = await checkSheet("input_list", SP.inputEditor.collect());
+      if (!data) return;
+      inputRefusals = data.refusals || [];
+      renderInputToolbar();
+    }, 400);
+  }
+
+  function paintInputRefusals() {
+    const slot = el("plan-input-refusals");
+    if (slot) {
+      slot.hidden = !inputRefusals.length;
+      slot.innerHTML = inputRefusals.length
+        ? "<strong>Save is locked:</strong> " + inputRefusals.map((r) => `<div>${esc(r.text)}</div>`).join("")
+        : "";
+    }
+    document.querySelectorAll("#plan-channels-table tr.row-refused").forEach((tr) => tr.classList.remove("row-refused"));
+    document.querySelectorAll("#plan-channels-table .is-refused").forEach((n) => n.classList.remove("is-refused"));
+    inputRefusals.forEach((r) => {
+      // "row 7 (Kick 2)" or "CH 4 (Acoustic L)": the input's name.
+      const m = /\(([^)]*)\)\s*$/.exec(r.row || "");
+      const name = m ? m[1] : r.row;
+      document.querySelectorAll("#plan-channels-table tr.row-primary").forEach((tr) => {
+        const box = tr.querySelector('[data-input-col="name"]');
+        if (!box || box.value !== name) return;
+        tr.classList.add("row-refused");
+        const cell = r.column && tr.querySelector(`[data-input-col="${r.column}"]`);
+        if (cell) cell.classList.add("is-refused");
+      });
+    });
+  }
+
+  function scheduleBusCheck() {
+    clearTimeout(busCheckTimer);
+    busCheckTimer = setTimeout(async () => {
+      const data = await checkSheet("bus_sheet", busSaveRows());
+      if (!data) return;
+      busSheet.refusals = (data.refusals || []).filter((r) => r.sheet === "busses.csv");
+      redrawTables();
+    }, 400);
+  }
+
+  // ---- the bus sheet's editor ----------------------------------------------
+
+  async function loadBusSheet() {
+    if (!SP.bundle()) {
+      loadBusSheetPayload({ bus_sheet: null, derived: [] });
+      busSheet.loaded = false;
+      return;
+    }
+    try {
+      const r = await fetch("/api/build/bus-sheet");
+      if (r.ok) loadBusSheetPayload(await r.json());
+    } catch (e) {
+      /* the tables draw from the plan alone until it answers */
+    }
+  }
+
+  // One cell edited: kept in the editor (a redraw keeps it), marked, and
+  // checked. The table is not redrawn under the cursor.
+  function editBusCell(input) {
+    const row = busRow(input.dataset.busRow);
+    if (!row) return;
+    row.values[input.dataset.busCol] = input.value;
+    busSheet.dirty = busSheet.rows.some((r) => Object.keys(Object.assign({}, r.values, r.original))
+      .some((c) => (r.values[c] || "") !== (r.original[c] || "")));
+    busSheet.note = "";
+    input.classList.toggle("is-edited", busCellEdited(row, input.dataset.busCol));
+    paintBusControls();
+    scheduleBusCheck();
+  }
+
+  function paintBusControls() {
+    document.querySelectorAll(".bus-dirty-badge").forEach((n) => { n.hidden = !busSheet.dirty; });
+    document.querySelectorAll("[data-bus-discard]").forEach((n) => { n.hidden = !busSheet.dirty; });
+    document.querySelectorAll("[data-bus-save]").forEach((n) => {
+      n.hidden = !(busSheet.dirty || busSheet.behind);
+      n.disabled = busSheet.refusals.length > 0 || SP.isStale();
+    });
+  }
+
+  // The sheet as Save sends it: every row the file has, in its order, whole;
+  // then a row for each plan object the file has no row for, when a cell of
+  // it was filled in.
+  function busSaveRows() {
+    const kept = busSheet.rows.filter((r) => r.line != null).sort((a, b) => a.line - b.line)
+      .map((r) => ({ line: r.line, values: Object.assign({}, r.values) }));
+    const added = busSheet.rows.filter((r) => r.line == null && Object.keys(r.values)
+      .some((c) => c !== "bus" && String(r.values[c] || "").trim()))
+      .map((r) => ({ line: null, values: Object.assign({}, r.values, { bus: r.label }) }));
+    return kept.concat(added);
+  }
+
+  async function saveBusSheet() {
+    if (!(busSheet.dirty || busSheet.behind) || busSheet.refusals.length) return;
+    if (!(await SP.checkServer())) {
+      busSheet.note = "Nothing was saved: this page is out of date -- see the banner.";
+      busSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    let data;
+    let ok = false;
+    try {
+      const r = await fetch("/api/build/bus-sheet/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_sha256: (busSheet.source && busSheet.source.sha256) || "",
+          expected_bundle: SP.bundle() ? SP.bundle().directory : null,
+          rows: busSaveRows(),
+        }),
+      });
+      data = await r.json();
+      ok = r.ok;
+    } catch (e) {
+      data = { error: String(e) };
+    }
+    if (!ok) {
+      if (data.stale === "bundle") SP.markStale(data.error);
+      busSheet.refusals = (data.refusals || []).filter((r) => r.sheet === "busses.csv");
+      busSheet.note = data.error || "couldn't save";
+      busSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    loadBusSheetPayload(data);
+    busSheet.note = data.message || "Saved.";
+    busSheet.noteKind = "ok";
+    if (SP.refreshBuild) SP.refreshBuild();
+    // plan.json changed: step 04 draws it again, and Apply re-reads its
+    // pre-flight (the same as after a build).
+    if (SP.planBuilt) SP.planBuilt();
+    else await fetchPlan();
+  }
+
+  function discardBusSheet() {
+    busSheet.rows.forEach((r) => { r.values = Object.assign({}, r.original); });
+    busSheet.dirty = false;
+    busSheet.refusals = [];
+    busSheet.note = "";
+    redrawTables();
+  }
+
+  // ---- outputs.csv's editor ------------------------------------------------
+
+  async function loadOutputsSheet() {
+    if (!SP.bundle()) {
+      loadOutputsSheetPayload({ outputs_sheet: null, derived: [] });
+      outSheet.loaded = false;
+      return;
+    }
+    try {
+      const r = await fetch("/api/build/outputs-sheet");
+      if (r.ok) loadOutputsSheetPayload(await r.json());
+    } catch (e) {
+      /* the table waits for it */
+    }
+  }
+
+  function outDirty() {
+    if (outSheet.rows.length !== outSheet.original.length) return true;
+    return outSheet.rows.some((r, i) => OUT_COLS.some((c) => outRowEdited(i, c)));
+  }
+
+  function paintOutControls() {
+    const unsaved = outSheet.dirty || outSheet.behind || !(outSheet.source && outSheet.source.present);
+    document.querySelectorAll(".out-dirty-badge").forEach((n) => { n.hidden = !outSheet.dirty; });
+    document.querySelectorAll("[data-out-discard]").forEach((n) => { n.hidden = !outSheet.dirty; });
+    document.querySelectorAll("[data-out-save]").forEach((n) => {
+      n.hidden = !unsaved;
+      n.disabled = outSheet.refusals.length > 0 || SP.isStale();
+    });
+  }
+
+  let outCheckTimer = null;
+  function scheduleOutCheck() {
+    clearTimeout(outCheckTimer);
+    outCheckTimer = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/build/outputs-sheet/check", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: outSheet.rows }),
+        });
+        if (!r.ok) return;
+        outSheet.refusals = (await r.json()).refusals || [];
+      } catch (e) {
+        return;
+      }
+      redrawTables();
+    }, 400);
+  }
+
+  function editOutCell(input) {
+    const i = Number(input.dataset.outRow);
+    const row = outSheet.rows[i];
+    if (!row) return;
+    row[input.dataset.outCol] = input.value;
+    outSheet.dirty = outDirty();
+    outSheet.note = "";
+    input.classList.toggle("is-edited", outRowEdited(i, input.dataset.outCol));
+    paintOutControls();
+    scheduleOutCheck();
+  }
+
+  function toggleOutRun(key) {
+    outSheet.open[key] = !outSheet.open[key];
+    redrawTables();
+  }
+
+  // A new row at the end, ready for its socket.
+  function addOutSocket() {
+    outSheet.rows.push({ output: "", source: "", notes: "" });
+    outSheet.original.push({});
+    outSheet.dirty = true;
+    redrawTables();
+    const box = el("plan-render") && el("plan-render").querySelector(
+      `[data-out-row="${outSheet.rows.length - 1}"][data-out-col="output"]`);
+    if (box) box.focus();
+  }
+
+  async function saveOutputsSheet() {
+    if (outSheet.refusals.length) return;
+    if (!(await SP.checkServer())) {
+      outSheet.note = "Nothing was saved: this page is out of date -- see the banner.";
+      outSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    let data;
+    let ok = false;
+    try {
+      const r = await fetch("/api/build/outputs-sheet/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_sha256: (outSheet.source && outSheet.source.sha256) || "",
+          expected_bundle: SP.bundle() ? SP.bundle().directory : null,
+          rows: outSheet.rows,
+        }),
+      });
+      data = await r.json();
+      ok = r.ok;
+    } catch (e) {
+      data = { error: String(e) };
+    }
+    if (!ok) {
+      if (data.stale === "bundle") SP.markStale(data.error);
+      outSheet.refusals = data.refusals || [];
+      outSheet.note = data.error || "couldn't save";
+      outSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    loadOutputsSheetPayload(data);
+    outSheet.note = data.message || "Saved.";
+    outSheet.noteKind = "ok";
+    // busses.csv's Outputs cells may have followed: read it again.
+    if (!busSheet.dirty) await loadBusSheet();
+    if (SP.refreshBuild) SP.refreshBuild();
+    if (SP.planBuilt) SP.planBuilt();
+    else await fetchPlan();
+  }
+
+  function discardOutputsSheet() {
+    outSheet.rows = outSheet.original.filter((r) => Object.keys(r).length)
+      .map((r) => Object.assign({}, r));
+    outSheet.original = outSheet.rows.map((r) => Object.assign({}, r));
+    outSheet.dirty = false;
+    outSheet.refusals = [];
+    outSheet.note = "";
+    redrawTables();
+  }
+
+  // ---- user.csv's editor ---------------------------------------------------
+
+  async function loadUserSheet() {
+    if (!SP.bundle()) {
+      loadUserSheetPayload({ user_sheet: null, derived: [] });
+      userSheet.loaded = false;
+      return;
+    }
+    try {
+      const r = await fetch("/api/build/user-sheet");
+      if (r.ok) loadUserSheetPayload(await r.json());
+    } catch (e) {
+      /* the table waits for it */
+    }
+  }
+
+  function userDirty() {
+    if (userSheet.rows.length !== userSheet.original.length) return true;
+    return userSheet.rows.some((r, i) => USER_COLS.some((c) => userRowEdited(i, c)));
+  }
+
+  function paintUserControls() {
+    document.querySelectorAll(".user-dirty-badge").forEach((n) => { n.hidden = !userSheet.dirty; });
+    document.querySelectorAll("[data-user-discard]").forEach((n) => { n.hidden = !userSheet.dirty; });
+    document.querySelectorAll("[data-user-save]").forEach((n) => {
+      n.hidden = !(userSheet.dirty || userSheet.behind);
+      n.disabled = userSheet.refusals.length > 0 || SP.isStale();
+    });
+  }
+
+  let userCheckTimer = null;
+  function scheduleUserCheck() {
+    clearTimeout(userCheckTimer);
+    userCheckTimer = setTimeout(async () => {
+      try {
+        const r = await fetch("/api/build/user-sheet/check", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: userSheet.rows }),
+        });
+        if (!r.ok) return;
+        userSheet.refusals = (await r.json()).refusals || [];
+      } catch (e) {
+        return;
+      }
+      redrawTables();
+    }, 400);
+  }
+
+  function editUserCell(input) {
+    const row = userSheet.rows[Number(input.dataset.userRow)];
+    if (!row) return;
+    row[input.dataset.userCol] = input.value;
+    // A slot moved between kinds takes that kind's cells: a user patch has
+    // no tap or leg, a user signal starts at POST, both sides.
+    if (input.dataset.userCol === "slot") {
+      const kind = userKind(userSlotNumber(input.value));
+      if (kind === "user patch" && (row.tap || row.leg)) {
+        row.tap = ""; row.leg = "";
+        setTimeout(redrawTables, 0);
+      } else if (kind === "user signal" && !row.tap && !row.leg) {
+        row.tap = "POST"; row.leg = "L+R";
+        setTimeout(redrawTables, 0);
+      }
+    }
+    userSheet.dirty = userDirty();
+    userSheet.note = "";
+    input.classList.toggle("is-edited", userRowEdited(Number(input.dataset.userRow), input.dataset.userCol));
+    paintUserControls();
+    scheduleUserCheck();
+  }
+
+  // A new row on the next user signal no row has (USR 1-24), ready for its
+  // source; the slot can be changed to any other.
+  function addUserSlot() {
+    const used = new Set(userSheet.rows.map((r) => userSlotNumber(r.slot)));
+    let n = 1;
+    while (used.has(n) && n < 24) n += 1;
+    if (used.has(n)) n = 25;
+    while (used.has(n) && n < 56) n += 1;
+    userSheet.rows.push({ slot: `USR ${n}`, source: "", tap: n <= 24 ? "POST" : "",
+      leg: n <= 24 ? "L+R" : "", name: "" });
+    userSheet.original.push({});
+    userSheet.dirty = true;
+    redrawTables();
+    const box = el("plan-render") && el("plan-render").querySelector(
+      `[data-user-row="${userSheet.rows.length - 1}"][data-user-col="source"]`);
+    if (box) box.focus();
+  }
+
+  async function saveUserSheet() {
+    if (!(userSheet.dirty || userSheet.behind) || userSheet.refusals.length) return;
+    if (!(await SP.checkServer())) {
+      userSheet.note = "Nothing was saved: this page is out of date -- see the banner.";
+      userSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    let data;
+    let ok = false;
+    try {
+      const r = await fetch("/api/build/user-sheet/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_sha256: (userSheet.source && userSheet.source.sha256) || "",
+          expected_bundle: SP.bundle() ? SP.bundle().directory : null,
+          rows: userSheet.rows,
+        }),
+      });
+      data = await r.json();
+      ok = r.ok;
+    } catch (e) {
+      data = { error: String(e) };
+    }
+    if (!ok) {
+      if (data.stale === "bundle") SP.markStale(data.error);
+      userSheet.refusals = data.refusals || [];
+      userSheet.note = data.error || "couldn't save";
+      userSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    loadUserSheetPayload(data);
+    userSheet.note = data.message || "Saved.";
+    userSheet.noteKind = "ok";
+    if (SP.refreshBuild) SP.refreshBuild();
+    if (SP.planBuilt) SP.planBuilt();
+    else await fetchPlan();
+  }
+
+  function discardUserSheet() {
+    userSheet.rows = userSheet.original.filter((r) => Object.keys(r).length)
+      .map((r) => Object.assign({}, r));
+    userSheet.original = userSheet.rows.map((r) => Object.assign({}, r));
+    userSheet.dirty = false;
+    userSheet.refusals = [];
+    userSheet.note = "";
+    redrawTables();
+  }
+
   function redrawTables() {
     if (!current || !current.plan) return;
+    // A redraw while a cell is being typed in (a check came back) puts the
+    // cursor back where it was.
+    const active = document.activeElement;
+    const keep = active && active.dataset && (active.dataset.busCol || active.dataset.inputCol ||
+      active.dataset.userCol || active.dataset.outCol)
+      ? { bus: active.dataset.busRow, busCol: active.dataset.busCol, key: active.dataset.inputKey,
+          col: active.dataset.inputCol, user: active.dataset.userRow, userCol: active.dataset.userCol,
+          out: active.dataset.outRow, outCol: active.dataset.outCol,
+          start: active.selectionStart, end: active.selectionEnd }
+      : null;
+    // The page stays where it was: replacing the tables under the reader
+    // (a check came back, a Role was chosen) moved it about 40-100 px when the
+    // browser re-anchored the scroll.
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
     try {
       renderPlan(el("plan-render"), current.plan, current.channel_display,
         current.bus_display, current.output_display);
@@ -1728,6 +2905,21 @@
     } catch (e) {
       console.error("Build step 04: failed to redraw the plan", e);
     }
+    if (keep) {
+      const selector = keep.outCol
+        ? `[data-out-row="${CSS.escape(keep.out)}"][data-out-col="${CSS.escape(keep.outCol)}"]`
+        : keep.userCol
+        ? `[data-user-row="${CSS.escape(keep.user)}"][data-user-col="${CSS.escape(keep.userCol)}"]`
+        : keep.busCol
+          ? `[data-bus-row="${CSS.escape(keep.bus)}"][data-bus-col="${CSS.escape(keep.busCol)}"]`
+          : `[data-input-key="${CSS.escape(keep.key || "")}"][data-input-col="${CSS.escape(keep.col)}"]`;
+      const again = el("plan-render").querySelector(selector);
+      if (again) {
+        again.focus({ preventScroll: true });
+        try { if (keep.start != null) again.setSelectionRange(keep.start, keep.end); } catch (e) { /* a select */ }
+      }
+    }
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
   }
 
   function renderCurrentPlan() {
@@ -2159,7 +3351,7 @@
 
   const SECTION_WORDS = {
     channels: "Channels", busses: "Busses", dcas: "DCAs",
-    mute_groups: "Mute groups", outputs: "Outputs",
+    mute_groups: "Mute groups", outputs: "Mains and Matrix",
     category_colors: "Colours",
     findings: "Findings", conditions: "Watch conditions",
   };
@@ -2270,6 +3462,10 @@
     } catch (e) {
       current = null;
     }
+    // The bus sheet comes with it (an edit not saved yet is kept).
+    if (!busSheet.dirty) await loadBusSheet();
+    if (!userSheet.dirty) await loadUserSheet();
+    if (!outSheet.dirty) await loadOutputsSheet();
     renderCurrentPlan();
   }
 
@@ -2389,6 +3585,7 @@
     SP.inputEditor.onChange((origin) => {
       if (origin === "plan") markRowProblems();
       else redrawTables();
+      scheduleInputCheck();
     });
   }
   const editLink = el("plan-input-edit-link");
@@ -2429,7 +3626,7 @@
     }
   }
 
-  runBtn.addEventListener("click", startBuild);
+  runBtn.addEventListener("click", buildAsking);
   stopBtn.addEventListener("click", stopBuild);
   el("plan-rebuild-btn").addEventListener("click", rebuild);
   el("status-rebuild-btn").addEventListener("click", rebuild);
@@ -2442,6 +3639,8 @@
   // The stale-page banner went up: Build plan and both Rebuilds go off
   // with every other control that writes.
   SP.onStale(() => renderPlanTile());
+  // A Save in step 02 or 04 laid the input list onto plan.json: draw it.
+  if (SP.onPlanBuilt) SP.onPlanBuilt(() => fetchPlan());
 
   // ---- open a plan.json that is somewhere else ---------------------------
   // What `/setup` did, kept for a plan that is not this bundle's: the
@@ -2503,6 +3702,28 @@
   // shell.js ran first and has drawn steps 01-03, so the editors a
   // finding's jump link looks for already exist.
   renderCurrentPlan();
+  // Watch's Edit sheets, or a "Sheet differs from desk" row's
+  // Show in Build 04, brings this page to step 04 (the watch keeps running
+  // on the server), says so, and finds the row it was sent to. The line
+  // goes when the page leaves Build.
+  const fromWatchLine = el("plan-from-watch");
+  SP.sheetsFromWatch = (row) => {
+    SP.activateMode("build");
+    SP.activateStep("plan");
+    if (fromWatchLine) fromWatchLine.hidden = false;
+    if (row && /^plan-(channel|bus|output)-[a-z0-9-]*$/.test(row) && SP.jumpTo) {
+      SP.jumpTo({ mode: "build", target: "#" + row });
+    }
+  };
+  if (el("plan-back-to-watch")) {
+    el("plan-back-to-watch").addEventListener("click", () => SP.activateMode("watch"));
+  }
+  SP.onModeChange((mode) => {
+    if (mode !== "build" && fromWatchLine) fromWatchLine.hidden = true;
+  });
+  Promise.all([loadBusSheet(), loadUserSheet(), loadOutputsSheet()]).then(() => {
+    if (current && current.plan) redrawTables();
+  });
   commandPreview();
   renderRun();
   if (run.state === "running") {

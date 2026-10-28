@@ -203,22 +203,15 @@ def test_shared_physical_input():
     assert "C002" in _rule_ids(findings)
 
 
-def test_channel_not_in_any_dca():
+def test_a_channel_in_no_dca_is_not_a_finding():
+    """A channel in use that is in no DCA is a choice, not
+    something to report, so there is no rule for it."""
     state = ConsoleState({
         "/ch/1/name": "Kick",
         "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1,
-    })
-    findings = run_audit(state)
-    assert "CH001" in _rule_ids(findings)
-
-
-def test_channel_in_dca_is_clean():
-    state = ConsoleState({
-        "/ch/1/name": "Kick",
-        "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1,
-        "/ch/1/tags": "#D1",
     })
     assert "CH001" not in _rule_ids(run_audit(state))
+    assert "CH001" not in {r.id for r in DEFAULT_RULES}
 
 
 def test_dca_fader_closed_with_active_members():

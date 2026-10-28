@@ -219,7 +219,7 @@ def parse(text: str, *, resolved_name: str = "resolved conventions") -> Parsed:
     return Parsed(Table(list(data), by_alias), [], "valid")
 
 
-_PLAIN = {"color": "colour", "hpf_hz": "HPF", "dca": "DCA", "mute_group": "mute group",
+_PLAIN = {"color": "color", "hpf_hz": "HPF", "dca": "DCA", "mute_group": "mute group",
           "gain_db": "gain", "trim_db": "trim", "fader_db": "fader",
           "main_direct": "Main routing"}
 

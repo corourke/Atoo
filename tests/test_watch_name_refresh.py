@@ -50,6 +50,9 @@ def _compact_desk(**overrides) -> dict[str, str]:
         desk[f"/ch/{n}/in/conn/in"] = str(n)
         desk[f"/ch/{n}/clink"] = "1"
         desk[f"/io/in/LCL/{n}/name"] = f"LCL {n}"
+    # Both bays empty, in the desk's own word: "OFF" is not
+    # one of their values, and would read as something fitted.
+    desk["/cards/$type"] = desk["/$syscfg/opt_mod"] = "NONE"
     desk.update(overrides)
     return desk
 
@@ -76,9 +79,10 @@ def _provider(desk: _Counting, every: int, *, bulk: bool = True):
 
 
 def test_a_pass_between_refreshes_asks_for_no_names_and_88_fewer_requests():
-    """The first-pass plan: 323 requests by node dump, of which 88 are
+    """The first-pass plan: 325 requests by node dump, of which 88 are
     names (40 ch + 8 aux + 16 bus + 16 DCA + 8 mute group). A pass
-    between refreshes asks for 235. Counted from the plan, the way
+    between refreshes asks for 237. (323 and 235 until an earlier change read
+    what is fitted in each expansion bay: two leaves, neither a name.) Counted from the plan, the way
     `cli.read_requests` and `watch_scope.ScopedReadPlan` count it."""
     plan = console_read_plan(**COMPACT)
     names = [a for a, _ in plan if is_name_address(a)]
@@ -86,20 +90,20 @@ def test_a_pass_between_refreshes_asks_for_no_names_and_88_fewer_requests():
     assert {a.split("/")[1] for a in names} == {"ch", "aux", "bus", "dca", "mgrp"}
 
     by_node, alone = group_plan_by_node(plan)
-    assert len(by_node) + len(alone) == 323
+    assert len(by_node) + len(alone) == 325
     without = [(a, t) for a, t in plan if not is_name_address(a)]
     by_node, alone = group_plan_by_node(without)
-    assert len(by_node) + len(alone) == 235
+    assert len(by_node) + len(alone) == 237
 
     kwargs = dict(COMPACT, bulk=True)
-    assert cli.read_requests(kwargs) == 323
-    assert cli.read_requests(kwargs, names_known=True) == 235
+    assert cli.read_requests(kwargs) == 325
+    assert cli.read_requests(kwargs, names_known=True) == 237
     per_leaf = dict(COMPACT, bulk=False)
     assert cli.read_requests(per_leaf) - cli.read_requests(per_leaf, names_known=True) == 88
 
 
 def test_a_live_pass_between_refreshes_asks_the_desk_for_no_name():
-    """The same, counted at a desk: the refresh pass is the 323 plus the
+    """The same, counted at a desk: the refresh pass is the 325 plus the
     second pass's 24 socket names and 24 `clink`s; the pass between drops
     the 88 names and the 24 socket names and keeps the `clink`s, which
     are switches, not names."""
@@ -107,12 +111,12 @@ def test_a_live_pass_between_refreshes_asks_the_desk_for_no_name():
     provider = _provider(desk, every=3)
 
     provider()
-    assert desk.requests() == 323 + 24 + 24
+    assert desk.requests() == 325 + 24 + 24
     assert sum(is_name_address(a) for a in desk.gets) == 88 + 24
     desk.reset()
 
     provider()
-    assert desk.requests() == 235 + 24
+    assert desk.requests() == 237 + 24
     assert not [a for a in desk.gets if is_name_address(a)]
     assert len([a for a in desk.gets if a.endswith("/clink")]) == 24
     assert len([a for a in desk.gets if a.endswith("/tags")]) == 48, "tags every pass"
@@ -126,7 +130,7 @@ def test_names_come_back_on_the_refresh_pass():
         desk.reset()
         provider()
         counts.append(desk.requests())
-    full, between = 323 + 48, 235 + 24
+    full, between = 325 + 48, 237 + 24
     assert counts == [full, between, between, full, between, between, full]
 
 

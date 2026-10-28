@@ -1,7 +1,8 @@
-"""T002, and the talkback strip left out of CH001 / L002.
+"""T002, and the talkback strip left out of L002 and the other mix checks.
 
 T001's first run on hardware (2026-09-25, the Compact) also reported
-ch 40 "TALKBACK" as in no DCA (CH001) and fader at floor (L002) --
+ch 40 "TALKBACK" as in no DCA (a rule removed since) and fader
+at floor (L002) --
 the talk mic's strip, kept out of the mix on purpose. The maintainer: exempt it,
 and say so once. Fixtures are built by hand; no capture has talkback set up.
 """
@@ -42,12 +43,11 @@ def test_fixture_strips_are_in_use():
 def test_the_talkback_strip_is_skipped_and_nothing_else_is(assign, talk, other):
     state = _desk(assign)
     assert talkback_strip(state) == talk
-    no_dca = _hits(state, "CH001")
     floor = _hits(state, "L002")
-    assert talk not in no_dca and f"{talk}/fdr" not in floor
+    assert f"{talk}/fdr" not in floor
     # A band strip on the same desk is still judged.
-    assert "/ch/39" in no_dca and "/ch/39/fdr" in floor
-    assert other in no_dca and f"{other}/fdr" in floor
+    assert "/ch/39/fdr" in floor
+    assert f"{other}/fdr" in floor
 
 
 @pytest.mark.parametrize("assign,talk", [("CH40", "/ch/40"), ("AUX8", "/aux/8")])
@@ -62,7 +62,6 @@ def test_the_exemption_announces_itself_once(assign, talk):
 def test_talkback_off_exempts_nothing_and_says_nothing():
     state = _desk("OFF")
     assert talkback_strip(state) is None
-    assert "/ch/40" in _hits(state, "CH001")
     assert "/ch/40/fdr" in _hits(state, "L002")
     assert not [f for f in run_audit(state) if f.rule_id == "T002"]
 
@@ -71,4 +70,4 @@ def test_unread_assign_exempts_nothing():
     state = _desk("CH40")
     del state.values[console_facts.TALK_ASSIGN]
     assert talkback_strip(state) is None
-    assert "/ch/40" in _hits(state, "CH001")
+    assert "/ch/40/fdr" in _hits(state, "L002")

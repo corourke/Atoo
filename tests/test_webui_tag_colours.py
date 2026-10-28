@@ -108,24 +108,27 @@ def test_stereo_48v_and_the_desk_name_have_no_colour_of_their_own(served, theme)
         info, warn = page.evaluate(VAR, "--info-fg"), page.evaluate(VAR, "--warning-fg")
         accent, dim = page.evaluate(VAR, "--accent"), page.evaluate(VAR, "--text-dim")
         st = page.evaluate(PAINT, ["#panel-plan .ct .ct-st", None])
-        phantom = page.evaluate(PAINT, ["#panel-plan .ct .col-plan-phantom .prop", None])
         desk = page.evaluate(PAINT, ["#panel-plan .ct .ct-desk-name", None])
-        assert st["text"] == "ST" and phantom["text"] == "48V"
+        assert st["text"] == "ST"
         assert desk["text"] == "on desk: OH"
         # The same neutral tag Build 02 draws: dim text on nothing.
-        for tag in (st, phantom):
-            assert tag["color"] == dim, tag
-            assert tag["background"] == "rgba(0, 0, 0, 0)", tag
-            assert tag["color"] not in (info, warn, accent), tag
+        assert st["color"] == dim, st
+        assert st["background"] == "rgba(0, 0, 0, 0)", st
+        assert st["color"] not in (info, warn, accent), st
         assert desk["color"] == dim and desk["color"] != accent
-        # Build 02 (the read-only Demo is where it draws 48V as a tag)
-        # and Build 04 are one tag: the same paint.
+        # 48V is a tag only where the table is read-only (an editable one is
+        # step 02's own tick): the Demo draws it in Build 02 and
+        # Build 04 as one tag, with the same paint as ST.
         demo = _page(b, served, theme, demo=True)
         _open_step(demo, "input-list")
         two = demo.evaluate(PAINT, ["#panel-input-list .prop", None])
-        assert two is not None
+        _open_step(demo, "plan")
+        four = demo.evaluate(PAINT, ["#panel-plan .ct .col-sheet-phantom .prop", None])
+        assert two is not None and four is not None and four["text"] == "48V"
+        for phantom in (two, four):
+            assert (phantom["color"], phantom["background"]) == (st["color"], st["background"])
         assert (two["color"], two["background"], two["border"]) == \
-               (phantom["color"], phantom["background"], phantom["border"])
+               (four["color"], four["background"], four["border"])
 
 
 @pytest.mark.parametrize("theme", ["dark", "light"])

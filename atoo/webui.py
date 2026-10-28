@@ -189,6 +189,8 @@ from atoo import fsbrowse
 
 from atoo import plan_freshness
 from atoo import source_edit
+from atoo import sheets as sheets_module
+from atoo import plan_schema as plan_schema_module
 from atoo.audit import (AuditRule, ConsoleState, DEFAULT_RULES, Finding,
                              coverage_caveat, position_label, read_console_state,
                              strip_label)
@@ -305,6 +307,26 @@ def _plan_counts(plan: "dict | None") -> dict:
         "mute_groups": len(plan.get("mute_groups") or {}),
         "sockets": len(sockets),
     }
+
+
+def _build_model_state() -> "tuple[bool, str | None]":
+    """Can a build run here? As `_patch_model_state`, asked the way `atoo
+    build` asks (`cli.provider_from_env`), so the page and the build agree."""
+    from atoo import cli
+    from atoo.ai_provider import AIProviderError
+
+    try:
+        cli.provider_from_env()
+    except AIProviderError as exc:
+        return False, _model_why(str(exc))
+    return True, None
+
+
+def _model_why(text: str) -> str:
+    if "API key" in text:
+        return ("no API key: set ANTHROPIC_API_KEY (or ATOO_AI_API_KEY) before starting "
+                "`atoo ui`, or ATOO_AI_PROVIDER=ollama for a local model")
+    return text
 
 
 def _patch_model_state() -> "tuple[bool, str | None]":
@@ -489,6 +511,60 @@ class InputListSaveRequest(BaseModel):
 
     expected_path: Optional[str] = None
     expected_sha256: Optional[str] = None
+    expected_bundle: Optional[str] = None
+    rows: list[dict] = []
+
+
+class BusSheetSaveRequest(BaseModel):
+    """Save on step 04's Busses or Outputs table: `rows` is the
+    bus sheet in order, `{line, values}` as `InputListSaveRequest`'s, with
+    `line` null for a row the sheet does not have yet. `expected_sha256` is
+    the file the page read, or empty when there was no busses.csv."""
+
+    expected_sha256: Optional[str] = None
+    expected_bundle: Optional[str] = None
+    rows: list[dict] = []
+
+
+class OutputsSheetSaveRequest(BaseModel):
+    """Save on step 04's Outputs table: `rows` is the whole
+    sheet, `{output, source, notes}` each, in order. `expected_sha256` is the
+    file the page read, or empty when the show had no outputs.csv yet."""
+
+    expected_sha256: Optional[str] = None
+    expected_bundle: Optional[str] = None
+    rows: list[dict] = []
+
+
+class UserSheetSaveRequest(BaseModel):
+    """Save on step 04's User signals and patches table: `rows`
+    is the whole sheet, `{slot, source, tap, leg, name}` each, in order.
+    `expected_sha256` is the file the page read, or empty when there was no
+    user.csv."""
+
+    expected_sha256: Optional[str] = None
+    expected_bundle: Optional[str] = None
+    rows: list[dict] = []
+
+
+class CaptureRequest(BaseModel):
+    """New show > From a desk: `source` is `snap` (with
+    `snap_path` and `console_model`) or `console` (the console in the bar);
+    `folder` is the new show's folder as the dialog shows it, taken as
+    asked, with `-2`, `-3` when that name is already used."""
+
+    source: str
+    snap_path: Optional[str] = None
+    console_model: Optional[str] = None
+    folder: Optional[str] = None
+
+
+class SheetsCheckRequest(BaseModel):
+    """What step 04 would refuse in a sheet as it stands, before Save:
+    `sheet` is `input_list` or `bus_sheet`, `rows` as its Save would send
+    them."""
+
+    sheet: str
     expected_bundle: Optional[str] = None
     rows: list[dict] = []
 
@@ -729,6 +805,8 @@ def _finding_to_dict(f: Finding) -> dict:
 
 _STRIP_BASE = re.compile(r"^(/(?:ch|aux|bus|main|mtx|dca|mgrp)/\d+)(?:/|$)")
 _SOCKET = re.compile(r"^/io/(?:in|out)/([A-Za-z0-9-]+)/(\d+)(?:/|$)")
+# An AES50 port's link status (`console_facts.aes50_status_address`).
+_AES50_STATUS = re.compile(r"^/\$stat/([A-C])/stat$")
 
 
 def finding_strip(f: Finding, state: "ConsoleState | None") -> "str | None":
@@ -736,8 +814,9 @@ def finding_strip(f: Finding, state: "ConsoleState | None") -> "str | None":
     the strip it is about, as the desk names it -- `CH 6 "Bass DI"`, the
     label the finding's own detail uses (`audit.strip_label`) -- from the
     finding's addresses. Several strips: their positions (`CH 3, CH 4`).
-    No strip but a socket: the socket (`LCL 9`). Neither: None, and the
-    page shows a dash. Sent by the server so the page never has to parse
+    No strip but a socket: the socket (`LCL 9`). Neither, but an AES50
+    port's link: the port (`AES50-B`). None of these: None, and the page
+    shows a dash. Sent by the server so the page never has to parse
     it back out of the detail text."""
     bases: list[str] = []
     sockets: list[str] = []
@@ -758,6 +837,9 @@ def finding_strip(f: Finding, state: "ConsoleState | None") -> "str | None":
         return ", ".join(position_label(b) for b in bases)
     if sockets:
         return ", ".join(sockets)
+    ports = [f"AES50-{m.group(1)}" for m in map(_AES50_STATUS.match, f.addresses) if m]
+    if ports:
+        return ", ".join(dict.fromkeys(ports))
     return None
 
 
@@ -1082,6 +1164,9 @@ def _channel_display(plan: "dict | None") -> list[dict]:
     from atoo import apply as apply_module
 
     channels = (plan or {}).get("channels") or []
+    socket_colours = (((plan or {}).get("meta") or {}).get("socket_colours") or {})
+    if not isinstance(socket_colours, dict):
+        socket_colours = {}
     try:
         shared = apply_module._shared_source_sockets(plan or {})
     except (AttributeError, TypeError):
@@ -1122,6 +1207,14 @@ def _channel_display(plan: "dict | None") -> list[dict]:
                 "index": col,
                 "name": console_facts.COLOUR_NAMES.get(col) if col is not None else None,
             }
+        elif entry.get("sockets") and entry["sockets"][0] in socket_colours:
+            # A captured strip linked to its source shows the socket's colour
+            # (`meta.socket_colours`); the plan states none of its own, and
+            # Apply writes none.
+            col = socket_colours[entry["sockets"][0]]
+            if console_facts.COLOUR_NAMES.get(col):
+                entry["colour"] = {"stated": None, "index": col,
+                                   "name": console_facts.COLOUR_NAMES[col], "from_socket": True}
         out.append(entry)
     return out
 
@@ -1169,10 +1262,10 @@ def _bus_display(plan: "dict | None") -> dict:
 def _output_display(plan: "dict | None") -> dict:
     """Step 04's output table: each Main or Matrix's desk `label` ("M1",
     "MX1"), from the `kind` and `index` apply writes `/main/{n}` and
-    `/mtx/{n}` by. `colour` is always `None`: the plan schema has no
-    colour for a Main or a Matrix and apply writes none, so the page
-    draws a neutral chip. An output the plan does not identify
-    (kind/index missing -- apply warns and writes nothing) gets `{}`."""
+    `/mtx/{n}` by, and its `colour`, the `col` a capture records and apply
+    writes (`apply.bus_col`), or None for a neutral chip. An output the plan
+    does not identify (kind/index missing -- apply warns and writes nothing)
+    gets `{}`."""
     from atoo import apply as apply_module
 
     outputs = (plan or {}).get("outputs")
@@ -1183,8 +1276,12 @@ def _output_display(plan: "dict | None") -> dict:
         kind = entry.get("kind") if isinstance(entry, dict) else None
         index = entry.get("index") if isinstance(entry, dict) else None
         if kind in ("main", "matrix") and isinstance(index, int) and not isinstance(index, bool):
+            col = apply_module.bus_col(entry)
+            colour_name = console_facts.COLOUR_NAMES.get(col) if col is not None else None
+            colour = ({"index": col, "name": colour_name, "stated": entry.get("color")}
+                      if colour_name else None)
             out[name] = {"kind": kind, "index": index,
-                         "label": apply_module.desk_label(kind, index), "colour": None}
+                         "label": apply_module.desk_label(kind, index), "colour": colour}
         else:
             out[name] = {}
     return out
@@ -1317,6 +1414,7 @@ def _write_records(journal: dict) -> list:
             # preview's "will change" left those out and the write that
             # followed sent more than the page had said.
             forced_by=row.get("forced_by"),
+            mirrored_by=row.get("mirrored_by"),
         )
         for row in journal.get("writes") or []
     ]
@@ -1374,13 +1472,10 @@ def _apply_payload(journal: dict, journal_path: "str | None",
     flagged = [record(w) for w in result.mismatches] + [record(w) for w in unreadable]
 
     if result.dry_run:
-        previews = [w for w in writes if w.status == "dry_run"]
-        groups = [
-            _apply_group("would_change", "would change",
-                         [record(w) for w in previews if w.would_change]),
-            _apply_group("unchanged", "already correct -- no write needed",
-                         [record(w) for w in previews if not w.would_change]),
-        ]
+        # A preview lists no rows here: every row is in the
+        # tile it belongs to, in the drawing (`preview_detail`), and the
+        # page shows them one tile at a time.
+        groups = []
     else:
         groups = [
             _apply_group("match", "matched",
@@ -1945,6 +2040,26 @@ def _new_conventions_suggestion() -> str:
     return DEFAULT_NEW_CONVENTIONS
 
 
+def _outputs_rows_written(rows: list[dict], plan: "dict | None") -> list[dict]:
+    """`outputs.csv` as a Save writes it: one row per socket the plan now
+    patches, in the desk's output order and words, each with the notes its
+    row was given. With no plan to say it, the rows as typed."""
+    from atoo import outputs_sheet
+
+    if plan is None:
+        return rows
+    notes = {}
+    for row in rows:
+        socket = outputs_sheet.parse_output(row.get("output"))
+        if socket is not None and row.get("notes"):
+            notes[socket] = row["notes"]
+    found = outputs_sheet.output_sources(plan)
+    return [{"output": outputs_sheet.format_output(*socket),
+             "source": outputs_sheet.source_words(*found[socket]),
+             "notes": notes.get(socket, "")}
+            for socket in sorted(found, key=lambda key: outputs_sheet.socket_order(*key))]
+
+
 def _display_path(path: Path, show: "bundle.Bundle | None") -> str:
     """The path as version H writes it on a tile: `touringband/input.csv`
     for a file in the open bundle, `~/house-rules.md` for one under the
@@ -2191,7 +2306,8 @@ def _build_source_payload(
     elif slot == "input_list":
         rows, row_finding = _input_list_payload(path, text, show)
         payload["rows"] = rows
-        payload["columns"] = list(input_list_module.CANONICAL_COLUMNS)
+        payload["columns"] = (list(input_list_module.CANONICAL_COLUMNS)
+                              + list(input_list_module.SHEET_COLUMNS))
         # Step 02's editor reads the file leniently: every
         # record as written, by the header's own column names, with its
         # position in the file -- so a list the loader refuses can still
@@ -2507,7 +2623,10 @@ def _build_payload(
     # have recorded a file is "unknown", never "stale".
     freshness = plan_freshness.assess(
         bundle_plan, conventions=conventions, instructions=instructions,
-        input_list=input_list, display=lambda p: _display_path(p, show))
+        input_list=input_list, display=lambda p: _display_path(p, show),
+        bus_sheet=(show.directory / bundle.BUSSES) if show is not None else None,
+        outputs_sheet=(show.directory / bundle.OUTPUTS) if show is not None else None,
+        user_sheet=(show.directory / bundle.USER) if show is not None else None)
     freshness["plan_path"] = str(show.plan) if show and bundle_plan is not None else None
 
     return {
@@ -2517,6 +2636,9 @@ def _build_payload(
         "read_only": demo,
         "stack": stack,
         "plan_freshness": freshness,
+        # A build is a model call: whether one is set up, so Build plan and
+        # Rebuild are locked, saying why, before anything is pressed.
+        "build_model": dict(zip(("ready", "why"), _build_model_state())),
         # The example text steps 01 and 03 show beside their editors
         # ("templates as suggestions only"). Read-only:
         # it reaches a file only when the engineer presses Insert and then
@@ -2619,18 +2741,13 @@ _DEMO_ISSUES: dict[str, dict[str, object]] = {
     # C002 Shared Physical Input (info) -- Gtr 2 repatched onto Gtr 1's
     # socket, AES50-A 8.
     "shared_input": {"/ch/8/in/conn/in": 8},
-    # CH001 Channel Not In Any DCA, x2 (info) -- the backing vocals drop
-    # out of the Vocals DCA and keep their Vocals mute group. The Band DCA's
-    # members (ch 6-9) are never touched, so `dca_closed` below always has
-    # something to complain about.
-    "dca_membership_dropped": {"/ch/11/tags": "#M2", "/ch/12/tags": "#M2"},
     # CH002 DCA Fader Low With Active Members (warning) -- the Band DCA,
-    # which also trips the show's own `band-dca-open` watch condition.
+    # which also trips the show's own `band-dca-down` watch condition.
     "dca_closed": {"/dca/2/fdr": -144.0},
     # CH003 Mute Group Active, Silencing Routed Members (info) -- the
     # Band mute group pressed with the band on stage.
     "mute_group_active": {"/mgrp/1/mute": 1},
-    # The show's own `lead-vox-unmuted` watch condition (error) -- Lead Vox
+    # The show's own `lead-vox-muted` watch condition (error) -- Lead Vox
     # (ch 10) muted. No built-in rule calls a muted channel a fault; the
     # show's watch.json does, which is the point of having one, and so
     # (at WARNING) does CV017, Muted Against Plan, which
@@ -2647,7 +2764,7 @@ _DEMO_ISSUES: dict[str, dict[str, object]] = {
     # R003 Matrix Orphan (warning) -- a physical output patched from a
     # Matrix with no channel/bus ever sending to it.
     "matrix_orphan": {"/io/out/LCL/3/grp": "MTX", "/io/out/LCL/3/in": 1},
-    # CV015 FX Bus Effect Contradicts Plan (warning) -- the
+    # CV015 Effect Insert Contradicts Plan (warning) -- the
     # Vox Verb bus's insert switched off, so its V-REV is bypassed. Watch
     # adds the rule from the Demo show's plan; E003 says it at INFO too.
     "vox_verb_bypassed": {"/bus/7/preins/on": 0},
@@ -2851,6 +2968,17 @@ class WatchSession:
         self.virtual_soundcheck = False
         self._plan_changed: "Callable[[], list[WatchNote]] | None" = None
         self._base_rules: list[AuditRule] | None = None
+        # The rules before they were bound to the show's plan, so
+        # a Save in Build's step 04 can bind them to the saved plan
+        # (`follow_sheet_save`), and that Save, for the page's one line
+        # ("Read busses.csv at ..., after its Save at ...").
+        self.unbound_rules: list[AuditRule] | None = None
+        self.plan_path: "str | None" = None
+        self._sheet_read: "dict | None" = None
+        # Readings taken so far: a pass reads the rules just after its
+        # reading, so the first pass whose reading follows a Save audits
+        # with the rules that Save bound.
+        self._readings = 0
 
     def subscribe(self, loop: asyncio.AbstractEventLoop) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
@@ -2921,6 +3049,8 @@ class WatchSession:
         binding is made once and does not follow a rebuild."""
         self._halt()
         self._plan_changed = plan_notes(plan_path)
+        self.plan_path = str(plan_path) if plan_path is not None else None
+        self._sheet_read = None
         self._stop.clear()
         # What this session finds, kept for "Save findings" (the
         # same lines `atoo watch --findings-log` appends) until the next Start.
@@ -2965,6 +3095,42 @@ class WatchSession:
         self._base_rules = list(rules)
         self.rules[:] = self._effective_rules(self._base_rules)
         self.watch_path = watch_path
+        return True
+
+    def follow_sheet_save(self, plan_path, bind, *, sheet: str, saved_at: str) -> bool:
+        """A Save in Build's step 04 wrote the plan this session watches
+        against: bind the rules to it now (`bind`, the page's
+        `_with_plan_rules`), so the next pass audits the saved plan -- its new
+        routes, and CV023 for what the desk does not have yet -- with the
+        console, the baseline and the session kept. The plan's own change is
+        then not news (W004 is for a rebuild). False when no watch runs on
+        that plan."""
+        if self.plan_path is None or str(plan_path) != self.plan_path:
+            return False
+        if not self._rebind(plan_path, bind):
+            return False
+        self._sheet_read = {"sheet": sheet, "saved_at": saved_at, "read_at": None,
+                            "after": self._readings}
+        return True
+
+    def take_plan(self, plan_path, bind) -> bool:
+        """A watch started with no show open takes the plan of the show
+        opened since -- Make a show from this desk, or Open -- on its next
+        pass, so what the plan states stands down (R012 becomes R013) and
+        W005 goes. What a reading covers stays as Start chose it: an output
+        socket only the plan names is read after a restart.
+        False with a plan already bound, or no watch running."""
+        if self.plan_path is not None:
+            return False
+        return self._rebind(plan_path, bind)
+
+    def _rebind(self, plan_path, bind) -> bool:
+        if not self.running or self.rules is None or self.unbound_rules is None:
+            return False
+        self.plan_path = str(plan_path)
+        self._base_rules = list(bind(self.unbound_rules))
+        self.rules[:] = self._effective_rules(self._base_rules)
+        self._plan_changed = plan_notes(plan_path)
         return True
 
     def stop(self) -> None:
@@ -3013,6 +3179,7 @@ class WatchSession:
 
         def tracking_provider() -> ConsoleState:
             state = provider()
+            self._readings += 1
             latest[:] = [state]
             return state
 
@@ -3020,9 +3187,11 @@ class WatchSession:
         try:
             for event in watch(tracking_provider, rules=rules, interval=interval,
                                sleep=self._stop.wait, session_notes=self._session_notes):
-                self._broadcast(presenter.payload(
+                payload = presenter.payload(
                     event, coverage_caveat(latest[0]) if latest else None,
-                    latest[0] if latest else None))
+                    latest[0] if latest else None)
+                self._with_sheet_read(payload)
+                self._broadcast(payload)
                 if self._findings is not None:
                     self._findings.record(event, latest[0] if latest else None)
                 if self._stop.is_set():
@@ -3041,6 +3210,24 @@ class WatchSession:
                 closer()
             self.running = False
             self.virtual_soundcheck = False
+
+    def _with_sheet_read(self, payload: dict) -> None:
+        """The first pass after a step 04 Save says when it read the sheet,
+        and how many of its edits wait for Apply (CV023); every later pass
+        repeats that line until the next Save."""
+        read = self._sheet_read
+        if read is None:
+            return
+        if read["read_at"] is None:
+            # A pass whose reading came before the Save audited with the old
+            # rules: it has not read the sheet yet.
+            if self._readings <= read["after"]:
+                return
+            read["read_at"] = payload.get("at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        waiting = sum(1 for f in payload.get("all_findings") or []
+                      if f.get("rule_id") == "CV023")
+        payload["sheet_read"] = {"sheet": read["sheet"], "saved_at": read["saved_at"],
+                                 "read_at": read["read_at"], "waiting": waiting}
 
     def findings_text(self) -> str | None:
         """The findings log of the current or last session, or None before
@@ -3944,6 +4131,10 @@ def create_app(
             plan, _error = _load_plan_from_path(str(show.plan))
             if plan is not None:
                 app.state.plan, app.state.plan_path = plan, str(show.plan)
+                # A watch running with no show takes this one's plan (Watch's Make a show from this desk). Not the Demo's:
+                # that is another console.
+                if not is_demo_show(show):
+                    session.take_plan(show.plan, _with_plan_rules)
         # Watch's rules too, for the same reason: the editor
         # offering the last show's watch.json under this show's name
         # would Save the last show's rules into the wrong conversation.
@@ -5209,9 +5400,32 @@ def create_app(
                     {"slot": "input_list", "path": str(path), "changed": False,
                      **_rows_summary(summary)},
                     f"Nothing to save -- {label} already says that. The file was not touched.")
+            # The edit is laid onto the plan too, with no model,
+            # and a cell that cannot work on the desk is refused before
+            # anything is written.
+            update = _sheets_update(show, input_change=(
+                original, text, [row.get("line") for row in req.rows]))
+            if update is not None and update["result"].refusals:
+                return _refusal_response(update, label)
+            sha_before = conventions_ref.file_sha256(path)
             refusal = _write_text(path, text)
             if refusal is not None:
                 return refusal
+            plan_said = []
+            if update is not None:
+                bus_path = show.directory / bundle.BUSSES
+                bus_sha = conventions_ref.file_sha256(bus_path)
+                if _rename_sources_in_sheet(show, update["result"].sources_spelling()):
+                    plan_said.append(f"Renamed inputs are written by their new names in "
+                                     f"{bundle.BUSSES}'s sources.")
+                    meta = update["result"].plan.setdefault("meta", {})
+                    recorded = meta.get("bus_sheet")
+                    if isinstance(recorded, dict) and recorded.get("sha256") == bus_sha:
+                        meta["bus_sheet"] = plan_freshness.input_list_record(bus_path,
+                                                                             show.directory)
+                plan_said += _write_plan_update(
+                    show, update, sheet_path=path,
+                    before_sha=sha_before, slot="input_list")
         parts = []
         if summary["changed"]:
             parts.append(f"{len(summary['changed'])} row(s) changed")
@@ -5223,7 +5437,10 @@ def create_app(
             parts.append("column(s) added: " + ", ".join(summary["columns_added"]))
         payload = _payload_after_save(
             {"slot": "input_list", "path": str(path), "changed": True, **_rows_summary(summary)},
-            f"Saved {label}: " + (", ".join(parts) or "rows reordered") + ".")
+            f"Saved {label}: " + (", ".join(parts) or "rows reordered") + "."
+            + "".join(" " + line for line in plan_said))
+        payload["notes"] = update["result"].notes if update is not None else []
+        payload["plan_updated"] = bool(plan_said)
         # Written as asked, and read back by the engine's own loader: a row
         # it refuses is an ERROR in the dock (`input-list.invalid`, naming
         # the row), not a refusal to save. Say so with the save, too.
@@ -5231,6 +5448,687 @@ def create_app(
             payload["message"] += (" The input list does not load as it stands -- the "
                                    "finding in the Findings panel names the row; a build refuses it "
                                    "until it is fixed.")
+        return payload
+
+    # ---- the desk sheets in step 04 (piece 3) ---------------
+    #
+    # Step 04's tables edit the show's two sheets. A Save writes the sheet
+    # and then lays it onto the bundle's plan.json with no model
+    # (`atoo/sheets.py`): what cannot physically work is refused before
+    # anything is written, and every choice made on the way is said.
+
+    def _bus_sheet_source(show) -> dict:
+        path = show.directory / bundle.BUSSES
+        text = _raw_text(path) if path.is_file() else None
+        source = {"present": text is not None, "path": str(path),
+                  "display_path": _display_path(path, show),
+                  "sha256": conventions_ref.file_sha256(path) if text is not None else None,
+                  "columns": list(sheets_module.BUS_COLUMNS), "records": []}
+        if text is not None:
+            header, records, _end = source_edit.read_records(text)
+            source["header"] = header
+            source["records"] = [{"line": i, "values": r.values} for i, r in enumerate(records)]
+        return source
+
+    def _bundle_plan(show) -> "dict | None":
+        if app.state.plan is not None and app.state.plan_path == str(show.plan):
+            return app.state.plan
+        if show.plan.is_file():
+            plan, _error = _load_plan_from_path(str(show.plan))
+            return plan
+        return None
+
+    def _bus_sheet_payload(show) -> dict:
+        plan = _bundle_plan(show)
+        sheet = _bus_sheet_source(show)
+        recorded = ((plan or {}).get("meta") or {}).get("bus_sheet")
+        recorded = recorded.get("sha256") if isinstance(recorded, dict) else None
+        return {"bus_sheet": sheet,
+                # The sheet has cells this plan has not taken in: a rebuild,
+                # or an edit in another program. Save lays it on.
+                "plan_behind": bool(plan is not None and sheet["present"]
+                                    and recorded != sheet["sha256"]),
+                "derived": sheets_module.bus_rows_from_plan(plan) if plan else [],
+                "roles": {"bus": list(plan_schema_module.BUS_ROLES),
+                          "output": list(plan_schema_module.OUTPUT_ROLES)},
+                "plan": plan is not None}
+
+    def _sheets_update(show, *, input_change=None, bus_change=None) -> "dict | None":
+        """The plan with a sheet's edit laid on, not yet written: `input_change`
+        is `(text before, text after, lines)`, `bus_change` `(rows before, rows
+        after)`. None when the bundle has no plan to update."""
+        from atoo import verify_plan
+
+        plan = _bundle_plan(show)
+        if plan is None:
+            return None
+        result = sheets_module.Result(plan=copy.deepcopy(plan))
+        input_text = _raw_text(show.path(bundle.INPUT_LIST)) or ""
+        cells: dict = {}
+        if input_change is not None:
+            before, after, lines = input_change
+            sheets_module.overlay_inputs(plan, before, after, lines, result=result)
+            input_text = after
+            cells = sheets_module.input_cells(before, after, lines, result.plan)
+        if bus_change is not None:
+            before_rows, after_rows = bus_change
+            sheets_module.overlay_busses(
+                result.plan, after_rows, before=before_rows, result=result,
+                categories=sheets_module.categories_by_channel(result.plan, input_text))
+            cells = sheets_module.bus_cells(before_rows, after_rows, result.plan)
+        if not result.refusals:
+            sheets_module.refuse_new_errors(
+                plan, result, console_model=verify_plan.resolve_console_model(plan))
+        return {"before": plan, "result": result, "cells": cells}
+
+    def _refusal_response(update: dict, what: str) -> JSONResponse:
+        refusals = [r.as_dict() for r in update["result"].refusals]
+        return JSONResponse({
+            "error": f"Nothing was saved: {len(refusals)} cell(s) of {what} cannot work on the "
+                     "desk -- " + "; ".join(r["text"] for r in refusals[:4])
+                     + ("; ..." if len(refusals) > 4 else ""),
+            "refusals": refusals}, status_code=400)
+
+    def _outputs_follow(show, update: dict) -> list[str]:
+        """A bus-sheet Save that moved a bus's, Main's or Matrix's
+        outputs brings `outputs.csv` along (`outputs_sheet.follow_plan`), so
+        the two files agree and the next build does not lay the old row back
+        on, which would make the move a copy. A captured show's sheet is the
+        whole list, so a newly patched socket gains its row. The sheet's
+        fingerprint in the plan moves with it when the plan was current with
+        it. Before the plan is written: it carries that fingerprint."""
+        from atoo import outputs_sheet, plan_freshness
+
+        path = show.directory / bundle.OUTPUTS
+        if not path.is_file():
+            return []
+        original = _raw_text(path)
+        after = update["result"].plan
+        captured = (after.get("meta") or {}).get("made_from") in ("desk", "snap")
+        text, said = outputs_sheet.follow_plan(original, update["before"], after,
+                                               complete=captured)
+        if not said or text is None or text == original:
+            return []
+        old_sha = conventions_ref.file_sha256(path)
+        if _write_text(path, text) is not None:
+            return [f"{bundle.OUTPUTS} could not be brought up to date; edit its rows for "
+                    f"{', '.join(said[:4])} to match."]
+        meta = after.setdefault("meta", {})
+        recorded = meta.get("outputs_sheet")
+        if isinstance(recorded, dict) and recorded.get("sha256") == old_sha:
+            meta["outputs_sheet"] = plan_freshness.input_list_record(path, show.directory)
+        return [f"{bundle.OUTPUTS} follows: {'; '.join(said[:6])}"
+                + (f"; and {len(said) - 6} more" if len(said) > 6 else "") + "."]
+
+    def _write_plan_update(show, update: dict, *, sheet_path: Path, before_sha,
+                           slot: str) -> list[str]:
+        """Write the updated plan.json, with the sheet's new fingerprint when
+        the plan was current with the sheet before this Save, and the Save's
+        INFO lines among its notes. Returns what to say about it."""
+        result = update["result"]
+        plan = result.plan
+        meta = plan.setdefault("meta", {})
+        key = slot if slot in ("input_list", "user_sheet", "outputs_sheet") else "bus_sheet"
+        recorded = meta.get(key) if isinstance(meta.get(key), dict) else None
+        # The bus sheet and the user sheet are laid on whole (every filled
+        # cell), so after a Save the plan says what the sheet says, whatever
+        # it said before. The input list is laid on by the rows that changed,
+        # so its record moves only when the plan agreed with it before.
+        was_current = key in ("bus_sheet", "user_sheet", "outputs_sheet")
+        if recorded and recorded.get("sha256") == before_sha:
+            was_current = True
+        # A captured plan was made from no conventions, so no rebuild reads
+        # a category, a note or a preset into it: those never make it stale.
+        captured = meta.get("made_from") in ("desk", "snap")
+        if captured:
+            result.uncarried = []
+        if was_current and not result.unplaced and not result.uncarried:
+            meta[key] = plan_freshness.input_list_record(sheet_path, show.directory)
+        notes = plan.setdefault("notes", [])
+        texts = {n.get("text") for n in notes if isinstance(n, dict)}
+        for text in result.notes:
+            if text not in texts:
+                notes.append({"text": text, "source": "sheets"})
+        if plan == update["before"]:
+            return said_without_change(result)
+        # What the edit leaves for Apply, kept until the desk has it: Watch's
+        # CV023 ("Sheet differs from desk") reads it.
+        try:
+            pending = sheets_module.pending_writes(
+                update["before"], plan, update.get("cells") or {},
+                (update["before"].get("meta") or {}).get("sheet_pending"))
+        except Exception:  # noqa: BLE001 -- a plan Apply cannot target says nothing
+            pending = (update["before"].get("meta") or {}).get("sheet_pending") or []
+        if pending:
+            meta["sheet_pending"] = pending
+        meta["sheets_saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        show.plan.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n",
+                             encoding="utf-8")
+        if app.state.bundle is not None and app.state.bundle.directory == show.directory:
+            app.state.plan, app.state.plan_path = plan, str(show.plan)
+        # A running Watch on this show reads the saved plan on its next pass,
+        # without a restart (spec section 4).
+        session.follow_sheet_save(
+            show.plan, _with_plan_rules,
+            sheet={"bus_sheet": bundle.BUSSES, "user_sheet": bundle.USER,
+                   "outputs_sheet": bundle.OUTPUTS}.get(
+                slot, bundle.INPUT_LIST),
+            saved_at=meta["sheets_saved_at"])
+        said = []
+        if result.changes:
+            said.append(f"The plan is updated: {'; '.join(result.changes[:6])}"
+                        + (f"; and {len(result.changes) - 6} more" if len(result.changes) > 6
+                           else "") + ".")
+        if result.uncarried:
+            said.append("The plan has no field for " + ", ".join(result.uncarried[:4])
+                        + (" and more" if len(result.uncarried) > 4 else "")
+                        + ", so it reads Stale until it is rebuilt.")
+        if result.unplaced:
+            said.append(f"{', '.join(repr(n) for n in result.unplaced)} "
+                        f"{'has' if len(result.unplaced) == 1 else 'have'} no channel cell, so "
+                        "the plan has no channel for it yet: fill its channel cell, or rebuild.")
+        return said
+
+    def said_without_change(result) -> list[str]:
+        if result.uncarried:
+            return ["The plan has no field for " + ", ".join(result.uncarried[:4])
+                    + (" and more" if len(result.uncarried) > 4 else "")
+                    + ", so it reads Stale until it is rebuilt."]
+        return []
+
+    def _rename_sources_in_sheet(show, spelling: dict) -> bool:
+        """The bus sheet's `sources` cells, with renamed channels and buses
+        written by their new names. True when busses.csv changed."""
+        path = show.directory / bundle.BUSSES
+        text = _raw_text(path) if path.is_file() else None
+        if not text or not spelling:
+            return False
+        _header, records, _end = source_edit.read_records(text)
+        rows = []
+        for i, record in enumerate(records):
+            cell = record.values.get("sources") or ""
+            new = sheets_module.rename_in_sources(cell, spelling)
+            rows.append({"line": i, "values": {"sources": new} if new != cell else {}})
+        new_text, _summary = source_edit.splice_bus_sheet(text, rows)
+        if new_text == text:
+            return False
+        path.write_text(new_text, encoding="utf-8")
+        return True
+
+    # ---- New show > From a desk -------------------------------
+    #
+    # `atoo capture` behind a button: a .snap, or the console in the bar,
+    # written as a new show folder, with no model and nothing written to
+    # the desk. The page then opens the folder as it opens any show.
+
+    @app.get("/api/capture/defaults")
+    def api_capture_defaults(snap_path: Optional[str] = None, console_model: Optional[str] = None):
+        """The folder the dialog offers: the working folder, named after the
+        .snap, or after the desk's model and today's date."""
+        import datetime
+
+        from atoo import capture as capture_module
+        from atoo.firstrun import default_directory
+
+        parent = config.load_default_workspace() or default_directory()
+        today = datetime.date.today().isoformat()
+        if snap_path:
+            name = capture_module.bundle_name(snap=snap_path, captured=today)
+        else:
+            defaults = app.state.console_defaults or {}
+            model = console_model or (defaults.get("console_model") or "wing")
+            name = capture_module.bundle_name(console_model=model, captured=today)
+        folder = capture_module.free_directory(Path(parent), name)
+        return {"folder": str(folder), "display": _display_path(folder, None),
+                "models": sorted(console_facts.CONSOLE_MODELS)}
+
+    @app.post("/api/capture")
+    def api_capture(req: CaptureRequest, request: Request):
+        import datetime
+
+        from atoo import capture as capture_module
+        from atoo.snapshot import SnapshotError
+
+        refusal = _setup_only(request)
+        if refusal is not None:
+            return refusal
+        captured = datetime.date.today().isoformat()
+        if req.source == "snap":
+            path = Path(os.path.expanduser(req.snap_path or ""))
+            if not req.snap_path or not path.is_file():
+                return JSONResponse({"error": "choose the .snap file to capture"}, status_code=400)
+            if req.console_model not in console_facts.CONSOLE_MODELS:
+                return JSONResponse(
+                    {"error": "a .snap does not say which WING saved it, and the three have "
+                              "different sockets: choose the console model"}, status_code=400)
+            try:
+                read = capture_module.from_snap(path, req.console_model, captured=captured)
+            except SnapshotError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            source = f"the snapshot {path.name}"
+        elif req.source == "console":
+            from atoo.console import WingConsole
+
+            defaults = app.state.console_defaults or {}
+            if defaults.get("demo"):
+                return JSONResponse({"error": "the console is Demo -- there is no desk to "
+                                              "capture. Choose a console with Change..., or a "
+                                              ".snap file"}, status_code=400)
+            address = (defaults.get("address") or "").strip()
+            if not address:
+                return JSONResponse({"error": "no console is set -- choose one with Change... "
+                                              "in the bar, or capture a .snap file"},
+                                    status_code=400)
+            console = WingConsole(address, port=defaults.get("port") or 2223,
+                                  timeout=defaults.get("timeout") or 1.0)
+            try:
+                identity = console.identity()
+                if identity is None:
+                    return JSONResponse({"error": f"no reply from {address} -- is the console "
+                                                  "reachable, and is its OSC remote enabled?"},
+                                        status_code=400)
+                model = console_facts.model_from_identity(identity.args) or req.console_model
+                if model is None:
+                    return JSONResponse({"error": "the desk stated a model Atoo does not know: "
+                                                  "choose the console model"}, status_code=400)
+                read = capture_module.from_console(console, model, captured=captured)
+            finally:
+                console.close()
+            source = f"the desk at {address}"
+        else:
+            return JSONResponse({"error": f"capture reads a .snap or the console, not "
+                                          f"{req.source!r}"}, status_code=400)
+        wanted = Path(os.path.expanduser(req.folder)) if req.folder else None
+        if wanted is None:
+            from atoo.firstrun import default_directory
+
+            wanted = Path(config.load_default_workspace() or default_directory()) / read.name
+        target = capture_module.free_directory(wanted.parent, wanted.name)
+        try:
+            capture_module.write_bundle(read.capture, target, evidence_name=read.evidence_name,
+                                        evidence=read.evidence)
+        except OSError as exc:
+            return JSONResponse({"error": f"couldn't write {target}: {exc.strerror}"},
+                                status_code=400)
+        return {"directory": str(target), "source": source,
+                "renamed": target != wanted,
+                "summary": capture_module.summary_lines(read.capture)
+                + [f"{bundle.CAPTURES}/{read.evidence_name}"],
+                "notes": read.capture.notes}
+
+    @app.get("/api/build/bus-sheet")
+    def api_build_bus_sheet():
+        show = app.state.bundle
+        if show is None:
+            return {"bus_sheet": None, "derived": [], "roles": {
+                "bus": list(plan_schema_module.BUS_ROLES),
+                "output": list(plan_schema_module.OUTPUT_ROLES)}, "plan": False}
+        return _bus_sheet_payload(show)
+
+    def _outputs_sheet_payload(show) -> dict:
+        """`outputs.csv` as step 04's Outputs table reads it: its rows (or, for
+        a show with none yet, the plan's own, which a Save writes), the plan's
+        rows, and the desk's colour for each source and each object's name
+        (`outputs_sheet.display`)."""
+        from atoo import outputs_sheet
+
+        plan = _bundle_plan(show)
+        path = show.directory / bundle.OUTPUTS
+        text = _raw_text(path) if path.is_file() else None
+        recorded = ((plan or {}).get("meta") or {}).get("outputs_sheet")
+        recorded = recorded.get("sha256") if isinstance(recorded, dict) else None
+        sha = conventions_ref.file_sha256(path) if text is not None else None
+        derived = outputs_sheet.rows_from_plan(plan or {})
+        rows = ([{c: r.get(c, "") for c in outputs_sheet.COLUMNS}
+                 for r in outputs_sheet.read_rows(text)] if text is not None else derived)
+        return {"outputs_sheet": {"present": text is not None, "path": str(path),
+                                  "display_path": _display_path(path, show), "sha256": sha,
+                                  "columns": list(outputs_sheet.COLUMNS), "rows": rows},
+                "derived": derived,
+                "display": outputs_sheet.display(plan or {}),
+                "plan_behind": bool(plan is not None and text is not None and recorded != sha),
+                "plan": plan is not None}
+
+    def _outputs_sheet_update(show, rows: list[dict]) -> "dict | None":
+        from atoo import outputs_sheet, verify_plan
+
+        plan = _bundle_plan(show)
+        if plan is None:
+            return None
+        result = outputs_sheet.overlay(plan, rows, complete=True,
+                                       console_model=verify_plan.resolve_console_model(plan))
+        return {"before": plan, "result": result, "cells": {}}
+
+    def _busses_follow(show, update: dict) -> list[str]:
+        """An Outputs Save that moved a bus's, Main's or Matrix's sockets brings
+        `busses.csv`'s Outputs cell for it along, so the two files agree: the
+        cell follows outputs.csv. A blank cell stays blank (it
+        means "the plan's"); the plan's bus-sheet fingerprint moves with the
+        file when the plan was current with it."""
+        from atoo import outputs_sheet, plan_freshness
+
+        path = show.directory / bundle.BUSSES
+        if not path.is_file():
+            return []
+        after = update["result"].plan
+        moved = {f"{ {'BUS': 'Bus', 'MAIN': 'Main', 'MTX': 'Matrix'}[src[0]] } {(src[1] + 1) // 2}"
+                 for socket in outputs_sheet.changed_sockets(update["before"], after)
+                 for src in (outputs_sheet.output_sources(update["before"]).get(socket),
+                             outputs_sheet.output_sources(after).get(socket))
+                 if src is not None and src[0] in ("BUS", "MAIN", "MTX")}
+        if not moved:
+            return []
+        now = {d["bus"]: d.get("outputs") or "" for d in sheets_module.bus_rows_from_plan(after)}
+        original = _raw_text(path)
+        sheet = _bus_sheet_source(show)
+        rows, said = [], []
+        for record in sheet["records"]:
+            values = dict(record["values"])
+            parsed = sheets_module.parse_label(values.get("bus"))
+            label = (sheets_module.label_of(*parsed) if parsed and parsed[1] is not None
+                     else None)
+            if (label in moved and (values.get("outputs") or "").strip()
+                    and values["outputs"].strip() != now.get(label, "")):
+                values["outputs"] = now.get(label, "")
+                said.append(f"{label} {values['outputs'] or 'none'}")
+            rows.append({"line": record["line"], "values": values})
+        if not said:
+            return []
+        old_sha = conventions_ref.file_sha256(path)
+        try:
+            text, _summary = source_edit.splice_bus_sheet(original, rows)
+        except source_edit.EditError:
+            return []
+        if _write_text(path, text) is not None:
+            return [f"{bundle.BUSSES} could not be brought up to date; its Outputs cells for "
+                    f"{', '.join(said[:4])} still say the old sockets."]
+        meta = after.setdefault("meta", {})
+        recorded = meta.get("bus_sheet")
+        if isinstance(recorded, dict) and recorded.get("sha256") == old_sha:
+            meta["bus_sheet"] = plan_freshness.input_list_record(path, show.directory)
+        return [f"{bundle.BUSSES}'s Outputs column follows: {'; '.join(said[:6])}"
+                + (f"; and {len(said) - 6} more" if len(said) > 6 else "") + "."]
+
+    def _user_sheet_payload(show) -> dict:
+        """`user.csv` as step 04's table reads it: its rows, what reads each
+        slot (set in Outputs and Channels), each slot's kind, and the plan's
+        own slots for a show with no sheet yet."""
+        from atoo import user_sheet
+
+        plan = _bundle_plan(show)
+        path = show.directory / bundle.USER
+        text = _raw_text(path) if path.is_file() else None
+        recorded = ((plan or {}).get("meta") or {}).get("user_sheet")
+        recorded = recorded.get("sha256") if isinstance(recorded, dict) else None
+        sha = conventions_ref.file_sha256(path) if text is not None else None
+        rows = (user_sheet.read_rows(text) if text is not None
+                else user_sheet.rows_from_plan(plan or {}))
+        readers = user_sheet.readers(plan or {})
+        return {"user_sheet": {"present": text is not None, "path": str(path),
+                               "display_path": _display_path(path, show), "sha256": sha,
+                               "columns": list(user_sheet.COLUMNS), "rows": rows},
+                "readers": {str(slot): who for slot, who in readers.items()},
+                "derived": user_sheet.rows_from_plan(plan or {}),
+                "plan_behind": bool(plan is not None and text is not None and recorded != sha),
+                "plan": plan is not None}
+
+    def _user_sheet_update(show, rows: list[dict]) -> "dict | None":
+        from atoo import user_sheet, verify_plan
+
+        plan = _bundle_plan(show)
+        if plan is None:
+            return None
+        result = user_sheet.overlay(plan, rows, complete=True,
+                                    console_model=verify_plan.resolve_console_model(plan))
+        return {"before": plan, "result": result, "cells": {}}
+
+    @app.get("/api/build/outputs-sheet")
+    def api_build_outputs_sheet():
+        show = app.state.bundle
+        if show is None:
+            return {"outputs_sheet": None, "derived": [], "display": {"sockets": {}, "objects": {}},
+                    "plan": False}
+        return _outputs_sheet_payload(show)
+
+    @app.post("/api/build/outputs-sheet/check")
+    def api_build_outputs_sheet_check(req: OutputsSheetSaveRequest, request: Request):
+        """What a Save of the Outputs table would refuse and change, with
+        nothing written."""
+        refusal = _setup_only(request)
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        update = _outputs_sheet_update(show, req.rows) if show is not None else None
+        if update is None:
+            return {"refusals": [], "changes": []}
+        return {"refusals": [r.as_dict() for r in update["result"].refusals],
+                "changes": update["result"].changes}
+
+    @app.post("/api/build/outputs-sheet/save")
+    def api_build_outputs_sheet_save(req: OutputsSheetSaveRequest, request: Request):
+        from atoo import outputs_sheet
+
+        refusal = _setup_only(request) or _refuse_demo("Save")
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        refusal = _stale_editor(req.expected_bundle, show, "Nothing was saved")
+        if refusal is not None:
+            return refusal
+        if show is None:
+            return JSONResponse({"error": "no show bundle open -- outputs.csv lives in one"},
+                                status_code=400)
+        with save_lock:
+            path = show.directory / bundle.OUTPUTS
+            original = _raw_text(path) if path.is_file() else None
+            sha_now = conventions_ref.file_sha256(path) if original is not None else None
+            if (req.expected_sha256 or None) != sha_now:
+                return JSONResponse(
+                    {"error": f"{bundle.OUTPUTS} changed on disk after this page read it -- "
+                              "edited in another program, or saved from another tab. Nothing "
+                              "was saved. Reload to read it as it is now.",
+                     "stale": "file", "slot": "outputs_sheet"}, status_code=409)
+            rows = [{c: str(r.get(c) or "").strip() for c in outputs_sheet.COLUMNS}
+                    for r in req.rows]
+            rows = [r for r in rows if r["output"] or r["source"]]
+            update = _outputs_sheet_update(show, rows)
+            if update is not None and update["result"].refusals:
+                return _refusal_response(update, bundle.OUTPUTS)
+            # The file says what the plan now patches, socket by socket, in the
+            # desk's words (`usb 5` is written `USB 5`), with each row's notes:
+            # a socket a row took OFF has no row.
+            text = outputs_sheet.csv_text(_outputs_rows_written(
+                rows, update["result"].plan if update is not None else None))
+            label = _display_path(path, show)
+            wrote = text != original
+            if wrote:
+                refusal = _write_text(path, text)
+                if refusal is not None:
+                    return refusal
+            said = []
+            if update is not None:
+                said += _busses_follow(show, update)
+                said = _write_plan_update(show, update, sheet_path=path, before_sha=sha_now,
+                                          slot="outputs_sheet") + said
+            else:
+                said.append("There is no plan.json to update yet: the next build makes one.")
+        if not wrote and not said:
+            message = f"Nothing to save -- {label} already says that, and the plan agrees."
+        else:
+            message = (f"Saved {label}. " if wrote else "") + " ".join(said)
+        payload = _payload_after_save({"slot": "outputs_sheet", "path": str(path),
+                                       "changed": wrote}, message.strip())
+        payload.update(_outputs_sheet_payload(show))
+        return payload
+
+    @app.get("/api/build/user-sheet")
+    def api_build_user_sheet():
+        show = app.state.bundle
+        if show is None:
+            return {"user_sheet": None, "readers": {}, "derived": [], "plan": False}
+        return _user_sheet_payload(show)
+
+    @app.post("/api/build/user-sheet/check")
+    def api_build_user_sheet_check(req: UserSheetSaveRequest, request: Request):
+        """What a Save of the table would refuse and change, with nothing written."""
+        refusal = _setup_only(request)
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        update = _user_sheet_update(show, req.rows) if show is not None else None
+        if update is None:
+            return {"refusals": [], "changes": []}
+        return {"refusals": [r.as_dict() for r in update["result"].refusals],
+                "changes": update["result"].changes}
+
+    @app.post("/api/build/user-sheet/save")
+    def api_build_user_sheet_save(req: UserSheetSaveRequest, request: Request):
+        from atoo import user_sheet
+
+        refusal = _setup_only(request) or _refuse_demo("Save")
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        refusal = _stale_editor(req.expected_bundle, show, "Nothing was saved")
+        if refusal is not None:
+            return refusal
+        if show is None:
+            return JSONResponse({"error": "no show bundle open -- user.csv lives in one"},
+                                status_code=400)
+        with save_lock:
+            path = show.directory / bundle.USER
+            original = _raw_text(path) if path.is_file() else None
+            sha_now = conventions_ref.file_sha256(path) if original is not None else None
+            if (req.expected_sha256 or None) != sha_now:
+                return JSONResponse(
+                    {"error": f"{bundle.USER} changed on disk after this page read it -- "
+                              "edited in another program, or saved from another tab. Nothing "
+                              "was saved. Reload to read it as it is now.",
+                     "stale": "file", "slot": "user_sheet"}, status_code=409)
+            rows = [{c: str(r.get(c) or "").strip() for c in user_sheet.COLUMNS} for r in req.rows]
+            rows = [r for r in rows if any(r.values())]
+            update = _user_sheet_update(show, rows)
+            if update is not None and update["result"].refusals:
+                return _refusal_response(update, bundle.USER)
+            # The file says what the plan now holds, slot by slot, in the
+            # desk's words, so a Save also tidies what was typed ("ch 19").
+            text = user_sheet.csv_text(user_sheet.rows_from_plan(update["result"].plan)
+                                       if update is not None else rows)
+            label = _display_path(path, show)
+            wrote = text != original
+            if wrote:
+                refusal = _write_text(path, text)
+                if refusal is not None:
+                    return refusal
+            said = (_write_plan_update(show, update, sheet_path=path, before_sha=sha_now,
+                                       slot="user_sheet")
+                    if update is not None else
+                    ["There is no plan.json to update yet: the next build makes one."])
+        if not wrote and not said:
+            message = f"Nothing to save -- {label} already says that, and the plan agrees."
+        else:
+            message = (f"Saved {label}. " if wrote else "") + " ".join(said)
+        payload = _payload_after_save({"slot": "user_sheet", "path": str(path), "changed": wrote},
+                                      message.strip())
+        payload.update(_user_sheet_payload(show))
+        return payload
+
+    @app.post("/api/build/sheets/check")
+    def api_build_sheets_check(req: SheetsCheckRequest, request: Request):
+        """What a Save would refuse, and what it would decide, with nothing
+        written: step 04 marks a refused cell red and locks Save with the
+        reason before anyone presses it."""
+        refusal = _setup_only(request)
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        if show is None:
+            return {"refusals": [], "notes": [], "changes": []}
+        try:
+            if req.sheet == "input_list":
+                path = show.path(bundle.INPUT_LIST)
+                original = _raw_text(path) or ""
+                text, _summary = source_edit.splice_input_list(original, req.rows)
+                update = _sheets_update(show, input_change=(
+                    original, text, [r.get("line") for r in req.rows]))
+            elif req.sheet == "bus_sheet":
+                path = show.directory / bundle.BUSSES
+                original = _raw_text(path) if path.is_file() else None
+                text, _summary = source_edit.splice_bus_sheet(original, req.rows)
+                update = _sheets_update(show, bus_change=(
+                    [r.values for r in source_edit.read_records(original or "")[1]],
+                    [r.values for r in source_edit.read_records(text)[1]]))
+            else:
+                return JSONResponse({"error": f"no sheet {req.sheet!r}"}, status_code=400)
+        except source_edit.EditError as exc:
+            return {"refusals": [], "notes": [], "changes": [], "stale": str(exc)}
+        if update is None:
+            return {"refusals": [], "notes": [], "changes": []}
+        result = update["result"]
+        return {"refusals": [r.as_dict() for r in result.refusals], "notes": result.notes,
+                "changes": result.changes}
+
+    @app.post("/api/build/bus-sheet/save")
+    def api_build_bus_sheet_save(req: BusSheetSaveRequest, request: Request):
+        refusal = _setup_only(request) or _refuse_demo("Save")
+        if refusal is not None:
+            return refusal
+        show = app.state.bundle
+        refusal = _stale_editor(req.expected_bundle, show, "Nothing was saved")
+        if refusal is not None:
+            return refusal
+        if show is None:
+            return JSONResponse({"error": "no show bundle open -- busses.csv lives in one"},
+                                status_code=400)
+        with save_lock:
+            path = show.directory / bundle.BUSSES
+            original = _raw_text(path) if path.is_file() else None
+            sha_now = conventions_ref.file_sha256(path) if original is not None else None
+            if (req.expected_sha256 or None) != sha_now:
+                return JSONResponse(
+                    {"error": f"{bundle.BUSSES} changed on disk after this page read it -- "
+                              "edited in another program, or saved from another tab. Nothing "
+                              "was saved. Reload to read it as it is now.",
+                     "stale": "file", "slot": "bus_sheet"}, status_code=409)
+            try:
+                text, summary = source_edit.splice_bus_sheet(original, req.rows)
+            except source_edit.EditError as exc:
+                return JSONResponse({"error": f"{exc}. Nothing was saved.", "stale": "file",
+                                     "slot": "bus_sheet"}, status_code=409)
+            before_rows = [r.values for r in source_edit.read_records(original or "")[1]]
+            after_rows = [r.values for r in source_edit.read_records(text)[1]]
+            update = _sheets_update(show, bus_change=(before_rows, after_rows))
+            if update is not None and update["result"].refusals:
+                return _refusal_response(update, bundle.BUSSES)
+            label = _display_path(path, show)
+            wrote = text != original
+            if wrote:
+                refusal = _write_text(path, text)
+                if refusal is not None:
+                    return refusal
+            said = []
+            if update is not None:
+                if _rename_sources_in_sheet(show, update["result"].sources_spelling()):
+                    said.append("Renamed sources are written by their new names in it.")
+                said += _outputs_follow(show, update)
+                said += _write_plan_update(show, update, sheet_path=path, before_sha=sha_now,
+                                           slot="bus_sheet")
+            else:
+                said.append("There is no plan.json to update yet: the next build makes one.")
+        if not wrote and not said:
+            message = f"Nothing to save -- {label} already says that, and the plan agrees."
+        else:
+            parts = []
+            if summary["changed"]:
+                parts.append(f"{len(summary['changed'])} row(s) changed")
+            if summary["added"]:
+                parts.append(f"{summary['added']} added")
+            message = (f"Saved {label}" + (f": {', '.join(parts)}" if parts else "") + ". "
+                       if wrote else "") + " ".join(said)
+        payload = _payload_after_save({"slot": "bus_sheet", "path": str(path), "changed": wrote},
+                                      message.strip())
+        payload.update(_bus_sheet_payload(show))
+        payload["notes"] = update["result"].notes if update is not None else []
         return payload
 
     # ---- Build step 04 (version H, phase 3) -----------------
@@ -5305,6 +6203,16 @@ def create_app(
                  "findings": [s["missing"] for s in refused if s.get("missing")]},
                 status_code=400,
             )
+
+        # A build is a model call. With none set up it is refused here,
+        # after every other refusal and before `atoo build` would move
+        # plan.json aside.
+        model_ready, model_why = _build_model_state()
+        if not model_ready:
+            return JSONResponse(
+                {"error": f"a build needs a model, and none is set up here ({model_why}). "
+                          "Nothing was changed: plan.json is as it was."},
+                status_code=400)
 
         argv = ["build", "--show", str(show.directory),
                 "--conventions", conventions["path"],
@@ -5771,8 +6679,13 @@ def create_app(
             # strips, with the strips the write changes marked.
             from atoo import desk_view
 
+            # Every row, so each tile's Detail can show what
+            # it changes (now and after) and what it leaves as it is.
             payload["drawing"] = desk_view.full_build_desk(plan_now, [
-                {"address": w.address, "status": w.status, "would_change": w.would_change}
+                {"address": w.address, "description": w.description, "status": w.status,
+                 "prior_value": w.prior_value, "intended_value": w.intended_value,
+                 "would_change": w.would_change, "forced_by": w.forced_by,
+                 "mirrored_by": w.mirrored_by}
                 for w in _write_records(journal)])
             apply_run.publish(result=payload)
             return _apply_findings(payload, DEMO_CONSOLE_LABEL if demo else address)
@@ -6437,7 +7350,8 @@ def create_app(
         # duplicate id the client-side check missed, an operator/value
         # incompatibility, ...) never reaches disk half-written.
         from atoo.watch_conditions import (
-            DRAFTED_KEY, WatchConditionsError, canonical_target, parse_watch_conditions,
+            DRAFTED_KEY, WatchConditionsError, canonical_target, new_document,
+            parse_watch_conditions,
         )
 
         # The demo show's watch.json, or any file in the
@@ -6471,7 +7385,7 @@ def create_app(
             if isinstance(row, dict) and isinstance(row.get("channel"), str) else row
             for row in req.watch_conditions
         ]
-        document: dict = {"watch_conditions": rows}
+        document: dict = new_document(rows)
         # Carry forward the bookkeeping the table cannot see.
         # `drafted` records every id a build has ever proposed, and it is
         # the only thing that makes DELETING a drafted condition stick --
@@ -6504,8 +7418,10 @@ def create_app(
         app.state.watch_conditions = validated
         app.state.watch_conditions_path = req.path
         from atoo.watch_conditions import build_watch_rules
-        reloaded = session.replace_rules(
-            _with_plan_rules(DEFAULT_RULES + build_watch_rules(validated)), req.path)
+        unbound = DEFAULT_RULES + build_watch_rules(validated)
+        reloaded = session.replace_rules(_with_plan_rules(unbound), req.path)
+        if reloaded:
+            session.unbound_rules = list(unbound)
         return {**_watch_payload(), "watch_reloaded": reloaded}
 
     @app.post("/api/watch-conditions/new")
@@ -6537,7 +7453,9 @@ def create_app(
                           f"{bundle.WATCH_CONDITIONS} -- nothing was written"},
                 status_code=409,
             )
-        refusal = _write_new(target, json.dumps({"watch_conditions": []}, indent=2) + "\n")
+        from atoo.watch_conditions import new_document
+
+        refusal = _write_new(target, json.dumps(new_document(), indent=2) + "\n")
         if refusal is not None:
             return refusal
         app.state.watch_conditions = []
@@ -6617,7 +7535,8 @@ def create_app(
         # a channel cut off from every planned route (CV016), a
         # mute the plan does not have (CV017), and L002 quiet
         # on a fader the plan itself puts at the floor.
-        rules = _with_plan_rules(rules if rules is not None else DEFAULT_RULES)
+        unbound = list(rules if rules is not None else DEFAULT_RULES)
+        rules = _with_plan_rules(unbound)
 
         # The page sends `console` and means the bundle bar's,
         # and when the bar holds Demo that IS the demo -- Watch follows the
@@ -6637,6 +7556,7 @@ def create_app(
                           rules=rules, virtual_soundcheck=req.virtual_soundcheck,
                           plan_path=_open_plan_path())
             session.watch_path = req.watch_conditions_path or None
+            session.unbound_rules = unbound
             return session.status()
         if req.source == "console":
             # The bundle bar's console, like every other desk-facing
@@ -6699,6 +7619,7 @@ def create_app(
                           virtual_soundcheck=req.virtual_soundcheck,
                           plan_path=_open_plan_path())
             session.watch_path = req.watch_conditions_path or None
+            session.unbound_rules = unbound
             return session.status()
         return JSONResponse({"error": f"unknown source {req.source!r}"}, status_code=400)
 

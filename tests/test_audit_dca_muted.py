@@ -288,10 +288,10 @@ def test_a_watch_condition_on_the_same_dca_mute_takes_the_row_and_names_ch004():
     """One fault, one row: the engineer's own condition about the Band DCA's
     mute is the row, and the built-in is named under it."""
     condition = {"id": "band-live", "description": "The Band DCA is never muted",
-                 "channel": "DCA Band", "field": "muted", "operator": "==", "value": False,
+                 "channel": "DCA Band", "field": "muted", "operator": "!=", "value": False,
                  "severity": "error"}
     rules = list(DEFAULT_RULES) + build_watch_rules(
-        parse_watch_conditions(json.dumps({"watch_conditions": [condition]})))
+        parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [condition]})))
     shown = present_findings(run_audit(_state(_desk()), rules))
     assert [(f.rule_id, f.severity) for f in shown.alerts
             if f.rule_id in {"CH004", "WATCH:band-live"}] == [("WATCH:band-live", Severity.ERROR)]

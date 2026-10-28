@@ -525,7 +525,7 @@ CODE_SUMMARIES: dict[str, tuple[str, str, str]] = {
     "reply.channels-numbered": ("note", "notes", "channels numbered in the reply's order"),
     "reply.sockets-chosen": ("note", "notes", "sockets chosen by code"),
     "reply.sends-expanded": ("note", "notes", "bus sends written from the busses' sender lists"),
-    "reply.colours-applied": ("note", "notes", "colours written from the conventions"),
+    "reply.colours-applied": ("note", "notes", "colors written from the conventions"),
     "reply.name-cut": ("name", "names", "a name cut to fit the desk"),
     "reply.pair-phantom": ("channel", "channels",
                            "a stereo pair's two input-list rows disagreed about 48V; the pair "
@@ -550,7 +550,7 @@ CODE_SUMMARIES: dict[str, tuple[str, str, str]] = {
     "inferred.bus-main-index": ("bus", "busses", "which Main a bus feeds, decided"),
     "inferred.send-level": ("bus", "busses", "send levels decided where none was stated"),
     "inferred.send-mode": ("bus", "busses", "send pre/post decided where none was stated"),
-    "strip.colour-alias": ("note", "notes", "a colour name read as the desk's own"),
+    "strip.colour-alias": ("note", "notes", "a color name read as the desk's own"),
     "conventions.unused": ("note", "notes", "declared in the conventions, unused in this show"),
     "group.empty": ("note", "notes", "a DCA or mute group with no members"),
     "bus.empty": ("bus", "busses", "a bus nothing sends to"),

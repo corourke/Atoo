@@ -1,7 +1,8 @@
 """Apply as one four-step flow, the desk drawn as scribble
 strips, and the Demo show that previews but never writes.
 
-The mockup it builds is `mockups/apply-flow/` (approved 2026-10-13).
+The mockup it builds is `mockups/apply-flow/` (approved 2026-10-13;
+removed 2026-10-27, in git at `86ac89c5`).
 Tested here:
 
 * **`desk_view`** -- what the drawing holds: every strip kind, sized from
@@ -56,10 +57,15 @@ def _plan() -> dict:
 
 def test_the_drawing_has_every_strip_kind_sized_from_the_console_facts(monkeypatch):
     drawing = desk_view.full_build_desk(_plan())
-    assert [(s["kind"], s["count"]) for s in drawing["sections"]] == [
+    strips = drawing["sections"][:len(desk_view.SECTIONS)]
+    assert [(s["kind"], s["count"]) for s in strips] == [
         (kind, console_facts.CAPACITY[kind]) for kind, _ in desk_view.SECTIONS]
+    # Then Inputs and Outputs (one tile per socket group), FX
+    # (one per slot) and Console.
     assert [s["title"] for s in drawing["sections"]] == [
-        "Channels", "Aux", "Buses", "Mains", "Matrices", "DCAs", "Mute groups"]
+        "Channels", "Aux", "Buses", "Mains", "Matrices", "DCAs", "Mute groups",
+        "Inputs", "Outputs", "FX", "Console"]
+    assert drawing["sections"][-2]["count"] == console_facts.FX_SLOTS
     # A desk of another size draws its own size: nothing counts to 40 itself.
     monkeypatch.setitem(console_facts.CAPACITY, "ch", 24)
     smaller = desk_view.full_build_desk(_plan())
@@ -92,8 +98,9 @@ def test_a_preview_marks_the_strips_its_write_changes():
     drawing = desk_view.full_build_desk(_plan(), records)
     changes = {(s["kind"], x["n"]) for s in drawing["sections"] for x in s["strips"]
                if x["changes"]}
-    assert changes == {("ch", 2), ("bus", 1)}
-    assert drawing["counts"]["changing"] == 2
+    # A socket's row marks its socket group's tile.
+    assert changes == {("ch", 2), ("bus", 1), ("in", "A")}
+    assert drawing["counts"]["changing"] == 3
 
 
 def test_the_patch_read_asks_a_colour_per_strip_and_a_name_per_group():
@@ -337,13 +344,16 @@ def test_the_desk_is_drawn_from_the_servers_drawing(assets):
     for key in ("run.result.drawing", "run.review.desk", "drawing.sections",
                 "section.strips", "strip.colour", "strip.mark", "strip.state"):
         assert key in js, key
-    assert 'name.dataset.colour = String(strip.colour).toLowerCase();' in js
+    # The whole tile takes the strip's colour.
+    assert 'cell.dataset.colour = String(strip.colour).toLowerCase();' in js
+    assert '.desk-strip[data-colour="red"]' in css
     for cls in (".desk-strip", ".desk-strip-name", ".desk-strip-no", ".desk-strip.is-new",
-                ".desk-strip.is-edit", ".desk-strip.is-unused", ".desk-strip.is-unknown"):
+                ".desk-strip.is-edit", ".desk-strip.is-free", ".desk-strip.is-unknown",
+                ".desk-strip.is-selected"):
         assert cls in css, cls
     # Light theme under the three rules the page's tokens use.
-    assert ':root[data-theme="light"] .desk-view' in css
-    assert ':root:not([data-theme="dark"]) .desk-view' in css
+    assert ':root[data-theme="light"] :is(.desk-view, .dock-detail)' in css
+    assert ':root:not([data-theme="dark"]) :is(.desk-view, .dock-detail)' in css
 
 
 def test_a_preview_is_stale_once_step_one_changes(assets):

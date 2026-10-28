@@ -174,12 +174,28 @@ def test_version_needs_no_command_and_runs_nothing_else(capsys, monkeypatch, tmp
 
 # ---- atoo ui: the start-up line and the footer -----------------------------
 
-def test_ui_starts_with_the_same_line_version_prints(stub_ui_server, capsys, tmp_path, monkeypatch):
+def test_ui_starts_with_the_version_and_where_it_runs_from(stub_ui_server, capsys, tmp_path,
+                                                          monkeypatch):
+    """The start is the version and where it
+    runs from, the console and the working folder. The branch and commit
+    are `atoo --version`'s; the address only with --no-browser, where the
+    page does not open by itself."""
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     assert main(["ui", "--port", "0", "--no-browser"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[0] == install_info.describe().summary()
+    assert out[0] == install_info.describe().short()
+    assert "branch" not in out[0]
     assert out[1].startswith("Atoo: http://")
+
+
+def test_ui_that_opens_the_browser_does_not_print_the_address(stub_ui_server, capsys, tmp_path,
+                                                             monkeypatch):
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr("atoo.cli._open_browser", lambda url: None)
+    assert main(["ui", "--port", "0"]) == 0
+    out = capsys.readouterr().out
+    assert "http://" not in out
+    assert "Session-based" not in out and "Arm ticked" not in out
 
 
 def test_the_page_carries_the_line_and_the_script_shows_it():

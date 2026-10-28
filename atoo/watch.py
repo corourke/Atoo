@@ -27,7 +27,7 @@ scoped, and the one it does offer can be taken away without notice.
 
 **Could a poll simply read less?** `atoo.watch_scope` answers that
 with measured numbers rather than an estimate. The rules
-`watch` runs read 3,891 of a Compact's 6,195 addresses, so a scoped
+`watch` runs read 3,893 of a Compact's 6,197 addresses, so a scoped
 per-leaf pass is ~26s against ~41s -- better, and still six times the 3-4
 second budget -- and it saves the node-dump read (the default) nothing at all,
 because the leaves it drops live inside object nodes the read still has
@@ -59,8 +59,9 @@ from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timezone
 from typing import Callable, Iterator, Mapping
 
-from atoo.audit import (AuditRule, ConsoleState, DEFAULT_RULES, Finding, SEVERITY_ORDER,
-                             names_read, rule_groups, run_audit, shared_sentence)
+from atoo.audit import (RUNS_WATCH, AuditRule, ConsoleState, DEFAULT_RULES, Finding,
+                             RuleInfo, SEVERITY_ORDER, names_read, rule_groups, run_audit,
+                             shared_sentence)
 from atoo.diagnostics import Diagnostic, Severity
 
 #: How many passes a live watch goes between reading names.
@@ -293,7 +294,7 @@ def _change_lines(verb: str, group: list[Finding]) -> list[str]:
     stopped) tripping one rule in the same pass are one line, as `audit`
     groups them:
 
-        NEW     [INFO] CH001 Channel Not In Any DCA (2): CH 3 "Vocal", CH 4 "Vocal" -- each is in use but belongs to no DCA group.
+        NEW     [INFO] L002 Active Strip Fader At Floor (2): CH 3 "Vocal", CH 4 "Vocal" -- each is unmuted and in use, but its own fader is at -144dB.
 
     and where the sentences differ past the strip, one line each under one
     heading."""
@@ -408,29 +409,26 @@ NO_PLAN_RULE_ID = "W005"
 
 def no_plan_note(plan_path=None, reason: str | None = None) -> Finding:
     """W005: the INFO saying Watch is judging the desk without the show's plan,
-    and which checks that costs, drawn from the rules that take a plan
-    (`audit.rules_needing_a_plan`). `plan_path` and `reason` are given when a
-    plan was named but could not be read."""
+    and how many checks that costs, counted from the rules that take a plan
+    (`audit.rules_needing_a_plan`; the Rules reference names them). Kept to
+    two sentences, counts rather than lists: it is read on a terminal and in
+    a table row. `plan_path` and `reason` are given when a plan was named but
+    could not be read."""
     from atoo.audit import rules_needing_a_plan
 
     judged, absent = rules_needing_a_plan()
-
-    def listed(pairs) -> str:
-        return ", ".join(f"{rid} {title}" for rid, title in pairs)
-
     if plan_path is None:
         title, summary = "Watching without a plan", "no plan, plan checks off"
-        lead = "Watching without a plan: no show's plan was given."
+        lead = "No show's plan was given"
     else:
         title, summary = "The plan could not be read", "plan unreadable, plan checks off"
-        lead = f"Watching without the plan: {plan_path} could not be read: {reason}."
+        lead = f"{plan_path} could not be read ({reason})"
     return watch_note(Diagnostic.audit(
         NO_PLAN_RULE_ID, Severity.INFO, "watch", title,
-        f"{lead} These run without it, so they can warn about what the plan would have allowed "
-        f"(a parallel bus it asks for, a strip it puts at the floor): {listed(judged)}. "
-        f"These are not run at all: {listed(absent)}. "
-        f"Stop Watch and start it with the show's plan (atoo watch --show DIR; "
-        f"on the Watch page, open the show first).",
+        f"{lead}, so the {len(absent)} checks that compare the desk with the plan are off, "
+        f"{len(judged)} others may warn about something the plan asked for, and a strip "
+        f"counts as active only when the desk reads it in use. "
+        f"Start Watch with the show: atoo watch --show DIR, or open the show on the Watch page.",
         (),
     ), "Plan", summary)
 
@@ -463,6 +461,37 @@ def clip_status_note(status) -> Finding:
         CLIP_STATUS_RULE_ID, Severity.INFO, "watch", title, status.detail,
         ("clip:on" if status.on else "clip:off",),
     ), "Clip detection", status.summary)
+
+
+def _note_rule(rule_id: str, title: str, description: str) -> RuleInfo:
+    return RuleInfo(rule_id, Severity.INFO, "watch", title, description, RUNS_WATCH)
+
+
+#: Watch's own notes, for the Rules reference (`audit.rule_catalogue` has the
+#: rest). Facts about the session, not checks over console state.
+WATCH_NOTE_RULES: tuple[RuleInfo, ...] = (
+    _note_rule(NAME_REFRESH_RULE_ID, "Names are refreshed, not read every pass",
+               "Strip, bus, DCA, mute-group and input-socket names are read at Start and "
+               "refreshed every few readings, so a rename shows up at the next refresh. "
+               "`atoo watch --name-refresh 1` reads names every pass."),
+    _note_rule(CLIP_STATUS_RULE_ID, "Clip detection is on, or off",
+               "Whether Watch is listening to the console's meters for clips (L003), and if "
+               "not, why: the connection could not be made, was lost, or no meter data arrives."),
+    _note_rule(VIRTUAL_SOUNDCHECK_RULE_ID, "Virtual soundcheck is on",
+               "While the desk's Virtual soundcheck switch is on, a channel on its alternate "
+               "input (C004) and the global alternate switch (C005) are reported at INFO, not as "
+               "warnings. Turn it off when soundcheck ends, and any still on its alternate "
+               "becomes a warning at once."),
+    _note_rule(PLAN_CHANGED_RULE_ID, "The plan changed since Watch started",
+               "The show's plan changed after Watch started (a rebuild or an apply), and Watch is "
+               "still judging the desk against the plan as it was at Start. Stop Watch and start "
+               "it again to use the new plan."),
+    _note_rule(NO_PLAN_RULE_ID, "Watching without a plan",
+               "Watch has no plan, or could not read the one it was given, so the checks "
+               "listed under Compared with the plan are off, and a few others may warn about "
+               "something the plan asked for. Start Watch with the show (`atoo watch --show "
+               "DIR`) to judge the desk against it."),
+)
 
 
 #: The Watch page's note for a non-default or rejected

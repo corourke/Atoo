@@ -1,5 +1,6 @@
 """Watch, to the UI style guide (docs/developer/ui-style.md;
-the drawing is mockups/ui-audit/sample-watch.html).
+the drawing was mockups/ui-audit/sample-watch.html, removed 2026-10-27
+and in git at 86ac89c5).
 
 The bug first (§4: "a button that would do nothing must be locked"): on
 the empty Watch page -- no show, no console -- **Start watching** was a
@@ -42,9 +43,9 @@ from atoo import webui  # noqa: E402
 from atoo.webui import create_app  # noqa: E402
 
 WATCH_JSON = {
-    "watch_conditions": [
+    "version": 2, "watch_conditions": [
         {"id": "kick-unmuted", "description": "The kick drives the room.",
-         "channel": "Kick", "field": "muted", "operator": "==", "value": False,
+         "channel": "Kick", "field": "muted", "operator": "!=", "value": False,
          "severity": "error"},
     ],
 }
@@ -356,7 +357,7 @@ ERROR = _finding("error", "WATCH:kick-unmuted", 'CH 1 "Kick"', "The kick drives 
                  'CH 1 "Kick" is muted -- The kick drives the room.')
 WARNING = _finding("warning", "CH002", 'DCA 1 "Drums"', "DCA Fader Low With Active Members",
                    "DCA 1 is at the floor.")
-INFO = _finding("info", "CH001", 'CH 2 "Snare"', "Channel Not In Any DCA", "No DCA.")
+INFO = _finding("info", "CH004", 'DCA 2 "Band"', "DCA Muted, Silencing Active Members", "Muted.")
 
 
 @pytest.mark.parametrize("findings, word, cls, line, lit", [

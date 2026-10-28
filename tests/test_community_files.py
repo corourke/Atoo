@@ -82,6 +82,6 @@ def test_the_licence_is_agpl_in_the_file_the_metadata_and_the_readme():
     meta = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     assert meta["project"]["license"] == {"text": "AGPL-3.0-or-later"}
     readme = (REPO / "README.md").read_text(encoding="utf-8")
-    section = readme[readme.index("## Licence"):]
-    assert "AGPL-3.0" in section and "commercial licence" in section
+    section = readme[readme.index("## License"):]
+    assert "AGPL-3.0" in section and "commercial license" in section
     assert "Apache" not in readme

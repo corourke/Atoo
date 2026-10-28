@@ -267,7 +267,8 @@ def test_watch_runs_both_rules_from_the_default_set_and_binds_them_to_the_plan(t
 def test_binding_to_a_plan_leaves_every_other_rule_as_it_was():
     bound = split_path_rules(DEFAULT_RULES, _parallel_plan())
     assert [r.id for r in bound] == [r.id for r in DEFAULT_RULES]
-    assert all(a is b for a, b in zip(bound, DEFAULT_RULES) if a.id not in ("R012", "R013"))
+    assert all(a is b for a, b in zip(bound, DEFAULT_RULES)
+               if a.id not in ("R012", "R013", "R014"))
 
 
 def test_a_full_desk_of_48_strips_by_16_busses_costs_well_under_a_second():

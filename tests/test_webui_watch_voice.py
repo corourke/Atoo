@@ -39,7 +39,7 @@ from test_webui_watch_guide import (  # noqa: E402,F401
 
 MAIN = _finding("error", "R005", 'MAIN 1 "PA"', "Main Not Patched", "MAIN 1 has no output socket.")
 CLIP = _finding("warning", "L003", 'CH 10 "Lead Vox"', "Clipped", "Lead Vox peaked at 0 dBFS.")
-ACRONYMS = _finding("info", "CH001", 'CH 2 "Snare"', "Channel Not In Any DCA", "No DCA.")
+ACRONYMS = _finding("info", "CH004", 'DCA 2 "Band"', "DCA Muted, Silencing Active Members", "Muted.")
 CONDITION = _finding("warning", "WATCH:vox-fader", 'BUS 5 "Drums"', "No mix or FX bus fader is below -40 dB.",
                      'BUS 5 "Drums" has its fader at -144 dB -- No mix or FX bus fader is below -40 dB.')
 
@@ -125,7 +125,7 @@ def test_the_table_and_the_verdict_speak_one_voice(served_show, width, theme):
         assert page.locator("#watch-verdict-line").inner_text() == 'MAIN 1 "PA": Main not patched'
         claims = page.locator("#alert-body .row-claim").all_inner_texts()
         assert claims == ["Main not patched", "Clipped", "has its fader at -144 dB",
-                          "Channel not in any DCA"]
+                          "DCA muted, silencing active members"]
         assert page.evaluate("document.documentElement.scrollWidth") <= width
 
 

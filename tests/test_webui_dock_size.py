@@ -53,7 +53,9 @@ def test_the_dock_is_sized_to_its_content_and_follows_the_page_on_a_phone(client
     css = client.get("/static/styles.css").text
     dock = re.search(r"\.dock-col \{(.*?)\n\}", css, re.S).group(1)
     assert "align-self: flex-start;" in dock and "height: auto;" in dock
-    assert re.search(r"max-height: calc\(100dvh - var\(--sticky-h\) - 28px\);", dock)
+    # Under the pinned app header and bundle bar, whose height shell.js
+    # keeps in --pin-h.
+    assert re.search(r"max-height: calc\(100dvh - var\(--pin-h, 0px\) - 64px\);", dock)
     assert not re.search(r"(?<!max-)height: calc\(100", dock)
     narrow = css[css.index("@media (max-width: 900px) {\n  /* Narrow: the dock"):]
     narrow = narrow[:narrow.index("\n}\n")]

@@ -79,21 +79,22 @@ def test_a_new_rule_defaults_to_hazard():
 
 
 def _busy_unplanned_state():
-    """One aux strip nobody planned: in use, in no DCA, routed with its
-    fader on the floor. Exactly one convention finding about it
-    (CH001) and one hazard (L002) -- which is the pair that makes
+    """One aux strip nobody planned: in use, an effect inserted and switched
+    off, routed with its fader on the floor. Exactly one convention finding
+    about it (E003) and one hazard (L002) -- which is the pair that makes
     the distinction visible."""
     return ConsoleState({
         "/aux/4/name": "Wedge Spare",
         "/aux/4/fdr": -144.0,
         "/aux/4/mute": 0,
         "/aux/4/main/1/on": 1,
+        "/aux/4/preins/ins": "FX1", "/aux/4/preins/on": 0, "/fx/1/mdl": "HALL",
     })
 
 
 def test_with_no_plan_everything_is_in_scope():
     findings = run_audit(_busy_unplanned_state())
-    assert {"CH001", "L002"} <= _rule_ids(findings)
+    assert {"E003", "L002"} <= _rule_ids(findings)
     assert SCOPE_SUMMARY_RULE_ID not in _rule_ids(findings)
 
 
@@ -112,8 +113,8 @@ def test_convention_finding_about_an_unplanned_strip_is_withheld():
     plan = {"channels": [_channel(channel=1)]}
     result = apply_plan_scope(state, run_audit(state), plan, DEFAULT_RULES)
 
-    assert "CH001" not in _rule_ids(result.findings)
-    assert {w.finding.rule_id for w in result.withheld} == {"CH001"}
+    assert "E003" not in _rule_ids(result.findings)
+    assert {w.finding.rule_id for w in result.withheld} == {"E003"}
     assert {w.reason for w in result.withheld} == {WITHHELD_OUTSIDE_PLAN}
 
 
@@ -123,13 +124,14 @@ def test_the_same_finding_about_a_planned_strip_survives():
         "/ch/1/fdr": -144.0,
         "/ch/1/mute": 0,
         "/ch/1/main/1/on": 1,
+        "/ch/1/preins/ins": "FX1", "/ch/1/preins/on": 0, "/fx/1/mdl": "HALL",
     })
-    # In the plan, but the plan says nothing about its fader or its DCA --
+    # In the plan, but the plan says nothing about its fader or its insert --
     # so neither rule can stand down, and both are about the show.
     plan = {"channels": [_channel(channel=1)]}
     result = apply_plan_scope(state, run_audit(state), plan, DEFAULT_RULES)
 
-    assert {"CH001", "L002"} <= _rule_ids(result.findings)
+    assert {"E003", "L002"} <= _rule_ids(result.findings)
     assert result.withheld == []
 
 
@@ -480,29 +482,6 @@ def test_a_dca_fader_the_plan_does_not_state_is_still_reported():
     assert "CH002" in _rule_ids(result.findings)
 
 
-def test_a_dca_membership_the_plan_states_stands_down():
-    """CV003 owns the comparison; CH001 saying the same thing in
-    weaker words is one finding too many."""
-    state = ConsoleState({"/ch/1/name": "Kick", "/ch/1/tags": "", "/dca/1/name": "Drums"})
-    plan = {"channels": [_channel(channel=1, dca=["Drums"])]}
-    result = apply_plan_scope(state, run_audit(state), plan, DEFAULT_RULES)
-
-    assert "CH001" not in _rule_ids(result.findings)
-    assert [w.reason for w in result.withheld if w.finding.rule_id == "CH001"] == [
-        WITHHELD_PLAN_STATES
-    ]
-
-
-def test_a_mute_group_alone_does_not_stand_down_the_dca_rule():
-    """Both live at `{base}/tags`, and a plan can state one without the
-    other -- which is why the stated key is finer than the address."""
-    state = ConsoleState({"/ch/1/name": "Kick", "/ch/1/tags": "", "/mgrp/1/name": "Band"})
-    plan = {"channels": [_channel(channel=1, mute_group=["Band"])]}
-    result = apply_plan_scope(state, run_audit(state), plan, DEFAULT_RULES)
-
-    assert "CH001" in _rule_ids(result.findings)
-
-
 def test_a_send_level_the_plan_states_stands_down_only_for_that_send():
     """The judged parameter carries the bus index, read off the finding's
     own address -- so a stated send to bus 1 says nothing about bus 2."""
@@ -557,6 +536,7 @@ def test_the_summary_counts_what_was_withheld_and_why():
     state = ConsoleState({
         "/ch/1/name": "Kick", "/ch/1/fdr": -144.0, "/ch/1/mute": 0, "/ch/1/main/1/on": 1,
         "/aux/4/name": "Spare", "/aux/4/fdr": -144.0, "/aux/4/mute": 0, "/aux/4/main/1/on": 1,
+        "/aux/4/preins/ins": "FX1", "/aux/4/preins/on": 0, "/fx/1/mdl": "HALL",
     })
     plan = {"channels": [_channel(channel=1, fader={"fader_db": -144})]}
     result = apply_plan_scope(state, run_audit(state), plan, DEFAULT_RULES)
@@ -582,12 +562,12 @@ def test_run_audit_with_a_plan_reports_the_withheld_count_in_line():
     plan = {"channels": [_channel(channel=1)]}
     findings = run_audit(state, plan=plan)
 
-    assert "CH001" not in _rule_ids(findings)
+    assert "E003" not in _rule_ids(findings)
     assert "L002" in _rule_ids(findings)   # hazard: survives, see above
     assert SCOPE_SUMMARY_RULE_ID in _rule_ids(findings)
     summary = _by_rule(findings)[SCOPE_SUMMARY_RULE_ID][0]
     assert "1 finding(s)" in summary.detail
-    assert "CH001" in summary.detail
+    assert "E003" in summary.detail
 
 
 def test_the_summary_renders_like_any_other_finding():

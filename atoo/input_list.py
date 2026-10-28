@@ -32,6 +32,23 @@ CANONICAL_COLUMNS = (
     "order", "patch", "name", "category", "type", "model", "phantom", "preset", "notes",
 )
 
+# The desk sheets' three optional columns (approved 2026-10-25):
+# the desk channel a row goes on,
+# and the DCAs and mute groups it is in. `atoo capture` writes all three from
+# the desk. A filled cell is the engineer's word: a build places the channel
+# and sets its membership by it (`reply_expand.apply_stated_columns`), a Save in Build's step 04 carries it into the plan (`atoo/sheets.py`),
+# and a captured show's plan agrees with it. `verify_plan` warns where a plan
+# does not follow a filled cell (`input-list.column-not-followed`), so a cell
+# that has no effect never looks honoured.
+CHANNEL_COLUMN = "channel"
+DCA_COLUMN = "dca"
+MUTE_GROUP_COLUMN = "mute_group"
+LIST_SEPARATOR = ";"
+#: Every column the step 02 and step 04 editors write: the canonical ones
+#: plus the three sheet columns above.
+SHEET_COLUMNS = (CHANNEL_COLUMN, DCA_COLUMN, MUTE_GROUP_COLUMN)
+_CHANNEL_CELL = re.compile(r"^(?:(?P<ch>\d+)|aux\s*(?P<aux>\d+))$", re.IGNORECASE)
+
 # The `order` column (FR-1.1). Optional. A cell holds
 # the band's OWN input number -- usually the split from their IEM rack, or
 # the way they patch a stage box -- or `-`, which means "skip": the row
@@ -69,15 +86,12 @@ def patch_column(header) -> str:
 # Ignoring them silently would be worse than refusing: the file would load,
 # the column would have no effect, and the plan would quietly contradict
 # what the sheet appears to say.
-FORBIDDEN_COLUMNS = {"channel", "channel_number", "ch", "stereo"}
+FORBIDDEN_COLUMNS = {"channel_number", "ch", "stereo"}
 
 _FORBIDDEN_REASONS = {
-    "channel": "conventions compute channel assignment; the input list must not "
-               "specify one",
-    "channel_number": "conventions compute channel assignment; the input list must "
-                      "not specify one",
-    "ch": "conventions compute channel assignment; the input list must not specify "
-          "one",
+    "channel_number": "the desk channel goes in the 'channel' column (1-40, or "
+                      "'Aux 1'-'Aux 8')",
+    "ch": "the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8')",
     "stereo": "every input socket on a WING is mono, so no row is "
               "stereo. Linking two sources into one stereo channel is a decision "
               "made from the conventions and the source names ('Keys L'/'Keys R'), "
@@ -128,6 +142,11 @@ class InputRow:
     # The `order` cell as written, stripped: the band's own input number
     # ("7"), SKIP_MARK, or "" (ORDER_COLUMN above). Validated on read.
     order: str = ""
+    # The desk sheets' columns (CHANNEL_COLUMN above): `("ch", 9)` or
+    # `("aux", 3)`, or None when blank; the DCA and mute-group names, in order.
+    channel: "tuple[str, int] | None" = None
+    dca: tuple = ()
+    mute_group: tuple = ()
 
     @property
     def skipped(self) -> bool:
@@ -168,6 +187,25 @@ def _parse_bool(raw: str, *, row_num: int, column: str) -> bool:
     raise InputListError(
         f"row {row_num}: column {column!r} must be TRUE or FALSE, got {raw!r}"
     )
+
+
+def _parse_channel(raw: str, *, row_num: int) -> "tuple[str, int] | None":
+    text = raw.strip()
+    if not text:
+        return None
+    m = _CHANNEL_CELL.match(text)
+    if m:
+        bank, number = ("ch", int(m.group("ch"))) if m.group("ch") else ("aux", int(m.group("aux")))
+        from atoo.console_facts import CAPACITY
+        if 1 <= number <= CAPACITY[bank]:
+            return bank, number
+    raise InputListError(
+        f"row {row_num}: column 'channel' must be a desk channel, 1-40 or 'Aux 1'-'Aux 8', "
+        f"or blank -- got {raw!r}")
+
+
+def _parse_names(raw: str) -> tuple:
+    return tuple(part.strip() for part in raw.split(LIST_SEPARATOR) if part.strip())
 
 
 def parse_input_list(text: str, *, include_skipped: bool = False) -> list[InputRow]:
@@ -246,6 +284,9 @@ def parse_input_list(text: str, *, include_skipped: bool = False) -> list[InputR
                 patch=patch,
                 preset=preset,
                 order=order,
+                channel=_parse_channel(raw_row.get(CHANNEL_COLUMN) or "", row_num=row_num),
+                dca=_parse_names(raw_row.get(DCA_COLUMN) or ""),
+                mute_group=_parse_names(raw_row.get(MUTE_GROUP_COLUMN) or ""),
             )
         )
 
@@ -475,7 +516,7 @@ def check_patch(raw: str | None, console_model: str | None = None) -> dict:
     prints and `parse_socket_spec` reads back), `group`, `number`, `limit`
     (the highest socket of that group on `console_model`), `model`,
     `error` (a short reason, when not ok) and `note`. A blank cell is ok:
-    the build chooses a socket, and says so.
+    the build chooses a socket, with an INFO note.
 
     `console_model` None checks against the console's address space
     (`console_facts.INPUT_SOCKETS`) and says so in `note`, because the
@@ -491,7 +532,7 @@ def check_patch(raw: str | None, console_model: str | None = None) -> dict:
                  "number": None, "limit": None, "model": console_model,
                  "error": None, "note": None}
     if not text:
-        out.update(ok=True, patch="", note="blank: the build chooses a socket, and says so")
+        out.update(ok=True, patch="", note="blank: the build chooses a socket, with an INFO note")
         return out
     parsed = parse_socket_spec(text)
     if parsed is None:

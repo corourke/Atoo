@@ -1085,8 +1085,11 @@ def parse_critic_findings(raw: str, *,
     a `conventions` finding's `quotes` are checked against it
     (`conventions_audit.check_critic_finding`): all found keeps the
     finding and names its section; any not found downgrades it to INFO,
-    saying so. Without it (a harness with no text to hand) the finding is
-    passed through unchecked.
+    saying so. An `omission` quoting a line of that text, every quote
+    found, carries the line in `line` (`conventions_audit.
+    check_critic_omission`), which is what sends it to the build's fix-up
+    round. Without `layers` (a harness with no text to hand) every finding
+    is passed through unchecked.
     """
     findings = _extract_json_object(raw).get("findings", [])
     out: list[CriticFinding] = []
@@ -1125,12 +1128,13 @@ def parse_critic_findings(raw: str, *,
             category=kind,
             source="critic",
         )
-        if kind == "conventions" and layers is not None:
+        if kind in ("conventions", "omission") and layers is not None:
             quotes = f.get("quotes")
             if isinstance(quotes, str):
                 quotes = [quotes]
-            finding = conventions_audit.check_critic_finding(
-                finding, quotes if isinstance(quotes, list) else [], layers)
+            check = (conventions_audit.check_critic_finding if kind == "conventions"
+                     else conventions_audit.check_critic_omission)
+            finding = check(finding, quotes if isinstance(quotes, list) else [], layers)
         out.append(finding)
     return out
 
@@ -1145,7 +1149,7 @@ def watchlist_system() -> str:
     return load_prompt(
         "watchlist_draft.md",
         fields=", ".join(f"`{f}`" for f in sorted(wc._ALLOWED_FIELDS)),
-        operators=", ".join(f"`{o}`" for o in sorted(wc._OPERATORS)),
+        operators=", ".join(f"`{o}`" for o in sorted(wc.TRIGGER_OPERATORS)),
         severities=", ".join(f"`{s.value}`" for s in diagnostics.Severity),
     )
 

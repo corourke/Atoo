@@ -235,8 +235,9 @@ def test_saving_a_preset_adds_the_column_only_when_one_is_set(tmp_path, home):
     csv = "patch,name,category,type,model,phantom,notes\nLCL 1,Kick,drums,Mic,,FALSE,\n"
     directory = _bundle(tmp_path, csv)
     with fastapi_testclient.TestClient(create_app(initial_bundle=str(directory))) as c:
-        assert c.get("/api/build/sources").json()["input_list"]["columns"][-2:] == \
-            ["preset", "notes"]
+        # The canonical columns, then the desk sheets' three.
+        assert c.get("/api/build/sources").json()["input_list"]["columns"][-5:] == \
+            ["preset", "notes", "channel", "dca", "mute_group"]
         # An edit that sets no preset leaves the header as it was.
         assert _save(c, directory, [{"line": 0, "values": {"model": "D6", "preset": ""}}]) \
             .status_code == 200

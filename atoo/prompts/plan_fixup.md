@@ -2,9 +2,11 @@
 
      THIS FILE IS PROSE, NOT CODE. It is appended to the generator's own
      system prompt (plan_generation.md) for the one fix-up call a build
-     makes when its plan fails verify, or its reply fails the format
-     check. The user message carries the conventions, the input list, the
-     model's own reply and the exact error messages.
+     makes when its plan fails verify, its reply fails the format check, or
+     the critic finds a line of the conventions or instructions it did not
+     carry out (quoted verbatim, so checked against the text). The user
+     message carries the conventions, the input list, the model's own reply
+     and the exact error messages.
 
      Keep it short: every word here is paid for on every fix-up.
 -->
@@ -26,5 +28,8 @@ and what is wrong; they are facts about the reply, not opinions.
   reaches no output. Route it the way the conventions route its kind --
   to the Main, or into the bus it belongs in. Only if the show means it
   to be silent, leave it and say why in "notes".
+- A line marked "not carried out" quotes a line of the conventions or
+  instructions your reply left out. Carry it out as the line says, keeping
+  everything else; where it cannot be done, say why in "notes".
 - If an error cannot be fixed without guessing, make the smallest change
   that leaves the desk in working order and say so in "notes".

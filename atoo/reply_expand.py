@@ -358,8 +358,8 @@ def repair_reply(reply: dict) -> list[str]:
     if uncoloured:
         reply["category_colors"] = [e for e in reply["category_colors"] if e not in uncoloured]
         names = ", ".join(repr(e.get("category")) for e in uncoloured)
-        notes.append(f"reply.category_colors: {names} given no colour -- dropped from the map, "
-                     "so that category's channels take no colour from it")
+        notes.append(f"reply.category_colors: {names} given no color -- dropped from the map, "
+                     "so that category's channels take no color from it")
     notes.extend(_drop_channel_stated(reply))
     notes.extend(_move_processing_notes(reply))
     stray: dict = {}
@@ -1006,7 +1006,7 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
                 text += ("; the reply's color: null read as not stated, so the category map "
                          "applies: " + ", ".join(null_colour))
             findings.append(_info("reply.colours-applied", "plan",
-                                  "colour applied from the reply's category map by each "
+                                  "color applied from the reply's category map by each "
                                   "input-list row's category: " + text))
         findings.extend(rules.findings())
     return repairs
@@ -1662,7 +1662,7 @@ def _expand_instructed(channel: dict, found: dict, counters: dict, numbered: dic
             f"{'On that channel and p' if stated_number is not None else 'P'}atched from "
             f"{spelled}, as stated. Decided where the text is "
             f"silent: type {kind} ({kind_why}); phantom {'on' if phantom else 'off'} "
-            f"({phantom_why}); colour {color or 'none'} ({colour_why})"))
+            f"({phantom_why}); color {color or 'none'} ({colour_why})"))
 
 
 def _expand_alt_patches(channels: list[dict], pending: list[tuple[dict, dict, bool, str]],
@@ -1847,7 +1847,263 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
     settle_line_gains(reply, findings, [getattr(layer, "text", "") for layer in layers or []])
     if rows is not None:
         apply_stated_presets(reply, rows, findings=findings, pairs=pairs)
+        apply_stated_columns(reply, rows, findings=findings, pairs=pairs)
+    # Last, so every channel's socket is the one the plan will patch.
+    expand_output_runs(reply, findings)
+    expand_processed_feeds(reply, findings)
     return repairs
+
+
+def _strips_by_name(plan: dict) -> dict[str, tuple[str, int, bool]]:
+    """Every strip a user signal can take, by its name folded to lower case:
+    `(group, number, stereo)` -- a channel or an aux by its bank and number,
+    a bus, a Main or a Matrix by its index."""
+    found: dict[str, tuple[str, int, bool]] = {}
+    stereo_bases: dict[str, tuple[str, int, bool]] = {}
+    for ch in plan.get("channels") or []:
+        if isinstance(ch, dict) and isinstance(ch.get("name"), str) \
+                and isinstance(ch.get("channel"), int):
+            group = "AUX" if ch.get("bank") == "aux" else "CH"
+            stereo = bool((ch.get("source") or {}).get("stereo"))
+            name = ch["name"].strip().lower()
+            found.setdefault(name, (group, ch["channel"], stereo))
+            # A stereo channel keeps its left input's name ("Keys L"); the
+            # pair is "Keys" to whoever states a feed of it.
+            base = re.sub(r"\s*(?:l|left)$", "", name)
+            if stereo and base and base != name:
+                stereo_bases.setdefault(base, (group, ch["channel"], stereo))
+    for key, entry in (plan.get("busses") or {}).items():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int):
+            found.setdefault(key.strip().lower(), ("BUS", entry["index"], entry.get("mono") is not True))
+    for key, entry in (plan.get("outputs") or {}).items():
+        group = {"main": "MAIN", "matrix": "MTX"}.get(
+            entry.get("kind") if isinstance(entry, dict) else None)
+        if group and isinstance(entry.get("index"), int):
+            found.setdefault(key.strip().lower(), (group, entry["index"], entry.get("mono") is not True))
+    for base, strip in stereo_bases.items():
+        found.setdefault(base, strip)
+    return found
+
+
+def _user_signals_in_use(plan: dict) -> set[int]:
+    """The user-signal slots (USR 1-24) the plan defines or reads already."""
+    used = {u.get("slot") for u in plan.get("user_sources") or [] if isinstance(u, dict)}
+    for ch in plan.get("channels") or []:
+        patch = (ch or {}).get("patch") or {}
+        if patch.get("group") == "USR":
+            used |= set(patch.get("sockets") or [])
+    for entry in plan.get("direct_outputs") or []:
+        source = (entry or {}).get("source") or {}
+        if source.get("group") == "USR":
+            used.add(source.get("index"))
+    low, high = facts.USER_SIGNAL_SLOTS
+    return {n for n in used if isinstance(n, int) and low <= n <= high}
+
+
+def expand_processed_feeds(plan: dict, findings: list | None = None) -> int:
+    """The reply's `processed_feeds` as the plan's user signals and output
+    patches: a strip, by its name, at its tap (pre or post its
+    fader), to an output socket. The desk carries a processed feed through a
+    user signal (USR 1-24), so code takes the next free one -- the model only
+    names the strip -- and patches the socket from it; a stereo strip takes
+    two, its L and its R, on that socket and the next. A feed of the same
+    strip at the same tap that the plan already has is shared, not taken
+    twice. Each feed is an INFO quoting its line. More than the desk's 24
+    user signals cannot be carried, and a strip the plan does not have cannot
+    be fed: each is a WARNING naming the line, and that feed is not built.
+    Returns how many sockets were patched."""
+    from atoo import outputs_sheet
+    from atoo.input_list import format_socket
+
+    feeds = plan.pop("processed_feeds", None) or []
+    if not feeds:
+        return 0
+    strips = _strips_by_name(plan)
+    used = _user_signals_in_use(plan)
+    low, high = facts.USER_SIGNAL_SLOTS
+    written = 0
+
+    def warn(code: str, message: str) -> None:
+        if findings is not None:
+            findings.append(Diagnostic(severity=Severity.WARNING, code=code,
+                                       where="processed_feeds", message=message, source="build"))
+
+    for feed in feeds:
+        if not isinstance(feed, dict):
+            continue
+        quote = feed.get("quote") or ""
+        to = outputs_sheet.parse_output(feed.get("to"))
+        if to is None:
+            warn("processed-feed.not-a-socket",
+                 f"a processed feed was not built: {feed.get('to')!r} is not an output socket "
+                 f"(quoting {quote!r})")
+            continue
+        name = str(feed.get("strip") or "").strip()
+        strip = strips.get(name.lower())
+        if strip is None:
+            warn("processed-feed.no-such-strip",
+                 f"{format_socket(*to)} was not fed: the plan has no channel, bus, Main or "
+                 f"Matrix named {name!r} (quoting {quote!r})")
+            continue
+        group, number, stereo = strip
+        tap = "PRE" if str(feed.get("tap") or "").strip().lower().startswith("pre") else "POST"
+        legs = ["L", "R"] if stereo else ["L+R"]
+        slots: list[int] = []
+        added: list[dict] = []
+        for leg in legs:
+            same = next((u["slot"] for u in plan.get("user_sources") or []
+                         if isinstance(u, dict) and u.get("source") == {"group": group, "index": number}
+                         and u.get("tap") == tap and u.get("leg") == leg), None)
+            if same is not None:
+                slots.append(same)
+                continue
+            free = next((n for n in range(low, high + 1) if n not in used), None)
+            if free is None:
+                break
+            used.add(free)
+            added.append({"slot": free, "source": {"group": group, "index": number},
+                          "tap": tap, "leg": leg, "name": f"{name} {tap.lower()}"[:16]})
+            slots.append(free)
+        if len(slots) < len(legs):
+            warn("processed-feed.no-free-user-signal",
+                 f"{format_socket(*to)} was not fed {name} {tap.lower()}-fader: all "
+                 f"{high - low + 1} user signals (USR {low}-{high}) are in use, and a processed "
+                 f"feed needs {len(legs)} (quoting {quote!r})")
+            # A slot taken for the L of a stereo strip that found no R is given back.
+            used -= {u["slot"] for u in added}
+            continue
+        if added:
+            plan.setdefault("user_sources", []).extend(added)
+        entries = [{"group": to[0], "socket": to[1] + i, "source": {"group": "USR", "index": slot}}
+                   for i, slot in enumerate(slots)]
+        plan.setdefault("direct_outputs", []).extend(entries)
+        written += len(entries)
+        if findings is not None:
+            span = (format_socket(*to) if len(entries) == 1
+                    else f"{format_socket(*to)}-{entries[-1]['socket']}")
+            through = ", ".join(f"USR {s}" for s in slots)
+            findings.append(_info(
+                "inferred.processed-feed", "direct_outputs",
+                f"{span} carries {name} {'before' if tap == 'PRE' else 'after'} its fader "
+                f"({tap.lower()}), through {through}, the next free user signal"
+                f"{'s' if len(slots) > 1 else ''}, as {quote!r} asks"))
+    return written
+
+
+def _input_sockets_in_channel_order(plan: dict) -> list[tuple[str, int]]:
+    """Every input socket the plan's channels are patched from, in channel
+    order (the channel strips, then the aux), a stereo channel's two in
+    turn; a socket two channels share is counted once."""
+    return list(_input_socket_owners(plan))
+
+
+def _input_socket_owners(plan: dict) -> dict[tuple[str, int], str]:
+    """`_input_sockets_in_channel_order`, each socket with the name of the
+    first channel patched from it, in that order."""
+    bank_order = {"ch": 0, "aux": 1}
+    channels = sorted((c for c in plan.get("channels") or [] if isinstance(c, dict)),
+                      key=lambda c: (bank_order.get(c.get("bank") or "ch", 2),
+                                     c.get("channel") if isinstance(c.get("channel"), int) else 0))
+    found: dict[tuple[str, int], str] = {}
+    for channel in channels:
+        patch = channel.get("patch")
+        if not isinstance(patch, dict) or not isinstance(patch.get("group"), str):
+            continue
+        for n in patch.get("sockets") or []:
+            if isinstance(n, int) and (patch["group"], n) not in found:
+                found[(patch["group"], n)] = str(channel.get("name") or "")
+    return found
+
+
+def _left_out_words(owners: dict[tuple[str, int], str], left: list[tuple[str, int]]) -> str:
+    """The input sockets a counted run leaves out, by the channel each
+    feeds: "LCL 3 and LCL 4 (Music)"."""
+    from atoo.input_list import format_socket
+
+    by_channel: dict[str, list[str]] = {}
+    for socket in left:
+        by_channel.setdefault(owners.get(socket, ""), []).append(format_socket(*socket))
+    parts = []
+    for name, sockets in by_channel.items():
+        words = (sockets[0] if len(sockets) == 1
+                 else ", ".join(sockets[:-1]) + " and " + sockets[-1])
+        parts.append(f"{words} ({name})" if name else words)
+    return "; ".join(parts)
+
+
+def expand_output_runs(plan: dict, findings: list | None = None) -> int:
+    """The reply's `output_runs` as the plan's `direct_outputs`, one entry
+    per output socket, each run said at INFO with the line it
+    quotes. `"from": "inputs"` takes every input socket the channels are
+    patched from, in channel order -- "in order" read as the channels' order,
+    which is how a split or a recording is laid out; a socket source counts
+    up from there. A socket past its group's end is still written, so verify
+    refuses it by name rather than the run stopping short without a word.
+    Returns how many sockets were written."""
+    from atoo import outputs_sheet
+    from atoo.input_list import format_socket
+
+    runs = plan.pop("output_runs", None) or []
+    written = 0
+    for run in runs:
+        if not isinstance(run, dict):
+            continue
+        quote = run.get("quote") or ""
+        to = outputs_sheet.parse_output(run.get("to"))
+        if to is None:
+            if findings is not None:
+                findings.append(Diagnostic(
+                    severity=Severity.WARNING, code="output-runs.not-a-socket", where="output_runs",
+                    message=(f"an output run was not built: {run.get('to')!r} is not an output "
+                             f"socket (quoting {quote!r})"), source="build"))
+            continue
+        count = run.get("count") if isinstance(run.get("count"), int) else None
+        left_out = ""
+        if str(run.get("from") or "").strip().lower() == "inputs":
+            owners = _input_socket_owners(plan)
+            sources = list(owners)
+            if count is not None:
+                # A count short of every input is the model's judgement
+                # (a recording split of the band, leaving out a
+                # playback aux): what it left out is said with the run.
+                if count < len(sources):
+                    left_out = (f"; its count of {count} leaves out {len(sources) - count} of "
+                                f"the {len(sources)} input sockets the channels are patched "
+                                f"from: {_left_out_words(owners, sources[count:])}")
+                sources = sources[:count]
+            said = "every input socket the channels are patched from, in channel order"
+        else:
+            first, problem = outputs_sheet.parse_source(run.get("from"))
+            if problem or not isinstance(first, tuple):
+                if findings is not None:
+                    findings.append(Diagnostic(
+                        severity=Severity.WARNING, code="output-runs.not-a-source",
+                        where="output_runs",
+                        message=(f"an output run was not built: {run.get('from')!r} is not a "
+                                 f"source the desk's output routing offers (quoting {quote!r})"),
+                        source="build"))
+                continue
+            sources = [(first[0], first[1] + i) for i in range(count or 1)]
+            said = f"from {outputs_sheet.source_words(*first)} up"
+        entries = [{"group": to[0], "socket": to[1] + i,
+                    "source": {"group": group, "index": index}}
+                   for i, (group, index) in enumerate(sources)]
+        if not entries:
+            continue
+        plan.setdefault("direct_outputs", []).extend(entries)
+        written += len(entries)
+        if findings is not None:
+            last = entries[-1]
+            span = (format_socket(*to) if len(entries) == 1
+                    else f"{format_socket(*to)}-{last['socket']}")
+            findings.append(_info(
+                "inferred.output-run", "direct_outputs",
+                f"{span} ({len(entries)} socket(s)) fed {said}, as {quote!r} asks: "
+                + ", ".join(f"{format_socket(e['group'], e['socket'])} from "
+                            f"{outputs_sheet.source_words(e['source']['group'], e['source']['index'])}"
+                            for e in entries[:4])
+                + (", ..." if len(entries) > 4 else "") + left_out))
+    return written
 
 
 def _build_strips_on_full_reply(plan: dict, rows, strips, *, console_model, category_table,
@@ -1962,6 +2218,196 @@ def apply_stated_presets(plan: dict, rows, *, findings: list | None = None,
     return set_count
 
 
+def _spot_label(bank: str, number) -> str:
+    return f"{'Aux' if bank == 'aux' else 'CH'} {number}"
+
+
+def apply_stated_columns(plan: dict, rows, *, findings: list | None = None,
+                         pairs: dict | None = None) -> None:
+    """The input list's `channel`, `dca` and `mute_group` columns: a filled cell wins over the conventions and the reply, as the
+    `preset` column does, and runs after everything else has placed the
+    channels.
+
+    - `dca` and `mute_group` are the channel's whole membership. A group the
+      plan does not declare is declared (allocation numbers it), and a
+      membership the cell changes is said at INFO, naming both.
+    - `channel` places the strip there. A channel already on that strip
+      takes the one the moved channel left, at INFO, so nothing is lost and
+      no strip holds two. Moving onto or off an aux strip drops or keeps the
+      high-pass as `_apply_strip_to_row` does (an aux has none).
+    - Two channels whose rows name one strip cannot both be on it: refused,
+      naming the rows (`ReplyError`). A stereo pair's two rows are one
+      channel, and where they name different strips the first row's wins,
+      at INFO.
+    """
+    from atoo.input_list import rows_feeding
+
+    channels = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
+    # A group is named as the input list spells it, the first row's spelling
+    # where rows differ only in case or spacing (`DRUMS` and `drums`): what
+    # the engineer typed is the name, and the build matches without case.
+    spelling: dict[tuple[str, str], str] = {}
+    variants: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for row in rows:
+        for column in ("dca", "mute_group"):
+            for cell in getattr(row, column, ()) or ():
+                if not cell:
+                    continue
+                key = (column, _norm(cell))
+                if key not in spelling:
+                    spelling[key] = cell
+                elif cell != spelling[key]:
+                    variants.setdefault(key, []).append((cell, row.name))
+    stated: list[tuple[dict, object, tuple[str, int]]] = []
+    for channel in channels:
+        feeding = [r for r in rows_feeding(channel, rows, (pairs or {}).get(id(channel))) if r]
+        if not feeding:
+            continue
+        first = feeding[0]
+        label = f"channels[{channel.get('name')}]"
+        provenance = channel.setdefault("provenance", {})
+        if not isinstance(provenance, dict):
+            provenance = None
+        for column, section, word in (("dca", "dcas", "DCA"),
+                                      ("mute_group", "mute_groups", "mute group")):
+            cells = [spelling.get((column, _norm(c)), c)
+                     for c in getattr(first, column, ()) or () if c]
+            if not cells:
+                continue
+            names = [_declare_group(plan, section, name, first.name, column, word, findings)
+                     for name in cells]
+            before = [str(n) for n in channel.get(column) or []]
+            if sorted(map(_norm, before)) != sorted(map(_norm, names)) and findings is not None:
+                findings.append(_info(
+                    f"reply.{column.replace('_', '-')}-from-input-list", label,
+                    f"the input list's {column} column puts {first.name!r} in "
+                    f"{'; '.join(names)}, where the reply had {'; '.join(before) or 'none'}; "
+                    "the list wins"))
+            channel[column] = names
+            if provenance is not None:
+                provenance[column] = f"Input list {column} column: {'; '.join(names)} ({first.name})"
+        spots = [(r, r.channel) for r in feeding if getattr(r, "channel", None)]
+        if not spots:
+            continue
+        row, spot = spots[0]
+        for other, other_spot in spots[1:]:
+            if other_spot != spot and findings is not None:
+                findings.append(_info(
+                    "reply.channel-from-input-list", label,
+                    f"{row.name!r} and {other.name!r} are one stereo channel, and their "
+                    f"channel cells say {_spot_label(*spot)} and {_spot_label(*other_spot)}; "
+                    f"the first row wins"))
+        stated.append((channel, row, spot))
+
+    if findings is not None:
+        for (column, _), others in variants.items():
+            name = spelling[(column, _)]
+            section, word = (("dcas", "DCA") if column == "dca" else ("mute_groups", "mute group"))
+            if name not in (plan.get(section) or {}):
+                continue
+            spelt = "; ".join(f"{cell!r} ({row_name})" for cell, row_name in others)
+            findings.append(_info(
+                f"reply.{column.replace('_', '-')}-from-input-list", f"{section}[{name}]",
+                f"{word} {name!r} is spelled differently on other rows of the input list: "
+                f"{spelt}. The first row's spelling, {name!r}, is the {word}'s name"))
+
+    claimed: dict[tuple[str, int], tuple[dict, object]] = {}
+    for channel, row, spot in stated:
+        if spot in claimed and claimed[spot][0] is not channel:
+            raise ReplyError(
+                f"input list: {claimed[spot][1].name!r} and {row.name!r} both name "
+                f"{_spot_label(*spot)} in the channel column, and a strip holds one input "
+                "(or the two rows of one stereo pair). Change one of the two cells")
+        claimed[spot] = (channel, row)
+
+    for channel, row, spot in stated:
+        here = ((channel.get("bank") or "ch"), channel.get("channel"))
+        provenance = channel.setdefault("provenance", {})
+        cite = f"Input list channel column: {_spot_label(*spot)} ({row.name})"
+        if here == spot:
+            if isinstance(provenance, dict):
+                provenance["channel"] = cite
+            continue
+        occupant = next((c for c in channels if c is not channel
+                         and ((c.get("bank") or "ch"), c.get("channel")) == spot), None)
+        _place(channel, spot)
+        if isinstance(provenance, dict):
+            provenance["channel"] = cite
+        said = (f"the input list's channel column puts {row.name!r} on {_spot_label(*spot)}, "
+                f"where the build had placed it on {_spot_label(*here)}; the list wins")
+        if occupant is not None:
+            _place(occupant, here)
+            moved = occupant.setdefault("provenance", {})
+            if isinstance(moved, dict):
+                moved["channel"] = (f"moved to {_spot_label(*here)}: the input list's channel "
+                                    f"column gives {_spot_label(*spot)} to {row.name!r}")
+            said += (f", and {occupant.get('name')!r}, which was there, takes "
+                     f"{_spot_label(*here)}")
+        if findings is not None:
+            findings.append(_info("reply.channel-from-input-list",
+                                  f"channels[{channel.get('name')}]", said))
+
+
+def _place(channel: dict, spot: tuple[str, int]) -> None:
+    channel["bank"], channel["channel"] = spot
+    processing = channel.get("processing")
+    if spot[0] == "aux" and isinstance(processing, dict) and "hpf_hz" in processing:
+        # After `fill_defaults`, so the field stays, stated as none: an aux
+        # strip has no high-pass.
+        processing["hpf_hz"] = None
+
+
+def _declare_group(plan: dict, section: str, name: str, row_name: str, column: str, word: str,
+                   findings: list | None) -> str:
+    """`name`, declaring the group (allocation numbers it) when the plan has
+    none of that name, at INFO. A group the plan spells differently only in
+    case or spacing (the conventions' `Drums` for the list's `DRUMS`) is
+    renamed to the list's spelling, at INFO: the engineer's own word is the
+    group's name on the desk."""
+    groups = plan.get(section)
+    if not isinstance(groups, dict):
+        groups = plan[section] = {}
+    if name in groups:
+        return name
+    for existing in list(groups):
+        if _norm(existing) == _norm(name):
+            rename_group(plan, section, existing, name)
+            if findings is not None:
+                findings.append(_info(
+                    f"reply.{column.replace('_', '-')}-from-input-list", f"{section}[{name}]",
+                    f"{word} {existing!r} is named {name!r}, as the input list spells it"))
+            return name
+    groups[name] = {"description": None,
+                    "provenance": f"the input list's {column} column names it ({row_name})"}
+    if findings is not None:
+        findings.append(_info(
+            f"reply.{column.replace('_', '-')}-from-input-list", f"{section}[{name}]",
+            f"{word} {name!r} declared: the input list's {column} column puts {row_name!r} "
+            "in it, and nothing else declared it"))
+    return name
+
+
+def rename_group(plan: dict, section: str, old: str, new: str) -> None:
+    """A DCA (`dcas`) or mute group (`mute_groups`) renamed everywhere the
+    plan names it: its own key, in place and in order, and every channel's,
+    bus's and output's membership. In place."""
+    groups = plan.get(section)
+    if isinstance(groups, dict) and old in groups:
+        items = [((new if key == old else key), value) for key, value in groups.items()]
+        groups.clear()
+        groups.update(items)
+    column = "dca" if section == "dcas" else "mute_group"
+    holders = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
+    for key in ("busses", "outputs"):
+        entries = plan.get(key)
+        entries = entries.values() if isinstance(entries, dict) else entries or []
+        holders += [e for e in entries if isinstance(e, dict)]
+    for holder in holders:
+        names = holder.get(column)
+        if isinstance(names, list):
+            holder[column] = [new if n == old else n for n in names]
+
+
 def _pair_phantom(row, pair_row, where: str, findings: list | None) -> bool:
     """The one 48V value for a stereo channel built from two input-list
     rows: on if either row wants it. The desk switches a pair's two sockets
@@ -2015,7 +2461,7 @@ def _written_fields(channel: dict, color) -> set[str]:
 
 def _describe(key: str, value) -> str:
     if key == "color":
-        return f"colour {value}"
+        return f"color {value}"
     if key == "hpf_hz":
         return f"HPF {value:g} Hz"
     if key == "gain_db":
@@ -2053,7 +2499,7 @@ def _same(key: str, have, want) -> bool:
     return have == want
 
 
-_PLAIN = {"color": "colour", "hpf_hz": "HPF", "gain_db": "gain", "trim_db": "trim",
+_PLAIN = {"color": "color", "hpf_hz": "HPF", "gain_db": "gain", "trim_db": "trim",
           "fader_db": "fader", "dca": "DCA", "mute_group": "mute group",
           "main_direct": "Main routing"}
 

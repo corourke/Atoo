@@ -563,7 +563,7 @@ def test_api_watch_conditions_returns_conditions_loaded_at_startup():
         assert r.status_code == 200
         body = r.json()
         assert body["path"] == str(FIXTURE_WATCH_CONDITIONS_PATH)
-        assert body["watch_conditions"][0]["id"] == "crowd-mic-never-muted"
+        assert body["watch_conditions"][0]["id"] == "crowd-mic-muted"
 
 
 def test_create_app_degrades_gracefully_on_a_bad_initial_watch_conditions_path(tmp_path):
@@ -586,7 +586,7 @@ def test_watch_conditions_load_with_valid_path_replaces_loaded_conditions(client
 
     r2 = client.get("/api/watch-conditions")
     assert r2.status_code == 200
-    assert r2.json()["watch_conditions"][0]["id"] == "crowd-mic-never-muted"
+    assert r2.json()["watch_conditions"][0]["id"] == "crowd-mic-muted"
 
 
 def test_watch_conditions_load_with_missing_file_is_a_clean_error(client):
@@ -608,11 +608,11 @@ def test_watch_conditions_load_with_malformed_conditions_is_a_400_not_a_500(clie
     # A structurally-invalid file (unknown field) -- WatchConditionsError,
     # not a crash.
     bad = tmp_path / "bad_field.watch.json"
-    bad.write_text(json.dumps({"watch_conditions": [{
+    bad.write_text(json.dumps({"version": 2, "watch_conditions": [{
         "id": "x", "description": "x", "channel": "x",
         # `dca` stood in for "unknown field" here until an earlier change made it
         # a real one; `gain` is still genuinely unknown.
-        "field": "gain", "operator": "==", "value": True, "severity": "info",
+        "field": "gain", "operator": "!=", "value": True, "severity": "info",
     }]}))
     r = client.post("/api/watch-conditions/load", json={"path": str(bad)})
     assert r.status_code == 400
@@ -626,7 +626,7 @@ def test_watch_conditions_save_round_trips_through_the_loader(client, tmp_path):
         "description": "Kick must never be muted",
         "channel": "Kick",
         "field": "muted",
-        "operator": "==",
+        "operator": "!=",
         "value": False,
         "severity": "error",
     }]
@@ -652,7 +652,7 @@ def test_watch_conditions_save_rejects_invalid_conditions_without_writing(client
     out = tmp_path / "never_written.watch.json"
     bad_conditions = [{
         "id": "dup", "description": "x", "channel": "x",
-        "field": "muted", "operator": ">", "value": True, "severity": "info",
+        "field": "muted", "operator": "<=", "value": True, "severity": "info",
     }]
     r = client.post("/api/watch-conditions/save", json={"path": str(out), "watch_conditions": bad_conditions})
     assert r.status_code == 400
@@ -664,9 +664,9 @@ def test_watch_conditions_save_rejects_duplicate_ids(client, tmp_path):
     out = tmp_path / "dup.watch.json"
     conditions = [
         {"id": "same", "description": "a", "channel": "a", "field": "muted",
-         "operator": "==", "value": True, "severity": "info"},
+         "operator": "!=", "value": True, "severity": "info"},
         {"id": "same", "description": "b", "channel": "b", "field": "muted",
-         "operator": "==", "value": True, "severity": "info"},
+         "operator": "!=", "value": True, "severity": "info"},
     ]
     r = client.post("/api/watch-conditions/save", json={"path": str(out), "watch_conditions": conditions})
     assert r.status_code == 400
@@ -682,12 +682,12 @@ def test_watch_start_with_watch_conditions_path_threads_custom_rules_into_the_se
     # proving `req.watch_conditions_path` actually reached `watch()`'s
     # `rules=` rather than being silently ignored.
     watch_conditions_file = tmp_path / "kick_always_muted.watch.json"
-    watch_conditions_file.write_text(json.dumps({"watch_conditions": [{
+    watch_conditions_file.write_text(json.dumps({"version": 2, "watch_conditions": [{
         "id": "kick-must-be-muted",
         "description": "Kick must be muted (test-only condition, never true in the demo rig)",
         "channel": "Kick",
         "field": "muted",
-        "operator": "==",
+        "operator": "!=",
         "value": True,
         "severity": "error",
     }]}))
@@ -1722,11 +1722,12 @@ def test_an_unparseable_input_list_is_a_finding_not_an_exception(tmp_path):
 def test_the_input_list_is_read_by_the_engines_own_loader(build_client, tmp_path):
     """Not a second CSV reader with its own opinion about what a valid
     input list is. The rows the page gets are `parse_input_list`'s rows."""
-    from atoo.input_list import CANONICAL_COLUMNS, parse_input_list
+    from atoo.input_list import CANONICAL_COLUMNS, SHEET_COLUMNS, parse_input_list
 
     data = build_client.get("/api/build/sources").json()
     expected = parse_input_list((tmp_path / "touringband" / "input.csv").read_text())
-    assert data["input_list"]["columns"] == list(CANONICAL_COLUMNS)
+    # The canonical columns, and the desk sheets' three the editors write.
+    assert data["input_list"]["columns"] == list(CANONICAL_COLUMNS) + list(SHEET_COLUMNS)
     assert data["input_list"]["rows"] == [
         {column: getattr(row, column) for column in CANONICAL_COLUMNS} for row in expected
     ]
@@ -2496,7 +2497,7 @@ BUILD_HELP = {
     "help-conv-house": "Named once in <code>~/.atoo.config</code>",
     "help-conv-file": "The whole file reaches the model as one layer",
     "help-input-list": "One row per <strong>physical input</strong>",
-    "help-conv-stack": "Both layers reach the model, labelled",
+    "help-conv-stack": "Both layers reach the model, labeled",
     "help-instr-file": "Only what is true of <em>this</em> show.",
     "help-run-build": 'Runs <code id="run-command">atoo build</code>',
 }
@@ -2530,7 +2531,7 @@ def test_build_instructions_are_pop_up_help_and_keep_their_text(client):
     setup = client.get("/static/setup.js").text
     assert 'aria-controls="help-plan-table"' in setup
     assert 'class="help-popover" id="help-plan-table"' in setup
-    assert "Ch is the channel number, in the colour the plan sets." in setup
+    assert "Ch is the channel the plan puts the input on, in the color it sets." in setup
     assert '<p class="panel-note">Ch is the channel number' not in setup
 
 
@@ -2596,7 +2597,7 @@ def test_the_build_state_badges_are_all_four_states_h_draws(client):
 INPUT_LIST = Path(__file__).parent / "fixtures" / "touringband.csv"
 
 DRAFTED = [{"id": "mld-vox-muted", "description": "MLD VOX muted mid-set",
-            "channel": "MLD VOX", "field": "muted", "operator": "==",
+            "channel": "MLD VOX", "field": "muted", "operator": "!=",
             "value": True, "severity": "error"}]
 
 # **The one condition the operator wrote for himself**, and the whole
@@ -2604,7 +2605,7 @@ DRAFTED = [{"id": "mld-vox-muted", "description": "MLD VOX muted mid-set",
 # build merges its drafts alongside it and never over the top of it.
 OPERATORS_OWN_CONDITION = {
     "id": "Kick", "description": "Kick", "channel": "Kick",
-    "field": "muted", "operator": "==", "value": True, "severity": "warning",
+    "field": "muted", "operator": "!=", "value": True, "severity": "warning",
 }
 
 
@@ -2625,7 +2626,7 @@ def _touringband_bundle(tmp_path):
     directory.mkdir()
     (directory / "input.csv").write_text(INPUT_LIST.read_text())
     (directory / "watch.json").write_text(json.dumps(
-        {"watch_conditions": [dict(OPERATORS_OWN_CONDITION)]}, indent=2) + "\n")
+        {"version": 2, "watch_conditions": [dict(OPERATORS_OWN_CONDITION)]}, indent=2) + "\n")
     return directory
 
 
@@ -2745,27 +2746,43 @@ def test_a_second_build_while_one_runs_is_refused(tmp_path, stub_build, monkeypa
         assert _wait_for_build(c)["state"] == "done"
 
 
-def test_a_build_with_no_model_to_talk_to_fails_as_a_finding_not_a_crash(tmp_path, monkeypatch):
-    """No provider stub: the real `provider_from_env`, pointed at a
-    backend that refuses at once. The run ends `failed`, the page is
-    told why in the build's own words, and nothing is a 500."""
+def test_a_build_with_no_model_set_up_is_refused_and_moves_nothing(tmp_path, monkeypatch):
+    """No provider stub and no API key: Build is refused before it starts,
+    saying a build needs a model and how to set one up, and plan.json is not
+    moved aside -- Apply still has the plan it had. The Build payload says
+    so before anything is pressed, so the page locks Build plan."""
     monkeypatch.setenv("ATOO_AI_PROVIDER", "claude")
     monkeypatch.delenv("ATOO_AI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    show = _touringband_bundle(tmp_path)
+    (show / "plan.json").write_text('{"channels": [], "marker": "old"}')
+    app = create_app(initial_bundle=str(show), initial_conventions=str(_house(tmp_path)))
+    with fastapi_testclient.TestClient(app) as c:
+        model = c.get("/api/build/sources").json()["build_model"]
+        assert model["ready"] is False and "ANTHROPIC_API_KEY" in model["why"]
+        r = c.post("/api/build/run", json={"console_model": "wing-compact"})
+        assert r.status_code == 400
+        assert r.json()["error"].startswith("a build needs a model, and none is set up here (")
+        assert r.json()["error"].endswith("Nothing was changed: plan.json is as it was.")
+        assert c.get("/api/build/status").json()["state"] != "running"
+    assert json.loads((show / "plan.json").read_text())["marker"] == "old"
+    assert not (show / "plan.previous.json").exists()
+
+
+def test_build_plan_and_rebuild_are_locked_with_no_model(tmp_path, monkeypatch):
+    """The Python suite cannot see the browser code: the served setup.js
+    locks Build plan and both Rebuilds on `build_model`, and says why."""
     app = create_app(initial_bundle=str(_touringband_bundle(tmp_path)),
                      initial_conventions=str(_house(tmp_path)))
     with fastapi_testclient.TestClient(app) as c:
-        assert c.post("/api/build/run", json={"console_model": "wing-compact"}).status_code == 200
-        status = _wait_for_build(c)
-        assert status["state"] == "failed"
-        assert status["exit_code"] == 1
-        finding = status["findings"][0]
-        assert finding["code"] == "build.failed"
-        assert finding["severity"] == "error"
-        assert "generation failed" in finding["message"]
-        assert "ATOO_AI_PROVIDER" in finding["fix"]
-        assert c.get("/api/plan").status_code == 404, "a failed build lands no plan"
-    assert not (tmp_path / "touringband" / "plan.json").exists()
+        js = c.get("/static/setup.js").text
+        css = c.get("/static/styles.css").text
+    # The reason is long: it wraps beside the button instead of running off.
+    assert ".field-buttons:has(#run-build-lock:not([hidden]))" in css
+    assert "function buildModelWhy()" in js and "sources.build_model" in js
+    assert '"a build needs a model, and none is set up here ("' in js
+    assert "|| !!noModel;" in js
+    assert js.count("|| !!buildModelWhy();") == 2
 
 
 def test_a_build_whose_provider_does_not_answer_puts_its_reason_in_the_dock(tmp_path, monkeypatch):
@@ -3460,3 +3477,146 @@ def test_the_drafted_tag_is_blue_not_yellow(client):
     assert 'tag.className = "state is-info wc-source-drafted"' in js
     assert "state is-warn wc-source-drafted" not in js
     assert 'class="state is-info" id="wc-drafted-badge"' in client.get("/").text
+
+
+def test_the_outputs_table_lists_every_feed_of_a_matrix(client):
+    """A Matrix's feeds are its `fed_by` and every `matrix_sends`
+    naming it, on a channel, a bus or a Main. Since piece 3 the Outputs
+    table is the bus sheet: a row's Sources cell is busses.csv's, and a
+    blank one shows the plan's, from `GET /api/build/bus-sheet`'s `derived`
+    rows (`sheets.bus_rows_from_plan`, through `plan_compat.matrix_feeds`).
+    Checked in Chromium on the church desk's captured show; this pins the
+    served asset."""
+    js = client.get("/static/setup.js").text
+    assert 'busSheet.derived.filter((d) => (kind === "bus") === (d.kind === "bus"))' in js
+    assert 'const shown = derived ? (col === "name" ? (derived.name || derived.key) : derived[col]) || "" : "";' in js
+    assert "function matrixFeedsDesc(" not in js
+
+
+def test_watch_edits_the_sheets_in_build_and_says_what_it_read(client):
+    """An earlier change, the desk sheets while Watch runs: Watch's Edit sheets takes
+    this page to Build's step 04 (not a new tab, the maintainer's word; the
+    watch keeps running on the server), a "Sheet differs from desk" row
+    (CV023) goes to Apply or to the row in Build 04 the same way, and the
+    line under the bar says when Watch read a Save. The Python suite cannot
+    see the page, so the served assets are pinned here; the flow was driven
+    in Chromium."""
+    html = client.get("/").text
+    watch = client.get("/static/watch.js").text
+    setup = client.get("/static/setup.js").text
+    apply_js = client.get("/static/apply.js").text
+    css = client.get("/static/styles.css").text
+    assert '<button type="button" class="btn btn-secondary btn-sm" id="watch-edit-sheets" hidden' \
+        in html
+    assert 'id="watch-sheet-read" hidden' in html
+    assert ("Watch is still running. It reads the sheets on its next pass after Save; go back "
+            "to Watch to see it.") in html
+    assert 'id="plan-back-to-watch">Back to Watch</button>' in html
+    for text in ('const SHEET_DIFFERS = "CV023";', "function sheetLinks(f)",
+                 'data-sheet-go="apply"', 'data-sheet-go="build" data-row="',
+                 ">Open in Apply</button>", ">Show in Build 04</button>",
+                 'editSheets.addEventListener("click", () => SP.sheetsFromWatch());',
+                 'SP.activateMode("apply");', "SP.applyTheDifference();",
+                 "function renderSheetRead(read)", '" change waits" : " changes wait"',
+                 '"nothing waits for Apply."', "editSheets.hidden = !show || !!show.demo;"):
+        assert text in watch, f"watch.js never has {text}"
+    for text in ("_blank", "&#8599;", "&rarr;</a>"):
+        assert text not in watch.split("function sheetLinks(f)")[1].split("function findingHtml")[0]
+    assert "SP.sheetsFromWatch = (row) => {" in setup
+    assert "/^plan-(channel|bus|output)-[a-z0-9-]*$/.test(row)" in setup
+    assert "SP.applyTheDifference = applyTheDifference;" in apply_js
+    assert "apply-difference" not in apply_js
+    # With no show open, Make a show from this desk opens New show... ->
+    # From a desk on the bar's console, outside the bar Watch hides.
+    assert 'id="watch-make-show" hidden' in html
+    assert html.index('id="new-show-dialog"') > html.index('id="console-message"')
+    assert "makeShow.hidden = !!show || !(SP && SP.makeShowFromDesk);" in watch
+    assert 'id="watch-made-show"' in html
+    shell = client.get("/static/shell.js").text
+    assert "makeShowFromDesk: (onDone) => openNewShowChooser({ fromWatch: true, onDone: onDone })," \
+        in shell
+    assert 'newShow.readSeg.select("console");' in shell
+    for rule in (".watch-sheet-read {", "#alert-table .row-actions {", ".from-watch {"):
+        assert rule in css, f"styles.css has no {rule}"
+
+
+def test_step_04_edits_the_desk_sheets_with_the_maintainers_words(client):
+    """An earlier change, desk sheets piece 3 (mockup revision 3): the Channels,
+    Busses and Mains and Matrix tables edit input.csv and busses.csv, Save carries
+    the maintainer's note, a refused cell locks Save, and New show... captures a
+    desk. The Python suite cannot see the page, so the served assets are
+    pinned here; the page itself was driven in Chromium."""
+    js = client.get("/static/setup.js").text
+    shell = client.get("/static/shell.js").text
+    html = client.get("/").text
+    # The maintainer's wording, exactly.
+    assert '"Save writes the input.csv file and updates the build plan."' in js
+    assert 'const BUS_NOTE = "Save writes the busses.csv file and updates the build plan.";' in js
+    assert "Captures the desk to input.csv and busses.csv which you can edit." in html
+    # The bus sheet's own Save path, its check, and the input list's check.
+    for text in ('fetch("/api/build/bus-sheet/save"', 'fetch("/api/build/sheets/check"',
+                 'checkSheet("input_list", SP.inputEditor.collect())',
+                 'checkSheet("bus_sheet", busSaveRows())',
+                 "Save is locked:", "data-bus-save", "data-bus-discard", "Save busses.csv",
+                 # Revision 3: a row's sources and their tap fold
+                 # open under it; its Outputs are badges, edited in Outputs.
+                 'const BUS_DETAIL_COLS = [["sources", "Sources"], ["tap", "Tap"], ["fx", "FX"], ["preset", "Preset"],',
+                 '["dca", "DCA"], ["mute_group", "Mute group"], ["label", "Label"], ["notes", "Notes"]];',
+                 "worked out from the other rows\\' sources; edit those to change it",
+                 'class="row-refusal"', "row-refused", "is-refused", "is-edited"):
+        assert text in js, f"setup.js never has {text}"
+    for text in ("collect: collectRows,", 'fetch("/api/capture"', '"/api/capture/defaults?"',
+                 'kind: "snap"', "if (data.plan_updated) {", "openNewShowChooser"):
+        assert text in shell, f"shell.js never has {text}"
+    # The Channels Save reads as the Busses one does ("Save input.csv"), and
+    # both are hidden until there is something to save (the style guide, §4).
+    assert 'id="plan-input-save-btn" disabled hidden>Save input.csv</button>' in html
+    assert '`${busSheet.dirty || busSheet.behind ? "" : " hidden"}`' in js
+    assert "n.hidden = !(busSheet.dirty || busSheet.behind);" in js
+    for element_id in ("new-show-dialog", "ns-start", "ns-read", "ns-snap-change", "ns-model",
+                       "ns-folder", "ns-go", "plan-input-refusals"):
+        assert f'id="{element_id}"' in html, f"shell.html has no #{element_id}"
+    css = client.get("/static/styles.css").text
+    for rule in (".sheet-note {", ".sheet-refusals {", ".new-show-dialog {", ".ns-row {",
+                 ".build-body #plan-channels-table.ct-sheet td.cell-input { padding-inline: 4px; }"):
+        assert rule in css, f"styles.css has no {rule}"
+
+
+def test_the_preview_shows_each_tiles_detail_not_a_list_of_every_address(client):
+    """The Apply preview's "All N changes, address by address"
+    list is gone: a click on a tile shows its Detail in the side bar, in the
+    issue's wording. Asserted over the served assets,
+    since the Python suite cannot see the page."""
+    js = client.get("/static/apply.js").text
+    html = client.get("/static/shell.html").text
+    css = client.get("/static/styles.css").text
+    for gone in ("address by address", "changes, address by", "already right on the desk",
+                 "already correct -- no write needed"):
+        assert gone not in js and gone not in html, gone
+    for words in ('" will change • "', '" are same"', '"Nothing changes here."',
+                  '" Every plan setting is already on the desk."', '"already on the desk"',
+                  '"Includes values from the plan and the preset "',
+                  '"Click a tile in the Preview to see the change detail."',
+                  '"Show addresses"', '"Not changing"', '"Changing"'):
+        assert words in js, words
+    # The source jump's sentence is the server's (preview_detail._link).
+    assert "l.text" in js and "drawing.tiles" in js
+    assert 'id="dock-detail"' in html and 'id="dock-folded-line"' in html
+    # The selection ring is the text colour, never brass or blue.
+    ring = css[css.index(".desk-strip.is-selected {"):]
+    assert ring[:ring.index("}")].count("var(--text)") == 1
+    # The side bar takes the rest of the 1280px shell on Apply, never under 300px.
+    assert ".shell-body:has(#mode-apply.is-active) .dock-col:not(.is-collapsed) " \
+        "{ flex: 1 0 300px; min-width: 300px; }" in css
+
+
+def test_a_new_info_row_lights_in_the_info_colour_not_the_accent(client):
+    """A new info row (a warning that has just turned into a note, as a
+    split does once a bus sheet's role is saved) fades in from the info
+    colour. The accent wash it had before sat behind dim info text, which
+    could not be read until the fade ended. The page was checked in Chromium
+    in both themes."""
+    css = client.get("/static/styles.css").text
+    assert "#alert-table tr.row-new.sev-row-info { animation-name: flash-new-info; }" in css
+    assert ("@keyframes flash-new-info { from { background: var(--info-bg); } "
+            "to { background: transparent; } }") in css

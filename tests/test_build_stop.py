@@ -553,9 +553,9 @@ def _bundle(tmp_path) -> Path:
     directory = tmp_path / "show"
     directory.mkdir()
     (directory / "input.csv").write_text((FIXTURES / "touringband.csv").read_text())
-    (directory / "watch.json").write_text(json.dumps({"watch_conditions": [{
+    (directory / "watch.json").write_text(json.dumps({"version": 2, "watch_conditions": [{
         "id": "Kick", "description": "Kick", "channel": "Kick", "field": "muted",
-        "operator": "==", "value": True, "severity": "warning"}]}, indent=2) + "\n")
+        "operator": "!=", "value": True, "severity": "warning"}]}, indent=2) + "\n")
     return directory
 
 
@@ -588,7 +588,7 @@ def stop_app(tmp_path, monkeypatch, standin):
 
     server = standin("api", replies={
         generate.critic_system(): json.dumps({"findings": []}),
-        generate.watchlist_system(): json.dumps({"watch_conditions": []}),
+        generate.watchlist_system(): json.dumps({"version": 2, "watch_conditions": []}),
     })
     monkeypatch.setenv("ATOO_AI_PROVIDER", "api")
     monkeypatch.setenv("ATOO_AI_API_KEY", "k")

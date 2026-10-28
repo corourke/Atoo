@@ -851,6 +851,8 @@
     updateArmState();
     if (!previewBtn.disabled) start(false);
   }
+  // Watch's "Open in Apply" calls this after switching the
+  // page to Apply.
   SP.applyTheDifference = applyTheDifference;
 
   // Step 1 changed: a tick given for what it held before is withdrawn.
@@ -1468,20 +1470,41 @@
   // stops when the server does, which is the case it most needs to show.
   setInterval(() => { if (latest.state === "running") renderRun(); }, 250);
 
-  // ---- step 2: the desk, as scribble strips -------------------------------
+  // ---- step 2: the desk, as tiles ----------------------------------------
+  // Half-height tiles, the number in the corner left of the
+  // name. A full build's drawing also carries every row of the preview in
+  // the tile it belongs to (`drawing.tiles`, `preview_detail.py`): clicking
+  // a tile shows its Detail in the side bar, or, on a phone, in place
+  // under its bank.
 
   const LEGEND = {
-    full: [["", "as the plan sets it"], ["l-changes", "changed by this write"],
-           ["l-unused", "not in the plan"]],
+    full: [["", "as the plan sets it"], ["l-changes", "changes"],
+           ["l-unused", "not in the plan"], ["l-selected", "shown in Detail"]],
     patch: [["", "in use"], ["l-free", "free"], ["l-new", "added by this change"],
             ["l-edit", "edited by this change"]],
   };
+  const TILE_HINT = "Click a tile to see its changes in the side bar.";
+  const TILE_HINT_OPEN = "Click it again, press Esc or Close to go back to Findings.";
+
+  // What a tile is, in its tooltip and in Detail's heading.
+  const KIND_WORD = { ch: "Channel", aux: "Aux", bus: "Bus", main: "Main", mtx: "Matrix",
+    dca: "DCA", mgrp: "Mute group", in: "Input sockets", out: "Output sockets",
+    fx: "FX slot", cfg: "Console" };
+
+  // The full-build drawing on screen, when it carries tiles; the tiles in
+  // page order; and what Detail shows.
+  let drawn = null;
+  let drawnTiles = [];
+  const detail = { sel: null, addresses: false, unfolded: false };
 
   function drawDesk(drawing) {
+    if (drawing === drawn && drawing) return;
     const box = el("apply-desk");
     const legend = el("apply-desk-legend");
     box.textContent = "";
     legend.textContent = "";
+    drawn = drawing && drawing.mode === "full" && drawing.tiles ? drawing : null;
+    drawnTiles = [];
     if (!drawing) return;
     const patch = drawing.mode === "patch";
     (drawing.sections || []).forEach((section) => {
@@ -1496,12 +1519,17 @@
       count.className = "desk-count";
       count.textContent = String(section.count);
       head.appendChild(count);
+      if (section.note) head.appendChild(node("span", "desk-section-note", section.note));
       bank.appendChild(head);
       const grid = document.createElement("div");
       grid.className = "desk-strips";
       grid.dataset.kind = section.kind;
       section.strips.forEach((strip) => grid.appendChild(stripCell(section, strip, patch)));
       bank.appendChild(grid);
+      // Where Detail opens on a phone: under the bank holding the tile.
+      const inline = node("div", "desk-inline-detail");
+      inline.hidden = true;
+      bank.appendChild(inline);
       box.appendChild(bank);
     });
     const counts = drawing.counts || {};
@@ -1510,15 +1538,21 @@
     if (patch && counts.released) entries.push(["l-released", "returned to free"]);
     if (patch && counts.unknown) entries.push(["l-unknown", "never answered — treated as in use"]);
     entries.forEach(([cls, words]) => {
+      if (cls === "l-selected" && !drawn) return;
       const span = document.createElement("span");
       if (cls) span.className = cls;
       span.textContent = words;
       legend.appendChild(span);
     });
+    if (drawn) legend.appendChild(node("span", "desk-legend-hint", TILE_HINT));
+    if (detail.sel && !drawnTiles.some((t) => t.key === detail.sel)) detail.sel = null;
   }
 
   function stripCell(section, strip, patch) {
-    const cell = document.createElement("div");
+    // A tile of a drawing that carries its rows is a button: clicking it
+    // shows its Detail.
+    const cell = document.createElement(drawn ? "button" : "div");
+    if (drawn) cell.type = "button";
     const free = strip.state === "free" || strip.state === "unused";
     let cls = "desk-strip";
     if (strip.state === "free" && !strip.mark) cls += " is-free";
@@ -1528,24 +1562,27 @@
     if (strip.mark === "edit") cls += " is-edit";
     if (strip.mark === "moved") cls += " is-moved";
     if (strip.mark === "released") cls += " is-released";
-    if (!patch && strip.changes && strip.state === "plan") cls += " is-changes";
+    // An unused strip that changes keeps its outline (a
+    // dimmed tile hid that the initialize resets channel 14's patch).
+    if (!patch && strip.changes) cls += " is-changes";
     cell.className = cls;
     cell.dataset.strip = section.kind + ":" + strip.n;
     cell.dataset.state = strip.mark || strip.state;
-    const name = document.createElement("div");
-    name.className = "desk-strip-name";
     const showsFace = !(free && !strip.mark) && strip.state !== "unknown";
-    if (showsFace && strip.colour) name.dataset.colour = String(strip.colour).toLowerCase();
+    if (showsFace && strip.colour) cell.dataset.colour = String(strip.colour).toLowerCase();
+    const no = document.createElement("span");
+    no.className = "desk-strip-no";
+    no.textContent = String(strip.label || strip.n);
+    cell.appendChild(no);
+    const name = document.createElement("span");
+    name.className = "desk-strip-name";
     name.textContent = strip.state === "unknown" ? "unread"
       : showsFace ? (strip.name || "") : "—";
     cell.appendChild(name);
-    const no = document.createElement("span");
-    no.className = "desk-strip-no";
-    no.textContent = String(strip.n);
-    cell.appendChild(no);
     const words = { plan: "as the plan sets it", unused: "not in the plan", used: "in use",
       free: "free", unknown: "never answered — treated as in use" };
-    cell.title = section.title.replace(/s$/, "") + " " + strip.n +
+    const kind = KIND_WORD[section.kind] || section.title;
+    cell.title = kind + " " + (strip.label || strip.n) +
       (strip.name ? " — " + strip.name : "") +
       (strip.source_name ? " (the name on its source socket)" : "") +
       (strip.colour ? ", " + strip.colour : "") + " — " +
@@ -1553,8 +1590,275 @@
          moved: "moved here by this change's insert, and rewritten whole",
          released: "returned to free" }[strip.mark] || words[strip.state] || strip.state) +
       (strip.changes ? "; this write changes it" : "");
+    if (drawn && strip.key) {
+      cell.dataset.key = strip.key;
+      drawnTiles.push({ key: strip.key, kind: section.kind, label: strip.label || String(strip.n),
+        name: strip.name, colour: strip.colour, state: strip.state, cell: cell });
+      cell.addEventListener("click", () => selectTile(detail.sel === strip.key ? null : strip.key));
+    }
     return cell;
   }
+
+  // ---- a tile's Detail --------------------------------------
+  // In the side bar, under Findings folded to their heading and verdict;
+  // on a phone, in place under the tapped tile's bank. "Changing" (the
+  // value now and after) comes first, then "Not changing"; rows sit under
+  // headings in the desk's own order, which the server sends them in.
+
+  const findingsDock = el("findings-dock");
+  const dockDetail = el("dock-detail");
+  const foldedLine = el("dock-folded-line");
+  const unfoldBtn = el("dock-unfold");
+  // The dock's sections Detail folds, with the words the folded line uses.
+  const FOLDED = [["dock-check", "dock-check-count", "To check"],
+    ["dock-advice", "dock-advice-count", "Advice"], ["dock-info", "dock-info-count", "Choices"],
+    ["dock-details", "dock-details-count", "Build details"],
+    ["dock-resolved", "dock-resolved-count", "Addressed"]];
+
+  function tileOf(key) {
+    return (drawn && drawn.tiles[key]) || { rows: [], changes: 0, same: 0, presets: [], links: [] };
+  }
+
+  function selectTile(key) {
+    detail.sel = key;
+    if (!key) detail.unfolded = false;
+    renderDetail();
+    if (key) {
+      const t = drawnTiles.find((x) => x.key === key);
+      if (t && window.matchMedia("(max-width: 900px)").matches) {
+        const inline = t.cell.closest(".desk-bank").querySelector(".desk-inline-detail");
+        if (inline) inline.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }
+
+  function stepTile(step) {
+    const changing = drawnTiles.filter((t) => tileOf(t.key).changes);
+    if (!changing.length) return;
+    let i = changing.findIndex((t) => t.key === detail.sel);
+    if (i < 0) {
+      // From a tile that does not change: the next or previous one that does.
+      const pos = drawnTiles.findIndex((t) => t.key === detail.sel);
+      i = changing.findIndex((t) => drawnTiles.indexOf(t) > pos);
+      if (i < 0) i = changing.length;
+      if (step > 0) i -= 1;
+    }
+    selectTile(changing[(i + step + changing.length) % changing.length].key);
+  }
+
+  function foldedWords() {
+    return FOLDED.filter(([id]) => el(id) && !el(id).hidden)
+      .map(([, countId, words]) => words + " " + el(countId).textContent).join(" · ");
+  }
+
+  function detailShown() {
+    return !!drawn && !el("apply-review").hidden && SP.currentMode() === "apply";
+  }
+
+  // Step 2 is redrawn on every status the runner answers; Detail only when
+  // what it shows has changed, so a poll never resets its scroll.
+  let detailFor = null;
+  function syncDetail() {
+    const now = detailShown() ? drawn : null;
+    if (now === detailFor) return;
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const shown = detailShown();
+    detailFor = shown ? drawn : null;
+    if (!shown) {
+      detail.sel = null;
+      detail.unfolded = false;
+    }
+    const sel = detail.sel;
+    drawnTiles.forEach((t) => t.cell.classList.toggle("is-selected", t.key === sel));
+    document.querySelectorAll("#apply-desk .desk-inline-detail").forEach((x) => {
+      x.hidden = true;
+      x.textContent = "";
+    });
+    const hint = document.querySelector("#apply-desk-legend .desk-legend-hint");
+    if (hint) hint.textContent = sel ? TILE_HINT_OPEN : TILE_HINT;
+    // The dock: Findings fold to their heading and verdict while a tile
+    // is shown, and one line opens them again.
+    const words = sel ? foldedWords() : "";
+    findingsDock.classList.toggle("has-detail", !!sel && !detail.unfolded);
+    findingsDock.classList.toggle("is-detail-open", !!sel);
+    foldedLine.hidden = !sel || detail.unfolded || !words;
+    unfoldBtn.textContent = "▸ " + words;
+    dockDetail.hidden = !shown;
+    dockDetail.textContent = "";
+    if (!shown) return;
+    dockDetail.appendChild(detailBody(sel, false));
+    if (sel) {
+      const t = drawnTiles.find((x) => x.key === sel);
+      const inline = t && t.cell.closest(".desk-bank").querySelector(".desk-inline-detail");
+      if (inline) {
+        inline.appendChild(detailBody(sel, true));
+        inline.hidden = false;
+      }
+    }
+  }
+
+  function detailBody(key, inPlace) {
+    const wrap = node("div", "detail");
+    const head = node("div", "detail-head");
+    const row1 = node("div", "detail-row1");
+    row1.appendChild(node("h2", "detail-title", "Detail"));
+    wrap.appendChild(head);
+    head.appendChild(row1);
+    if (!key) {
+      wrap.appendChild(node("p", "detail-empty", "Click a tile in the Preview to see the change detail."));
+      return wrap;
+    }
+    const t = drawnTiles.find((x) => x.key === key);
+    const d = tileOf(key);
+    const push = node("span", "push");
+    [["‹", -1, "Previous tile that changes"], ["›", 1, "Next tile that changes"]].forEach(([text, step, title]) => {
+      const b = node("button", "btn-icon btn-icon-muted", text);
+      b.type = "button";
+      b.title = title;
+      b.setAttribute("aria-label", title);
+      b.addEventListener("click", () => stepTile(step));
+      push.appendChild(b);
+    });
+    const close = node("button", "btn btn-quiet", "Close");
+    close.type = "button";
+    close.title = "Close Detail (Esc)";
+    close.addEventListener("click", () => selectTile(null));
+    push.appendChild(close);
+    row1.appendChild(push);
+
+    // The tile as it is drawn, and what it is.
+    const id = node("div", "detail-id");
+    const tag = node("span", t.cell.className.replace(" is-selected", "") + " detail-tile");
+    t.cell.childNodes.forEach((child) => tag.appendChild(child.cloneNode(true)));
+    if (t.cell.dataset.colour) tag.dataset.colour = t.cell.dataset.colour;
+    id.appendChild(tag);
+    const io = t.kind === "in" || t.kind === "out";
+    const free = t.state !== "plan";
+    id.appendChild(node("span", "detail-kind", KIND_WORD[t.kind] +
+      (io ? ", " + t.name : t.kind === "cfg" ? ", " + t.name : " " + t.label) +
+      (free && !io ? " · not in the plan" : "")));
+    head.appendChild(id);
+    const facts = node("p", "detail-facts");
+    if (d.rows.length) {
+      facts.appendChild(node("b", null, String(d.changes)));
+      facts.appendChild(document.createTextNode(" will change • "));
+      facts.appendChild(node("b", null, String(d.same)));
+      facts.appendChild(document.createTextNode(" are same"));
+    } else {
+      facts.textContent = "Nothing in this write touches it.";
+    }
+    head.appendChild(facts);
+    if (d.presets.length) {
+      const src = node("p", "detail-src", "Includes values from the plan and the preset ");
+      src.appendChild(node("b", null, d.presets.join(", ")));
+      head.appendChild(src);
+    }
+    if (d.links.length) {
+      const links = node("div", "detail-links");
+      d.links.forEach((l) => {
+        const b = node("button", "btn btn-quiet", l.text + " →");
+        b.type = "button";
+        b.addEventListener("click", () => selectTile(l.key));
+        links.appendChild(b);
+      });
+      head.appendChild(links);
+    }
+    const sw = node("button", "detail-switch");
+    sw.type = "button";
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(detail.addresses));
+    sw.appendChild(node("span", "detail-switch-track"));
+    sw.appendChild(document.createTextNode("Show addresses"));
+    sw.addEventListener("click", () => { detail.addresses = !detail.addresses; renderDetail(); });
+    head.appendChild(sw);
+
+    const body = node("div", "detail-body");
+    const changing = d.rows.filter((r) => r.changes);
+    const same = d.rows.filter((r) => !r.changes);
+    const sec = node("div", "detail-sec");
+    const secHead = node("div", "detail-sec-head");
+    secHead.appendChild(node("h3", null, "Changing"));
+    secHead.appendChild(node("span", "detail-count", String(changing.length)));
+    sec.appendChild(secHead);
+    if (changing.length) sec.appendChild(paramsTable(changing, true, io));
+    else {
+      sec.appendChild(node("p", "detail-nothing", "Nothing changes here." +
+        (same.length ? " Every plan setting is already on the desk." : "")));
+    }
+    body.appendChild(sec);
+    if (same.length) {
+      // Open beside the page; folded in place on a phone, where the
+      // changes are what the tap was for.
+      const fold = node("details", "detail-sec");
+      fold.open = !inPlace;
+      const sum = node("summary", "detail-sec-head");
+      sum.appendChild(node("h3", null, "Not changing"));
+      sum.appendChild(node("span", "detail-count", String(same.length)));
+      sum.appendChild(node("span", "push meta", "already on the desk"));
+      fold.appendChild(sum);
+      fold.appendChild(paramsTable(same, false, io));
+      body.appendChild(fold);
+    }
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  function paramsTable(rows, changing, io) {
+    const table = node("table", "detail-params" + (changing ? "" : " is-quiet"));
+    const cols = node("colgroup");
+    ["c-name", "c-now", "c-after"].forEach((c) => cols.appendChild(node("col", c)));
+    table.appendChild(cols);
+    const thead = node("thead");
+    const tr = node("tr");
+    ["Parameter", changing ? "Now" : "Holds", changing ? "After" : ""]
+      .forEach((w) => tr.appendChild(node("th", null, w)));
+    thead.appendChild(tr);
+    table.appendChild(thead);
+    const tbody = node("tbody");
+    let group = null;
+    rows.forEach((r) => {
+      if (r.section !== group) {
+        group = r.section;
+        const g = node("tr", "detail-group");
+        const td = node("td", null, r.section);
+        td.colSpan = 3;
+        if (io && r.owner) td.appendChild(node("span", "detail-owner", " · " + r.owner));
+        g.appendChild(td);
+        tbody.appendChild(g);
+      }
+      const row = node("tr");
+      const name = node("td", null, r.label);
+      if (r.note) name.appendChild(node("span", "detail-note", r.note));
+      if (detail.addresses) name.appendChild(node("span", "detail-addr", r.address));
+      row.appendChild(name);
+      const dash = (v) => (v == null ? "—" : v);
+      if (changing) {
+        row.appendChild(node("td", "v now", dash(r.now)));
+        row.appendChild(node("td", "v after", dash(r.after)));
+      } else {
+        // One value: what the desk holds. A value within the desk's
+        // stepped tolerance of the plan's shows the plan's beside it.
+        const td = node("td", "v", dash(r.now == null ? r.after : r.now));
+        td.colSpan = 2;
+        if (r.plan) td.appendChild(node("span", "detail-plan", " (plan " + r.plan + ")"));
+        row.appendChild(td);
+      }
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    return table;
+  }
+
+  if (unfoldBtn) unfoldBtn.addEventListener("click", () => { detail.unfolded = true; renderDetail(); });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && detail.sel && SP.currentMode() === "apply") selectTile(null);
+  });
+  // The folded line counts what it folds; a redraw of the dock recounts.
+  SP.onFindingsChange(() => { if (detail.sel) renderDetail(); });
+  SP.onModeChange(() => renderDetail());
 
   function renderReview(ownMode) {
     const box = el("apply-review");
@@ -1567,6 +1871,7 @@
     const facts = el("apply-review-facts");
     facts.textContent = "";
     drawDesk(drawing);
+    syncDetail();
     if (!mine) return;
     if (kind === "apply" && run.result) {
       const c = run.result.counts;
@@ -1833,16 +2138,9 @@
     skipped_no_change: "Unchanged",
   };
 
-  // A preview records every address as `dry_run` and does NOT split it
-  // into "would change" and "already correct" -- a preview asked the
-  // console but never asked it to do anything, and a second status would
-  // give the journal two vocabularies to keep in step (apply_plan's own
-  // docstring). The split is `would_change`, which the SERVER computes
-  // with the engine's type-aware comparison; this reads the answer.
+  // Only a write's journal is listed here; a preview's rows are in its
+  // tiles' Detail.
   function statusLabel(record) {
-    if (record.status === "dry_run") {
-      return record.would_change ? "Would change" : "Already correct";
-    }
     return STATUS_LABEL[record.status] || record.status;
   }
 
@@ -1905,16 +2203,11 @@
   }
 
   // A collapsed group is a sample of at most 250 rows (webui's
-  // `_APPLY_GROUP_SAMPLE`). After a write the rest are in its journal;
-  // a preview writes none (its scratch journal is deleted, and
-  // `journal_path` is null), so it must not point at one.
+  // `_APPLY_GROUP_SAMPLE`); the rest are in the write's journal.
   function sampleNote(group, result) {
     const head = "Showing " + group.records.length + " of " + group.count +
       " — the rest are the same shape";
     if (result && result.journal_path) return head + ", and all of them are in the journal file.";
-    if (result && result.dry_run) {
-      return head + ". A preview writes no journal; a write records every address in one.";
-    }
     return head + ".";
   }
 
@@ -2017,14 +2310,17 @@
     renderWriteResult(mine ? result : null);
     const slot = run.preview ? el("apply-preview-slot") : el("apply-write-slot");
     if (resultPanel.parentNode !== slot) slot.appendChild(resultPanel);
-    resultPanel.hidden = !result || !mine;
-    if (!result || !mine) return;
+    // A preview's rows are in its tiles: each tile's Detail
+    // shows them, so the preview has no list of its own. This panel is the
+    // journal after a write.
+    const shown = !!result && mine && !result.dry_run;
+    resultPanel.hidden = !shown;
+    if (!shown) return;
 
     const c = result.counts;
-    el("apply-result-summary").textContent = result.dry_run
-      ? "All " + c.would_change + " changes, address by address →"
-      : "The journal: all " + c.total + " addresses, written or already right →";
-    el("apply-watch-footer").hidden = !!result.dry_run || run.kind !== "apply";
+    el("apply-result-summary").textContent =
+      "The journal: all " + c.total + " addresses, written or already right →";
+    el("apply-watch-footer").hidden = run.kind !== "apply";
 
     // `apply.ApplyResult.summary()`, exactly as the command prints it.
     const summaryEl = el("apply-summary-line");
@@ -2034,11 +2330,8 @@
     const chips = el("apply-chips");
     chips.textContent = "";
     chips.appendChild(chip("evaluated", c.total));
-    if (result.dry_run) chips.appendChild(chip("would change", c.would_change));
-    else {
-      chips.appendChild(chip("written", c.written));
-      if (c.unchanged) chips.appendChild(chip("already right", c.unchanged));
-    }
+    chips.appendChild(chip("written", c.written));
+    if (c.unchanged) chips.appendChild(chip("already right", c.unchanged));
     if (c.mismatch) chips.appendChild(chip("mismatch", c.mismatch, "is-bad"));
     if (c.unreadable) chips.appendChild(chip("unreadable", c.unreadable, "is-warn"));
     if (c.cleaned) chips.appendChild(chip("output sockets disconnected", c.cleaned, "is-warn"));
@@ -2078,8 +2371,6 @@
       note.appendChild(path);
       note.appendChild(document.createTextNode(
         ". Undo, in History, puts every address back."));
-    } else if (result.dry_run) {
-      note.textContent = "A preview: nothing was written.";
     } else {
       note.textContent =
         "Nothing was written: the run stopped before touching an address. The log says why.";

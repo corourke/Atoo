@@ -343,7 +343,7 @@ class _Recorded(FakeProvider):
     reply = ""
 
     def complete(self, *, system, user, response_schema=None, label=""):
-        self.response = self.reply if label == "generator" else '{"watch_conditions": []}'
+        self.response = self.reply if label == "generator" else '{"version": 2, "watch_conditions": []}'
         return super().complete(system=system, user=user,
                                 response_schema=response_schema, label=label)
 

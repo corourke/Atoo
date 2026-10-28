@@ -125,9 +125,13 @@ def test_the_page_draws_the_row_and_drops_it(home, demo_copy, monkeypatch):
                 page.wait_for_selector("#alert-body tr:has-text('C008')", timeout=30000)
                 row = page.locator("#alert-body tr", has_text="C008").first
                 assert "ERROR" in row.inner_text().upper()
-                assert "AES50-A reports a link error (ERR)" in row.inner_text()
+                assert "Stage box link error" in row.inner_text()
+                assert ("Stage box AES50 port A reports a link error and can not carry the "
+                        "inputs of") in row.inner_text()
                 assert 'CH 1 "Kick"' in row.inner_text()
-                assert "6 more take their input from it" in row.inner_text()
+                assert "6 more or outputs AES50-A" in row.inner_text()
+                # Where names the port.
+                assert "AES50-A" in row.locator("td").nth(2).inner_text()
                 page.wait_for_selector("#alert-body tr:has-text('C010')", timeout=30000)
                 row = page.locator("#alert-body tr", has_text="C010").first
                 assert "INFO" in row.inner_text().upper()

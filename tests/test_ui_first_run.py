@@ -75,9 +75,10 @@ def test_ui_opens_the_browser_by_default_once_the_server_answers(home, display, 
     assert code == 0
     assert len(opened) == 1
     out = capsys.readouterr().out
-    # The URL is still printed, and it is the one opened.
-    printed = out.split("Atoo: ", 1)[1].split(" ", 1)[0]
-    assert opened[0] == printed + "/"
+    # The page opens by itself, so the start does not print its address
+    # ; --no-browser still does.
+    assert opened[0].startswith("http://127.0.0.1:")
+    assert "http://" not in out
     # When the browser was opened, the page's server was already answering.
     assert answered[0] is not None and "instance" in answered[0]
 
@@ -109,7 +110,8 @@ def test_no_display_opens_nothing_and_says_so(monkeypatch, capsys):
     monkeypatch.setattr(webbrowser, "open", lambda *a, **k: opened.append(a) or True)
     cli._open_browser("http://127.0.0.1:8420/")
     assert opened == []
-    assert "open the address above yourself" in capsys.readouterr().out
+    # The start no longer prints the address (2026-10-27), so this says it.
+    assert "open http://127.0.0.1:8420/ yourself" in capsys.readouterr().out
 
 
 class _RunningUi:
@@ -191,9 +193,7 @@ def test_ui_with_no_show_starts_in_the_workspace(home, stub_ui_server, capsys):
     (home / ".atoo.config").write_text('[workspace]\ndefault = "~/Documents/Atoo"\n')
     assert main(["ui", "--port", "0", "--no-browser"]) == 0
     out = capsys.readouterr().out
-    assert "Working folder: ~/Documents/Atoo -- Open… and New show… start here." in out
-    # The startup lines name the controls as the page labels them.
-    assert "The shell's Apply mode is the one screen that does, and only with Arm ticked." in out
+    assert "Working folder: ~/Documents/Atoo\n" in out
     assert "atoo init" not in out
     app = stub_ui_server[0].app
     with fastapi_testclient.TestClient(app) as client:

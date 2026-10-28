@@ -28,17 +28,27 @@ later concern (see the issue), not attempted here.
 `send_on`, `send_db`, `send_mode`, `phantom`.** `muted` and `fader_db` are
 scalar -- a plain `field <operator> value` comparison. `dca`, `mute_group` and `patch` are a different
 SHAPE of question ("is channel X a member of DCA Y", "is channel X
-patched to AES50-A 12"), and they carry it on the existing two operators
-rather than inventing a third: **`==` asserts
-membership, `!=` asserts non-membership.**
+patched to AES50-A 12"). `dca` and `mute_group` take **`in` and `not in`**;
+`patch` takes `==` and `!=`.
 
-    "field": "dca", "operator": "==", "value": "Drums"
+**A condition states when to alert.** It fires when it is
+true, on every field:
+
+    "field": "muted", "operator": "==", "value": true
+        -> fires when the strip is muted
+    "field": "dca", "operator": "not in", "value": "Drums"
         -> fires when the channel is NOT in the DCA named Drums
-    "field": "mute_group", "operator": "!=", "value": "FX"
+    "field": "mute_group", "operator": "in", "value": "FX"
         -> fires when the channel IS in the mute group named FX
+    "field": "fader_db", "operator": "<", "value": -10
+        -> fires when the fader is below -10 dB
 
-Same "assertion violated -> finding" polarity as every scalar field: the
-condition states what should be true, a `Finding` is it not being true.
+The evaluation below still reasons about the relationship that must HOLD
+for the alert to stay quiet: `_holding_form` turns each operator into its
+opposite once, when the condition is checked or explained, and nothing
+after that sees the alerting form. A file is `"version": 2` (`FORMAT_VERSION`);
+one without it was written for the old meaning, the opposite of this one,
+and is refused with how to convert it.
 
 `value` is a group NAME for `dca`/`mute_group`, resolved against live
 state the way `audit.diff_against_plan` resolves DCA/mute-group identity
@@ -53,19 +63,19 @@ are different sockets. A socket number past that group's own count
 (`console_facts.INPUT_SOCKETS`) is a load-time error rather than a rule
 that can never fire.
 
-The membership/patch fields accept **`==` and `!=` only** -- an ordering
-operator against a group name is refused at load time, not silently
-turned into a string comparison.
+The membership fields accept **`in` and `not in` only**, and `patch`
+**`==` and `!=` only** -- an ordering operator against a group name is
+refused at load time, not silently turned into a string comparison.
 
 **Sends and phantom.** Four fields say something true of one show that
-the fixed rules cannot know: "the click stays on in every in-ear mix", "the
-drummer's in-ear send for Kick stays above -10", "48V stays on for the
-overheads".
+the fixed rules cannot know, each written as when to alert: "the click is
+off in an in-ear mix", "the drummer's in-ear send for Kick is at or below
+-10", "48V is off for the overheads".
 
-    "field": "send_on",   "bus": "BUS 5-8",  "operator": "==", "value": true
-    "field": "send_db",   "bus": "BUS Drums IEM", "operator": ">", "value": -10
-    "field": "send_mode", "bus": "BUS 1-4",  "operator": "==", "value": "pre"
-    "field": "phantom",                      "operator": "==", "value": true
+    "field": "send_on",   "bus": "BUS 5-8",  "operator": "==", "value": false
+    "field": "send_db",   "bus": "BUS Drums IEM", "operator": "<=", "value": -10
+    "field": "send_mode", "bus": "BUS 1-4",  "operator": "!=", "value": "pre"
+    "field": "phantom",                      "operator": "==", "value": false
 
 - **`send_on`** (boolean), **`send_db`** (a dB level, every operator) and
   **`send_mode`** (`"pre"`, `"post"` or `"group"`, `==`/`!=`) are about the
@@ -113,14 +123,15 @@ names at most that many readings old; W001 says so at INFO.
 **File format** (JSON; see this module's tests for worked examples):
 
     {
+      "version": 2,
       "watch_conditions": [
         {
-          "id": "crowd-mic-never-muted",
-          "description": "Crowd Mic must never be muted",
+          "id": "crowd-mic-muted",
+          "description": "Crowd Mic is muted",
           "channel": "Crowd Mic",
           "field": "muted",
           "operator": "==",
-          "value": false,
+          "value": true,
           "severity": "error"
         }
       ]
@@ -217,7 +228,7 @@ from pathlib import Path
 from typing import Callable
 
 from atoo.audit import (
-    AuditRule, ConsoleState, Finding, Severity, bus_indices, strip_bases,
+    AuditRule, ConsoleState, Finding, Severity, bus_indices, is_active, strip_bases,
     strip_group_membership, strip_source_sockets,
 )
 from atoo.console_facts import CAPACITY, INPUT_SOCKETS, PHANTOM_CAPABLE_GROUPS
@@ -288,7 +299,53 @@ _BOOL_COMPATIBLE_OPERATORS = frozenset({"==", "!="})
 # operators carry them -- and for the same reason, `"dca" > "Drums"` is
 # refused at load time rather than quietly doing a string comparison
 # nobody asked for. `!=` means is not a member of.
-_EQUALITY_ONLY_FIELDS = _RELATIONAL_FIELDS | {"send_mode"}
+_EQUALITY_ONLY_FIELDS = (_RELATIONAL_FIELDS - _GROUP_FIELDS) | {"send_mode"}
+
+# `dca` and `mute_group` ask whether a strip is a member, and say so in
+# words: `in` alerts when it is, `not in` when it is not.
+_GROUP_OPERATORS = frozenset({"in", "not in"})
+TRIGGER_OPERATORS = frozenset(_OPERATORS) | _GROUP_OPERATORS
+
+# A condition states when to ALERT; the evaluation and the
+# plain-English sentence reason about the relationship that must HOLD for
+# it to stay quiet. Each alerting operator, as that relationship.
+_HOLDS_WHEN_QUIET = {"==": "!=", "!=": "==", "<": ">=", ">=": "<", "<=": ">", ">": "<=",
+                     "in": "!=", "not in": "=="}
+
+
+def _holding_form(cond: dict) -> dict:
+    """`cond` with its operator turned into the relationship whose failure
+    fires it: `fader_db < -10` becomes `fader_db >= -10`, `dca not in Drums`
+    becomes `dca == Drums` (a member). What `_make_check` and
+    `explain_condition` evaluate; never written back."""
+    return {**cond, "operator": _HOLDS_WHEN_QUIET[cond["operator"]]}
+
+
+def operator_problem(field: str, operator_: object) -> str | None:
+    """Why `operator_` cannot go with `field`, or None. The loader and the
+    editor's check both ask this."""
+    if field in _GROUP_FIELDS:
+        if operator_ in _GROUP_OPERATORS:
+            return None
+        if operator_ in ("==", "!="):
+            meant = "not in" if operator_ == "==" else "in"
+            return (f"field {field!r} takes 'in' or 'not in', not {operator_!r}: a condition "
+                    f"now says when to alert, so 'not in' alerts when the strip is not in "
+                    f"the group and 'in' when it is. A file written before that meant "
+                    f"{operator_!r} as {meant!r}")
+        return f"field {field!r} takes 'in' or 'not in', not {operator_!r}"
+    if operator_ not in _OPERATORS:
+        return (f"unknown operator {operator_!r} -- expected one of {sorted(_OPERATORS)}"
+                + (" ('in' and 'not in' are for dca and mute_group)"
+                   if operator_ in _GROUP_OPERATORS else ""))
+    if field in _BOOLEAN_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
+        return (f"field {field!r} is a boolean and only supports "
+                f"{sorted(_BOOL_COMPATIBLE_OPERATORS)}, not {operator_!r}")
+    if field in _EQUALITY_ONLY_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
+        return (f"field {field!r} asks a yes/no question and only supports "
+                f"{sorted(_BOOL_COMPATIBLE_OPERATORS)} ('==' alerts when it holds, '!=' when "
+                f"it does not), not {operator_!r}")
+    return None
 
 # --------------------------------------------------------------------------
 # Targets: what a condition's `channel` names.
@@ -323,6 +380,9 @@ _RANGE_RE = re.compile(rf"^({_KIND_ALT})\s*(\d+)\s*-\s*(\d+)$", re.IGNORECASE)
 _ALL_RE = re.compile(rf"^ALL\s+({_KIND_ALT})$", re.IGNORECASE)
 _KIND_PREFIX_RE = re.compile(rf"^({_KIND_ALT})(?=$|[\s\d-])\s*(.*)$", re.IGNORECASE)
 _ALL_PREFIX_RE = re.compile(r"^ALL(?:\s+(\S+))?$", re.IGNORECASE)
+# The word ACTIVE, anywhere in the cell and in any case, limits
+# a condition to the strips that are active (`audit.is_active`).
+_ACTIVE_RE = re.compile(r"(?<!\S)ACTIVE(?!\S)", re.IGNORECASE)
 
 _TARGET_HELP = ("write a position as CH 10, AUX 3, BUS 3, MAIN 1, MTX 3 or DCA 14 "
                 "(CHN, CHAN and MATRIX are read too), a range as DCA 10-16, every strip "
@@ -358,6 +418,10 @@ class Target:
     name: str | None = None
     #: `Main` on its own, read as `MAIN 1` (`main_default_note`).
     defaulted: bool = False
+    #: The cell said ACTIVE: only the strips `audit.is_active`
+    #: finds active are checked, at each pass. `text` is then the cell with
+    #: the word taken out, which is what everything else was parsed from.
+    active: bool = False
 
     @property
     def is_name(self) -> bool:
@@ -378,7 +442,10 @@ class Target:
     def canonical(self) -> str:
         """The one display spelling: `CH 10`, `DCA 10-16`, `ALL AUX`,
         `BUS Drums` (the kind word normalised, the name as written); a
-        bare name is returned stripped and otherwise as written."""
+        bare name is returned stripped and otherwise as written. ACTIVE,
+        when the cell has it, comes first: `ACTIVE ALL BUS`."""
+        if self.active:
+            return f"ACTIVE {replace(self, active=False).canonical}"
         if self.bank is None:
             return self.text.strip()
         word = CANONICAL_KIND_WORD[self.bank]
@@ -395,7 +462,10 @@ class Target:
         """What two targets are compared by: the canonical spelling, and a
         name lower-cased because names resolve case-insensitively --
         `bus drums` and `BUS Drums` are one target, `BUS Drums` and `DCA
-        Drums` are two."""
+        Drums` are two. ACTIVE is part of the key: `ACTIVE ALL BUS` and
+        `ALL BUS` watch different strips."""
+        if self.active:
+            return f"ACTIVE {replace(self, active=False).key}"
         if self.bank is None:
             return self.canonical.lower()
         if self.name is not None:
@@ -429,8 +499,28 @@ def parse_target(text: str) -> Target:
     Track` -- the last says to write `BUS 2`); a position of 0 or past the
     bank's `console_facts.CAPACITY` (`CH 41`, every WING model having 40);
     a backwards range (`DCA 16-10`); `ALL` with a word that is nearly a
-    kind (`ALL AUXES`)."""
+    kind (`ALL AUXES`).
+
+    **ACTIVE**, a word anywhere in the cell and in any case,
+    is taken out and what is left is read exactly as above; the target is
+    then `active`. A cell that is only ACTIVE names no strip, and is
+    refused. ACTIVE is always the word, never part of a name: a strip
+    named "Active" is watched by its position (`active_name_note`)."""
     stripped = text.strip()
+    if _ACTIVE_RE.search(stripped):
+        rest = re.sub(r"\s+", " ", _ACTIVE_RE.sub(" ", stripped)).strip()
+        if not rest:
+            raise TargetError(
+                f"{stripped!r} says ACTIVE but names no strip -- ACTIVE goes with a strip, a "
+                "range or ALL and a kind: ACTIVE ALL BUS, ACTIVE CH 1-24, ACTIVE DCA 1-8")
+        try:
+            inner = parse_target(rest)
+        except TargetError as exc:
+            raise TargetError(
+                f"{stripped!r}: ACTIVE is read as the word that limits a condition to active "
+                f"strips (a strip named Active is watched by its position), and {rest!r} is "
+                f"left -- {exc}") from None
+        return replace(inner, active=True)
 
     m = _ALL_RE.match(stripped)
     if m:
@@ -509,12 +599,14 @@ def _check_position(bank: str, n: int, text: str) -> None:
 def canonical_target(text: str) -> str:
     """`ch10` -> `CH 10`; a name, or text that does not parse at all, is
     returned exactly as written, so normalising a file never edits a
-    name. Never raises -- for writing and display, not validation."""
+    name -- except that ACTIVE moves to the front (`kick active` ->
+    `ACTIVE kick`). Never raises -- for writing and display, not
+    validation."""
     try:
         target = parse_target(text)
     except TargetError:
         return text
-    return text if target.is_name else target.canonical
+    return text if target.is_name and not target.active else target.canonical
 
 
 def main_default_note(target: Target) -> str | None:
@@ -523,6 +615,18 @@ def main_default_note(target: Target) -> str | None:
         return None
     return (f"{target.text.strip()!r} read as MAIN 1 (the main L/R) -- write MAIN 1 to "
             f"make it explicit")
+
+
+def active_name_note(target: Target) -> str | None:
+    """The INFO for a cell where ACTIVE could also have been part of a
+    strip's name (`Active Vox`, `BUS Drums Active`): which reading was
+    taken. None for a position, range or ALL form, where it could not."""
+    if not target.active or target.is_position:
+        return None
+    named = target.name if target.is_scoped else target.text.strip()
+    return (f"ACTIVE is read as the word that limits the condition to active strips, so "
+            f"this watches the strip named {named!r} while it is active; a strip whose own "
+            "name has the word Active in it is watched by its position")
 
 
 def target_key(text: str) -> str:
@@ -749,7 +853,16 @@ def condition_address_patterns(cond: dict) -> tuple[str, ...]:
         patterns.append(r"^/bus/\d+/name$")
     else:
         patterns += _FIELD_READ_PATTERNS[field]
-    return tuple(dict.fromkeys(p.replace("{bank}", bank) for p in patterns))
+    patterns = [p.replace("{bank}", bank) for p in patterns]
+    if target.active:
+        # `audit.is_active`: what makes a strip in use, a
+        # DCA's or mute group's members, and what feeds a Main or Matrix or
+        # where it goes.
+        from atoo import watch_scope as ws
+        patterns += [ws.STRIP_NAME, ws.SOURCE_NAME, ws.STRIP_PATCH, ws.STRIP_SEND_ON,
+                     ws.STRIP_MAIN_ON, ws.STRIP_TAGS, ws.BUS_NAME, ws.BUS_SEND_ON,
+                     ws.BUS_MAIN_ON, ws.MAIN_SEND_ON, ws.OUTPUT_PATCH]
+    return tuple(dict.fromkeys(patterns))
 
 
 class WatchConditionsError(ValueError):
@@ -823,7 +936,11 @@ def row_problems(cond: object) -> dict:
             out["canonical"] = target.canonical
             out["position"] = target.is_position
             out["scoped"] = target.is_scoped
-            note = main_default_note(target)
+            if target.active:
+                # ACTIVE: the editor writes `canonical` back
+                # for it too, the word first.
+                out["active"] = True
+            note = main_default_note(target) or active_name_note(target)
             if note:
                 # Not a refusal: the cell is rewritten to `canonical` and
                 # the note shown under it, not in red.
@@ -854,9 +971,10 @@ def row_problems(cond: object) -> dict:
 # A condition in plain English.
 # --------------------------------------------------------------------------
 
-# A condition states the relationship that SHOULD hold, and the alert fires
-# when it does not, so each operator is read as its opposite: `fader_db >=
-# -40` alerts when the fader is below -40 dB.
+# `explain_condition` reads the condition in its holding form (the opposite
+# of what alerts), so each operator here is read as its opposite again:
+# `fader_db < -40` holds as `>= -40`, which alerts when the fader is below
+# -40 dB.
 _ALERT_ORDERING = {">": "at or below", "<": "at or above", ">=": "below", "<=": "above"}
 _SEVERITY_WORDS = {"error": "an error", "warning": "a warning", "info": "information"}
 _MODE_WORDS = {"pre": "pre-fader", "post": "post-fader", "group": "in group mode"}
@@ -864,16 +982,26 @@ _MODE_WORDS = {"pre": "pre-fader", "post": "post-fader", "group": "in group mode
 
 def _strip_phrase(target: Target) -> str:
     """Which strip or strips a target names, as a noun phrase."""
+    if target.active and target.bank is not None and target.name is None \
+            and target.first != target.last:
+        word = CANONICAL_KIND_WORD[target.bank]
+        return (f"any active {word}" if target.all_of_kind
+                else f"any active {word} from {target.first} to {target.last}")
+    while_active = ", while it is active," if target.active else ""
     if target.bank is None:
-        return f"the channel or aux named {target.canonical}"
+        return f"the channel or aux named {target.text.strip()}{while_active}"
     word = CANONICAL_KIND_WORD[target.bank]
     if target.name is not None:
-        return f"the {word} named {target.name}"
+        return f"the {word} named {target.name}{while_active}"
     if target.all_of_kind:
         return f"any {word}"
     if target.first != target.last:
         return f"any {word} from {target.first} to {target.last}"
-    return f"{word} {target.first}"
+    return f"{word} {target.first}{while_active}"
+
+
+#: What "active" means, said after an ACTIVE condition's sentence.
+ACTIVE_MEANING = "Active: on this show's sheets, or in use on the desk."
 
 
 def _naming_sentence(target: Target) -> str:
@@ -917,12 +1045,11 @@ def explain_condition(cond: object) -> str | None:
     problems = row_problems(cond)
     if any(key in problems for key in ("channel", "field", "value", "bus", "row")):
         return None
+    if operator_problem(cond["field"], cond.get("operator")) \
+            or cond.get("severity") not in _SEVERITY_WORDS:
+        return None
+    cond = _holding_form(cond)
     field, op, value = cond["field"], cond["operator"], cond["value"]
-    if op not in _OPERATORS or cond.get("severity") not in _SEVERITY_WORDS:
-        return None
-    if (field in _BOOLEAN_FIELDS or field in _EQUALITY_ONLY_FIELDS) \
-            and op not in _BOOL_COMPATIBLE_OPERATORS:
-        return None
     target = parse_target(cond["channel"])
     who = _strip_phrase(target)
     extra = ""
@@ -954,7 +1081,9 @@ def explain_condition(cond: object) -> str | None:
             alert = (f"has {send} set to something other than {mode}" if op == "=="
                      else f"has {send} set {mode}")
     severity = _SEVERITY_WORDS[cond["severity"]]
-    return f"Alerts as {severity} when {who} {alert}. {_naming_sentence(target)}{extra}"
+    meaning = f" {ACTIVE_MEANING}" if target.active else ""
+    return (f"Alerts as {severity} when {who} {alert}.{meaning} "
+            f"{_naming_sentence(target)}{extra}")
 
 
 def _validate_condition(cond: object, source: str, index: int) -> dict:
@@ -993,19 +1122,9 @@ def _validate_condition(cond: object, source: str, index: int) -> dict:
     if field not in _ALLOWED_FIELDS:
         _fail(source, where, f"unknown field {field!r} -- expected one of {sorted(_ALLOWED_FIELDS)}")
 
-    operator_ = cond["operator"]
-    if operator_ not in _OPERATORS:
-        _fail(source, where, f"unknown operator {operator_!r} -- expected one of {sorted(_OPERATORS)}")
-
-    if field in _BOOLEAN_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
-        _fail(source, where,
-              f"field {field!r} is a boolean and only supports "
-              f"{sorted(_BOOL_COMPATIBLE_OPERATORS)}, not {operator_!r}")
-    if field in _EQUALITY_ONLY_FIELDS and operator_ not in _BOOL_COMPATIBLE_OPERATORS:
-        _fail(source, where,
-              f"field {field!r} asks a yes/no question and only supports "
-              f"{sorted(_BOOL_COMPATIBLE_OPERATORS)} ('==' asserts it holds, '!=' asserts "
-              f"it does not), not {operator_!r}")
+    problem = operator_problem(field, cond["operator"])
+    if problem:
+        _fail(source, where, problem)
 
     value_problem = _value_problem(field, cond["value"])
     if value_problem:
@@ -1038,6 +1157,51 @@ def _validate_condition(cond: object, source: str, index: int) -> dict:
     return cond
 
 
+#: The watch.json format whose conditions state when to alert.
+#: A file without it was written when a condition stated what should hold,
+#: the opposite meaning, and is refused rather than misread.
+VERSION_KEY = "version"
+FORMAT_VERSION = 2
+
+# Paste-able, so a show written for the old meaning is converted in one go:
+# every operator inverted, dca/mute_group to `in`/`not in`, the mark added.
+_CONVERT_ONE_LINER = (
+    "python3 -c \"import json,sys; p=sys.argv[1]; d=json.load(open(p)); "
+    "n={'==':'!=','!=':'==','<':'>=','>=':'<','<=':'>','>':'<='}; "
+    "g={'==':'not in','!=':'in'}; "
+    "[c.update(operator=(g if c.get('field') in ('dca','mute_group') else n)[c['operator']]) "
+    "for c in d['watch_conditions']]; d['version']=2; "
+    "json.dump(d, open(p,'w'), indent=2)\" ")
+
+
+def new_document(conditions: list | None = None) -> dict:
+    """A watch.json document as it is written now: the format mark first."""
+    return {VERSION_KEY: FORMAT_VERSION, "watch_conditions": list(conditions or [])}
+
+
+def _version_problem(data: dict, source: str) -> str | None:
+    version = data.get(VERSION_KEY)
+    if version == FORMAT_VERSION:
+        return None
+    if version is not None:
+        return (f"{source}: \"version\" is {version!r}; this Atoo reads watch-conditions "
+                f"files of version {FORMAT_VERSION}")
+    path = source if source and not source.startswith("<") else "watch.json"
+    return (
+        f"{source}: has no \"version\": {FORMAT_VERSION}, so it was written when a condition "
+        f"stated what should hold. A condition now states when to alert: it fires when it "
+        f"is true. Invert each condition: == and != swap, < becomes >=, >= becomes <, <= "
+        f"becomes >, > becomes <=; on dca and mute_group, == becomes \"not in\" and != becomes "
+        f"\"in\". Then add \"version\": {FORMAT_VERSION} at the top. This does all of it to the "
+        f"file in place:\n  {_CONVERT_ONE_LINER}{_shell_quote(path)}")
+
+
+def _shell_quote(path: str) -> str:
+    import shlex
+
+    return shlex.quote(path)
+
+
 def parse_watch_conditions(text: str, source: str = "<string>") -> list[dict]:
     """Parse and validate a watch-conditions JSON document's text. Raises
     `WatchConditionsError` on the first problem found -- bad JSON, no
@@ -1055,6 +1219,9 @@ def parse_watch_conditions(text: str, source: str = "<string>") -> list[dict]:
     conditions = data["watch_conditions"]
     if not isinstance(conditions, list):
         raise WatchConditionsError(f"{source}: \"watch_conditions\" must be a list")
+    problem = _version_problem(data, source)
+    if problem:
+        raise WatchConditionsError(problem)
 
     validated: list[dict] = []
     seen_ids: set[str] = set()
@@ -1180,11 +1347,25 @@ def covered_strips(channel: str, plan: dict | None) -> frozenset:
     one. A position, range or `ALL` form is its own strips; a name is looked
     up in `plan` (case-insensitively, within its kind). A name the plan does
     not settle -- absent from it, or on two strips of the kind -- stays a
-    `("name", text)` pair, which equals only the same name."""
+    `("name", text)` pair, which equals only the same name. An ACTIVE
+    target's pairs end in `"active"`, `("bus", 5, "active")`:
+    it watches the strip only while it is active, so it is never the same
+    condition as the one without the word (`_plain` compares them as
+    strips, for the overlap caution)."""
     try:
         target = parse_target(channel)
     except TargetError:
         return frozenset({("name", channel.strip().lower())})
+    covered = _covered(target, plan)
+    return frozenset(pair + ("active",) for pair in covered) if target.active else covered
+
+
+def _plain(strips: frozenset) -> frozenset:
+    """`covered_strips` as strips alone, ACTIVE or not."""
+    return frozenset(pair[:2] for pair in strips)
+
+
+def _covered(target: Target, plan: dict | None) -> frozenset:
     if target.is_position:
         return frozenset((target.bank, n) for n in range(target.first, target.last + 1))
     name = (target.name if target.is_scoped else target.text).strip().lower()
@@ -1221,12 +1402,16 @@ def _bus_key(cond: dict) -> str:
 
 
 def _meaning_key(cond: dict) -> tuple:
-    value = cond["value"]
-    if isinstance(value, str):
+    value, operator_ = cond["value"], cond["operator"]
+    if isinstance(value, bool):
+        # `!= false` alerts exactly when `== true` does.
+        if operator_ == "!=":
+            operator_, value = "==", not value
+    elif isinstance(value, str):
         value = value.strip().lower()
-    elif not isinstance(value, bool):
+    else:
         value = float(value)
-    return (cond["field"], _bus_key(cond), cond["operator"], value)
+    return (cond["field"], _bus_key(cond), operator_, value)
 
 
 def merge_drafted_conditions(existing: dict | None, drafted: list[dict],
@@ -1305,7 +1490,7 @@ def merge_drafted_conditions(existing: dict | None, drafted: list[dict],
             duplicates.append((cond_id, twin))
             continue
         rival = next((i for i, s in by_field.get((cond["field"], _bus_key(cond)), [])
-                      if s & strips), None)
+                      if _plain(s) & _plain(strips)), None)
         if rival is not None:
             overlaps.append((cond_id, rival))
         entry = dict(cond)
@@ -1321,7 +1506,8 @@ def merge_drafted_conditions(existing: dict | None, drafted: list[dict],
         by_field.setdefault((cond["field"], _bus_key(cond)), []).append((cond_id, strips))
         added.append(cond_id)
 
-    document = dict(existing)
+    document = {VERSION_KEY: FORMAT_VERSION, **dict(existing)}
+    document[VERSION_KEY] = FORMAT_VERSION
     document["watch_conditions"] = conditions
     # Union, never a replacement: an id drafted by an older build and since
     # deleted has to stay recorded or the deletion stops sticking.
@@ -1384,7 +1570,8 @@ def _satisfied(
         return _OPERATORS[op_symbol](live, expected)
 
     if field in _GROUP_FIELDS:
-        # `==` asserts membership, `!=` asserts non-membership. `strip_group_membership` is
+        # In the holding form (`_holding_form`), `==` is membership and `!=` is not: `not in`
+        # alerts when the strip is not a member, so it holds as `==`. `strip_group_membership` is
         # `audit.diff_against_plan`'s own resolver, so an unknown or ambiguous group name
         # is skipped here
         # exactly as it is there.
@@ -1727,8 +1914,11 @@ def _resolve_scoped(state: ConsoleState, target: Target, cond: dict) -> _Resolut
 
 
 def _make_check(cond: dict) -> Callable[[ConsoleState], list[Finding]]:
-    channel_name = cond["channel"]
-    target = parse_target(channel_name)
+    # Everything below judges the relationship that keeps the alert quiet.
+    cond = _holding_form(cond)
+    target = parse_target(cond["channel"])
+    # The name to resolve, ACTIVE taken out of it (`Target.text`).
+    channel_name = cond["channel"] if not target.active else target.text
     field = cond["field"]
     op_symbol = cond["operator"]
     expected = cond["value"]
@@ -1768,24 +1958,37 @@ def _make_check(cond: dict) -> Callable[[ConsoleState], list[Finding]]:
     # session's first reading -- and kept for every call after it.
     resolution: _Resolution | None = None
 
+    def watched(state: ConsoleState, base: str) -> bool:
+        # ACTIVE: only a strip active at this pass is checked,
+        # so one that becomes active mid-show is picked up at the next.
+        return not target.active or is_active(state, base)
+
+    active_note = active_name_note(target)
+
     def check(state: ConsoleState) -> list[Finding]:
         nonlocal resolution
+        notes: list[Finding] = []
+        if active_note:
+            notes.append(watch_note(Diagnostic.audit(
+                rule_id, Severity.INFO, "watch", description,
+                f"{cond['channel'].strip()!r}: {active_note} (condition {cond['id']!r}).", (),
+            ), "Read as written", f"{cond['channel'].strip()} \u2192 {target.canonical}"))
         if target.is_scoped:
             if resolution is None:
                 resolution = _resolve_scoped(state, target, cond)
-            findings = list(resolution.notes)
-            if resolution.base is not None:
+            findings = notes + list(resolution.notes)
+            if resolution.base is not None and watched(state, resolution.base):
                 findings += finding_for(state, resolution.base,
                                         _position_label(state, resolution.base))
             return findings
 
         if target.is_name:
             base = _resolve_channel_base(state, channel_name)
-            if base is None:
+            if base is None or not watched(state, base):
                 # Zero or ambiguous matches -- a different, not-yet-built
                 # check (see module docstring); not evidence of a violation.
-                return []
-            return finding_for(state, base, _position_label(state, base))
+                return notes
+            return notes + finding_for(state, base, _position_label(state, base))
 
         findings: list[Finding] = []
         note = main_default_note(target)
@@ -1809,7 +2012,8 @@ def _make_check(cond: dict) -> Callable[[ConsoleState], list[Finding]]:
                 f"{target.canonical} is the position, not the strip named {state.name(base)!r}"))
         # One finding per violating strip, each citing its own position.
         for base in target.bases():
-            findings += finding_for(state, base, _position_label(state, base))
+            if watched(state, base):
+                findings += finding_for(state, base, _position_label(state, base))
         return findings
 
     return check

@@ -364,9 +364,9 @@ def test_audit_with_plan_runs_conventions_diff(tmp_path, capsys):
 def _scope_case(tmp_path):
     """A desk with one planned channel and one strip nobody planned, both
     routed and unmuted with the fader on the floor. The unplanned strip
-    trips a convention rule (CH001, in no DCA) and a hazard (L002,
-    routed and silent) -- so one finding about it must go and the other
-    must stay."""
+    trips a convention rule (E003, an effect inserted and switched off)
+    and a hazard (L002, routed and silent) -- so one finding about it must
+    go and the other must stay."""
     state_file = tmp_path / "state.json"
     # Routed via a bus send rather than a Main, so the fixture trips only
     # the two rules it is about -- an unpatched Main would add an
@@ -376,6 +376,7 @@ def _scope_case(tmp_path):
         "/ch/1/tags": "#D1", "/dca/1/name": "Drums",
         "/ch/30/name": "Somebody Elses", "/ch/30/mute": 0, "/ch/30/fdr": -144.0,
         "/ch/30/send/1/on": 1,
+        "/ch/30/preins/ins": "FX1", "/ch/30/preins/on": 0, "/fx/1/mdl": "HALL",
     }))
     plan_file = tmp_path / "plan.json"
     plan_file.write_text(json.dumps({
@@ -399,11 +400,11 @@ def test_audit_with_plan_withholds_out_of_scope_findings_and_says_so(tmp_path, c
 
     # The convention finding about the unplanned strip is gone as a
     # finding -- its rendered block is not there...
-    assert "[INFO] CH001" not in out
-    assert "belongs to no DCA group" not in out
+    assert "[INFO] E003" not in out
+    assert "but the insert is switched off" not in out
     # ...but never silently: it is still named, counted and explained.
     assert "[INFO] S001" in out
-    assert "1 CH001 (1 about an object the plan never mentions)" in out
+    assert "1 E003 (1 about an object the plan never mentions)" in out
 
 
 def test_audit_with_plan_keeps_a_hazard_about_an_unplanned_strip(tmp_path, capsys):
@@ -429,7 +430,7 @@ def test_audit_without_a_plan_withholds_nothing(tmp_path, capsys):
     assert main(["audit", "--state", str(state_file)]) == 0
     out = capsys.readouterr().out
 
-    assert "CH001" in out
+    assert "E003" in out
     assert "L002" in out
     assert "S001" not in out
 
@@ -457,12 +458,12 @@ def test_watch_with_watch_conditions_reports_a_finding_in_baseline(tmp_path, cap
     # to fire, appearing in the baseline alongside built-in rule findings (R005, C001, ...).
     conditions_file = tmp_path / "conditions.json"
     conditions_file.write_text(json.dumps({
-        "watch_conditions": [{
+        "version": 2, "watch_conditions": [{
             "id": "kick-must-be-muted",
             "description": "Kick must be muted (test fixture)",
             "channel": "Kick",
             "field": "muted",
-            "operator": "==",
+            "operator": "!=",
             "value": True,
             "severity": "warning",
         }]
@@ -502,11 +503,11 @@ def test_watch_with_bad_watch_conditions_path_exits_1_cleanly(tmp_path, capsys):
 def test_watch_with_invalid_watch_conditions_exits_1_cleanly(tmp_path, capsys):
     conditions_file = tmp_path / "bad.json"
     conditions_file.write_text(json.dumps({
-        "watch_conditions": [{
+        "version": 2, "watch_conditions": [{
             "id": "bad", "description": "bad", "channel": "Kick",
             # `dca` stood in for "unknown field" here until an earlier change made
             # it a real one; `gain` is still genuinely unknown.
-            "field": "gain", "operator": "==", "value": True, "severity": "warning",
+            "field": "gain", "operator": "!=", "value": True, "severity": "warning",
         }]
     }))
     exit_code = main([
@@ -541,12 +542,12 @@ def _home_watch_conditions_config(tmp_path, monkeypatch, default_watch_condition
 def test_watch_uses_config_default_watch_conditions_when_flag_omitted(tmp_path, monkeypatch, capsys):
     house_conditions = tmp_path / "house.watch.json"
     house_conditions.write_text(json.dumps({
-        "watch_conditions": [{
+        "version": 2, "watch_conditions": [{
             "id": "kick-must-be-muted",
             "description": "Kick must be muted (test fixture)",
             "channel": "Kick",
             "field": "muted",
-            "operator": "==",
+            "operator": "!=",
             "value": True,
             "severity": "warning",
         }]
@@ -573,12 +574,12 @@ def test_watch_explicit_flag_wins_over_config_default(tmp_path, monkeypatch, cap
 
     conditions_file = tmp_path / "explicit.watch.json"
     conditions_file.write_text(json.dumps({
-        "watch_conditions": [{
+        "version": 2, "watch_conditions": [{
             "id": "kick-must-be-muted",
             "description": "Kick must be muted (test fixture)",
             "channel": "Kick",
             "field": "muted",
-            "operator": "==",
+            "operator": "!=",
             "value": True,
             "severity": "warning",
         }]
@@ -651,7 +652,7 @@ def test_ui_watch_conditions_flag_with_bad_path_fails_fast(stub_ui_server, tmp_p
 def test_ui_uses_config_default_watch_conditions_when_flag_omitted(tmp_path, monkeypatch, stub_ui_server, capsys):
     calls = stub_ui_server
     house_conditions = tmp_path / "house.watch.json"
-    house_conditions.write_text(json.dumps({"watch_conditions": []}))
+    house_conditions.write_text(json.dumps({"version": 2, "watch_conditions": []}))
     _home_watch_conditions_config(tmp_path, monkeypatch, house_conditions)
 
     exit_code = main(["ui", "--port", "0"])
@@ -740,7 +741,7 @@ def test_ui_on_an_unassignable_host_does_not_blame_the_port(capsys):
 def test_ui_announces_the_port_it_got_not_the_one_it_asked_for(stub_ui_server, capsys):
     """`--port 0` means "you pick". Printing the request back gives
     http://127.0.0.1:0, which nothing can open."""
-    assert main(["ui", "--port", "0"]) == 0
+    assert main(["ui", "--port", "0", "--no-browser"]) == 0
     out = capsys.readouterr().out
     assert "http://127.0.0.1:0 " not in out
     url = [line for line in out.splitlines() if line.startswith("Atoo: http")]
@@ -788,11 +789,11 @@ def _bundle(tmp_path, *, conventions=True, stale_expectations=False, watch=False
         (d / "expectations.toml").write_text("[plan]\nchannels = 9999\n")
     if watch:
         (d / "watch.json").write_text(json.dumps({
-            "watch_conditions": [{
+            "version": 2, "watch_conditions": [{
                 "id": "from-the-bundle",
                 "description": "Kick must be muted (bundle fixture)",
                 "channel": "Kick", "field": "muted",
-                "operator": "==", "value": True, "severity": "warning",
+                "operator": "!=", "value": True, "severity": "warning",
             }]
         }))
     return d
@@ -1382,21 +1383,41 @@ def test_a_rebuild_moves_the_old_plan_aside_before_it_starts(tmp_path, monkeypat
     """"If we rebuild, we need to clear the current
     plan ... because none of that is still current." A build that then
     fails leaves no out-of-date plan.json for Apply to offer."""
-    from atoo.ai_provider import AIProviderError
+    from atoo.ai_provider import FakeProvider
 
     d = _bundle(tmp_path)
     (d / "plan.json").write_text('{"channels": [], "marker": "old"}')
-
-    def no_model():
-        raise AIProviderError("no model here")
-
-    monkeypatch.setattr("atoo.cli.provider_from_env", no_model)
+    # A model is set up, and its call fails: the build had started.
+    monkeypatch.setattr("atoo.cli.provider_from_env", lambda: FakeProvider(response=None))
     code = main(["build", "--console-model", "wing-compact", "--show", str(d),
                  "--conventions", str(HOUSE)])
     assert code == 1
     assert not (d / "plan.json").exists()
     assert json.loads((d / "plan.previous.json").read_text())["marker"] == "old"
     assert "plan.json moved aside to plan.previous.json" in capsys.readouterr().err
+
+
+def test_with_no_model_set_up_a_build_moves_nothing_and_says_so(tmp_path, monkeypatch, capsys):
+    """A build is a model call: with none set up it cannot start, and it says
+    so before plan.json moves -- Apply still has the plan it had."""
+    from atoo.ai_provider import AIProviderError
+
+    d = _bundle(tmp_path)
+    (d / "plan.json").write_text('{"channels": [], "marker": "old"}')
+
+    def no_model():
+        raise AIProviderError("a build needs a model: no API key")
+
+    monkeypatch.setattr("atoo.cli.provider_from_env", no_model)
+    code = main(["build", "--console-model", "wing-compact", "--show", str(d),
+                 "--conventions", str(HOUSE)])
+    assert code == 1
+    assert json.loads((d / "plan.json").read_text())["marker"] == "old"
+    assert not (d / "plan.previous.json").exists()
+    err = capsys.readouterr().err
+    assert ("build failed: a build needs a model: no API key. See 'Setting up an AI provider' in "
+            "the user guide. Nothing was changed: plan.json is as it was.") in err
+    assert "moved aside" not in err
 
 
 def test_a_build_refused_before_it_starts_leaves_the_plan_alone(tmp_path, capsys):

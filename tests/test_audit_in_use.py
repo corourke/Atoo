@@ -811,7 +811,7 @@ def test_an_initialized_console_produces_exactly_0_findings():
 def test_an_initialized_full_size_console_produces_exactly_0_findings():
     """The same headline for the second model we have measured. Before
     `FACTORY_INPUT_PATCHES["wing-full"]` existed this capture scored 4
-    INFO findings (CH001 and L002 on `/aux/1` and `/aux/2`), the
+    INFO findings (L002, and a DCA rule removed since, on `/aux/1` and `/aux/2`), the
     identity fallback not knowing the Full ships the same two media auxes
     the Compact does."""
     findings = run_audit(_console_state_from_snap(INITIALIZED_FULL, "wing-full"))
@@ -830,7 +830,7 @@ def test_an_initialized_console_raises_no_error_and_no_warning():
 
 
 def test_the_two_media_auxes_are_what_the_zero_is_made_of():
-    """The four findings that went, and why they went.
+    """The findings that went, and why they went.
 
     `/aux/1` ships patched from USB 1 and `/aux/2` from PLAY 1. Told this
     is a Compact, the audit knows those are the desk's own doing and says
@@ -847,8 +847,7 @@ def test_the_two_media_auxes_are_what_the_zero_is_made_of():
     assert [f.rule_id for f in run_audit(known)] == []
 
     blind = run_audit(unknown)
-    assert sorted(f.rule_id for f in blind) == [
-        "CH001", "CH001", "L002", "L002"]
+    assert sorted(f.rule_id for f in blind) == ["L002", "L002"]
     assert {a.split("/fdr")[0] for f in blind for a in f.addresses} == {"/aux/1", "/aux/2"}
 
 
@@ -902,14 +901,13 @@ def test_the_channel_a_human_named_by_hand_is_in_use():
 
 
 def test_the_audit_now_has_something_to_say_about_that_channel():
-    """30 findings on this board before an earlier change and 32 after, and the two new
-    ones are both about `/ch/20`: it is in use and in no DCA (CH001),
-    and it is unmuted and in use with its fader at the floor (L002).
-    Neither is a regression to paper over -- they are the rules finally
-    seeing a strip that was invisible to them. Both name it 'Podium',
-    which is only readable because the name came off the socket."""
+    """The finding an earlier change added is about `/ch/20`: it is unmuted and in use
+    with its fader at the floor (L002). It is not a regression to paper
+    over -- it is the rule finally seeing a strip that was invisible to it.
+    It names it 'Podium', which is only readable because the name came off
+    the socket."""
     findings = [f for f in run_audit(_podium_console_state()) if "CH 20" in f.detail]
-    assert sorted(f.rule_id for f in findings) == ["CH001", "L002"]
+    assert sorted(f.rule_id for f in findings) == ["L002"]
     assert all('"Podium"' in f.detail for f in findings)
 
 
@@ -1117,6 +1115,9 @@ def test_the_live_path_never_asks_for_a_bus_send_mode():
     on AES50, so no AES50 output is asked.
     **6,167 + 26 + 26** since each local socket's own mute (C007).
     **6,195 + 26 + 26** since the width of each bus, Main and Matrix.
+    **6,197 + 26 + 26**: what is fitted in each
+    expansion bay. This capture answers neither, so no bay's outputs are
+    asked.
 
     **Counted as asked-or-deliberately-not.** The capture
     this desk is built from predates the insert points and FX slots, so
@@ -1127,7 +1128,7 @@ def test_the_live_path_never_asks_for_a_bus_send_mode():
     desk = _initialized_desk()
     state = read_console_state(desk, **_COMPACT_READ)
     not_asked = sum(len(v) for v in state.unasked_families.values())
-    assert len(set(desk.asked)) + not_asked == 6195 + 26 + 26
+    assert len(set(desk.asked)) + not_asked == 6197 + 26 + 26
     assert "/bus/1/send/MX1/mode" not in desk.asked
     assert "/main/4/send/MX8/pon" not in desk.asked
     assert "/bus/1/send/MX1/on" in desk.asked
@@ -1157,5 +1158,4 @@ def test_a_live_read_of_the_board_somebody_named_by_hand_sees_the_name():
     assert state.name("/ch/20") == ""
     assert state.text("/io/in/LCL/20/name") == "Podium"
     assert is_in_use(state, "/ch/20")
-    assert [f.rule_id for f in run_audit(state) if '"Podium"' in f.detail] == [
-        "CH001", "L002"]
+    assert [f.rule_id for f in run_audit(state) if '"Podium"' in f.detail] == ["L002"]

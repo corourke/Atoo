@@ -169,6 +169,17 @@ def _fed_by_desc(fed_by: dict | None) -> str:
     return f"bus {fed_by['name']}"
 
 
+def _matrix_feeds_desc(plan: dict, name: str) -> str:
+    """Its `fed_by` and every `matrix_sends` naming it,
+    or `?` when nothing feeds it."""
+    fed_by = (plan.get("outputs") or {}).get(name, {}).get("fed_by")
+    feeds = [_fed_by_desc(fed_by)] if fed_by else []
+    for kind, key, mode in plan_compat.matrix_feeds(plan).get(name, [])[1 if fed_by else 0:]:
+        who = {"main": str(key), "bus": f"bus {key}", "channel": str(key)}[kind]
+        feeds.append(f"{who} ({mode})" if mode else who)
+    return ", ".join(feeds) or "?"
+
+
 def render_plan(plan: dict, warnings: list) -> str:
     # Where the texts came from is in `meta` (the conventions are a
     # stack, not one file; the input list has its own record). A plan
@@ -237,10 +248,21 @@ def render_plan(plan: dict, warnings: list) -> str:
             sockets = plan_compat.output_patches(o)
             lines.append(f"  {name:<20} {_sockets_desc(sockets)}")
             if o.get("kind") == "matrix":
-                lines.append(f"                       Fed by: {_fed_by_desc(o.get('fed_by'))}")
+                lines.append(f"                       Fed by: {_matrix_feeds_desc(plan, name)}")
             out_proc = _strip_processing_desc(o.get("processing"))
             if out_proc:
                 lines.append(f"                       Processing: {out_proc}")
+
+    # The output sockets fed straight from a source (`direct_outputs`): the
+    # splits and recording feeds, in runs, in the desk's words.
+    if plan.get("direct_outputs"):
+        from atoo import outputs_sheet
+
+        direct = outputs_sheet.runs(plan)
+        count = sum(n for _out, _src, n in direct)
+        lines += ["", f"DIRECT OUTPUTS -- {count} socket(s) fed straight from a source"]
+        out_width = max(len(out) for out, _src, _n in direct)
+        lines += [f"  {out:<{out_width}}  from {src}" for out, src, _n in direct]
 
     # `warnings` is compile_plan()'s own bare-string list, or (on the
     # generate path) plan["notes"]'s tagged {text, source} objects -- note_line() renders either, prefixing the source tag when

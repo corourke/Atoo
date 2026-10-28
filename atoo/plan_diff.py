@@ -273,7 +273,7 @@ def _slot_label(strip: _Strip) -> str:
 # --------------------------------------------------------------------------
 
 _FIELD_WORDS = {
-    "name": "name", "color": "colour", "col": "colour", "icon": "icon",
+    "name": "name", "color": "color", "col": "color", "icon": "icon",
     "patch": "patch", "alt_patch": "alternate patch", "fader.fader_db": "fader",
     "fader.muted": "mute", "processing.hpf_hz": "HPF", "processing.gain_db": "gain",
     "processing.trim_db": "trim", "processing.preset": "preset",

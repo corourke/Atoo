@@ -28,14 +28,14 @@ from atoo.watch_conditions import build_watch_rules, parse_watch_conditions
 
 def _cond(**kw):
     base = {"id": "band-open", "description": "The Band DCA stays open",
-            "channel": "DCA Band", "field": "fader_db", "operator": ">=", "value": -20,
+            "channel": "DCA Band", "field": "fader_db", "operator": "<", "value": -20,
             "severity": "warning"}
     base.update(kw)
     return base
 
 
 def _rules(*conds):
-    return build_watch_rules(parse_watch_conditions(json.dumps({"watch_conditions": list(conds)})))
+    return build_watch_rules(parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": list(conds)})))
 
 
 def _state(dca_fdr: float, **extra) -> ConsoleState:
@@ -74,7 +74,7 @@ def test_a_scoped_name_that_matches_nothing_is_a_warning_note_naming_the_conditi
 
 
 def test_main_alone_and_the_name_refresh_note_are_notes():
-    [rule] = _rules(_cond(id="pa", channel="Main", field="muted", operator="==", value=False))
+    [rule] = _rules(_cond(id="pa", channel="Main", field="muted", operator="!=", value=False))
     notes = [f for f in rule.check(_state(0.0)) if isinstance(f, WatchNote)]
     assert [n.summary for n in notes] == ["Main → MAIN 1"]
     refresh = name_refresh_note(5)

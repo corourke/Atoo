@@ -273,6 +273,24 @@ def findings_from_plan(plan: dict, layers: list[Layer]) -> list[Diagnostic]:
     return out
 
 
+def check_critic_omission(finding: Diagnostic, quotes: list[str],
+                          layers: list[Layer]) -> Diagnostic:
+    """One critic `omission` finding, its quote checked.
+
+    An omission that quotes a line of the conventions or instructions, every
+    quote found, gets `line` set to that line: the build sends it to the
+    fix-up round (`cli._build`). Anything else -- an input-list row the plan
+    left out, a quote not in the text, no quote -- is returned as it came,
+    reported and never fed back, so only a line the engineer wrote can steer
+    the build."""
+    quotes = [str(q) for q in quotes or [] if str(q).strip()]
+    found, missing = check_quotes(quotes, layers)
+    if not quotes or missing:
+        return finding
+    return replace(finding, line=_line(found[0], quotes[0]),
+                   message=f"{finding.message} -- quoting {_quoted(quotes)}")
+
+
 def check_critic_finding(finding: Diagnostic, quotes: list[str],
                          layers: list[Layer]) -> Diagnostic:
     """One critic `conventions` finding, quote-checked.

@@ -274,7 +274,7 @@ def _path_requests(home):
     ("127.0.0.1", "evil.example:8420"),        # DNS rebinding
 ])
 def test_no_endpoint_opens_a_path_for_another_machine(home, client_host, host):
-    (home / "secret.json").write_text('{"watch_conditions": [], "channels": []}')
+    (home / "secret.json").write_text('{"version": 2, "watch_conditions": [], "channels": []}')
     app = create_app()
     with fastapi_testclient.TestClient(app, client=(client_host, 5000),
                                        headers={"host": host}) as c:
@@ -292,7 +292,7 @@ def test_no_endpoint_opens_a_path_for_another_machine(home, client_host, host):
 
 
 def test_every_path_endpoint_still_answers_this_machine(home):
-    (home / "secret.json").write_text('{"watch_conditions": []}')
+    (home / "secret.json").write_text('{"version": 2, "watch_conditions": []}')
     with _local(create_app()) as c:
         for url, body in _path_requests(home):
             assert c.post(url, json=body).status_code != 403, url
@@ -301,7 +301,7 @@ def test_every_path_endpoint_still_answers_this_machine(home):
 
 def test_a_phone_watching_may_send_back_the_watch_file_the_server_holds(home):
     held = home / "watch.json"
-    held.write_text('{"watch_conditions": []}')
+    held.write_text('{"version": 2, "watch_conditions": []}')
     other = home / "other.json"
     app = create_app(initial_watch_conditions_path=str(held))
     with fastapi_testclient.TestClient(app, client=("203.0.113.20", 5000),

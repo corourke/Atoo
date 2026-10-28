@@ -776,7 +776,10 @@ OUTPUT_SCHEMA = {
 # index decision" -- four unrelated authors merged into one flat list,
 # with very different reactions warranted for each. Every `notes` entry is
 # now one of these, tagged with which wrote it.
-NOTE_SOURCES = ("model", "extraction", "repair", "allocation")
+# "capture": what `atoo capture` decided or could not hold
+# when it wrote a plan from a desk. "sheets": what a Save in Build's step 04
+# decided when it carried a sheet's cells into the plan (`atoo/sheets.py`).
+NOTE_SOURCES = ("model", "extraction", "repair", "allocation", "capture", "sheets")
 
 NOTE_SCHEMA = {
     "type": "object",
@@ -922,6 +925,49 @@ PLAN_CHANNEL_SCHEMA = copy.deepcopy(CHANNEL_SCHEMA)
 PLAN_CHANNEL_SCHEMA["properties"]["processing"]["properties"]["preset_values"] = \
     _preset_values_schema()
 
+# Where a captured plan found an object's name on the desk --
+# `socket` (the strip shows its source's name), `strip` (its own) or `none`
+# (no name; the plan's is a placeholder such as "Bus 5"). `apply` writes the
+# name only there, so a capture applied back to its desk changes nothing.
+# Only `atoo capture` writes it, so it is in the plan's schema and not the
+# model's, like `preset_values`.
+NAME_ON = {"type": "string", "enum": ["socket", "strip", "none"]}
+PLAN_CHANNEL_SCHEMA["properties"]["name_on"] = NAME_ON
+
+
+def _sends_schema(target: str) -> dict:
+    """A list of sends to `target` objects (`matrix` or `bus`), each naming its
+    target by the plan's key for it, with the tap and level a channel's
+    `bus_sends` carry. Both nullable: null leaves it to `decide`/apply as a
+    bus send's does, and on a captured plan to the desk."""
+    return {"type": "array", "items": {
+        "type": "object",
+        "properties": {
+            target: {"type": "string", "minLength": 1},
+            "mode": {"type": ["string", "null"], "enum": [*facts.PLAN_SEND_MODES, None]},
+            "level_db": _DB,
+        },
+        "required": [target],
+        "additionalProperties": False,
+    }}
+
+
+# The routes a desk has that a plan could not hold, which the
+# maintainer asked for in the desk sheets. A send lives on its SOURCE, as on the
+# desk (`/ch/{n}/send/MX{m}`, `/bus/{n}/send/{b}`, `/main/{n}/send/MX{m}`):
+#
+#   channel  matrix_sends  -> a Matrix, by its `outputs` key
+#   bus      bus_sends     -> another bus, by its `busses` key
+#   bus      matrix_sends  -> a Matrix
+#   Main     matrix_sends  -> a Matrix (an `outputs` entry of kind main)
+#
+# So a Matrix fed by several sources is simply named by several of them, and
+# its feeds are its `fed_by` plus every `matrix_sends` naming it
+# (`plan_compat.matrix_feeds`). `fed_by` stays for the one-source Matrix a
+# build writes. Plan schema only: a build from conventions does not produce
+# these yet, so the model's schema does not offer them.
+PLAN_CHANNEL_SCHEMA["properties"]["matrix_sends"] = _sends_schema("matrix")
+
 
 def _bus_preset_values_schema() -> dict:
     """`busses[X].preset_values`: a bus preset expanded into
@@ -956,6 +1002,61 @@ def _bus_preset_values_schema() -> dict:
 # same reason PLAN_CHANNEL_SCHEMA exists.
 PLAN_BUS_SCHEMA = copy.deepcopy(BUS_SCHEMA)
 PLAN_BUS_SCHEMA["properties"]["preset_values"] = _bus_preset_values_schema()
+PLAN_BUS_SCHEMA["properties"]["name_on"] = NAME_ON
+PLAN_BUS_SCHEMA["properties"]["bus_sends"] = _sends_schema("bus")
+PLAN_BUS_SCHEMA["properties"]["matrix_sends"] = _sends_schema("matrix")
+PLAN_OUTPUT_SCHEMA = copy.deepcopy(OUTPUT_SCHEMA)
+PLAN_OUTPUT_SCHEMA["properties"]["name_on"] = NAME_ON
+PLAN_OUTPUT_SCHEMA["properties"]["matrix_sends"] = _sends_schema("matrix")
+
+# The bus sheet's `role`: what a bus, Main or Matrix is FOR, in
+# the engineer's words from a fixed list, so a rule can rely on it. Written
+# from `busses.csv` by a Save in Build's step 04 (`atoo/sheets.py`), and by
+# `atoo capture` for an effect return. Absent or null is "not said".
+BUS_ROLES = ("mix", "parallel", "fx", "monitor", "feed", "other")
+OUTPUT_ROLES = ("pa", "fill", "delay", "monitor", "feed", "record", "other")
+PLAN_BUS_SCHEMA["properties"]["role"] = {"type": ["string", "null"],
+                                         "enum": [*BUS_ROLES, None]}
+PLAN_OUTPUT_SCHEMA["properties"]["role"] = {"type": ["string", "null"],
+                                            "enum": [*OUTPUT_ROLES, None]}
+# A Main's or a Matrix's own width (`/main/{n}/busmono`, `/mtx/{n}/busmono`),
+# as a bus's `mono`. Only a capture or the bus sheet states it; null or absent
+# leaves the desk's.
+PLAN_OUTPUT_SCHEMA["properties"]["mono"] = {"type": ["boolean", "null"]}
+# A Main's or Matrix's own DCAs and mute groups (`/main|mtx/{n}/tags`),
+# as a bus's. Absent: the plan states none, and Apply leaves the desk's.
+PLAN_OUTPUT_SCHEMA["properties"]["dca"] = {"type": "array", "items": {"type": "string"}}
+PLAN_OUTPUT_SCHEMA["properties"]["mute_group"] = {"type": "array", "items": {"type": "string"}}
+# A Main's or Matrix's own colour (`/main|mtx/{n}/col`, 1-18), as a
+# bus's `col`. Stated by a capture; null or absent leaves the desk's.
+PLAN_OUTPUT_SCHEMA["properties"]["col"] = {"type": ["integer", "null"], "minimum": 1, "maximum": 18}
+
+# The effects a strip inserts, as the plan states them for the
+# strip itself -- a capture's (what the desk had), or the bus sheet's `fx`
+# cell. One entry per insert point; a bus preset's insert at a point the
+# strip's own `inserts` also names loses to it (`bus_presets.strip_inserts`).
+# `model` null takes the insert off (`ins` NONE). `engine` is the desk's FX
+# engine: the one a capture found it in, or one `fx_engines.allocate` gave a
+# model the sheet added. `parameters` are the engine's own leaves (`dcy`,
+# `pdel`), as read; empty leaves them at what the desk gives the model.
+# Absent: the plan states no insert of its own, and Apply leaves the desk's.
+STRIP_INSERTS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "point": {"type": "string", "enum": ["preins", "postins"]},
+            "model": {"type": ["string", "null"]},
+            "engine": {"type": ["integer", "null"]},
+            "parameters": {"type": "object",
+                           "additionalProperties": {"type": ["number", "string", "boolean"]}},
+        },
+        "required": ["point", "model"],
+        "additionalProperties": False,
+    },
+}
+for _schema in (PLAN_CHANNEL_SCHEMA, PLAN_BUS_SCHEMA, PLAN_OUTPUT_SCHEMA):
+    _schema["properties"]["inserts"] = copy.deepcopy(STRIP_INSERTS_SCHEMA)
 
 # What ANY valid plan looks like, whichever path built it. The
 # deterministic compiler emits no `unassigned_inputs` or `notes`, so they
@@ -971,7 +1072,7 @@ PLAN_SCHEMA = {
         "conventions_file": {"type": "string"},
         "input_list": {"type": "string"},
         "busses": {"type": "object", "additionalProperties": PLAN_BUS_SCHEMA},
-        "outputs": {"type": "object", "additionalProperties": OUTPUT_SCHEMA},
+        "outputs": {"type": "object", "additionalProperties": PLAN_OUTPUT_SCHEMA},
         # A row left off the desk on purpose. A bare name in every plan
         # built before 2026-09-29; since then `{input, quote, from}`: the
         # words that said to leave it out, and whose they were
@@ -998,15 +1099,34 @@ PLAN_SCHEMA = {
         # with no disjoint stereo pair has nothing to put here, which is
         # almost every plan.
         #
-        # **`apply` does not write these yet**, so a plan carrying them is
-        # asking for USR slots that must already be set up on the desk.
-        # `verify_plan` says that out loud, once per plan
-        # (`user-source.not-written-by-apply`), rather than letting a
-        # section apply silently ignores look like a section it honoured.
-        # For the same reason `schema_section()` below does NOT tell the
-        # generator this field exists: a model emitting it would produce a
-        # plan that verifies and half-applies.
+        # `apply` writes each slot ahead of the channel or output that reads
+        # it (`apply.user_source_targets`), and `atoo capture`
+        # records the slots a channel or an output reads. `schema_section()`
+        # below does not offer it to the generator yet: a model names
+        # strips, not their numbers, so a processed feed waits on its own
+        # reply shape.
         "user_sources": {"type": "array", "items": USER_SOURCE_SCHEMA},
+        # Output sockets an `atoo capture` found carrying an
+        # input (or a monitor or send feed) straight from the routing, not a
+        # bus, Main or Matrix -- a recording or Dante split. Recorded so the
+        # plan declares them (CV009 reports one only if it changes, and
+        # `apply --clean-output-sockets` keeps it), and Apply writes them as
+        # output patches; a built plan has none. `source` is
+        # the desk's own `/io/out/{group}/{socket}/grp` and `in`.
+        "direct_outputs": {"type": "array", "items": {
+            "type": "object",
+            "properties": {
+                "group": {"type": "string", "enum": sorted(facts.OUTPUT_SOCKETS)},
+                "socket": {"type": "integer", "minimum": 1},
+                "source": {"type": "object",
+                           "properties": {"group": {"type": "string", "minLength": 1},
+                                          "index": {"type": "integer"}},
+                           "required": ["group", "index"],
+                           "additionalProperties": False},
+            },
+            "required": ["group", "socket", "source"],
+            "additionalProperties": False,
+        }},
         "notes": {"type": "array", "items": NOTE_SCHEMA},
         # FR-6.2, folded into the build (no separate
         # pre-compile stage). Where the conventions text itself is at fault
@@ -1287,6 +1407,39 @@ REPLY_UNASSIGNED_SCHEMA = {
     "additionalProperties": False,
 }
 
+# The output sockets the conventions feed straight from a source
+# -- a split, a recording feed -- stated as runs, which code expands into the
+# plan's `direct_outputs`, one entry per socket (`reply_expand.expand_output_runs`).
+# "from" is "inputs" (every input socket the plan patches, in channel order) or
+# a source in the desk's words ("AES50-A 1", "USR 3"); "count" bounds the run.
+REPLY_OUTPUT_RUN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "to": {"type": "string", "minLength": 1},
+        "from": {"type": "string", "minLength": 1},
+        "count": {"type": "integer", "minimum": 1},
+        "quote": {"type": "string"},
+    },
+    "required": ["to", "from", "quote"],
+    "additionalProperties": False,
+}
+
+# A processed feed -- a strip at its tap, to an output socket,
+# a post-fader vocal to a recorder, say -- stated by the strip's name. The desk
+# carries it through a user signal, which code picks
+# (`reply_expand.expand_processed_feeds`); the model never names a USR slot.
+REPLY_PROCESSED_FEED_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "to": {"type": "string", "minLength": 1},
+        "strip": {"type": "string", "minLength": 1},
+        "tap": {"type": "string", "enum": ["pre", "post"]},
+        "quote": {"type": "string"},
+    },
+    "required": ["to", "strip", "tap", "quote"],
+    "additionalProperties": False,
+}
+
 REPLY_SCHEMA = {
     "type": "object",
     "properties": {
@@ -1302,6 +1455,8 @@ REPLY_SCHEMA = {
         # row's own notes). Code checks the quote; a row with none, or one
         # that is not there, is built anyway.
         "unassigned_inputs": {"type": "array", "items": REPLY_UNASSIGNED_SCHEMA},
+        "output_runs": {"type": "array", "items": REPLY_OUTPUT_RUN_SCHEMA},
+        "processed_feeds": {"type": "array", "items": REPLY_PROCESSED_FEED_SCHEMA},
         "notes": PLAN_SCHEMA["properties"]["notes"],
         "conventions_audit": PLAN_SCHEMA["properties"]["conventions_audit"],
     },
@@ -1465,6 +1620,34 @@ never leave out a rule-4b field."""
 """
         unassigned_prose = ('[{"input", "quote"}]: a row left out ONLY where words quoted from the\n'
                             '                      conventions, instructions or its notes say so; code builds the rest')
+        output_runs_prose = """\
+  output_runs         optional, [{"to", "from", "count", "quote"}]: output
+                      sockets fed STRAIGHT from a source, not from a bus,
+                      Main or Matrix -- a split to a monitor desk or a
+                      recording feed -- ONLY where the conventions or
+                      instructions state one; "quote" is their exact line.
+                      "to" is the first output socket ("AES50-B 1", "CRD 1",
+                      "USB 1"); code fills one socket per source from there.
+                      "from" is "inputs" -- every input socket the channels
+                      are patched from, in channel order, a stereo
+                      channel's two in turn -- or the first source, in the
+                      desk's words ("AES50-A 1", "LCL 3", "USR 3"). "count"
+                      is how many sockets; leave it out for every input.
+                      A processed or post-fader feed is processed_feeds,
+                      never a run. A bus, Main or Matrix's own sockets are
+                      its "patch", never a run.
+  processed_feeds     optional, [{"to", "strip", "tap", "quote"}]: an
+                      output socket fed from a strip AFTER its processing
+                      -- a post-fader vocal to a recorder, a channel's
+                      pre-fader feed to a stream -- ONLY where the
+                      conventions or instructions state one; "quote" is
+                      their exact line. "strip" is the channel's, bus's,
+                      Main's or Matrix's name as the plan has it; "tap" is
+                      "pre" or "post" its fader; "to" is the output socket
+                      ("USB 13"). Code carries it through a user signal and
+                      picks the slot: never name a USR slot. A stereo strip
+                      takes "to" and the next socket.
+"""
         category_colors_prose = """\
   category_colors     [{"category": "drums", "color": "Red"}, ...]: the
                       conventions' colour map, once; code colours each
@@ -1538,6 +1721,7 @@ one per group, not one per physical socket number):"""
 """
         category_colors_prose = ""
         unassigned_prose = "input list rows you deliberately did NOT assign, by name"
+        output_runs_prose = ""
         bus_sends_prose = f"""\
   bus_sends     array of {{bus, mode ({_bounds(send['mode'])}), level_db}}.
                 Every bus must appear in "busses". mode is never null
@@ -1763,7 +1947,7 @@ And at the top level:
                       top-level "notes" array (prefixed with the output's name),
                       never a new field on the output itself.
   unassigned_inputs   {unassigned_prose}
-  notes               array of {{"text": "...", "source": "model"}}. "source"
+{output_runs_prose}  notes               array of {{"text": "...", "source": "model"}}. "source"
                       is ALWAYS the literal string "model" here -- the other
                       values this field can hold ("extraction", "repair",
                       "allocation") are written by Atoo's own code

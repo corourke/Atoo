@@ -307,11 +307,10 @@ def test_rule_4_keeps_its_teeth_and_the_carve_out_is_named_and_narrow():
     assert set(sum(plan_schema.INFERABLE_FIELDS.values(), ())) == {
         "mono", "destination", "stereo", "mode"}
 
-    # The knowledge file no longer teaches that a width is unknowable.
+    # The knowledge file no longer teaches that a width is unknowable. That a
+    # decided width is announced is rule 4b's to say, above; the knowledge
+    # file is the maintainer's prose and is not held to a sentence of it.
     assert "not inferable from what the bus is for" not in gen
-    user = generate.generator_user("c", "name\nKick\n", conventions_name="c.md",
-                                   input_name="i.csv")
-    assert "the decision is said out loud" in user
 
     # The critic must not report a marked decision as an invention.
     crit = generate.critic_system()
@@ -458,13 +457,15 @@ def test_the_critic_is_no_longer_asked_to_check_routing():
     asking for it (5900 since 2026-10-11), plus the sentence that a
     preset taken for an unqualified instrument is not an invention (6000
     since 2026-10-13), plus the paragraph saying a strip's starting fader and
-    mute are shown as the desk will hold them (6600)."""
+    mute are shown as the desk will hold them (6600), plus the paragraph
+    asking an omitted line of the conventions to be quoted, since such an
+    omission goes back to the fix-up round (6900, 2026-10-27)."""
     crit = " ".join(generate.critic_system().split())
     assert "A channel reaches Main by" not in crit
     assert "no route to Main" not in crit
     assert "Rules about routing" not in crit
     assert "a bus feeding nothing" not in crit
-    assert len(generate.critic_system()) <= 6600
+    assert len(generate.critic_system()) <= 6900
 
 
 def test_the_change_prompt_chooses_an_unqualified_instruments_preset_and_says_so():

@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pytest
 
-from atoo import audit, conventions_resolve, finding_groups, webui
+from atoo import audit, conventions_resolve, finding_groups, generate, webui
 from atoo.ai_provider import FakeProvider
 from atoo.cli import main
 from atoo.diagnostics import Severity
@@ -37,6 +37,14 @@ from atoo.render import render_plan
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DEMO = FIXTURES / "demo_2026-10-13"
+
+
+@pytest.fixture
+def demo_domain(monkeypatch):
+    """The domain knowledge the Demo's resolve cited (frozen beside it): the
+    shipped file is the maintainer's to edit, and a citation of a sentence
+    he has since cut is not a fault of this build."""
+    monkeypatch.setattr(generate, "_DOMAIN", DEMO / "knowledge.md")
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +94,7 @@ def test_the_minus_of_a_level_is_not_a_bullet():
     assert "- -18dB" in covered and "- 18dB" not in covered
 
 
-def test_the_maintainers_resolved_demo_conventions_cover_every_line():
+def test_the_maintainers_resolved_demo_conventions_cover_every_line(demo_domain):
     """The real file: 169 citations, 58 lines, and nine of them read as
     uncovered before the fix (eight preset lines and their lead-in)."""
     result = conventions_resolve.check(
@@ -96,7 +104,7 @@ def test_the_maintainers_resolved_demo_conventions_cover_every_line():
     assert result.uncovered == []
 
 
-def test_an_uncovered_line_is_an_info_not_a_warning():
+def test_an_uncovered_line_is_an_info_not_a_warning(demo_domain):
     """Decided: the generator reads an uncovered line
     verbatim, so nothing is lost and the board is not at risk."""
     resolved = (DEMO / "conventions.resolved.md").read_text()
@@ -113,7 +121,7 @@ def test_an_uncovered_line_is_an_info_not_a_warning():
 
 
 class _Replay(FakeProvider):
-    def __init__(self, watchlist: str = '{"watch_conditions": []}'):
+    def __init__(self, watchlist: str = '{"version": 2, "watch_conditions": []}'):
         super().__init__()
         self.watchlist = watchlist
 
@@ -129,12 +137,12 @@ class _Replay(FakeProvider):
 
 
 @pytest.fixture
-def replay(tmp_path, monkeypatch):
+def replay(tmp_path, monkeypatch, demo_domain):
     """Build the Demo as the maintainer did on 2026-10-13, with no model.
     Returns (exit code, the plan, stdout, stderr) for `extra` arguments."""
-    def run(capsys, *extra, watchlist='{"watch_conditions": []}'):
+    def run(capsys, *extra, watchlist='{"version": 2, "watch_conditions": []}'):
         work = tmp_path / "starter"
-        shutil.copytree(DEMO, work, ignore=shutil.ignore_patterns("conventions.resolved.md"))
+        shutil.copytree(DEMO, work, ignore=shutil.ignore_patterns("conventions.resolved.md", "knowledge.md"))
         # The suite turns the resolve step off (conftest); this build is
         # the one that ran it.
         monkeypatch.setenv("ATOO_RESOLVE", "1")

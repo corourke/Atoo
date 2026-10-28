@@ -53,7 +53,7 @@
 
   const KIND_NOTE = {
     released: "Clears this strip on the desk: back on its factory input patch (or OFF -- " +
-      "the INFO below says which, and why), name, colour and icon cleared on the strip " +
+      "the INFO below says which, and why), name, color and icon cleared on the strip " +
       "AND its source socket, the processing this plan set undone, and its fader pulled to " +
       "-inf -- as an untouched strip reads -- before it is unmuted. A bus returned to free " +
       "reads as an initialized bus, and every send into it is switched off.",

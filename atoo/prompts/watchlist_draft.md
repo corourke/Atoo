@@ -25,10 +25,10 @@
 You draft a watchlist for a live-sound engineer: the short list of things
 that, if they drift during a show, mean something is wrong.
 
-A watch condition states what must **stay** true. It is checked against the
-live console repeatedly, and it produces an alert when the console stops
-agreeing with it. So write assertions about the settled state of the show,
-not about events.
+A watch condition states **when to alert**: the state of the console that is
+wrong. It is checked against the live console repeatedly, and it produces an
+alert while it is true. So describe the wrong state of the show (a mic
+unmuted, a fader pulled down, a patch moved), not an event.
 
 ## What is worth watching
 
@@ -65,12 +65,12 @@ Emit one JSON object and nothing else:
 {
   "watch_conditions": [
     {
-      "id": "crowd-mic-muted",
-      "description": "Crowd L stays muted",
+      "id": "crowd-mic-unmuted",
+      "description": "Crowd L is unmuted",
       "channel": "Crowd L",
       "field": "muted",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "error"
     }
   ]
@@ -79,9 +79,9 @@ Emit one JSON object and nothing else:
 
 - `id` — short, stable, unique within the list. A person will read it in an
   alert and in a file they edit by hand.
-- `description` — the rule itself, as one short sentence saying what the
-  condition checks: "Main 1 stays unmuted", "No DCA is muted", "Lead Vox
-  fader stays above -40 dB". Nothing else. The alert already says which
+- `description` — what is wrong when it fires, as one short sentence:
+  "Main 1 is muted", "A DCA is muted", "Lead Vox fader is below -40 dB".
+  Nothing else. The alert already says which
   strip, by number and name, and what was read from the console, so the
   description does not repeat either. Do not explain why it matters, say
   what would happen if it failed, or assume anything about the show, the
@@ -106,8 +106,13 @@ Emit one JSON object and nothing else:
   breaks it by number and by its name on the console, so a range loses
   nothing a condition per strip would have said. Name a single strip only
   for a rule that is about that strip alone (`MAIN 1`, `Lead Vox`).
+  For a rule about **every** strip of a kind that is in use, write the word
+  `ACTIVE` before it: `ACTIVE ALL BUS`, `ACTIVE DCA 1-8`. It checks only the
+  strips on this show's sheets or in use on the desk, so unused ones do not
+  fire.
 - `field` — one of: {fields}
-- `operator` — one of: {operators}
+- `operator` — one of: {operators}. `dca` and `mute_group` take `in` or
+  `not in`; every other field takes the rest.
 - `bus` — **only** on `send_on`, `send_db` and `send_mode`, and required
   on them: where the strip's send goes. Write it the way `channel` writes a
   bus: the kind word and the name as the plan spells it (`BUS Drum IEM`),
@@ -138,32 +143,32 @@ invented from either is an alert nobody asked for. Two examples:
 {
   "watch_conditions": [
     {
-      "id": "click-in-every-iem",
-      "description": "The click stays on in every in-ear mix",
+      "id": "click-off-in-an-iem",
+      "description": "The click is off in an in-ear mix",
       "channel": "Click",
       "field": "send_on",
       "bus": "BUS 5-8",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "error"
     },
     {
-      "id": "overhead-left-48v",
-      "description": "48V stays on for OH L",
+      "id": "overhead-left-48v-off",
+      "description": "48V is off for OH L",
       "channel": "OH L",
       "field": "phantom",
       "operator": "==",
-      "value": true,
+      "value": false,
       "severity": "error"
     }
   ]
 }
 ```
 
-For `dca`, `mute_group` and `patch`, `==` asserts the relationship holds
-and `!=` asserts it does not. `"field": "dca", "operator": "==", "value":
-"Drums"` means *this channel must be in the Drums DCA*, and alerts when it
-is not.
+For `dca` and `mute_group`, `not in` alerts when the channel is not in the
+group and `in` when it is: `"field": "dca", "operator": "not in", "value":
+"Drums"` alerts when this channel is not in the Drums DCA. For `patch`, `!=`
+alerts when the channel is patched anywhere but that socket.
 
 Every `channel` must be a strip that exists in the plan, and every `value`
 must be one the plan could actually produce. A condition naming a channel

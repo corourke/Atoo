@@ -800,6 +800,14 @@ OUTPUT_SOCKETS = {
     "REC": 4,
 }
 
+# What can feed an output socket (`/io/out/{GROUP}/{n}/grp`, the walk's own
+# `list` descriptor), and the range of its `/in` (`int [1 .. 64]`, for every
+# group). A physical group's own count bounds `/in` further, as an input
+# patch's: the source is that input socket.
+OUTPUT_SOURCE_GROUPS = ("OFF", "LCL", "AUX", "A", "B", "C", "SC", "USB", "CRD", "MOD",
+                        "PLAY", "AES", "USR", "OSC", "BUS", "MAIN", "MTX", "SEND", "MON")
+OUTPUT_SOURCE_INDEX_MAX = 64
+
 # Value domains, quoted from the walk's own `data` descriptors.
 #
 #   ch.{n}.fdr          fader [-oo .. 10.0 dB], 1024 steps
@@ -1499,6 +1507,43 @@ INSERT_POINTS = {
     "mtx": ("preins", "postins"),
 }
 
+# -- Which FX models make a bus an effect send ---------------
+#
+# A WING has no send/return path to an effect: a reverb is heard when a bus
+# INSERTS the slot, and the usual way to build one is a bus whose only job
+# is that insert, set fully wet, routed to Main. A strip that reaches Main
+# directly and through that bus is not a doubled dry signal, which is what
+# R012 warns about: the bus carries the effect's return. So a bus with one of
+# these models inserted (switch on) is read as an effect send.
+#
+# The models are the time-based and modulation effects in the desk's own list
+# (`initialized/fx_models.json`, the `/fx/{n}/mdl` enum on firmware 3.1),
+# the ones built to be heard as a wet return:
+#
+#   reverb      HALL ROOM CHAMBER PLATE CONCERT AMBI V-ROOM V-REV V-PLATE
+#               GATED REVERSE DEL/REV SHIMMER SPRING VSS3 BPLATE
+#   delay       ST-DL TAP-DL TAPE-DL OILCAN BBD-DL
+#   modulation  DIMCRS CHORUS FLANGER PHASER
+#   pitch       PITCH D-PITCH
+#
+# Left out, as a judgement: DOUBLE (a doubler blends a shifted, delayed copy
+# WITH the dry signal and is normally inserted on the voice itself; the one
+# seen on a desk sat at mix 36 on a vocal bus, which carries a dry copy),
+# ROTARY (a speaker simulator, inserted on the instrument), TAPE (tape
+# saturation), and every EQ, dynamics, amp, enhancer and channel-strip model.
+# EXT is an outboard loop whose content is unknown. Whether the slot is set
+# fully wet (`fxmix`) is not read: that would be 16 more requests on every
+# Watch pass, and the INFO that stands R012 down names the model it went on.
+#: model -> what it is, as the INFO says it ("a reverb").
+EFFECT_SEND_MODELS = {
+    **dict.fromkeys(("HALL", "ROOM", "CHAMBER", "PLATE", "CONCERT", "AMBI", "V-ROOM",
+                     "V-REV", "V-PLATE", "GATED", "REVERSE", "DEL/REV", "SHIMMER",
+                     "SPRING", "VSS3", "BPLATE"), "reverb"),
+    **dict.fromkeys(("ST-DL", "TAP-DL", "TAPE-DL", "OILCAN", "BBD-DL"), "delay"),
+    **dict.fromkeys(("DIMCRS", "CHORUS", "FLANGER", "PHASER"), "modulation effect"),
+    **dict.fromkeys(("PITCH", "D-PITCH"), "pitch shifter"),
+}
+
 # -- Talkback (the comms half) ----------------------------------
 #
 # From the 2026-09-08 walk of a Compact
@@ -1564,12 +1609,17 @@ def is_talkback_name(*texts: object) -> bool:
 # asks each port's link status first, and reads the outputs of every port
 # with a device on it (`OK`, `ERR` or `UPD`). The walk's desk had nothing on
 # AES50, so `-` is the only value seen on hardware; `OK`, `ERR` and `UPD`
-# are the list's own words. **UPD is not "updating"** (2026-10-22): the protocol document (WING_Remote-Protocols-3.1-03.pdf, the
-# `/$stat/A/stat` row) lists `-, OK, ERR, UPD` without a meaning, and
-# A full-size WING read `UPD` on AES50-A with a Behringer S32 on it
-# passing audio. What it means is unknown; the audit says it, at INFO (C010),
-# and never raises it. `ERR` is still read as a link error, **not yet
-# confirmed on a desk** (a cable pull). Forge's capture of that desk
+# are the list's own words. **UPD means the stage box's firmware needs an
+# update** (2026-10-25): the desk flags a box whose
+# firmware is older than it expects, or does not fully match the console's
+# version. The protocol document (WING_Remote-Protocols-3.1-03.pdf, the
+# `/$stat/A/stat` row) lists `-, OK, ERR, UPD` without a meaning; a
+# full-size WING reads `UPD` on AES50-A with a healthy Behringer S32 on it
+# passing audio, with port B unplugged as well.
+# Audio passes, but preamp remote control and dual-port A/B need current
+# stage-box firmware, so the audit says it at INFO (C010) and never raises
+# it. `ERR` is still read as a link error, **not yet confirmed on a desk**
+# (a cable pull). Forge's capture of that desk
 # (2026-10-22): `/$stat/A/dev "S32"`, `/$stat/A/stat "UPD"`,
 # B and C `dev ""` / `stat "-"`, `/$syscfg/opt_mod "DANTE"`; `errorsc` and
 # `errorsu` were not in it and are still unread.
@@ -1581,7 +1631,7 @@ def is_talkback_name(*texts: object) -> bool:
 # output.no-patch already says; R006 said the opposite.
 AES50_PORTS = ("A", "B", "C")
 #: The `stat` values that mean a device is on the port: linked, in error,
-#: or updating. `-` is an empty port.
+#: or linked with stage-box firmware the desk wants updated (`UPD`). `-` is an empty port.
 AES50_DEVICE_STATES = ("OK", "ERR", "UPD")
 
 

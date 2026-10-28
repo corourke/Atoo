@@ -618,7 +618,7 @@
 
   /* options:
    *   mode          "open-file" | "open-folder" | "create-folder" | "save-file"
-   *   kind          "md" | "csv" | "json" | "folders" | "any"  (what files to offer)
+   *   kind          "md" | "csv" | "json" | "snap" | "folders" | "any"  (what files to offer)
    *   title, note   the heading and one line under it
    *   start         a folder, or a file (its folder opens with it highlighted)
    *   select        a name to highlight in `start`

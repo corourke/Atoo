@@ -20,7 +20,7 @@ at all (`starter/audit-demo/audit_demo_state.json`, which `atoo init` copies; `d
 its own panel, printing nothing at all until it finished. Two things
 came out of it, and `console_read_plan` is the hinge of both -- it builds
 the whole address list *before* anything is fetched. A read that knows
-its own total can report `read 1200/6195 (19%)` while it works
+its own total can report `read 1200/6197 (19%)` while it works
 (`atoo.progress`), and a read that has its addresses in hand can
 fetch them by node instead of by leaf (`read_console_state(bulk=True)`,
 323 requests instead of 6,143 on a Compact, pipelined eight in flight
@@ -46,8 +46,8 @@ global alternate switch `/io/altsw` was read (C005), 6,138 once
 each phantom-capable socket's width was read (`/io/in/{grp}/{n}/mode`,
 C001), 6,143 once three AES50 link states and two monitor
 sources were read, 6,167 since each
-local socket's own mute (`/io/in/{grp}/{n}/mute`, C007), and 6,195 since the width of
-each bus, Main and Matrix (`busmono`, R011 and CV020). What is left is the real
+local socket's own mute (`/io/in/{grp}/{n}/mute`, C007), 6,195 since the width of
+each bus, Main and Matrix (`busmono`, R011 and CV020), and 6,197 since what each expansion bay holds. What is left is the real
 work, and A11 measured that too: **~39s per-leaf, ~4s by node dump** on 2026-09-22, and
 118.8s against 4.8s on 2026-09-24, the run that made the node dump the default. Those 320 were never
 values any rule could have had -- nothing is being read less thoroughly,
@@ -208,7 +208,7 @@ DCA_LOW_FADER_DB = -20.0
 #   bus      16      0   0                      8            0         0
 #
 # Without them every strip on a desk nobody has touched reads as "in use",
-# which is what made CH001 and L002 fire dozens of times on an empty
+# which is what made L002 fire dozens of times on an empty
 # board.
 #
 # **The patch exclusion is per model, and it lives in
@@ -344,6 +344,12 @@ class ConsoleState:
     # signal just now, or None when no meter stream is being listened to
     # (every state but a live watch's): None is "not known", never "silent".
     live_strips: frozenset | None = None
+    # The objects on the open show's sheets, as bases (`/ch/3`,
+    # `/bus/5`, `/main/1`, `/dca/2`, `/mgrp/1`), from its plan
+    # (`sheet_bases`), or None when no show is open. Not values: what the
+    # show says, which makes an object active (`is_active`) whatever the desk
+    # reads of it.
+    sheet_strips: frozenset | None = None
 
     def get(self, address: str, default=None):
         return self.values.get(address, default)
@@ -927,8 +933,10 @@ def expansion_bay_addresses(state: ConsoleState) -> list[tuple[str, str]]:
     the same choice for the same reason: a plan that touches no bay pays
     nothing.
     """
+    # The first pass already asks both whenever it reads outputs; this is for a read that asked for none.
     return [(console_facts.EXPANSION_BAY_ADDRESSES[group], "s")
-            for group in sorted(expansion_bays_in_use(state))]
+            for group in sorted(expansion_bays_in_use(state))
+            if console_facts.EXPANSION_BAY_ADDRESSES[group] not in state.values]
 
 
 def talkback_addresses(state: ConsoleState) -> list[tuple[str, str]]:
@@ -1005,10 +1013,68 @@ def aes50_output_addresses(state: ConsoleState) -> list[tuple[str, str]]:
     return wanted
 
 
+_BAY_REPORTED_FITTED = "the desk reports {} fitted"
+
+
+def fitted_bays(state: ConsoleState) -> dict[str, str]:
+    """Every expansion bay (`CRD`, `MOD`) the DESK says has something in
+    it, mapped to what it said (`DANTE`, `WLIVE`). The
+    first pass asks `/$syscfg/opt_mod` and `/cards/$type` whenever it
+    reads outputs, so this is known before the second pass decides what
+    else to read. A bay whose reading is absent, blank or `NONE` is not
+    fitted -- `console_facts.bay_is_empty` is stricter the other way,
+    because it refuses a patch; this only widens a read."""
+    fitted: dict[str, str] = {}
+    for group, address in console_facts.EXPANSION_BAY_ADDRESSES.items():
+        reported = state.text(address)
+        if reported and reported.strip() and not console_facts.bay_is_empty(reported):
+            fitted[group] = reported.strip()
+    return fitted
+
+
+def bay_output_addresses(state: ConsoleState) -> list[tuple[str, str]]:
+    """The rest of a read's **second pass**: which object
+    feeds each output socket of every bay the desk reports fitted
+    (`fitted_bays`) whose outputs the first pass did not read.
+
+    A Matrix patched to a Dante module's outputs is patched to `MOD`, and
+    a WING stores that on the socket (`/io/out/MOD/36/grp`), so a read
+    that skipped the module called the Matrix unpatched (R006 on a
+    full-size WING with a Dante module). Only each socket's `grp` here,
+    64 per fitted bay: the socket's `in` is asked afterwards, and only
+    where `grp` names something (`bay_output_index_addresses`), because
+    most of a 64-socket bay is usually unpatched and a Watch pass pays
+    for every address. None on a desk whose bays are empty, and none when
+    no output sockets were read at all, as for AES50.
+    """
+    if not output_sockets(state):
+        return []
+    return [(f"/io/out/{group}/{n}/grp", "s")
+            for group in sorted(fitted_bays(state))
+            if not _output_group_was_read(state, group)
+            for n in range(1, console_facts.OUTPUT_SOCKETS[group] + 1)]
+
+
+def bay_output_index_addresses(state: ConsoleState) -> list[tuple[str, str]]:
+    """The second half of `bay_output_addresses`: the `in`
+    of every fitted bay's output socket whose `grp` was read and names a
+    source, and whose `in` was not. One per patched socket; a socket
+    whose `grp` is `OFF` has no source to number."""
+    wanted: list[tuple[str, str]] = []
+    for group in sorted(fitted_bays(state)):
+        for n in range(1, console_facts.OUTPUT_SOCKETS[group] + 1):
+            grp = state.text(f"/io/out/{group}/{n}/grp")
+            index = f"/io/out/{group}/{n}/in"
+            if grp and grp != "OFF" and index not in state.values:
+                wanted.append((index, "i"))
+    return wanted
+
+
 def unread_output_groups_in_use(state: ConsoleState) -> dict[str, str]:
-    """AES50 ports the DESK reports a device on whose outputs this reading
-    does not hold: the groups a route could go to that nobody looked at. Empty after any live read, which reads them
-    in its second pass.
+    """AES50 ports the DESK reports a device on, and expansion bays it
+    reports fitted, whose outputs this reading does not
+    hold: the groups a route could go to that nobody looked at. Empty after any live read, which reads them in its second
+    pass.
 
     The desk's own status only, not a strip patched from the port, which
     the read follows anyway. A capture from before that read holds no status,
@@ -1017,8 +1083,14 @@ def unread_output_groups_in_use(state: ConsoleState) -> dict[str, str]:
     on every old capture (a partial read is declared,
     not used to silence a rule). So those keep the verdict they had."""
     used = aes50_ports_in_use(state)
-    return {port: why for port, why in used.items()
-            if why == _DEVICE_ON_PORT and not _output_group_was_read(state, port)}
+    unread = {port: why for port, why in used.items()
+              if why == _DEVICE_ON_PORT and not _output_group_was_read(state, port)}
+    # A bay the desk reports fitted is the same case -- the
+    # desk's own word, and outputs a route could go to.
+    for group, reported in fitted_bays(state).items():
+        if not _output_group_was_read(state, group):
+            unread[group] = _BAY_REPORTED_FITTED.format(reported)
+    return unread
 
 
 def monitor_source_nodes(state: ConsoleState) -> dict[str, str]:
@@ -1223,6 +1295,90 @@ def is_in_use(state: ConsoleState, base: str) -> bool:
     return m is not None and _receives_sends(state, int(m.group(1)))
 
 
+def sheet_bases(plan: dict | None) -> frozenset:
+    """The objects on a show's sheets, as bases: every channel
+    and aux the plan places, by strip; every bus, Main, Matrix, DCA and mute
+    group it holds, by number. The plan is what the sheets (`input.csv`,
+    `busses.csv`, `outputs.csv`) are built into, and the one place their rows
+    have a position. Empty for no plan."""
+    if not isinstance(plan, dict):
+        return frozenset()
+    bases: set[str] = set()
+    for channel in plan.get("channels") or []:
+        if isinstance(channel, dict) and isinstance(channel.get("channel"), int):
+            bank = "aux" if channel.get("bank") == "aux" else "ch"
+            bases.add(f"/{bank}/{channel['channel']}")
+    roots = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
+    for key, root in roots.items():
+        for entry in (plan.get(key) or {}).values():
+            if isinstance(entry, dict) and isinstance(entry.get("index"), int):
+                bases.add(f"/{root}/{entry['index']}")
+    for entry in (plan.get("outputs") or {}).values():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int) \
+                and entry.get("kind") in ("main", "matrix"):
+            root = "main" if entry["kind"] == "main" else "mtx"
+            bases.add(f"/{root}/{entry['index']}")
+    return frozenset(bases)
+
+
+def on_sheets(state: ConsoleState, plan: dict | None) -> ConsoleState:
+    """`state` with the open show's sheets laid on it (`sheet_strips`), so
+    `is_active` counts what the show holds. A state that already carries
+    them keeps its own."""
+    if state.sheet_strips is not None or not isinstance(plan, dict):
+        return state
+    return replace(state, sheet_strips=sheet_bases(plan))
+
+
+_OBJECT_BASE_RE = re.compile(r"^/(ch|aux|bus|main|mtx|dca|mgrp)/(\d+)$")
+
+
+def is_active(state: ConsoleState, base: str) -> bool:
+    """Is this object active? On the open show's sheets
+    (`state.sheet_strips`), or in use on the desk, by kind:
+
+    * a channel, aux or bus: `is_in_use` -- named, patched to a socket that
+      is not the factory's, sending, and for a bus also receiving sends;
+    * a DCA or mute group: it has a member (a strip's tags carry it);
+    * a Main: a strip or bus routes to it, switched on (`_main_is_fed`), or
+      it goes somewhere itself -- a send to a Matrix switched on, or an output
+      socket patched from it;
+    * a Matrix: something sends to it, switched on (`_matrix_is_fed`), or an
+      output socket is patched from it.
+
+    The one definition the ACTIVE watch conditions and every fixed rule that
+    asks whether a strip is in use read. Patch's "may I write here"
+    (`amend.strip_occupancy`) is another question and keeps `is_in_use`."""
+    if state.sheet_strips and base in state.sheet_strips:
+        return True
+    m = _OBJECT_BASE_RE.match(base)
+    if m is None:
+        return False
+    kind, idx = m.group(1), int(m.group(2))
+    if kind in ("ch", "aux", "bus"):
+        return is_in_use(state, base)
+    if kind == "dca":
+        return idx in _dca_members(state)
+    if kind == "mgrp":
+        return idx in _mute_group_members(state)
+    if kind == "main":
+        return (_main_is_fed(state, idx)
+                or any(state.flag(f"{base}/send/MX{n}/on")
+                       for n in matrix_send_targets(state, base))
+                or _patched_from(state, "MAIN", idx))
+    return _matrix_is_fed(state, idx) or _patched_from(state, "MTX", idx)
+
+
+def _patched_from(state: ConsoleState, kind: str, idx: int) -> bool:
+    """Is an output socket patched from bus, Main or Matrix `idx`? (`kind`
+    is the desk's word, `MAIN` or `MTX`; object N is slots 2N-1 and 2N.)"""
+    for group, socket in output_sockets(state):
+        raw = state.output_source(group, socket)
+        if raw is not None and raw[0] == kind and (raw[1] + 1) // 2 == idx:
+            return True
+    return False
+
+
 def _dca_members(state: ConsoleState) -> dict[int, list[str]]:
     members: dict[int, list[str]] = {}
     for base in strip_bases(state):
@@ -1347,7 +1503,7 @@ class AuditRule:
     `addresses`, which is exact even when the address carries an index the
     rule cannot know in advance (`/ch/1/send/3/lvl`). Set it only where
     the address a finding cites is coarser than the parameter it actually
-    judged: CH001 cites the strip but judges its DCA tags.
+    judged: R008 cites the strip but judges its routes.
     """
 
     id: str
@@ -1388,6 +1544,8 @@ def run_audit(
     plan_model = resolve_console_model(plan) if plan else None
     if state.console_model is None and plan_model:
         state = replace(state, console_model=plan_model)
+    if plan is not None:
+        state = on_sheets(state, plan)
     rule_list = list(rules) if rules is not None else DEFAULT_RULES
     if plan is not None:
         rule_list = split_path_rules(rule_list, plan)
@@ -1413,7 +1571,7 @@ def _rule_bus_no_inputs(state: ConsoleState) -> list[Finding]:
     findings = []
     for idx in bus_indices(state):
         base = f"/bus/{idx}"
-        if not is_in_use(state, base):
+        if not is_active(state, base):
             continue
         fed = any(state.flag(f"{b}/send/{idx}/on") for b in strip_bases(state))
         if not fed:
@@ -1456,7 +1614,7 @@ def _busses_reaching_nothing(state: ConsoleState) -> list[str]:
     sockets read."""
     reaching = objects_reaching_a_physical_output(state)
     return [f"/bus/{idx}" for idx in bus_indices(state)
-            if is_in_use(state, f"/bus/{idx}") and f"bus:{idx}" not in reaching]
+            if is_active(state, f"/bus/{idx}") and f"bus:{idx}" not in reaching]
 
 
 def _mains_reaching_nothing(state: ConsoleState) -> list[str]:
@@ -1479,7 +1637,8 @@ def _matrices_reaching_nothing(state: ConsoleState) -> list[str]:
 
 def _rule_route_unchecked(state: ConsoleState) -> list[Finding]:
     """R007: what R002, R005 and R006 would have
-    called unrouted, on a reading that left an AES50 port in use unread.
+    called unrouted, on a reading that left an AES50 port in use, or a
+    fitted module or card, unread.
 
     *"Reaches no physical output"* is a claim about every output, and a
     reading that holds none of AES50-A's, with a stage box on AES50-A,
@@ -1494,8 +1653,8 @@ def _rule_route_unchecked(state: ConsoleState) -> list[Finding]:
     if not unread or not output_patch_was_read(state):
         return []
     read = summarise_sockets(output_sockets(state))
-    where = "; ".join(f"AES50-{port} ({why})"
-                      for port, why in sorted(unread.items()))
+    where = "; ".join(f"{format_socket(group, 1).rsplit(' ', 1)[0]} ({why})"
+                      for group, why in sorted(unread.items()))
     subjects = ([(b, strip_label(state, b), f"{b}/name") for b in _busses_reaching_nothing(state)]
                 + [(b, position_label(b), b) for b in _mains_reaching_nothing(state)]
                 + [(b, position_label(b), b) for b in _matrices_reaching_nothing(state)])
@@ -1598,7 +1757,7 @@ def _rule_strip_reaches_nothing(state: ConsoleState,
         fdr = state.fader_db(base)
         if fdr is not None and fdr <= FADER_FLOOR_DB:
             continue
-        if not is_in_use(state, base):
+        if not is_active(state, base):
             continue
         findings.append(Diagnostic.audit(
             "R008", Severity.WARNING, "routing", "Strip Reaches Nothing",
@@ -1972,7 +2131,7 @@ def split_paths(state: ConsoleState) -> list[SplitPath]:
     that each carry the strip's signal. Routes that share their last leg met
     earlier and are reported there, so a strip on Main 1 twice that also
     feeds a Matrix from Main 1 is one split, at Main 1."""
-    bases = [b for b in strip_bases(state) if is_in_use(state, b)]
+    bases = [b for b in strip_bases(state) if is_active(state, b)]
     first_legs = _strip_legs_by_strip(state, bases)
     edges: dict[str, list[_Leg]] = {}
     for leg in _routing_legs(state):
@@ -2059,16 +2218,73 @@ _SPLIT_ADVICE_NO_PLAN = ("Atoo has no plan it could read for this show, so it ca
                          "the routes off.")
 
 
+def effect_send_inserts(state: ConsoleState, node: str) -> list[tuple[int, str]]:
+    """`(slot, model)` for every effect this bus inserts that makes it an
+    effect send: the insert switched on, naming an FX slot
+    that holds a time-based or modulation model
+    (`console_facts.EFFECT_SEND_MODELS`). Empty for anything but a bus, and
+    for a bus whose inserts or slots were not read."""
+    if not node.startswith("bus:"):
+        return []
+    found = []
+    for _point, slot, on in state.inserts(_node_base(node)):
+        if slot is None or on is not True:
+            continue
+        model = state.fx_model(slot)
+        if model in console_facts.EFFECT_SEND_MODELS:
+            found.append((slot, model))
+    return found
+
+
+def _route_effect_buses(state: ConsoleState, route: tuple[_Leg, ...]) -> list[str]:
+    """The effect-send buses this route passes through on its way."""
+    return [leg.target for leg in route[:-1] if effect_send_inserts(state, leg.target)]
+
+
+def _split_dry_routes(state: ConsoleState, split: SplitPath) -> tuple[tuple[_Leg, ...], ...]:
+    """The routes of `split` that pass through no effect send: the copies
+    of the dry signal. Fewer than two, and the split is an effect send's
+    return beside the dry signal, which is R014's, not R012's."""
+    return tuple(route for route in split.routes if not _route_effect_buses(state, route))
+
+
+def _effect_models(state: ConsoleState, node: str) -> str:
+    """`BPLATE in FX4 (a reverb) and VSS3 in FX1 (a reverb)`."""
+    return " and ".join(f"{model} in FX{slot} (a {console_facts.EFFECT_SEND_MODELS[model]})"
+                        for slot, model in effect_send_inserts(state, node))
+
+
+def _strip_order(base: str) -> tuple:
+    """`/ch/2` before `/ch/19`, channels before auxes."""
+    _, bank, number = base.split("/")
+    return (bank != "ch", int(number))
+
+
 def _rule_signal_split(state: ConsoleState, planned: "frozenset | None" = None) -> list[Finding]:
     """R012. `planned` is the legs a plan states (`planned_routing_legs`), or
     None with no plan. A split whose every leg is stated was asked for and is
-    R013's; one the plan only partly states says which legs it does not."""
+    R013's; one the plan only partly states says which legs it does not.
+
+    A route through an effect send (`effect_send_inserts`) is
+    not a second dry copy, so it is left out: a split with fewer than two
+    dry routes left is R014's, and one with two or more is reported on those
+    routes alone, saying which it left out."""
     findings = []
-    for split in split_paths(state):
-        unstated = _split_unstated(split, planned) if planned is not None else None
+    for full in split_paths(state):
+        unstated = _split_unstated(full, planned) if planned is not None else None
         if unstated is not None and not unstated:
             continue
+        dry = _split_dry_routes(state, full)
+        if len(dry) < 2:
+            continue
+        split = SplitPath(full.strip, full.destination, dry)
+        effects = list(dict.fromkeys(node for route in full.routes
+                                     for node in _route_effect_buses(state, route)))
+        unstated = _split_unstated(split, planned) if planned is not None else None
         notes = _split_muted(state, split)
+        for node in effects:
+            notes.append(f"Its route through {_node_text(state, node)} is read as an effect "
+                         f"send and left out: it runs {_effect_models(state, node)}")
         if unstated:
             routes = "; ".join(f"{_node_text(state, leg.source)} to "
                                f"{_node_text(state, leg.target)}" for leg in unstated)
@@ -2086,25 +2302,106 @@ def _rule_signal_split(state: ConsoleState, planned: "frozenset | None" = None) 
     return findings
 
 
+#: A bus sheet `role` that says why a split is meant: R013's
+#: title for it, and how the routes through it are read.
+_ROLE_SPLIT = {"parallel": ("Parallel Bus Asked For", "parallel processing"),
+               "fx": ("Read As Effect Sends", "an effect return beside the dry signal")}
+
+
+def plan_bus_roles(plan: dict) -> dict[int, tuple[str, str]]:
+    """Each bus's `role` from the plan, by index, with the bus's name:
+    `{2: ("Drums Comp", "parallel")}`. Only the roles a split reads."""
+    out = {}
+    for name, entry in (plan.get("busses") or {}).items():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int) \
+                and entry.get("role") in _ROLE_SPLIT:
+            out[entry["index"]] = (name, entry["role"])
+    return out
+
+
 def _rule_signal_split_asked_for(state: ConsoleState,
-                                 planned: "frozenset | None" = None) -> list[Finding]:
+                                 planned: "frozenset | None" = None,
+                                 roles: "dict[int, tuple[str, str]] | None" = None) -> list[Finding]:
     """R013: the splits R012 stood down for because the plan states every
-    leg of them, one finding per destination. Nothing without a plan."""
+    leg of them, one finding per destination. Nothing without a plan.
+
+    A split whose routes pass through a bus the bus sheet gives the role
+    `parallel` or `fx` (`roles`, from the plan) quotes that cell, under its
+    own title, so the engineer sees their own words: one finding per
+    destination and bus."""
     if planned is None:
         return []
-    by_destination: dict[str, list[SplitPath]] = {}
+    by_destination: dict[tuple[str, int | None], list[SplitPath]] = {}
     for split in split_paths(state):
-        if not _split_unstated(split, planned):
-            by_destination.setdefault(split.destination, []).append(split)
+        if _split_unstated(split, planned):
+            continue
+        through = [int(leg.target.split(":")[1]) for route in split.routes for leg in route[:-1]
+                   if leg.target.startswith("bus:") and int(leg.target.split(":")[1]) in (roles or {})]
+        # A parallel bus says more about a split than an effect return does.
+        through.sort(key=lambda bus: list(_ROLE_SPLIT).index(roles[bus][1]))
+        key = (split.destination, through[0] if through else None)
+        by_destination.setdefault(key, []).append(split)
     findings = []
-    for destination, splits in by_destination.items():
+    for (destination, bus), splits in by_destination.items():
         strips = ", ".join(_node_text(state, split.strip) for split in splits)
         addresses = tuple(dict.fromkeys(a for split in splits for a in _split_addresses(split)))
+        reach = f"{strips} reach{'es' if len(splits) == 1 else ''} {_node_text(state, destination)}"
+        if bus is not None:
+            name, role = roles[bus]
+            title, reading = _ROLE_SPLIT[role]
+            findings.append(Diagnostic.audit(
+                "R013", Severity.INFO, "routing", title,
+                f'"busses.csv, Bus {bus} "{name}", role: {role}." {reach} by more than one '
+                f"route, one of them through {_node_text(state, f'bus:{bus}')}, read as "
+                f"{reading}; R012 is quiet about it.",
+                addresses,
+            ))
+            continue
         findings.append(Diagnostic.audit(
             "R013", Severity.INFO, "routing", "Signal Split Asked For",
+            f"{reach} by more than one route, and the plan includes every one of those routes, so "
+            f"it is read as asked for (parallel processing) and R012 is quiet about it.",
+            addresses,
+        ))
+    return findings
+
+
+def _rule_signal_split_effect_send(state: ConsoleState,
+                                   planned: "frozenset | None" = None) -> list[Finding]:
+    """R014: the splits R012 stood down for because every
+    route but one passes through an effect send -- the dry signal and the
+    effect's return, which is how a reverb or delay bus is meant to be
+    used. One finding per effect bus and destination, naming the model it
+    went on, so the judgement is said rather than silent. A split the plan
+    states in full is R013's and is not repeated here."""
+    groups: dict[tuple[str, str], list[SplitPath]] = {}
+    for split in split_paths(state):
+        if planned is not None and not _split_unstated(split, planned):
+            continue
+        if len(_split_dry_routes(state, split)) >= 2:
+            continue
+        for node in dict.fromkeys(node for route in split.routes
+                                  for node in _route_effect_buses(state, route)):
+            groups.setdefault((split.destination, node), []).append(split)
+    findings = []
+    for (destination, node), splits in sorted(groups.items()):
+        strips = ", ".join(_node_text(state, split.strip)
+                           for split in sorted(splits, key=lambda s: _strip_order(s.strip)))
+        base = _node_base(node)
+        addresses = tuple(dict.fromkeys(
+            [a for split in splits for a in _split_addresses(split)]
+            + [f"{base}/{point}/{leaf}" for point, slot, _on in state.inserts(base)
+               if slot is not None for leaf in ("on", "ins")]
+            + [console_facts.FX_MODEL.replace("{n}", str(slot))
+               for slot, _model in effect_send_inserts(state, node)]))
+        findings.append(Diagnostic.audit(
+            "R014", Severity.INFO, "routing", "Signal Split Through An Effect Send",
             f"{strips} reach{'es' if len(splits) == 1 else ''} {_node_text(state, destination)} "
-            f"by more than one route, and the plan includes every one of those routes, so it is read as "
-            f"asked for (parallel processing) and R012 is quiet about it.",
+            f"through {_node_text(state, node)} as well as by another route. Read as an effect "
+            f"send: {_node_text(state, node)} runs {_effect_models(state, node)}, so it carries "
+            f"the effect's return rather than a second dry copy, and R012 is quiet about it. "
+            f"If {_node_text(state, node)} is meant to carry the dry signal too, set the effect "
+            f"fully wet or take it off.",
             addresses,
         ))
     return findings
@@ -2113,8 +2410,9 @@ def _rule_signal_split_asked_for(state: ConsoleState,
 def planned_routing_legs(plan: dict) -> frozenset:
     """Every leg of the routing a plan states, as `(source, target)` node
     ids: a strip's `bus_sends` and `main_routes`, a bus's Main
-    `destinations`, and a Matrix's `fed_by`. A leg to a bus that the plan does
-    not name resolves to nothing and is not stated."""
+    `destinations`, a Matrix's `fed_by`, and the `matrix_sends` and a bus's
+    `bus_sends`. A leg to a bus that the plan does not
+    name resolves to nothing and is not stated."""
     busses = {name: entry["index"] for name, entry in (plan.get("busses") or {}).items()
               if isinstance(entry, dict) and isinstance(entry.get("index"), int)}
     legs: set[tuple[str, str]] = set()
@@ -2147,6 +2445,28 @@ def planned_routing_legs(plan: dict) -> frozenset:
             legs.add((f"main:{fed_by['index']}", f"mtx:{entry['index']}"))
         elif fed_by.get("type") == "bus" and fed_by.get("name") in busses:
             legs.add((f"bus:{busses[fed_by['name']]}", f"mtx:{entry['index']}"))
+    # The sends a plan states on their source -- a
+    # channel's, a bus's or a Main's to a Matrix, and a bus's to a bus.
+    outputs = plan.get("outputs") or {}
+    matrices = {name: e["index"] for name, e in outputs.items()
+                if isinstance(e, dict) and e.get("kind") == "matrix" and isinstance(e.get("index"), int)}
+
+    def sends(source: str, entry: dict, field: str, key: str, targets: dict, kind: str) -> None:
+        for send in (entry.get(field) or []) if isinstance(entry, dict) else []:
+            if isinstance(send, dict) and send.get(key) in targets:
+                legs.add((source, f"{kind}:{targets[send[key]]}"))
+
+    for entry in plan.get("channels") or []:
+        if isinstance(entry, dict) and isinstance(entry.get("channel"), int):
+            sends(f"/{entry.get('bank') or 'ch'}/{entry['channel']}", entry,
+                  "matrix_sends", "matrix", matrices, "mtx")
+    for entry in (plan.get("busses") or {}).values():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int):
+            sends(f"bus:{entry['index']}", entry, "bus_sends", "bus", busses, "bus")
+            sends(f"bus:{entry['index']}", entry, "matrix_sends", "matrix", matrices, "mtx")
+    for entry in outputs.values():
+        if isinstance(entry, dict) and entry.get("kind") == "main" and isinstance(entry.get("index"), int):
+            sends(f"main:{entry['index']}", entry, "matrix_sends", "matrix", matrices, "mtx")
     return frozenset(legs)
 
 
@@ -2154,7 +2474,10 @@ def split_path_rules(rules, plan: dict) -> list[AuditRule]:
     """`rules` with R012 and R013 bound to `plan`: the same rules, told
     which legs the plan states."""
     planned = planned_routing_legs(plan)
-    bound = {"R012": _rule_signal_split, "R013": _rule_signal_split_asked_for}
+    roles = plan_bus_roles(plan)
+    bound = {"R012": _rule_signal_split,
+             "R013": lambda state, legs: _rule_signal_split_asked_for(state, legs, roles),
+             "R014": _rule_signal_split_effect_send}
     return [replace(rule, check=lambda state, check=bound[rule.id]: check(state, planned))
             if rule.id in bound else rule for rule in rules]
 
@@ -2212,7 +2535,13 @@ def output_patch_sides(state: ConsoleState) -> dict[tuple[str, int], list[tuple[
 
 def _width_object_in_use(state: ConsoleState, kind: str, idx: int) -> bool:
     if kind == "BUS":
-        return is_in_use(state, f"/bus/{idx}")
+        return is_active(state, f"/bus/{idx}")
+    # A Main or Matrix: on the show's sheets, or fed. Not `is_active`'s
+    # "goes somewhere", which an object patched to one side always does --
+    # the question this rule asks is whether that one side matters.
+    base = f"/{'main' if kind == 'MAIN' else 'mtx'}/{idx}"
+    if state.sheet_strips and base in state.sheet_strips:
+        return True
     if kind == "MAIN":
         return _main_is_fed(state, idx)
     return _matrix_is_fed(state, idx)
@@ -2540,7 +2869,7 @@ def _rule_strip_has_no_source(state: ConsoleState) -> list[Finding]:
         if state.on_alternate_input(base) or (
                 global_alternate and state.alternate_group(base) is not None):
             continue
-        if not is_in_use(state, base):
+        if not is_active(state, base):
             continue
         why = ("named" if _is_active_name(state.name(base))
                else "sending somewhere")
@@ -2582,7 +2911,7 @@ def _rule_input_socket_muted(state: ConsoleState) -> list[Finding]:
         muted = [state.input_muted(group, leg) for leg in legs]
         if any(flag is None for flag in muted) or not any(muted):
             continue
-        if not is_in_use(state, base):
+        if not is_active(state, base):
             continue
         label = strip_label(state, base)
         if all(muted):
@@ -2645,20 +2974,22 @@ def aes50_port_dependents(state: ConsoleState) -> dict[str, tuple[list[str], lis
     return found
 
 
-def _dependents_text(state: ConsoleState, strips: list[str], outputs: list[int]) -> str:
-    """"CH 1 "Kick" and CH 2 "Snare" take their input from it, and
-    outputs 1-6 on it carry a source" -- what a dead AES50 port takes down."""
+def _dependents_text(state: ConsoleState, port: str, strips: list[str],
+                     outputs: list[int]) -> str:
+    """`the inputs of CH 1 "Kick", CH 2 "Snare" and 3 more or outputs
+    AES50-B 25-32` -- what a dead AES50 port cannot carry, the end of C008's
+    sentence."""
     parts = []
     if strips:
         shown = [strip_label(state, base) for base in strips[:6]]
         if len(strips) > 6:
             shown.append(f"{len(strips) - 6} more")
         who = shown[0] if len(shown) == 1 else ", ".join(shown[:-1]) + f" and {shown[-1]}"
-        parts.append(f"{who} {'takes its' if len(strips) == 1 else 'take their'} input from it")
+        parts.append(f"the input{'' if len(strips) == 1 else 's'} of {who}")
     if outputs:
-        parts.append(f"output{'' if len(outputs) == 1 else 's'} {_number_runs(outputs)} on it "
-                     f"{'carries' if len(outputs) == 1 else 'carry'} a source")
-    return " and ".join(parts)
+        parts.append(f"output{'' if len(outputs) == 1 else 's'} AES50-{port} "
+                     f"{_number_runs(outputs)}")
+    return " or ".join(parts)
 
 
 def _aes50_link(state: ConsoleState, port: str) -> str | None:
@@ -2690,19 +3021,21 @@ def _rule_aes50_cannot_carry_patch(state: ConsoleState) -> list[Finding]:
         if link not in ("-", "ERR") or port not in dependents:
             continue
         strips, outputs = dependents[port]
-        what = _dependents_text(state, strips, outputs)
+        what = _dependents_text(state, port, strips, outputs)
         address = console_facts.aes50_status_address(port)
+        # The maintainer's sentence for '-' (2026-10-25), and the same shape
+        # for a link error. Each finding has its own title, so the message is
+        # the one sentence.
         if link == "-":
-            message = (f"AES50-{port} reads '-', so no stage box is on "
-                       f"it, but {what}. No audio can pass: connect the stage box, or "
-                       f"patch these elsewhere.")
+            title = "Stage Box Not Connected"
+            message = (f"Stage box AES50 port {port} appears to not be connected and can "
+                       f"not carry {what}.")
         else:
-            message = (f"AES50-{port} reports a link error (ERR), and "
-                       f"{what}. No audio passes while the link is in error: check the cable "
-                       f"and the stage box.")
+            title = "Stage Box Link Error"
+            message = (f"Stage box AES50 port {port} reports a link error and can not "
+                       f"carry {what}.")
         findings.append(Diagnostic.audit(
-            "C008", Severity.ERROR, "configuration", "AES50 Port Cannot Carry Its Patch",
-            message, (address,),
+            "C008", Severity.ERROR, "configuration", title, message, (address,),
         ))
     return findings
 
@@ -2734,15 +3067,16 @@ def _rule_aes50_link_not_ok(state: ConsoleState) -> list[Finding]:
 def _rule_aes50_reports_upd(state: ConsoleState) -> list[Finding]:
     """C010: an AES50 port whose status reads `UPD`.
 
-    INFO, never a hazard. The status list's words are the desk's own and
-    what `UPD` means is **not confirmed**: a healthy Behringer S32 on
-    AES50-A, passing audio, was read as `UPD` on a full-size WING. A word
-    whose meaning is unknown does not warn against a stage box that may be
-    passing audio, and it does not list every channel on the port as silent;
-    it says what the desk said (with the device the desk names on the port,
-    `/$stat/{port}/dev`), and what the meters show of the strips
-    patched from the port when they are being listened to. A port that is
-    actually down is C008's (`-`, `ERR`).
+    `UPD` means the stage box's firmware needs an update: the desk flags it
+    as older than it expects, or not fully matching the console's version
+    (2026-10-25: a healthy Behringer S32 on AES50-A of
+    a full-size WING, passing audio). INFO, never a hazard: the link passes
+    audio, but preamp remote control and dual-port A/B need current
+    stage-box firmware. It does not list every channel on the port as
+    silent; it names the device the desk gives on the port
+    (`/$stat/{port}/dev`), says what the desk's `UPD` means, and what the
+    meters show of the strips patched from the port when they are being
+    listened to. A port that is actually down is C008's (`-`, `ERR`).
     """
     findings = []
     dependents = aes50_port_dependents(state)
@@ -2753,8 +3087,9 @@ def _rule_aes50_reports_upd(state: ConsoleState) -> list[Finding]:
         live = state.live_strips
         device = state.text(console_facts.aes50_device_address(port))
         name = f"AES50-{port}" + (f" ({device})" if device else "")
-        message = (f"{name} reports UPD, which the desk's list gives without saying what "
-                   f"it means (a healthy stage box has been seen reading it).")
+        message = (f"{name} reports UPD: the desk flags the stage box's firmware as older "
+                   f"than it expects. Audio can still pass, but preamp remote control and "
+                   f"dual-port A/B need current stage-box firmware; update the box.")
         if not strips:
             message += " Nothing is patched from it."
         elif live is None:
@@ -2769,7 +3104,8 @@ def _rule_aes50_reports_upd(state: ConsoleState) -> list[Finding]:
                 message += (f" None of the {len(strips)} strips patched from it is carrying "
                             f"signal just now; that may only be a quiet stage.")
         findings.append(Diagnostic.audit(
-            "C010", Severity.INFO, "configuration", "AES50 Port Reports UPD", message,
+            "C010", Severity.INFO, "configuration", "AES50 Stage Box Firmware Needs Updating",
+            message,
             (console_facts.aes50_status_address(port),),
         ))
     return findings
@@ -2938,54 +3274,38 @@ def talkback_strip(state: ConsoleState) -> str | None:
 
     That strip is the talk mic, and a talk mic is kept out of the mix on
     purpose: fader down, in no DCA, no send or route, no jack patched.
-    CH001, L002, R008, C006 and C007 skip it, and T002 says so once (T001's first run
-    on the Compact flagged both on ch 40 "TALKBACK")."""
+    L002, R008, C006 and C007 skip it, and T002 says so once (T001's first run
+    on the Compact flagged ch 40 "TALKBACK")."""
     return _TALKBACK_BASES.get(state.text(console_facts.TALK_ASSIGN))
 
 
 def _rule_talkback_strip_exempt(state: ConsoleState) -> list[Finding]:
-    """T002: the talkback strip is in use, so CH001, L002, R008, C006 and C007
+    """T002: the talkback strip is in use, so L002, R008, C006 and C007
     would have judged it as a band strip. They skip it; this is the one
     line that says they did, rather than the exemption being silent."""
     base = talkback_strip(state)
-    if base is None or not is_in_use(state, base):
+    if base is None or not is_active(state, base):
         return []
     return [Diagnostic.audit(
         "T002", Severity.INFO, "communications", "Talkback Strip Left Out Of Mix Checks",
         f"{strip_label(state, base)} is the strip talkback is assigned to "
         f"({state.text(console_facts.TALK_ASSIGN)}), so it is treated as the talk mic: "
-        f"'in no DCA' (CH001), 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing "
+        f"'fader at floor' (L002), 'sends nowhere' (R008), 'nothing "
         f"patched' (C006) and 'socket muted' (C007) are not reported for it.",
         (console_facts.TALK_ASSIGN, base),
     )]
 
 
 # --------------------------------------------------------------------------
-# Rules -- channels (4)
+# Rules -- channels (3)
 # --------------------------------------------------------------------------
-
-
-def _rule_channel_no_dca(state: ConsoleState) -> list[Finding]:
-    findings = []
-    all_members = {b for members in _dca_members(state).values() for b in members}
-    talk = talkback_strip(state)
-    for base in strip_bases(state):
-        if base == talk:
-            continue  # the talk mic, kept out of DCAs on purpose (T002)
-        if is_in_use(state, base) and base not in all_members:
-            findings.append(Diagnostic.audit(
-                "CH001", Severity.INFO, "channels", "Channel Not In Any DCA",
-                f"{strip_label(state, base)} is in use but belongs to no DCA group.",
-                (base,),
-            ))
-    return findings
 
 
 def _rule_dca_low_with_members(state: ConsoleState) -> list[Finding]:
     findings = []
     for idx, members in _dca_members(state).items():
         base = f"/dca/{idx}"
-        active_members = [m for m in members if is_in_use(state, m)]
+        active_members = [m for m in members if is_active(state, m)]
         if not active_members:
             continue
         fdr = state.fader_db(base)
@@ -3011,7 +3331,7 @@ def _rule_mute_group_silencing(state: ConsoleState) -> list[Finding]:
         # used to be "routed", which on a factory WING is every strip on
         # the desk -- `main/1/on` ships on. `is_in_use` is the catalogue's
         # own definition and excludes exactly that.
-        active_members = [m for m in members if is_in_use(state, m)]
+        active_members = [m for m in members if is_active(state, m)]
         if active_members:
             findings.append(Diagnostic.audit(
                 "CH003", Severity.INFO, "channels", "Mute Group Active, Silencing Routed Members",
@@ -3055,7 +3375,7 @@ def _rule_dca_muted_with_members(state: ConsoleState,
         base = f"/dca/{idx}"
         if base in planned or not state.mute(base):
             continue
-        active_members = [m for m in members if is_in_use(state, m)]
+        active_members = [m for m in members if is_active(state, m)]
         if active_members:
             findings.append(Diagnostic.audit(
                 "CH004", Severity.INFO, "channels", "DCA Muted, Silencing Active Members",
@@ -3159,7 +3479,8 @@ def _rule_fader_floor_while_active(state: ConsoleState,
     "Active" was "routed anywhere", and on a factory WING that is every
     strip on the desk and half the busses, because `main/1/on` ships on --
     twenty-nine of the A5 run's forty-eight findings were that and nothing
-    else. It is `is_in_use` now: the lever is what 'actively routed' is taken to
+    else. It is `is_active` now (`is_in_use`, or on the show's sheets):
+    the lever is what 'actively routed' is taken to
     mean, not whether to hide the rule.
 
     `planned_floor` is the strips the show's plan itself puts
@@ -3179,7 +3500,7 @@ def _rule_fader_floor_while_active(state: ConsoleState,
         fdr = state.fader_db(base)
         if fdr is None or fdr > FADER_FLOOR_DB:
             continue
-        if is_in_use(state, base):
+        if is_active(state, base):
             findings.append(Diagnostic.audit(
                 "L002", Severity.INFO, "levels", "Active Strip Fader At Floor",
                 f"{strip_label(state, base)} is unmuted and in use, but its own fader is at "
@@ -3205,30 +3526,32 @@ def _rule_clipped(state: ConsoleState) -> list[Finding]:
     passes; the rule only words what the clip monitor reports, and is
     silent on any state that carries none -- `audit` and every captured
     state. One finding per strip: both sides of a stereo strip, and all
-    four of its level words, are one. "Clipped N times" counts runs: a
-    clip ends only after the strip stays below the release level for a
-    moment, and the sentence says so beside the count.
+    four of its level words, are one.
+
+    The sentence says what each number is -- how many clips
+    (always, "once" for one), the longest, and when the first and the last
+    were -- so no span between two clips reads as a duration.
 
     The finding's key is its rule and strip, so a second clip inside the
     minute is the same finding with the timer moved on, and the sentence
     says where the timer stands: that is how the restart is seen."""
-    from atoo.metering import RELEASE_SECONDS, RELEASE_THRESHOLD_DB
-
     findings = []
     for clip in state.clips:
         label = strip_label(state, clip.base)
-        said = f"{label} clipped"
-        if clip.count > 1:
-            said += (f" {clip.count} times (a clip ends once the level stays below "
-                     f"{RELEASE_THRESHOLD_DB:g} dBFS for {RELEASE_SECONDS * 1000:.0f} ms)")
+        if clip.count == 1:
+            said = f"{label} clipped once"
             if clip.longest is not None:
-                said += f", the longest for about {_seconds(clip.longest)}"
-        elif clip.longest is not None:
-            said += f" for about {_seconds(clip.longest)}"
+                said += f", for {_seconds(clip.longest)}"
+            said += f"; that was {_seconds(clip.ago)} ago"
+        else:
+            said = f"{label} clipped {clip.count} times"
+            if clip.longest is not None:
+                said += f"; the longest was {_seconds(clip.longest)}"
+            first = clip.first_ago if clip.first_ago is not None else clip.ago
+            said += f"; the first was {_seconds(first)} ago and the last {_seconds(clip.ago)} ago"
         findings.append(Diagnostic.audit(
             "L003", Severity.ERROR, "levels", "Clipped",
-            f"{said}; the last was {_seconds(clip.ago)} ago. This clears in "
-            f"{_seconds(max(clip.remaining, 0.0))} unless it clips again.",
+            f"{said}. This clears in {_seconds(max(clip.remaining, 0.0))} unless it clips again.",
             (f"{clip.base}/clip",),
         ))
     return findings
@@ -3252,10 +3575,10 @@ DEFAULT_RULES: list[AuditRule] = [
     # suppress this. The predicate is "in use" now rather than "named",
     # which is wider and still keeps it off a factory desk.
     AuditRule("R001", Severity.WARNING, "routing", "Bus No Inputs",
-              "An in-use bus receives no channel/aux sends.", _rule_bus_no_inputs,
+              "A bus in use has no channel or aux sending to it.", _rule_bus_no_inputs,
               scope=RuleScope.HAZARD),
     AuditRule("R002", Severity.WARNING, "routing", "Bus No Output",
-              "An in-use bus has no route to a physical output, direct or indirect.", _rule_bus_no_output,
+              "A bus in use reaches no output socket, either directly or through a Main or Matrix.", _rule_bus_no_output,
               scope=RuleScope.CONVENTION),
     # A matrix feeding a physical output with nothing in it is wrong on
     # any desk; so is a mix with nowhere to go, and an output with no
@@ -3318,8 +3641,17 @@ DEFAULT_RULES: list[AuditRule] = [
               "and above the floor, unless the plan includes every one of those routes.",
               _rule_signal_split, scope=RuleScope.HAZARD, judges=("split-path",)),
     AuditRule("R013", Severity.INFO, "routing", "Signal Split Asked For",
-              "The splits R012 stood down for because the plan includes every route of them.",
+              "A split R012 would report, said at INFO instead because the plan includes every one "
+              "of its routes.",
               _rule_signal_split_asked_for, scope=RuleScope.HAZARD, judges=("split-path",)),
+    # With no plan, a reverb or delay bus beside the dry
+    # signal is the split every desk has. Read from the desk itself (an FX
+    # model inserted on the bus), and said at INFO.
+    AuditRule("R014", Severity.INFO, "routing", "Signal Split Through An Effect Send",
+              "A split R012 would report, said at INFO instead because every route but one passes "
+              "through a bus with a reverb, delay or modulation effect inserted on it: an "
+              "effect send.",
+              _rule_signal_split_effect_send, scope=RuleScope.HAZARD, judges=("split-path",)),
     # 48V does not care whose strip it is -- the issue's own example of
     # why this is not simply "filter by plan membership".
     AuditRule("C001", Severity.WARNING, "configuration", "Phantom Power On Unpatched Socket",
@@ -3369,17 +3701,18 @@ DEFAULT_RULES: list[AuditRule] = [
     # The AES50 link, which the read takes for every port and which nothing
     # used. Hazards: a stage box that passes no audio does not care whose
     # show it is, and no plan states a link's health.
-    AuditRule("C008", Severity.ERROR, "configuration", "AES50 Port Cannot Carry Its Patch",
-              "A strip takes its input from an AES50 port, or an output on it carries a source, "
-              "while the port reads '-' or ERR.",
+    AuditRule("C008", Severity.ERROR, "configuration", "Stage Box Not Connected Or In Error",
+              "A channel takes its input from an AES50 stage box, or an output on one carries a "
+              "signal, while the desk reads that link as not connected (-) or in error (ERR).",
               _rule_aes50_cannot_carry_patch, scope=RuleScope.HAZARD),
     AuditRule("C009", Severity.WARNING, "configuration", "AES50 Stage Box Link Not OK",
-              "A stage box reads ERR with nothing patched to it.",
+              "An AES50 stage box link reads ERR, though nothing is patched to or from it.",
               _rule_aes50_link_not_ok, scope=RuleScope.HAZARD),
-    # UPD's meaning is unconfirmed (a healthy S32 reads it), so
-    # it is said, at INFO, and never raised.
-    AuditRule("C010", Severity.INFO, "configuration", "AES50 Port Reports UPD",
-              "An AES50 port's status reads UPD, a word whose meaning the desk does not give.",
+    # UPD is stage-box firmware the desk wants updated. The link
+    # still passes audio, so it is said, at INFO, and never raised.
+    AuditRule("C010", Severity.INFO, "configuration", "AES50 Stage Box Firmware Needs Updating",
+              "An AES50 port reads UPD: the desk flags the stage box's firmware as older than "
+              "it expects.",
               _rule_aes50_reports_upd, scope=RuleScope.HAZARD),
     # Hazards, because a lit insert doing nothing and a loaded
     # effect nobody hears do not care whose strip it is. No plan states an
@@ -3401,16 +3734,11 @@ DEFAULT_RULES: list[AuditRule] = [
               "Talkback is assigned to a strip, but neither TALK A nor TALK B is routed "
               "to any bus, Matrix or Main.",
               _rule_talkback_goes_nowhere, scope=RuleScope.HAZARD),
-    # Not a fault: the one line saying CH001 and L002 skipped the
+    # Not a fault: the one line saying L002 and the others skipped the
     # talk mic's strip, so the exemption is never silent.
     AuditRule("T002", Severity.INFO, "communications", "Talkback Strip Left Out Of Mix Checks",
-              "The strip talkback is assigned to is in use; CH001, L002, R008, C006 and C007 skip it.",
+              "The strip talkback is assigned to is in use; L002, R008, C006 and C007 skip it.",
               _rule_talkback_strip_exempt, scope=RuleScope.HAZARD),
-    # The finding that prompted this: 29 of the A5 run's 30 INFO
-    # findings were this rule on strips the show never mentions.
-    AuditRule("CH001", Severity.INFO, "channels", "Channel Not In Any DCA",
-              "An in-use channel/aux belongs to no DCA group.", _rule_channel_no_dca,
-              scope=RuleScope.CONVENTION, judges=("tags#D",)),
     # Something active is being silenced and nobody meant it. The
     # threshold is DCA_LOW_FADER_DB, not the floor: a DCA 20dB down is
     # already inaudible and its members still look normal.
@@ -3428,10 +3756,10 @@ DEFAULT_RULES: list[AuditRule] = [
               scope=RuleScope.HAZARD),
     # A duplicate name is about a pair, not a strip -- see RuleScope.
     AuditRule("N001", Severity.WARNING, "naming", "Duplicate Channel/Aux Names",
-              "More than one channel/aux shares the same non-default name.", _rule_duplicate_channel_names,
+              "Two or more channels or auxes share a name you gave them.", _rule_duplicate_channel_names,
               scope=RuleScope.PAIRWISE),
     AuditRule("N002", Severity.WARNING, "naming", "Duplicate Bus Names",
-              "More than one bus shares the same non-default name.", _rule_duplicate_bus_names,
+              "Two or more buses share a name you gave them.", _rule_duplicate_bus_names,
               scope=RuleScope.PAIRWISE),
     # A forgotten send on a strip you did not plan is their business. On
     # one you did, the send level is stated and CV006 owns it.
@@ -3461,8 +3789,8 @@ DEFAULT_RULES: list[AuditRule] = [
     # stream. A hazard about any strip, planned or not -- a
     # clipped unplanned channel is distorting the PA all the same.
     AuditRule("L003", Severity.ERROR, "levels", "Clipped",
-              "A channel, aux, bus, main or matrix clipped within the last minute "
-              "(a live watch only; it reads the console's meters).",
+              "A channel, aux, bus, Main or Matrix clipped within the last minute, read from "
+              "the console's meters.",
               _rule_clipped, scope=RuleScope.HAZARD),
 ]
 
@@ -3627,6 +3955,15 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
                 state_param(base, f"send/{bidx}/lvl")
             if _SEND_MODE_TO_WING.get(send.get("mode")) is not None:
                 state_param(base, f"send/{bidx}/mode")
+        for send in entry.get("matrix_sends") or []:         # CV006
+            midx = _plan_matrix_indices(plan).get(send.get("matrix")) if isinstance(send, dict) else None
+            if midx is None:
+                continue
+            state_param(base, f"send/MX{midx}/on")
+            if send.get("level_db") is not None:
+                state_param(base, f"send/MX{midx}/lvl")
+            if _SEND_MODE_TO_WING.get(send.get("mode")) is not None:
+                state_param(base, f"send/MX{midx}/mode")
 
         # CV016 judges every strip the plan routes somewhere, so R008
         # stands down for it: the plan, not the structural rule, says
@@ -3679,12 +4016,13 @@ def plan_scope(state: ConsoleState, plan: dict) -> PlanScope:
                 state_param(base, "mute")               # CV010 / CV012
             if fader.get("fader_db") is not None:
                 state_param(base, "fdr")                # CV011 / CV013
-    # CV015 compares a planned FX bus's insert and engine,
+    # CV015 compares a planned insert and its engine,
     # so E001/E003 stand down there rather than say it twice.
-    for _name, index, point, engine, _model in planned_fx_inserts(plan):
-        state_param(f"/bus/{index}", f"{point}/on")
-        state_param(f"/bus/{index}", f"{point}/ins")
-        state_param(f"/fx/{engine}", "mdl")
+    for base, point, engine, _model in planned_fx_inserts(plan):
+        state_param(base, f"{point}/on")
+        state_param(base, f"{point}/ins")
+        if engine is not None:
+            state_param(f"/fx/{engine}", "mdl")
     # CH004 reports a muted DCA, and CV017 (or the planned mute itself)
     # already says what the plan wants of every DCA it declares.
     for dca in planned_dca_mutes(plan):
@@ -4394,66 +4732,78 @@ def _diff_talkback_strip(state: ConsoleState, plan: dict) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------
-# CV015: an FX bus's effect, as its bus preset planned it
+# CV015: an effect a strip inserts, as the plan states it -- a bus preset's, or the strip's own, captured or from the bus sheet
 # --------------------------------------------------------------------------
 
 FX_INSERT_RULE_ID = "CV015"
-FX_INSERT_TITLE = "FX Bus Effect Contradicts Plan"
+FX_INSERT_TITLE = "Effect Insert Contradicts Plan"
 
 
-def planned_fx_inserts(plan: dict) -> list[tuple[str, int, str, int, str]]:
-    """`(bus name, bus index, insert point, engine, model)` for every effect
-    a plan's bus presets load (`busses[X].preset_values.inserts`) that has
-    an engine -- what `apply` writes and switches on."""
+def planned_fx_inserts(plan: dict) -> list[tuple[str, str, int | None, str | None]]:
+    """`(strip base, insert point, engine, model)` for every insert the plan
+    sets (`bus_presets.strip_inserts`, on a channel, bus, Main or Matrix):
+    an effect with an engine, which `apply` loads and switches on, or one
+    the plan takes off (engine and model None), which `apply` sets to NONE."""
+    from atoo import bus_presets
+
     out = []
-    for name, entry in (plan.get("busses") or {}).items():
-        if not isinstance(entry, dict) or not isinstance(entry.get("index"), int):
-            continue
-        values = entry.get("preset_values")
-        inserts = values.get("inserts") if isinstance(values, dict) else None
-        for ins in inserts or []:
-            if (isinstance(ins, dict) and isinstance(ins.get("engine"), int)
-                    and isinstance(ins.get("model"), str)
-                    and ins.get("point") in console_facts.INSERT_POINTS["bus"]):
-                out.append((name, entry["index"], ins["point"], ins["engine"], ins["model"]))
+    for bank, index, _label, entry in bus_presets.plan_strips(plan):
+        for ins in bus_presets.strip_inserts(entry):
+            point = ins.get("point")
+            if point not in console_facts.INSERT_POINTS.get(bank, ()):
+                continue
+            if ins.get("model") is None:
+                out.append((f"/{bank}/{index}", point, None, None))
+            elif isinstance(ins.get("engine"), int) and isinstance(ins.get("model"), str):
+                out.append((f"/{bank}/{index}", point, ins["engine"], ins["model"]))
     return out
 
 
 def fx_insert_findings(state: ConsoleState, plan: dict) -> list[Finding]:
-    """CV015: an FX bus whose effect is not what its bus
-    preset planned -- the insert names another engine (or none), the
-    insert is switched off (bypassed: an FX bus with its effect bypassed
-    is silent), or the engine holds another model. WARNING.
+    """CV015: a strip whose insert is not what the
+    plan sets -- the insert names another engine (or none), the insert is
+    switched off (bypassed: an FX bus with its effect bypassed is silent),
+    or the engine holds another model; or an insert the plan took off
+    names an engine again. WARNING.
 
     Run by `diff_against_plan` (an audit with a plan) and, through
     `fx_insert_rule`, by Watch when the show bundle has a plan: Watch runs
     no other plan diff, and this is the one an operator needs mid-show.
     Silent for whatever was not read."""
     findings = []
-    for name, index, point, engine, model in planned_fx_inserts(plan):
-        base = f"/bus/{index}"
+    for base, point, engine, model in planned_fx_inserts(plan):
         live_ins = state.text(f"{base}/{point}/ins")
-        live_on = state.flag(f"{base}/{point}/on")
-        live_model = state.fx_model(engine)
         word = _INSERT_POINT_NAMES[point]
-        problems = []
         named = None
         if live_ins is not None:
             m = re.fullmatch(r"FX(\d+)", live_ins)
             named = int(m.group(1)) if m else None
-            if named != engine:
-                problems.append(f"its {word} names {live_ins}, not FX{engine}")
+        if engine is None:
+            if named is None:
+                continue
+            findings.append(Diagnostic.audit(
+                "CV015", Severity.WARNING, "conventions", "Effect Insert Contradicts Plan",
+                f"{strip_label(state, base)}: the plan takes its {word} off; it names "
+                f"{live_ins}.",
+                (f"{base}/{point}/ins",),
+            ))
+            continue
+        live_on = state.flag(f"{base}/{point}/on")
+        live_model = state.fx_model(engine)
+        problems = []
+        if live_ins is not None and named != engine:
+            problems.append(f"its {word} names {live_ins}, not FX{engine}")
         if live_on is False and (live_ins is None or named == engine):
-            problems.append(f"its {word} is switched off, so the {model} is bypassed and the "
-                            f"bus returns nothing")
+            problems.append(f"its {word} is switched off, so the {model} is bypassed"
+                            + (" and the bus returns nothing" if base.startswith("/bus/") else ""))
         if live_model is not None and live_model != model:
             problems.append(f"FX{engine} holds {live_model}, not {model}")
         if not problems:
             continue
         findings.append(Diagnostic.audit(
-            "CV015", Severity.WARNING, "conventions", "FX Bus Effect Contradicts Plan",
+            "CV015", Severity.WARNING, "conventions", "Effect Insert Contradicts Plan",
             f"{strip_label(state, base)}: the plan loads {model} into FX{engine} and inserts it "
-            f"on this bus, switched on (its bus preset); " + "; ".join(problems) + ".",
+            f"on this strip, switched on; " + "; ".join(problems) + ".",
             (f"{base}/{point}/on", f"{base}/{point}/ins",
              console_facts.FX_MODEL.replace("{n}", str(engine))),
         ))
@@ -4516,7 +4866,29 @@ def planned_routes(plan: dict, entry: dict) -> list[tuple[str, str, int]]:
         idx = route.get("index") if isinstance(route, dict) else None
         if isinstance(idx, int):
             routes.append(("main", f"Main {idx}", idx))
+    # A send straight to a Matrix, the same way.
+    matrices = _plan_matrix_indices(plan)
+    for send in entry.get("matrix_sends") or []:
+        if not isinstance(send, dict) or send.get("matrix") not in matrices:
+            continue
+        level = send.get("level_db")
+        if isinstance(level, (int, float)) and level <= FADER_FLOOR_DB:
+            continue
+        routes.append(("mtx", send["matrix"], matrices[send["matrix"]]))
     return routes
+
+
+def _plan_matrix_indices(plan: dict) -> dict[str, int]:
+    """Each plan Matrix's index, by its `outputs` key."""
+    return {name: e["index"] for name, e in (plan.get("outputs") or {}).items()
+            if isinstance(e, dict) and e.get("kind") == "matrix" and isinstance(e.get("index"), int)}
+
+
+def _send_address(base: str, kind: str, idx: int) -> str:
+    """The send or route leaf a CV016 route is: `send/{n}`, `send/MX{n}` or
+    `main/{n}`, under `base`."""
+    return {"main": f"{base}/main/{idx}", "mtx": f"{base}/send/MX{idx}"}.get(
+        kind, f"{base}/send/{idx}")
 
 
 def _route_state(state: ConsoleState, base: str, kind: str, idx: int) -> str | None:
@@ -4526,12 +4898,13 @@ def _route_state(state: ConsoleState, base: str, kind: str, idx: int) -> str | N
         if on is None:
             return None
         return "carries" if on else "off"
-    on = state.flag(f"{base}/send/{idx}/on")
+    send = _send_address(base, kind, idx)
+    on = state.flag(f"{send}/on")
     if on is None:
         return None
     if not on:
         return "off"
-    lvl = state.number(f"{base}/send/{idx}/lvl")
+    lvl = state.number(f"{send}/lvl")
     return "at the floor" if lvl is not None and lvl <= FADER_FLOOR_DB else "carries"
 
 
@@ -4545,6 +4918,8 @@ def _other_live_routes(state: ConsoleState, base: str, planned: set[tuple[str, i
             continue
         live.append(effective_name(state, f"/bus/{idx}") or position_label(f"/bus/{idx}"))
     for idx in matrix_send_targets(state, base):
+        if ("mtx", idx) in planned:
+            continue
         on = state.flag(f"{base}/send/MX{idx}/on")
         lvl = state.number(f"{base}/send/MX{idx}/lvl")
         if on and (lvl is None or lvl > FADER_FLOOR_DB):
@@ -4600,9 +4975,9 @@ def _route_drift(state: ConsoleState, plan: dict) -> list[tuple[str, list, Findi
         if any(s is None for s in states) or "carries" in states:
             continue
         names = [_desk_bus_label(state, idx, name) if kind == "bus"
-                 else position_label(f"/main/{idx}")
+                 else position_label(f"/{kind}/{idx}")
                  for kind, name, idx in routes]
-        sends = [n for (kind, _, _), n in zip(routes, names) if kind == "bus"]
+        sends = [n for (kind, _, _), n in zip(routes, names) if kind in ("bus", "mtx")]
         mains = [n for (kind, _, _), n in zip(routes, names) if kind == "main"]
         what = []
         if sends:
@@ -4621,8 +4996,7 @@ def _route_drift(state: ConsoleState, plan: dict) -> list[tuple[str, list, Findi
         elsewhere = _other_live_routes(state, base, {(k, i) for k, _n, i in routes})
         tail = (f" It still reaches {_join(elsewhere)}, which the plan does not route it to."
                 if elsewhere else " Its signal reaches nothing the plan routes it to.")
-        addresses = tuple(f"{base}/main/{idx}/on" if kind == "main" else f"{base}/send/{idx}/on"
-                          for kind, _name, idx in routes)
+        addresses = tuple(f"{_send_address(base, kind, idx)}/on" for kind, _name, idx in routes)
         findings.append((base, routes, Diagnostic.audit(
             "CV016", Severity.WARNING, "conventions", "Planned Routes All Off",
             f"{strip_label(state, base)}: the plan {' and '.join(what)}; {verdict}." + tail,
@@ -4645,13 +5019,18 @@ def planned_unmuted(state: ConsoleState, plan: dict) -> list[tuple[str, str]]:
     writes such an object unmuted, `console_facts.MUTED_DEFAULT`), and each Main
     and Matrix the plan routes into or declares as an output, unless its
     output entry says muted. The talk mic is not in it: it is muted by
-    design between talks (T002), and a plan has no way to say so."""
+    design between talks (T002), and a plan has no way to say so.
+
+    A captured plan states no mix (`inferred.plan_states_the_mix`), so only
+    an object whose `muted` it states as false is in it."""
     out: list[tuple[str, str]] = []
     talk = talkback_strip(state)
+    states_mix = inferred.plan_states_the_mix(plan)
 
     def unmuted(entry: dict) -> bool:
         fader = entry.get("fader")
-        return not (isinstance(fader, dict) and fader.get("muted") is True)
+        muted = fader.get("muted") if isinstance(fader, dict) else None
+        return muted is False if not states_mix else muted is not True
 
     for entry in plan.get("channels") or []:
         if not isinstance(entry, dict) or entry.get("bank") not in ("ch", "aux"):
@@ -4668,6 +5047,9 @@ def planned_unmuted(state: ConsoleState, plan: dict) -> list[tuple[str, str]]:
             if isinstance(entry, dict) and isinstance(entry.get("index"), int) and unmuted(entry):
                 out.append((fmt.format(entry["index"]), name))
 
+    if not states_mix:
+        # A captured plan states no Main's or Matrix's mute either.
+        return out
     mains: dict[int, str] = {}
     matrices: dict[int, str] = {}
     stated_muted: set[str] = set()
@@ -5033,6 +5415,9 @@ def bus_send_drift_findings(state: ConsoleState, plan: dict) -> list[Finding]:
         findings.extend(_diff_bus_sends(
             state, entry, base, strip_label(state, base), entry.get("provenance") or {},
             level=False, spoken_for=cut_off.get(base, frozenset())))
+        findings.extend(_diff_matrix_sends(
+            state, plan, entry, base, strip_label(state, base), level=False,
+            spoken_for=cut_off.get(base, frozenset())))
     return findings
 
 
@@ -5083,9 +5468,16 @@ def unplanned_route_findings(state: ConsoleState, plan: dict) -> list[Finding]:
     the desk, which may well be meant, and the row only names it. Silent for
     whatever was not read."""
     findings: list[Finding] = []
+    matrices = _plan_matrix_indices(plan)
     for entry, base in _plan_strips(plan):
         label = strip_label(state, base)
+        # A send the plan states (`matrix_sends`) is
+        # CV006's to compare, not this rule's to report.
+        planned = {matrices.get(send.get("matrix")) for send in entry.get("matrix_sends") or []
+                   if isinstance(send, dict)}
         for idx in matrix_send_targets(state, base):
+            if idx in planned:
+                continue
             send_base = f"{base}/send/MX{idx}"
             level = _live_send_level(state, send_base)
             if level is None:
@@ -5208,7 +5600,23 @@ def with_plan_rules(rules, plan_path) -> list[AuditRule]:
         return list(rules)
     bound = [PLAN_REBOUND_RULES[rule.id](plan) if rule.id in PLAN_REBOUND_RULES else rule
              for rule in rules]
-    return split_path_rules(bound, plan) + plan_watch_rules(plan_path)
+    # Every rule, an ACTIVE watch condition among them, reads the show's
+    # sheets as active.
+    return [_reading_sheets(rule, plan)
+            for rule in split_path_rules(bound, plan) + plan_watch_rules(plan_path)]
+
+
+def _reading_sheets(rule: AuditRule, plan: dict) -> AuditRule:
+    """`rule`, given each state with `plan`'s sheets laid on it (`on_sheets`)."""
+    sheets = sheet_bases(plan)
+    check = rule.check
+
+    def checked(state: ConsoleState) -> list[Finding]:
+        if state.sheet_strips is None:
+            state = replace(state, sheet_strips=sheets)
+        return check(state)
+
+    return replace(rule, check=checked)
 
 
 def plan_watch_rules(plan_path) -> list[AuditRule]:
@@ -5357,8 +5765,8 @@ def fx_insert_rule(plan: dict) -> AuditRule | None:
         return None
     return AuditRule(
         FX_INSERT_RULE_ID, Severity.WARNING, "conventions", FX_INSERT_TITLE,
-        "An FX bus whose insert is off, names another engine, or whose engine holds another "
-        "model than its bus preset planned.",
+        "A strip whose insert is off, names another engine, or whose engine holds another "
+        "model than the plan sets, or names an engine where the plan takes the insert off.",
         lambda state: fx_insert_findings(state, plan), scope=RuleScope.CONVENTION)
 
 
@@ -5379,6 +5787,88 @@ PLAN_REBOUND_RULES: "dict[str, Callable[[dict], AuditRule]]" = {
 PLAN_SPLIT_PATH_RULE_IDS = ("R012", "R013")
 #: Rules that exist only with a plan: (id, title, factory), the factory
 #: returning None when the plan gives the rule nothing to check.
+# --------------------------------------------------------------------------
+# CV023: a sheet edit the desk does not have yet
+# --------------------------------------------------------------------------
+#
+# A Save in Build's step 04 records the desk writes its edit changed, with
+# the cells that asked for them (`plan["meta"]["sheet_pending"]`,
+# `sheets.pending_writes`). Watch never writes; this says, for each object,
+# that the desk does not have the edit yet, quoting the cell, until Apply
+# writes it (or the edit is undone, or the desk is set by hand to match).
+# A WARNING (the maintainer's decision F on the desk sheets' mockup).
+
+SHEET_DIFFERS_RULE_ID = "CV023"
+SHEET_DIFFERS_TITLE = "Sheet Differs From Desk"
+_PENDING_STRIP = re.compile(r"^(ch|aux|bus) (\d+) \((.*)\)$")
+_PENDING_OUTPUT = re.compile(r"^output (.*) \((main|matrix) (\d+)\)$")
+
+
+def _pending_where(label: str) -> "tuple[str, str | None]":
+    """`bus 9 (Presentr)` -> (`BUS 9 "Presentr"`, `/bus/9`): the object as the
+    desk names it, and its base address."""
+    m = _PENDING_STRIP.match(label)
+    if m:
+        base = f"/{m.group(1)}/{m.group(2)}"
+        return f'{position_label(base)} "{m.group(3)}"', base
+    m = _PENDING_OUTPUT.match(label)
+    if m:
+        base = f"/{'main' if m.group(2) == 'main' else 'mtx'}/{m.group(3)}"
+        return f'{position_label(base)} "{m.group(1)}"', base
+    return label, None
+
+
+def sheet_differs_findings(state: ConsoleState, plan: dict) -> list[Finding]:
+    """CV023: one WARNING per object whose sheet edit the desk does not have:
+    a recorded write whose address the reading holds, at another value
+    (`apply._values_equal`, the comparison Apply's preview makes). Silent for
+    what was not read, and once the desk has every write."""
+    from atoo.apply import _values_equal
+
+    meta = plan.get("meta") if isinstance(plan.get("meta"), dict) else {}
+    findings = []
+    for group in meta.get("sheet_pending") or []:
+        if not isinstance(group, dict):
+            continue
+        differ = []
+        for write in group.get("writes") or []:
+            address = write.get("address")
+            if address not in state.values:
+                continue
+            if not _values_equal(write.get("type") or "s", write.get("value"),
+                                 state.values[address], address):
+                differ.append(write)
+        if not differ:
+            continue
+        where, base = _pending_where(str(group.get("object") or ""))
+        quoted = "; ".join(group.get("cells") or [])
+        whats = [str(w.get("what") or w.get("address")).split(":", 1)[-1].split(" -- ")[0].strip()
+                 for w in differ]
+        shown = "; ".join(whats[:4]) + (f"; and {len(whats) - 4} more" if len(whats) > 4 else "")
+        findings.append(Diagnostic.audit(
+            "CV023", Severity.WARNING, "sheets", "Sheet Differs From Desk",
+            f'{where}: "{quoted}." The desk does not have this yet ({len(differ)} '
+            f"setting{'s' if len(differ) != 1 else ''}: {shown}). Nothing is written until you "
+            "apply it, or undo the edit.",
+            # The object first, so the page's Where is the bus or the strip
+            # the cell is about, not the socket a write lands on.
+            ((base,) if base else ()) + tuple(w["address"] for w in differ),
+        ))
+    return findings
+
+
+def sheet_differs_rule(plan: dict) -> AuditRule | None:
+    """CV023 as a rule Watch can run, bound to `plan`; None when no Save has
+    left anything for Apply."""
+    meta = plan.get("meta") if isinstance(plan.get("meta"), dict) else {}
+    if not meta.get("sheet_pending"):
+        return None
+    return AuditRule(
+        SHEET_DIFFERS_RULE_ID, Severity.WARNING, "sheets", SHEET_DIFFERS_TITLE,
+        "A sheet edit saved in Build's step 04 that the desk does not have yet.",
+        lambda state: sheet_differs_findings(state, plan), scope=RuleScope.CONVENTION)
+
+
 PLAN_ADDED_RULES: "tuple[tuple[str, str, Callable[[dict], AuditRule | None]], ...]" = (
     (FX_INSERT_RULE_ID, FX_INSERT_TITLE, fx_insert_rule),
     (ROUTE_DRIFT_RULE_ID, ROUTE_DRIFT_TITLE, route_drift_rule),
@@ -5390,6 +5880,7 @@ PLAN_ADDED_RULES: "tuple[tuple[str, str, Callable[[dict], AuditRule | None]], ..
     (BUS_WIDTH_RULE_ID, BUS_WIDTH_TITLE, bus_width_rule),
     (TALKBACK_MONITOR_RULE_ID, TALKBACK_MONITOR_TITLE, talkback_monitor_rule),
     (TALKBACK_MONITORS_NOTE_RULE_ID, TALKBACK_MONITORS_NOTE_TITLE, talkback_monitors_note_rule),
+    (SHEET_DIFFERS_RULE_ID, SHEET_DIFFERS_TITLE, sheet_differs_rule),
 )
 
 
@@ -5400,6 +5891,215 @@ def rules_needing_a_plan() -> "tuple[list[tuple[str, str]], list[tuple[str, str]
     titles = {rule.id: rule.title for rule in DEFAULT_RULES}
     judged = [(rid, titles[rid]) for rid in (*PLAN_REBOUND_RULES, *PLAN_SPLIT_PATH_RULE_IDS)]
     return judged, [(rid, title) for rid, title, _factory in PLAN_ADDED_RULES]
+
+
+# --------------------------------------------------------------------------
+# The rule catalogue: every rule id a finding can carry, with what it checks
+# in a sound engineer's words. `DEFAULT_RULES` holds the structural rules;
+# the plan comparisons (CV*) are built per finding in the diff code above, so
+# their entries live here, beside `SCOPE_SUMMARY_RULE_ID`. Watch's own notes
+# (W*) are `watch.WATCH_NOTE_RULES`. The Rules reference page is written
+# from these, and
+# `tests/test_rules_reference.py` fails while a finding's id, severity,
+# category or title is missing here or differs from what the code emits.
+# --------------------------------------------------------------------------
+
+#: Where a rule runs. `RUNS_ANY`: `atoo audit` and Watch, with or without a
+#: plan. `RUNS_PLAN`: `atoo audit --plan` and Watch with the show's plan.
+#: `RUNS_PLAN_AUDIT`: `atoo audit --plan` only. `RUNS_WATCH`: a live Watch.
+RUNS_ANY = "any"
+RUNS_PLAN = "plan"
+RUNS_PLAN_AUDIT = "plan-audit"
+RUNS_WATCH = "watch"
+
+
+@dataclass(frozen=True)
+class RuleInfo:
+    """One rule as the Rules reference lists it."""
+
+    id: str
+    severity: Severity
+    category: str
+    title: str
+    description: str
+    runs: str
+
+
+#: The categories in the order the reference lists them: (category, heading,
+#: one sentence on what its rules are about).
+RULE_CATEGORIES: tuple[tuple[str, str, str], ...] = (
+    ("routing", "Routing",
+     "Where signal goes: buses, Mains and Matrices that are fed or reach an output, "
+     "strips that reach nothing, loops and splits."),
+    ("configuration", "Patch, sockets and stage boxes",
+     "What each strip is patched from, 48V, alternate inputs, expansion bays and the "
+     "AES50 links to stage boxes."),
+    ("effects", "Effects", "Effects loaded into FX slots and inserted on strips."),
+    ("communications", "Talkback", "Whether talkback reaches anyone."),
+    ("channels", "DCAs and mute groups",
+     "DCAs and mute groups that silence what they control."),
+    ("naming", "Names", "Names that two strips or two buses share."),
+    ("levels", "Levels", "Faders, sends and clipping."),
+    ("conventions", "Compared with the plan",
+     "The desk against the show's plan: each rule here needs the plan, and speaks "
+     "where the desk differs from what the plan states."),
+    ("sheets", "Sheets", "Edits saved in Build's step 04 that the desk does not have yet."),
+    ("scope", "The report itself", "What a report with a plan leaves out, and why."),
+    ("watch", "Watch", "Notes Watch gives about the session itself, not about the desk."),
+)
+
+_T = f"{FADER_TOLERANCE_DB:g}dB"
+
+#: The plan comparisons and the scope summary. See the section comment.
+PLAN_RULE_CATALOGUE: tuple[RuleInfo, ...] = (
+    RuleInfo("CV001", Severity.WARNING, "conventions", "Mute Contradicts Plan",
+             "The plan mutes a channel or aux, and it is unmuted on the desk.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV002", Severity.WARNING, "conventions", "Fader Level Contradicts Plan",
+             f"A channel or aux fader is more than {_T} from the level the plan states.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV003", Severity.WARNING, "conventions", "DCA Membership Contradicts Plan",
+             "The plan puts a channel or aux in a DCA, and the desk does not have it there.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV004", Severity.WARNING, "conventions", "Mute Group Membership Contradicts Plan",
+             "The plan puts a channel or aux in a mute group, and the desk does not have it there.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV005", Severity.WARNING, "conventions", "Patch Contradicts Plan",
+             "A channel or aux is patched from a different input socket than the plan states, "
+             "or from none.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo(BUS_SEND_DRIFT_RULE_ID, Severity.WARNING, "conventions", BUS_SEND_DRIFT_TITLE,
+             "A send the plan states, from a channel or aux to a bus or Matrix, is off on the "
+             f"desk, in the other pre/post mode, or (in `atoo audit --plan`) more than {_T} "
+             "from the plan's level.",
+             RUNS_PLAN),
+    RuleInfo(MAIN_ROUTE_DRIFT_RULE_ID, Severity.WARNING, "conventions", MAIN_ROUTE_DRIFT_TITLE,
+             "A channel's route to a Main is off where the plan routes it, or on where the plan "
+             "has no such route.",
+             RUNS_PLAN),
+    RuleInfo("CV008", Severity.WARNING, "conventions", "Processing Contradicts Plan",
+             "A channel's trim, balance, polarity, head-amp gain, high-pass, hi-cut, tilt or EQ "
+             "is not what the plan states.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV009", Severity.WARNING, "conventions", "Undeclared Physical Output Patch",
+             "An output socket carries a signal the plan does not put there: nothing in the "
+             "plan routes to that socket, or the plan routes something else to it. Often left "
+             "over from an earlier show or from patching by hand.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV010", Severity.WARNING, "conventions", "Bus Mute Contradicts Plan",
+             "The plan mutes a bus, and it is unmuted on the desk.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV011", Severity.WARNING, "conventions", "Bus Fader Level Contradicts Plan",
+             f"A bus fader is more than {_T} from the level the plan states.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV012", Severity.WARNING, "conventions", "DCA Mute Contradicts Plan",
+             "The plan mutes a DCA, and it is unmuted on the desk.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV013", Severity.WARNING, "conventions", "DCA Fader Level Contradicts Plan",
+             f"A DCA fader is more than {_T} from the level the plan states.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo("CV014", Severity.WARNING, "conventions", "Talkback Strip Holds A Plan Input",
+             "Talkback is assigned to channel 40 or aux 8, and the plan puts an ordinary input "
+             "on that strip, so the talk mic and the input share it.",
+             RUNS_PLAN_AUDIT),
+    RuleInfo(FX_INSERT_RULE_ID, Severity.WARNING, "conventions", FX_INSERT_TITLE,
+             "An insert on a channel, bus, Main or Matrix is not what the plan sets: it names "
+             "another FX slot or none, it is switched off, the slot holds another effect, or an "
+             "insert the plan takes off is back on.",
+             RUNS_PLAN),
+    RuleInfo(ROUTE_DRIFT_RULE_ID, Severity.WARNING, "conventions", ROUTE_DRIFT_TITLE,
+             "Every send and route the plan gives a channel is off on the desk, so it reaches "
+             "none of the places the plan sends it.",
+             RUNS_PLAN),
+    RuleInfo(MUTE_DRIFT_RULE_ID, Severity.WARNING, "conventions", MUTE_DRIFT_TITLE,
+             "A channel, aux, bus, DCA, Main or Matrix is muted on the desk, and the plan leaves "
+             "it unmuted.",
+             RUNS_PLAN),
+    RuleInfo(UNPLANNED_ROUTE_RULE_ID, Severity.INFO, "conventions", UNPLANNED_ROUTE_TITLE,
+             "A send or route is on at the desk that the plan does not have, such as a channel "
+             "sent to a bus, Matrix or Main the plan never sends it to.",
+             RUNS_PLAN),
+    RuleInfo(PHANTOM_RULE_ID, Severity.WARNING, "conventions", PHANTOM_TITLE,
+             "48V on a channel's input socket is not what the input list's phantom column "
+             "says: on where it says FALSE, or off where it says TRUE.",
+             RUNS_PLAN),
+    RuleInfo(BUS_WIDTH_RULE_ID, Severity.WARNING, "conventions", BUS_WIDTH_TITLE,
+             "A bus is mono on the desk where the plan makes it stereo, or stereo where the "
+             "plan makes it mono.",
+             RUNS_PLAN),
+    RuleInfo(TALKBACK_MONITOR_RULE_ID, Severity.WARNING, "conventions", TALKBACK_MONITOR_TITLE,
+             "Talkback reaches some of the monitor mixes the plan builds but not this one, so "
+             "whoever listens to it cannot hear you.",
+             RUNS_PLAN),
+    RuleInfo(TALKBACK_MONITORS_NOTE_RULE_ID, Severity.INFO, "conventions",
+             TALKBACK_MONITORS_NOTE_TITLE,
+             "Names the monitor mixes the talkback check counted, and how many talkback "
+             "reaches, so a mix it did not count is plain to see.",
+             RUNS_PLAN),
+    RuleInfo(SHEET_DIFFERS_RULE_ID, Severity.WARNING, "sheets", SHEET_DIFFERS_TITLE,
+             "An edit saved in Build's step 04 is not on the desk yet. The finding quotes the "
+             "cell, and clears once you apply the plan, undo the edit, or set the desk to match.",
+             RUNS_PLAN),
+    RuleInfo(SCOPE_SUMMARY_RULE_ID, Severity.INFO, "scope", "Findings Withheld From This Report",
+             "With a plan, a finding about a strip the plan never mentions, or about a setting "
+             "the plan states and a comparison with the plan already checks, is left out. This "
+             "line counts what was left out and why, so a shorter report is never mistaken for "
+             "a healthier desk.",
+             RUNS_PLAN),
+)
+
+
+def rule_catalogue() -> list[RuleInfo]:
+    """Every rule `atoo audit` and Watch can report, structural and plan
+    comparison alike, in catalogue order. Watch's own notes are
+    `watch.WATCH_NOTE_RULES`."""
+    structural = [
+        RuleInfo(rule.id, rule.severity, rule.category, rule.title, rule.description,
+                 RUNS_WATCH if rule.id == "L003" else RUNS_ANY)
+        for rule in DEFAULT_RULES
+    ]
+    return structural + list(PLAN_RULE_CATALOGUE)
+
+
+def _diff_matrix_sends(
+    state: ConsoleState, plan: dict, entry: dict, base: str, label: str,
+    *, level: bool, spoken_for: frozenset = frozenset(),
+) -> list[Finding]:
+    """CV006 for a plan channel's sends straight to a Matrix (`matrix_sends`), as `_diff_bus_sends` for its bus sends: a stated
+    send that is off on the desk, or in the other pre/post mode, and with
+    `level`, at another level. Indexed by the plan's own Matrix numbers."""
+    matrices = _plan_matrix_indices(plan)
+    findings: list[Finding] = []
+    for send in entry.get("matrix_sends") or []:
+        name = send.get("matrix") if isinstance(send, dict) else None
+        idx = matrices.get(name)
+        if idx is None:
+            continue
+        send_base = f"{base}/send/MX{idx}"
+        target = f'{position_label(f"/mtx/{idx}")} "{name}"'
+        if state.flag(f"{send_base}/on") is False and ("mtx", idx) not in spoken_for:
+            findings.append(Diagnostic.audit(
+                "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                f"{label}: plan states a send to {target}, live console reads off.",
+                (f"{send_base}/on",)))
+        level_db = send.get("level_db")
+        if level and level_db is not None:
+            live_lvl = state.number(f"{send_base}/lvl")
+            if live_lvl is not None and abs(float(level_db) - live_lvl) > FADER_TOLERANCE_DB:
+                findings.append(Diagnostic.audit(
+                    "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                    f"{label}: plan says send to {target} is {level_db:g}dB, live console "
+                    f"reads {live_lvl:g}dB (tolerance {FADER_TOLERANCE_DB:g}dB).",
+                    (f"{send_base}/lvl",)))
+        wing_mode = _SEND_MODE_TO_WING.get(send.get("mode"))
+        live_mode = state.text(f"{send_base}/mode")
+        if wing_mode is not None and live_mode is not None and live_mode != wing_mode:
+            findings.append(Diagnostic.audit(
+                "CV006", Severity.WARNING, "conventions", "Bus Send Contradicts Plan",
+                f"{label}: plan says send to {target} mode is {send.get('mode')!r} "
+                f"({wing_mode}), live console reads {live_mode}.",
+                (f"{send_base}/mode",)))
+    return findings
 
 
 def _diff_bus_sends(
@@ -5611,6 +6311,9 @@ def diff_against_plan(state: ConsoleState, plan: dict) -> list[Finding]:
         # Bus sends and direct Main routes (FR-1.11).
         findings.extend(_diff_bus_sends(
             state, entry, base, label, provenance, level=True,
+            spoken_for=cut_off.get(base, frozenset())))
+        findings.extend(_diff_matrix_sends(
+            state, plan, entry, base, label, level=True,
             spoken_for=cut_off.get(base, frozenset())))
         findings.extend(_diff_main_routes(
             state, entry, base, label, provenance,
@@ -5982,15 +6685,15 @@ def _item_lines(items: list[str]) -> list[str]:
 def _render_rule_group(group: list[Finding]) -> list[str]:
     """One rule's entry. A rule that fired once reads as it always has:
 
-        [INFO] CH001 Channel Not In Any DCA
-          CH 3 "Vocal" is in use but belongs to no DCA group.
+        [INFO] L002 Active Strip Fader At Floor
+          CH 3 "Vocal" is unmuted and in use, but its own fader is at -144dB.
 
     A rule that fired on several strips says so once, with
     the strips listed and the sentence they share said once:
 
-        [INFO] CH001 Channel Not In Any DCA (5)
+        [INFO] L002 Active Strip Fader At Floor (5)
           CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback"
-          Each is in use but belongs to no DCA group.
+          Each is unmuted and in use, but its own fader is at -144dB.
 
     and, where the sentences differ past the strip (a level, a socket),
     each on its own line under the one heading. Nothing is dropped: every
@@ -6186,8 +6889,8 @@ def render_coverage(state: ConsoleState, *, from_capture: bool = False) -> str:
             "Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), "
             "R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On "
             "One Side), CV009 (Undeclared Physical "
-            "Output Patch), C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 "
-            "Stage Box Link Not OK), C010 (AES50 Port Reports UPD), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's "
+            "Output Patch), C008 (Stage Box Not Connected Or In Error), C009 (AES50 "
+            "Stage Box Link Not OK), C010 (AES50 Stage Box Firmware Needs Updating), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's "
             "Input Socket Muted) could not be checked -- with no output patch in hand, "
             "\"reaches no physical output\" is a question nobody asked rather than an "
             "answer.\n" + how])
@@ -6270,7 +6973,7 @@ def coverage_caveat(state: ConsoleState) -> str | None:
 #
 # It also replaced a guess. `cli.ESTIMATED_LIVE_READ_ADDRESSES` was a
 # hand-maintained 5,928 that went stale every time this plan grew; the
-# real number for a Compact reading its own panel is 6,195, and it is
+# real number for a Compact reading its own panel is 6,197, and it is
 # now counted rather than remembered. (It was 6,032 until 320 addresses the desk does not have were
 # dropped -- those 320 were never answered, so the number
 # of VALUES a read came back with did not change -- and 5,712 until the
@@ -6513,6 +7216,11 @@ def console_read_plan(
             plan.append((console_facts.aes50_status_address(port), "s"))
         for address in console_facts.MONITOR_SOURCES:
             plan.append((address, "s"))
+        # What is fitted in each expansion bay, so the second
+        # pass can read a fitted module's or card's outputs
+        # (`bay_output_addresses`). Two leaves.
+        for address in console_facts.EXPANSION_BAY_ADDRESSES.values():
+            plan.append((address, "s"))
 
     # What a plan states that no rule reads without one (`extra`): the filter
     # and EQ leaves `audit --plan` compares. Appended after everything else,
@@ -6750,14 +7458,14 @@ def read_console_state(
 
     `progress` is a `atoo.progress.ReadProgress` (or anything with
     its two methods). This read is 6,143 addresses on a
-    Compact -- then one serial round trip each; by default now 323
+    Compact -- then one serial round trip each; by default now 325
     requests, pipelined eight in flight -- and it used to print
     nothing at all for the whole of them, which at the desk is
     indistinguishable from a hang. Optional here so the
     library stays quiet by default; the CLI always passes one.
 
     `bulk=True` fetches most of those addresses with node dumps instead
-    -- one `,s *` query per object rather than one GET per leaf, 323
+    -- one `,s *` query per object rather than one GET per leaf, 325
     requests instead of 6,143 on a Compact (protocol PDF p24-25, and
     `atoo.console.parse_node_dump`). It changes where a value comes
     from, which is the one thing this tool may not get wrong, so it was
@@ -6907,6 +7615,12 @@ def read_console_state(
         that the first pass did not read (`aes50_output_addresses`): 96
         per port in use, none on a desk with nothing on AES50.
 
+        Plus, the output patch of every expansion bay
+        the desk reports fitted (`bay_output_addresses`): 64 `grp` per
+        fitted module or card, then one `in` per socket patched
+        (`bay_output_index_addresses`); none on a desk whose bays are
+        empty.
+
         Read per leaf even under `bulk`: `name` is in
         `DUMP_UNSAFE_LEAVES`, so a node dump would not have carried it
         anyway.
@@ -6916,13 +7630,20 @@ def read_console_state(
                    + custom_link_addresses(first)
                    + expansion_bay_addresses(first)
                    + talkback_addresses(first)
-                   + aes50_output_addresses(first))
+                   + aes50_output_addresses(first)
+                   + bay_output_addresses(first))
         if names is not None:
             sources = [(address, value_type) for address, value_type in sources
                        if not _take_known_name(values, names, address)]
         if progress is not None and hasattr(progress, "add_total"):
             progress.add_total(len(sources))
         read_all(sources)
+        # The `in` of each fitted bay's output socket that
+        # the `grp` just read says is patched.
+        indexes = bay_output_index_addresses(ConsoleState(values, console_model=console_model))
+        if progress is not None and hasattr(progress, "add_total"):
+            progress.add_total(len(indexes))
+        read_all(indexes)
 
     if not bulk:
         read_all(plan)

@@ -23,6 +23,7 @@ a report id it is not serving.
 
 from __future__ import annotations
 
+import json
 import socket
 import struct
 import threading
@@ -33,7 +34,7 @@ import pytest
 from atoo import metering
 from atoo.audit import ConsoleState, DEFAULT_RULES, run_audit
 from atoo.diagnostics import Severity
-from atoo.metering import (CLIP_THRESHOLD, REPORT_ID, REPORT_TYPES, RELEASE_THRESHOLD, ClipMonitor,
+from atoo.metering import (CLIP_BRIDGE_SECONDS, CLIP_THRESHOLD, REPORT_ID, REPORT_TYPES, ClipMonitor,
                            ClipTracker, StripClip, WORDS_PER_STRIP, clipped_strips, parse_packet,
                            report_strips, requests)
 from atoo.watch import CLIP_STATUS_RULE_ID, WatchNote, finding_key, present_findings, watch
@@ -139,6 +140,92 @@ def seconds(tracker: ClipTracker, now: float) -> dict[str, StripClip]:
     return {c.base: c for c in tracker.snapshot(now)}
 
 
+def feed(tracker: ClipTracker, now: float, base: str, level: int) -> None:
+    """One meter packet as `ClipMonitor` reads it: `base` at `level` (1/256
+    dB) on its input L word, every other strip quiet."""
+    words = [level] + [QUIET] * (WORDS_PER_STRIP - 1)
+    tracker.observe(now, clipped_strips([base], words))
+
+
+def play(tracker: ClipTracker, base: str, levels: list[tuple[float, int]]) -> None:
+    for now, level in levels:
+        feed(tracker, now, base, level)
+
+
+def packets(start: float, end: float, level: int, every: float = 0.05) -> list[tuple[float, int]]:
+    """Packets every `every` seconds from `start` up to, not including, `end`."""
+    n = round((end - start) / every)
+    return [(round(start + i * every, 4), level) for i in range(n)]
+
+
+# ---- recorded packet sequences (the shapes a desk test reported) -----
+
+
+def test_a_single_1_3_second_clip_is_once_for_1_3_seconds():
+    t = ClipTracker()
+    play(t, "/ch/2", packets(0.0, 2.0, QUIET) + packets(2.0, 3.3, HOT) + packets(3.3, 5.0, QUIET))
+    clip = seconds(t, 5.0)["/ch/2"]
+    assert clip.count == 1
+    assert clip.longest == pytest.approx(1.3, abs=0.01)
+    assert clip.ago == pytest.approx(5.0 - 3.25)
+    (finding,) = l003(state_with(clip, names={"/ch/2": "Snare"}))
+    assert finding.detail == ('CH 2 "Snare" clipped once, for 1.3 s; that was 1.8 s ago. This '
+                              "clears in 58 s unless it clips again.")
+
+
+def test_six_short_clips_over_46_seconds_count_six_and_the_longest_is_the_longest_clip():
+    """A drum mix sitting at -2 dBFS between peaks -- above the old -3 dBFS
+    release, which made this one 46 s "clip" -- with six peaks into clip."""
+    t = ClipTracker()
+    starts = [0.0, 9.0, 18.0, 27.0, 36.0, 46.0]
+    lengths = [0.2, 0.15, 0.4, 0.1, 0.25, 0.2]
+    levels: list[tuple[float, int]] = []
+    previous = 0.0
+    for start, length in zip(starts, lengths):
+        levels += packets(previous, start, -2 * 256) + packets(start, start + length, HOT)
+        previous = start + length
+    levels += packets(previous, 47.6, -2 * 256)
+    play(t, "/bus/4", levels)
+    clip = seconds(t, 47.6)["/bus/4"]
+    assert clip.count == 6
+    assert clip.longest == pytest.approx(0.4, abs=0.01)
+    assert clip.first_ago == pytest.approx(47.6)
+    assert clip.ago == pytest.approx(47.6 - 46.15)
+    (finding,) = l003(state_with(clip, names={"/bus/4": "Drum IEM"}))
+    assert finding.detail == ('BUS 4 "Drum IEM" clipped 6 times; the longest was 0.4 s; the '
+                              "first was 48 s ago and the last 1.5 s ago. This clears in 59 s "
+                              "unless it clips again.")
+
+
+def test_a_clip_across_the_streams_renewal_is_one_clip():
+    """The stream pauses while it is renewed every 2 s: no packets is not
+    quiet, so a clip that goes on through the pause is one clip."""
+    t = ClipTracker()
+    play(t, "/ch/2", packets(0.0, 1.0, QUIET) + packets(1.0, 2.0, HOT)
+         + packets(2.6, 3.0, HOT) + packets(3.0, 4.0, QUIET))   # 600 ms with no data
+    clip = seconds(t, 4.0)["/ch/2"]
+    assert clip.count == 1
+    assert clip.longest == pytest.approx(2.0, abs=0.01)
+
+
+def test_a_gap_longer_than_a_renewal_ends_a_clip():
+    t = ClipTracker()
+    play(t, "/ch/2", packets(0.0, 0.5, HOT) + packets(2.0, 2.5, HOT))   # 1.55 s with no data
+    assert seconds(t, 3.0)["/ch/2"].count == 2
+
+
+def test_a_duplicate_or_late_packet_changes_nothing():
+    t = ClipTracker()
+    levels = packets(0.0, 1.0, QUIET) + packets(1.0, 1.5, HOT) + packets(1.5, 3.0, QUIET)
+    # The 1.2 s packet is heard twice; 1.3's arrives 40 ms late, just before 1.35's.
+    levels = sorted([p for p in levels if p[0] != 1.3] + [(1.2005, HOT), (1.34, HOT)])
+    play(t, "/ch/2", levels)
+    clip = seconds(t, 3.0)["/ch/2"]
+    assert clip.count == 1
+    assert clip.longest == pytest.approx(0.5, abs=0.01)
+    assert t.interval == pytest.approx(0.05, abs=0.01)
+
+
 def test_a_single_clip_stands_for_sixty_seconds_and_then_clears():
     t = ClipTracker()
     t.observe(100.0, {"/ch/3"})
@@ -191,11 +278,12 @@ def test_a_run_of_clipped_packets_is_one_clip_and_a_long_enough_quiet_makes_the_
 
 def test_a_level_hovering_at_the_threshold_is_one_clip_not_hundreds():
     """Packets at 20/s whose strip flickers between clipped and just under
-    it (above the release level) are one run."""
+    it -- each dip one packet, shorter than the 200 ms bridge -- are one
+    clip."""
     t = ClipTracker()
     for i in range(200):                          # 10 s
         now = i * 0.05
-        t.observe(now, {"/ch/3"} if i % 3 else set(), {"/ch/3"})
+        t.observe(now, {"/ch/3"} if i % 3 else set())
     clip = seconds(t, 10.0)["/ch/3"]
     assert clip.count == 1
     assert clip.longest == pytest.approx(9.9, abs=0.2)
@@ -214,20 +302,21 @@ def test_dips_shorter_than_the_release_time_do_not_end_a_clip_and_longer_ones_do
     assert seconds(t, 0.6)["/ch/3"].count == 2
 
 
-def test_the_release_level_is_minus_three_dBFS_and_a_level_between_it_and_a_clip_holds_a_run():
-    assert RELEASE_THRESHOLD == -3 * 256
+def test_a_clip_ends_once_the_level_is_below_the_clip_threshold_for_200_ms():
+    """A clip is what lights the desk's clip LED -- at or above
+    -0.5 dBFS, dips under 200 ms bridged. A snare whose level sits at -2 dBFS
+    between hits clips once per hit; when a clip ended only below -3 dBFS
+    the groove read as one clip."""
+    assert CLIP_THRESHOLD == round(-0.5 * 256) and CLIP_BRIDGE_SECONDS == 0.2
     strips = ["/ch/1"]
-    just_under = [RELEASE_THRESHOLD + 1] + [QUIET] * 7
-    quiet = [RELEASE_THRESHOLD - 1] + [QUIET] * 7
-    assert clipped_strips(strips, just_under, RELEASE_THRESHOLD) == {"/ch/1"}
-    assert clipped_strips(strips, just_under) == set()
-    assert clipped_strips(strips, quiet, RELEASE_THRESHOLD) == set()
+    under = [CLIP_THRESHOLD - 1] + [QUIET] * 7
+    assert clipped_strips(strips, under) == set()
     t = ClipTracker()
-    t.observe(0.0, {"/ch/1"}, {"/ch/1"})
+    feed(t, 0.0, "/ch/1", HOT)
     for i in range(1, 20):                        # a full second at -2 dBFS
-        t.observe(i * 0.05, set(), {"/ch/1"})
-    t.observe(1.0, {"/ch/1"}, {"/ch/1"})
-    assert seconds(t, 1.0)["/ch/1"].count == 1
+        feed(t, i * 0.05, "/ch/1", -2 * 256)
+    feed(t, 1.0, "/ch/1", HOT)
+    assert seconds(t, 1.0)["/ch/1"].count == 2
 
 
 def test_clipped_packets_far_apart_are_two_clips_even_with_nothing_heard_between():
@@ -259,6 +348,60 @@ def test_a_packet_rate_too_slow_to_time_a_clip_says_that_it_clipped_and_nothing_
     assert seconds(t, 3.0)["/ch/3"].longest is None
 
 
+def test_a_recording_replays_through_the_tracker_as_the_watch_heard_it():
+    """`--record-meters`'s file, replayed: the same clips the live tracker
+    saw (a desk session recorded and checked here)."""
+    import io
+
+    from atoo.metering import iter_recording, replay_recording, write_recorded
+
+    strips = report_strips(REPORT_TYPES)
+    live = ClipMonitor("live", clock=lambda: clock[0])
+    clock = [0.0]
+    buffer = io.StringIO()
+    header = __import__("json").dumps({"atoo_meter_recording": 1, "host": "x",
+                                       "report_types": list(REPORT_TYPES), "words_per_strip": 8})
+    buffer.write(header + "\n")
+    for i in range(80):                           # 4 s at 20/s: two clips on CH 2
+        clock[0] = i * 0.05
+        hot = 10 <= i < 16 or 40 <= i < 52
+        data = packet(REPORT_ID, strips, {"/ch/2": (HOT,)} if hot else None)
+        write_recorded(buffer, clock[0], data)
+        live.feed(data)
+    lines = buffer.getvalue().splitlines()
+    tracker, now = replay_recording(lines)
+    assert now == pytest.approx(3.95)
+    def rounded(clips):
+        return [(c.base, c.count, round(c.ago, 3), round(c.longest or 0, 3), round(c.first_ago, 3))
+                for c in clips]
+
+    assert rounded(tracker.snapshot(now)) == rounded(live.tracker.snapshot(now))
+    (clip,) = tracker.snapshot(now)
+    assert (clip.base, clip.count) == ("/ch/2", 2)
+    assert clip.longest == pytest.approx(0.6, abs=0.01)
+    assert len(list(iter_recording(lines))) == 80
+    with pytest.raises(ValueError):
+        replay_recording(['{"t": 0, "packet": ""}'])
+
+
+def test_the_monitor_records_every_packet_from_the_desk(console, tmp_path):
+    path = tmp_path / "meters.jsonl"
+    monitor = monitor_for(console, record=str(path))
+    monitor.start()
+    try:
+        console.declared_udp_port()
+        assert console.send_meters({"/ch/3": (HOT,)})
+        assert wait_for(lambda: {c.base for c in monitor.snapshot()} == {"/ch/3"})
+        assert console.send_meters()
+        assert wait_for(lambda: monitor.tracker.packets == 2)
+    finally:
+        monitor.close()
+    lines = path.read_text().splitlines()
+    assert json.loads(lines[0])["atoo_meter_recording"] == 1 and len(lines) == 3
+    tracker, _now = metering.replay_recording(lines)
+    assert [c.base for c in tracker.snapshot(_now)] == ["/ch/3"]
+
+
 # ---- the rule ---------------------------------------------------------------
 
 
@@ -276,19 +419,26 @@ def test_a_clip_is_an_error_named_the_way_the_desk_labels_the_strip():
                                  names={"/ch/3": "Kick"}))
     assert finding.severity is Severity.ERROR and finding.title == "Clipped"
     assert finding.category == "levels"
-    assert finding.detail == ('CH 3 "Kick" clipped; the last was 12 s ago. '
+    assert finding.detail == ('CH 3 "Kick" clipped once; that was 12 s ago. '
                               "This clears in 48 s unless it clips again.")
     assert finding.addresses == ("/ch/3/clip",)
 
 
-def test_the_sentence_says_how_often_and_how_long_when_it_can():
-    (finding,) = l003(state_with(StripClip("/bus/5", 3, 4.0, 56.0, longest=1.2),
+def test_the_sentence_says_what_each_number_is():
+    """Always the count ("once" for one), the longest clip,
+    and when the first and the last were -- never a span that reads as a
+    duration."""
+    (finding,) = l003(state_with(StripClip("/bus/5", 6, 1.6, 58.4, longest=0.4, first_ago=53.0),
                                  names={"/bus/5": "Drums"}))
-    assert finding.detail == ('BUS 5 "Drums" clipped 3 times (a clip ends once the level stays '
-                              'below -3 dBFS for 200 ms), the longest for about 1.2 s; '
-                              "the last was 4.0 s ago. This clears in 56 s unless it clips again.")
-    (one,) = l003(state_with(StripClip("/main/1", 1, 30.0, 30.0, longest=0.4)))
-    assert one.detail.startswith("MAIN 1 clipped for about 0.4 s; the last was 30 s ago.")
+    assert finding.detail == ('BUS 5 "Drums" clipped 6 times; the longest was 0.4 s; the first '
+                              "was 53 s ago and the last 1.6 s ago. This clears in 58 s unless "
+                              "it clips again.")
+    (one,) = l003(state_with(StripClip("/main/1", 1, 30.0, 30.0, longest=1.3, first_ago=30.0)))
+    assert one.detail == ("MAIN 1 clipped once, for 1.3 s; that was 30 s ago. This clears in "
+                          "30 s unless it clips again.")
+    (untimed,) = l003(state_with(StripClip("/mtx/2", 2, 3.0, 57.0, first_ago=8.0)))
+    assert untimed.detail.startswith("MTX 2 clipped 2 times; the first was 8.0 s ago and the "
+                                     "last 3.0 s ago.")
 
 
 def test_a_strip_with_no_clip_and_a_state_with_none_say_nothing():
@@ -348,8 +498,9 @@ def test_the_error_is_new_once_stays_through_a_restart_and_clears_sixty_seconds_
     assert [[f.rule_id for f in e.cleared_findings if f.rule_id == "L003"] for e in events] == [
         [], [], [], [], [], ["L003"]]
     # The restart is seen in the sentence.
-    assert "clipped; the last was 28 s ago" in l003s(events[2])[0].detail
-    assert "clipped 2 times (a clip ends once the level stays below -3 dBFS for 200 ms); the last was 5.0 s ago" in l003s(events[3])[0].detail
+    assert "clipped once; that was 28 s ago" in l003s(events[2])[0].detail
+    assert ("clipped 2 times; the first was 43 s ago and the last 5.0 s ago"
+            in l003s(events[3])[0].detail)
     assert "This clears in 1.0 s" in l003s(events[4])[0].detail
 
 

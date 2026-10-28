@@ -263,6 +263,7 @@
 
   const bundleName = el("bundle-name");
   const bundleMessage = el("bundle-message");
+  const bundleMessageText = el("bundle-message-text");
   const bundleReadOnly = el("bundle-readonly");
   const demoChip = el("demo-chip");
   const noShowNotice = el("no-show-notice");
@@ -279,12 +280,15 @@
   let bundleEpoch = 0;
   let bundleOpening = 0;
 
+  // A note reads as a note; only an error is red. The × dismisses either.
   function showBundleMessage(text, isError) {
     if (!bundleMessage) return;
-    bundleMessage.textContent = text || "";
+    (bundleMessageText || bundleMessage).textContent = text || "";
     bundleMessage.hidden = !text;
     bundleMessage.classList.toggle("panel-message-error", !!isError);
   }
+  const bundleMessageClose = el("bundle-message-close");
+  if (bundleMessageClose) bundleMessageClose.addEventListener("click", () => showBundleMessage(""));
 
   function renderBundle() {
     // The packaged demo show is read-only. The bar says so,
@@ -433,8 +437,142 @@
     });
   }
 
+  // ---- New show... : Empty, or From a desk -----------------
+  // The dialog asks how the show starts. Empty goes on to the folder namer
+  // above, as New show... always did. From a desk captures the console in
+  // the bar or a .snap file into a new show folder (`POST /api/capture`,
+  // `atoo capture`'s own code: no model, nothing written to the desk), and
+  // opens it; its report is the bundle bar's message.
+  const newShow = {
+    dialog: el("new-show-dialog"), start: "empty", read: "snap", snap: "",
+  };
+
+  function newShowRows() {
+    const desk = newShow.start === "desk";
+    newShow.dialog.querySelectorAll(".ns-desk").forEach((n) => {
+      n.hidden = !desk || (n.classList.contains("ns-snap") && newShow.read !== "snap")
+        || (n.classList.contains("ns-console") && newShow.read !== "console");
+    });
+    newShow.dialog.querySelector(".ns-empty-hint").hidden = desk;
+    el("ns-go").textContent = desk ? "Capture this desk" : "Choose folder\u2026";
+    el("ns-snap-path").textContent = newShow.snap || "none chosen";
+    const desc = el("ns-console-desc");
+    if (desc) desc.textContent = (consoleDefaults && consoleDefaults.address)
+      ? "the console in the bar, " + consoleDefaults.address
+      : "none set: choose one with Change\u2026 in the bar, or capture a .snap file";
+  }
+
+  function newShowError(text) {
+    const node = el("ns-error");
+    node.textContent = text || "";
+    node.hidden = !text;
+  }
+
+  async function suggestCaptureFolder() {
+    const params = new URLSearchParams();
+    if (newShow.read === "snap" && newShow.snap) params.set("snap_path", newShow.snap);
+    try {
+      const r = await fetch("/api/capture/defaults?" + params.toString());
+      if (r.ok) el("ns-folder").value = (await r.json()).folder || "";
+    } catch (e) { /* the field stays as it is */ }
+  }
+
+  // `fromWatch`: Watch's Make a show from this desk, the same
+  // dialog with the desk Watch is reading (the bar's console) as the source.
+  // Watch keeps running, and its own tab stays where it is.
+  function openNewShowChooser(opts) {
+    if (!newShow.dialog) { openNewShowDialog(); return; }
+    newShow.fromWatch = !!(opts && opts.fromWatch === true);
+    newShow.onDone = newShow.fromWatch ? opts.onDone : null;
+    if (newShow.fromWatch) {
+      newShow.start = "desk";
+      newShow.read = "console";
+      newShow.startSeg.select("desk");
+      newShow.readSeg.select("console");
+      suggestCaptureFolder();
+    }
+    newShowError("");
+    newShowRows();
+    newShow.dialog.showModal();
+  }
+
+  if (newShow.dialog) {
+    newShow.startSeg = wireSeg(el("ns-start"), (v) => {
+      newShow.start = v;
+      newShowError("");
+      newShowRows();
+      if (v === "desk" && !el("ns-folder").value) suggestCaptureFolder();
+    });
+    newShow.readSeg = wireSeg(el("ns-read"), (v) => {
+      newShow.read = v;
+      newShowError("");
+      newShowRows();
+      suggestCaptureFolder();
+    });
+    el("ns-cancel").addEventListener("click", () => newShow.dialog.close());
+    el("ns-snap-change").addEventListener("click", async () => {
+      const files = window.AtooFiles;
+      if (!files) return;
+      // The file browser is a modal of its own: this dialog steps aside
+      // while it is up, and comes back however it closes.
+      newShow.dialog.close();
+      await files.open({
+        mode: "open-file", kind: "snap", title: "A .snap file to capture",
+        note: "A show file the WING saved (Utility > Show files), or one exported from WING Edit.",
+        start: newShow.snap ? parentOf(newShow.snap) : workspace,
+        confirmLabel: "Choose",
+        onChoose: (result) => {
+          newShow.snap = result.path;
+          suggestCaptureFolder();
+          return true;
+        },
+      });
+      newShowRows();
+      newShow.dialog.showModal();
+    });
+    el("ns-go").addEventListener("click", async () => {
+      if (newShow.start === "empty") {
+        newShow.dialog.close();
+        openNewShowDialog();
+        return;
+      }
+      newShowError("");
+      if (!(await checkServer())) return;
+      const go = el("ns-go");
+      go.disabled = true;
+      go.textContent = newShow.read === "console" ? "Reading the desk\u2026" : "Capturing\u2026";
+      try {
+        const r = await fetch("/api/capture", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: newShow.read, snap_path: newShow.snap || null,
+            console_model: el("ns-model").value || null, folder: el("ns-folder").value || null,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) { newShowError(data.error || "couldn't capture that desk"); return; }
+        const error = await openBundleAt(data.directory, false);
+        if (error) { newShowError(error); return; }
+        newShow.dialog.close();
+        if (!newShow.fromWatch) activateStep("plan");
+        const said = "Captured " + data.source + " to " + data.directory + "/ -- nothing was " +
+          "written to the desk. " + (data.notes || []).length + " note(s) on what the desk does not " +
+          "state are in the plan's Details on step 04." +
+          (data.renamed ? " The folder you named was taken, so a number was added." : "");
+        showBundleMessage(said, false);
+        // Watch hides the bar while it runs, so it says this itself.
+        if (newShow.fromWatch && newShow.onDone) newShow.onDone(said);
+      } catch (e) {
+        newShowError(String(e));
+      } finally {
+        go.disabled = false;
+        newShowRows();
+      }
+    });
+  }
+
   el("bundle-change-btn").addEventListener("click", openBundleDialog);
-  el("bundle-new-btn").addEventListener("click", openNewShowDialog);
+  el("bundle-new-btn").addEventListener("click", openNewShowChooser);
 
   // ---- the console readout, its editor, and Ping -------------------------
   // One round trip, nothing read, safe mid-show -- `atoo ping`
@@ -732,7 +870,7 @@
       // cross-checks a plan against), the address, the round trip.
       const parts = [];
       if (data.model_label) parts.push(data.model_label);
-      else parts.push("model not recognised");
+      else parts.push("model not recognized");
       parts.push(data.address + ":" + data.port);
       if (data.elapsed_ms != null) parts.push(Math.round(data.elapsed_ms) + " ms");
       setPingPill("Answered", "is-ok", parts.join(" · "));
@@ -2607,16 +2745,20 @@
   // `patch` was `socket` before the rename (a file may still be headed
   // that way; the server names the column `patch` in `values` either way,
   // and a Save writes it back under the file's own header).
-  const INPUT_COLUMNS = ["order", "patch", "name", "category", "type", "model", "phantom", "preset", "notes"];
+  const INPUT_COLUMNS = ["order", "patch", "name", "category", "type", "model", "phantom", "preset", "notes",
+    "channel", "dca", "mute_group"];
   const PATCH_COLUMNS = ["patch", "socket"];
   // What the server says the columns are (`source.columns`), else those.
   let inputColumns = INPUT_COLUMNS;
-  // The order step 02's table DRAWS them in: the
-  // patch last, just before the row's ✕. The data keeps its own column
-  // names and order; only the table moves.
+  // The order step 02's table DRAWS them in, as its header does: the desk
+  // sheets' channel, DCA and mute-group columns beside the
+  // input's own, and the patch last, just before the row's ✕. The data
+  // keeps its own column names and order; only the table moves.
+  const INPUT_DISPLAY_ORDER = ["order", "channel", "name", "category", "type", "model", "phantom",
+    "dca", "mute_group", "preset", "notes"];
   function inputDisplayColumns() {
     const patch = inputColumns.filter((c) => PATCH_COLUMNS.indexOf(c) !== -1).slice(0, 1);
-    return inputColumns.filter((c) => PATCH_COLUMNS.indexOf(c) === -1).concat(patch);
+    return INPUT_DISPLAY_ORDER.filter((c) => inputColumns.indexOf(c) !== -1).concat(patch);
   }
 
   function bundleDirectory() {
@@ -3059,7 +3201,7 @@
     badge.textContent = value || "+ add";
     badge.title = value
       ? "Patched to " + value + " -- click to change it"
-      : "No patch: the build chooses a socket, and says so. Click to set one, e.g. LCL 3 or AES50-A 12.";
+      : "No patch: the build chooses a socket, with an INFO note. Click to set one, e.g. LCL 3 or AES50-A 12.";
     badge.setAttribute("aria-label", value ? "Patch " + value + ", edit" : "Add a patch");
   }
 
@@ -3093,7 +3235,7 @@
     box.className = "socket-input patch-edit-input";
     box.setAttribute("aria-label", "patch");
     box.title = "Where this input is patched: the socket it is plugged into, e.g. "
-      + "LCL 3 or AES50-A 12. Leave it empty and the build chooses one, and says so.";
+      + "LCL 3 or AES50-A 12. Leave it empty and the build chooses one, with an INFO note.";
     const ok = document.createElement("button");
     ok.type = "button";
     ok.className = "btn-icon patch-edit-ok";
@@ -3271,6 +3413,14 @@
         // the empty ones.
         input.placeholder = "required";
         input.setAttribute("aria-required", "true");
+      }
+      if (column === "channel") {
+        td.className = "col-channel";
+        input.title = "The desk channel this input goes on: 1-40, or Aux 1-8. Leave it empty and "
+          + "the conventions place it. A second row on a channel makes it a stereo pair.";
+      } else if (column === "dca" || column === "mute_group") {
+        input.title = (column === "dca" ? "The DCAs" : "The mute groups")
+          + " this input's channel is in, by name, separated by ;";
       }
       if (column === "type") {
         input.setAttribute("list", "input-type-options");
@@ -3829,6 +3979,13 @@
       editingStep.input_list = false;
       showBundleMessage("");
       absorb(data);
+      // The Save updated plan.json too -- whoever holds the
+      // plan (step 04, Apply's pre-flight) reads it again.
+      if (data.plan_updated) {
+        planBuiltListeners.forEach((fn) => {
+          try { fn(); } catch (e) { /* one listener must not stop the rest */ }
+        });
+      }
       const loads = !!(data.input_list && data.input_list.rows);
       showSaveNote("input_list", data.message || "Saved.",
         data.saved && data.saved.changed ? (loads ? "ok" : "warn") : "", false);
@@ -3897,6 +4054,37 @@
     refreshBuild(true);
   });
 
+  // ---- the pinned header (for Build and Apply) ------------
+  // The app header, the stale banner when it shows, and the bundle bar stay
+  // at the top of the window, one under the other: each one's `top` is the
+  // height of those above it, and `--pin-h` is all of them, which the
+  // dock, Build's tiles and Watch's header sit under. A hidden one (Watch
+  // hides both while it runs) is 0 high, and one the stylesheet leaves
+  // unpinned (the bundle bar on a phone) adds nothing.
+  //
+  // Heights are fractional (69.5px), and `offsetHeight` rounds them up, which
+  // left a half-pixel seam of the page showing between the pieces. Each `top` is the exact sum rounded DOWN, so a piece overlaps
+  // the one above by under a pixel rather than leaving a gap.
+  function pinTheHeader() {
+    let top = 0;
+    for (const node of [document.querySelector("body.shell > .topbar"), el("stale-banner"),
+      el("bundle-chrome")]) {
+      if (!node) continue;
+      node.style.top = Math.floor(top) + "px";
+      if (getComputedStyle(node).position === "sticky") top += node.getBoundingClientRect().height;
+    }
+    document.documentElement.style.setProperty("--pin-h", Math.floor(top) + "px");
+    const pipe = el("pipeline-wrap");
+    document.documentElement.style.setProperty("--pipe-h",
+      (pipe && pipe.offsetParent ? pipe.offsetHeight : 0) + "px");
+  }
+  if (typeof ResizeObserver === "function") {
+    const pinObserver = new ResizeObserver(pinTheHeader);
+    [document.querySelector("body.shell > .topbar"), el("stale-banner"), el("bundle-chrome"),
+      el("pipeline-wrap")].forEach((node) => { if (node) pinObserver.observe(node); });
+  }
+  window.addEventListener("resize", pinTheHeader);
+
   // ---- first paint -----------------------------------------------------
   renderBundle();
   renderConsole();
@@ -3904,6 +4092,7 @@
   renderBuild();
   activateStep("conventions");
   activateMode(modeFromHash());
+  pinTheHeader();
 
   // ---- the contract later phases code against --------------------------
   window.Atoo = {
@@ -3925,6 +4114,10 @@
     isBuildDetail: (f) => !!f && f.severity === "info" && BUILD_DETAILS.has(f.code),
     // Open the dock (step 04's and Apply's "in Findings" link).
     revealDock: revealDock,
+    // Watch's Make a show from this desk: New show... -> From a desk, with
+    // the console in the bar as the source.
+    // `onDone` is given what the bar would say once the show is written.
+    makeShowFromDesk: (onDone) => openNewShowChooser({ fromWatch: true, onDone: onDone }),
     // A jump link's own handler (`{mode, target}`), for a page's in-text
     // links: step 04's "Changed since the last build" list.
     jumpTo: jumpTo,
@@ -4019,6 +4212,9 @@
       noteIcon: noteIcon,
       editNote: editNote,
       save: saveInputList,
+      // The table as Save would send it, for step 04's check of what a Save
+      // would refuse (`POST /api/build/sheets/check`).
+      collect: collectRows,
       discard: discardInputList,
       dirty: () => !!editingStep.input_list,
       onChange: (fn) => { if (typeof fn === "function") inputListeners.push(fn); },

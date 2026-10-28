@@ -350,7 +350,7 @@ def test_ui_seeds_the_page_without_moving_its_own_web_port(
         default_port = probe.getsockname()[1]
     monkeypatch.setattr(cli_module, "UI_DEFAULT_PORT", default_port)
 
-    assert main(["ui"]) == 0
+    assert main(["ui", "--no-browser"]) == 0
     assert len(stub_ui_server) == 1
     app, (_host, served_port) = stub_ui_server[0]
     assert served_port == default_port != 9999

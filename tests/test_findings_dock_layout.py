@@ -1,5 +1,6 @@
 """The findings dock the maintainer approved on
-2026-10-11 (`mockups/findings-dock/`, "approved, as shown").
+2026-10-11 (`mockups/findings-dock/`, "approved, as shown"; removed
+2026-10-27, in git at `86ac89c5`).
 
 The verdict first; one line per finding naming its strip the way the desk
 does; one row for one finding on several strips; the critic's warnings

@@ -40,6 +40,11 @@ to find what is wrong with it while that is still cheap.
    the plan. A row that is neither a channel nor in "unassigned_inputs" is
    the most serious finding there is.
 
+   A line of the conventions or instructions the plan did not carry out
+   AT ALL (an output not patched, a bus not there) is an omission too:
+   quote that one line in "quotes", exactly, for it is sent back to be
+   carried out. A line carried out wrongly is intent, below.
+
 2. Then intent. Read each line of the conventions and check the plan
    actually did it. Rules about processing, groups and ordering
    are easy to satisfy for most channels and miss for one.
@@ -124,7 +129,7 @@ Emit exactly one JSON object, no prose around it:
       "where": "the channel name, bus name, or input list row",
       "claim": "what is wrong, in at most ten words",
       "message": "why: the reasoning behind the claim, in one or two short sentences",
-      "quotes": ["the conventions line(s), verbatim -- REQUIRED for kind conventions"]
+      "quotes": ["the conventions or instructions line(s), verbatim -- REQUIRED for kind conventions and an omitted line"]
     }
   ]
 }

@@ -330,7 +330,7 @@ def decide_category(quote: str, name: str, categories) -> tuple[str | None, str]
                 return known[key], f"a talk mic takes the {known[key]!r} category"
     if "misc" in known:
         return known["misc"], "no category fits better, so 'misc'"
-    return None, "the conventions colour no category that fits, so no category colour"
+    return None, "the conventions color no category that fits, so no category color"
 
 
 # Words that make a strip a playback source: walk-in music, a playlist, a

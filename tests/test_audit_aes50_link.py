@@ -1,6 +1,7 @@
-"""C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK)
-and C010 (AES50 Port Reports UPD): a stage box whose link is down, in error
-with nothing patched, or reading the word UPD (said at INFO only).
+"""C008 (Stage Box Not Connected Or In Error), C009 (AES50 Stage Box Link Not OK)
+and C010 (AES50 Stage Box Firmware Needs Updating): a stage box whose link is
+down, in error with nothing patched, or reading UPD, firmware the desk wants
+updated (said at INFO only).
 
 A read takes each AES50 port's status (`/$stat/{A,B,C}/stat`: `-`, `OK`, `ERR`,
 `UPD`) and used it only to choose which outputs to read. A stage box whose link
@@ -92,20 +93,18 @@ def test_a_dead_link_under_a_patch_is_an_error_and_an_unsettled_one_a_warning():
 def test_a_strip_patched_from_a_port_with_no_stage_box_is_an_error():
     state = _state(_strip("/ch/1", "Kick", "A", 1))
     [f] = _found(state)
-    assert (f.rule_id, f.severity) == ("C008", Severity.ERROR)
-    assert f.message == ("AES50-A reads '-', so no stage box is on it, but "
-                         'CH 1 "Kick" takes its input from it. No audio can pass: connect the '
-                         "stage box, or patch these elsewhere.")
+    assert (f.rule_id, f.severity, f.title) == ("C008", Severity.ERROR, "Stage Box Not Connected")
+    assert f.message == ("Stage box AES50 port A appears to not be connected and can not carry "
+                         'the input of CH 1 "Kick".')
     assert f.addresses == ("/$stat/A/stat",)
 
 
 def test_a_link_in_error_under_two_strips_names_them_and_says_the_audio_is_lost():
     state = _state(_strip("/ch/1", "Kick", "B", 1), _strip("/ch/2", "Snare", "B", 2), B="ERR")
     [f] = _found(state)
-    assert (f.rule_id, f.severity) == ("C008", Severity.ERROR)
-    assert f.message == ("AES50-B reports a link error (ERR), and "
-                         'CH 1 "Kick" and CH 2 "Snare" take their input from it. No audio '
-                         "passes while the link is in error: check the cable and the stage box.")
+    assert (f.rule_id, f.severity, f.title) == ("C008", Severity.ERROR, "Stage Box Link Error")
+    assert f.message == ("Stage box AES50 port B reports a link error and can not carry the "
+                         'inputs of CH 1 "Kick" and CH 2 "Snare".')
 
 
 def test_an_output_that_carries_a_source_counts_and_the_outputs_are_read_as_runs():
@@ -113,24 +112,25 @@ def test_an_output_that_carries_a_source_counts_and_the_outputs_are_read_as_runs
                    _out("A", 1), _out("A", 2), _out("A", 3), _out("A", 5), _out("C", 1, ("MAIN", 1)),
                    A="OK", C="ERR")
     [f] = _found(state)
-    assert f.message.startswith("AES50-C reports a link error (ERR), and output 1 on it carries a "
-                                "source.")
+    assert f.message == ("Stage box AES50 port C reports a link error and can not carry "
+                         "output AES50-C 1.")
     state = _state(_out("A", 1), _out("A", 2), _out("A", 3), _out("A", 5), A="-")
     [f] = _found(state)
-    assert "outputs 1-3, 5 on it carry a source" in f.message
+    assert f.message == ("Stage box AES50 port A appears to not be connected and can not carry "
+                         "outputs AES50-A 1-3, 5.")
 
 
 def test_strips_and_outputs_on_a_port_are_named_together():
     state = _state(_strip("/ch/7", "Wedge Mic", "A", 3), _out("A", 6))
     [f] = _found(state)
-    assert ('CH 7 "Wedge Mic" takes its input from it and output 6 on it carries a source'
-            in f.message)
+    assert f.message == ("Stage box AES50 port A appears to not be connected and can not carry "
+                         'the input of CH 7 "Wedge Mic" or output AES50-A 6.')
 
 
 def test_a_port_with_many_strips_names_six_and_counts_the_rest():
     parts = [_strip(f"/ch/{n}", f"In {n}", "A", n) for n in range(1, 10)]
     [f] = _found(_state(*parts, A="ERR"))
-    assert 'CH 6 "In 6" and 3 more take their input from it' in f.message
+    assert 'CH 6 "In 6" and 3 more.' in f.message
     assert "CH 7" not in f.message
 
 
@@ -151,13 +151,14 @@ def _upd_state(*parts, live=None, model="wing-compact", device="S16", **status):
     return ConsoleState(state.values, console_model=model, live_strips=live)
 
 
-def test_upd_is_never_a_warning_or_an_error_only_the_desks_word_at_info():
-    """A healthy Behringer S32 passing audio reads UPD on a
-    full-size WING; a word whose meaning is unconfirmed does not raise a
-    hazard."""
+def test_upd_is_never_a_warning_or_an_error_only_info():
+    """A healthy Behringer S32 passing audio reads UPD on
+    a full-size WING. UPD is stage-box firmware the desk wants updated; the
+    link still passes audio, so it does not raise a hazard."""
     c010 = _rule("C010")
-    assert (c010.severity, c010.category, c010.scope) == (
-        Severity.INFO, "configuration", RuleScope.HAZARD)
+    assert (c010.severity, c010.category, c010.scope, c010.title) == (
+        Severity.INFO, "configuration", RuleScope.HAZARD,
+        "AES50 Stage Box Firmware Needs Updating")
     strip = _strip("/ch/4", "Bass", "A", 4)
     for live in (None, frozenset(), frozenset({"/ch/4"})):
         findings = run_audit(_upd_state(strip, live=live))
@@ -170,9 +171,10 @@ def test_upd_is_never_a_warning_or_an_error_only_the_desks_word_at_info():
 
 def test_upd_with_nothing_patched_says_so():
     [f] = _found(_upd_state(device=""))
-    assert f.message == ("AES50-A reports UPD, which the desk's list gives without saying what it "
-                         "means (a healthy stage box has been seen reading it). Nothing is "
-                         "patched from it.")
+    assert f.message == ("AES50-A reports UPD: the desk flags the stage box's firmware as older "
+                         "than it expects. Audio can still pass, but preamp remote control and "
+                         "dual-port A/B need current stage-box firmware; update the box. Nothing "
+                         "is patched from it.")
 
 
 @pytest.mark.parametrize("model", ["wing", "wing-compact", "wing-rack"])
@@ -186,10 +188,20 @@ def test_upd_is_one_info_line_for_every_console_and_stage_box_and_never_lists_ch
     assert "carry no audio" not in f.message and "CH 1" not in f.message
 
 
-def test_upd_names_the_device_the_desk_gives_on_the_port():
-    """A capture of a full-size WING with an S32: `/$stat/A/dev "S32"`, `stat "UPD"`."""
-    [f] = _found(_upd_state(device="S32"))
-    assert f.message.startswith("AES50-A (S32) reports UPD, which the desk's list gives")
+def test_upd_names_the_device_and_says_its_firmware_needs_updating():
+    """A full-size WING with a healthy S32 on AES50-A, port B
+    unplugged: `/$stat/A/dev "S32"`, `stat "UPD"`. UPD is the desk flagging
+    the stage box's firmware as older than it expects."""
+    strip = _strip("/ch/4", "Bass", "A", 4)
+    [f] = _found(_upd_state(strip, live=frozenset({"/ch/4"}), model="wing", device="S32",
+                            B="-"))
+    assert (f.rule_id, f.severity, f.title) == (
+        "C010", Severity.INFO, "AES50 Stage Box Firmware Needs Updating")
+    assert f.message == ("AES50-A (S32) reports UPD: the desk flags the stage box's firmware as "
+                         "older than it expects. Audio can still pass, but preamp remote control "
+                         "and dual-port A/B need current stage-box firmware; update the box. 1 of "
+                         "the 1 strips patched from it is carrying signal, so it is passing "
+                         "audio.")
 
 
 def test_upd_with_no_signal_or_no_meters_does_not_claim_the_box_is_down():
@@ -310,7 +322,7 @@ def test_a_read_with_no_output_sockets_names_c008_and_c009_as_not_checked():
     assert "C008" in coverage_caveat(state) and "C009" in coverage_caveat(state)
     assert "R006, R011, CV009, C008, C009 and C010 could not be checked" in render_coverage(state)
     nothing = ConsoleState({"/ch/1/name": "Kick"}, console_model="wing-compact")
-    assert "C008 (AES50 Port Cannot Carry Its Patch), C009 (AES50 Stage Box Link Not OK)" in \
+    assert "C008 (Stage Box Not Connected Or In Error), C009 (AES50 Stage Box Link Not OK)" in \
         render_coverage(nothing)
     with_outputs = ConsoleState({"/io/out/LCL/1/grp": "OFF", "/io/out/LCL/1/in": 0,
                                  "/io/in/LCL/1/vph": 0}, console_model="wing-compact")
@@ -359,8 +371,8 @@ def test_a_live_read_takes_the_status_and_the_rule_speaks():
     state = _read(values)
     assert state.text("/$stat/A/stat") == "ERR"
     [f] = [f for f in run_audit(state) if f.rule_id in IDS]
-    assert f.rule_id == "C008" and f.message.startswith("AES50-A reports a link error (ERR), and "
-                                                        'CH 3 "Vox" takes its input from it.')
+    assert f.rule_id == "C008" and f.message == (
+        'Stage box AES50 port A reports a link error and can not carry the input of CH 3 "Vox".')
 
 
 def test_a_live_read_of_a_healthy_stage_box_is_silent():
@@ -434,6 +446,7 @@ def test_a_capture_with_its_stage_boxes_unplugged_reports_each_port_once_in_the_
     findings = [f for f in run_audit(_with_status(values)) if f.rule_id in IDS]
     assert [(f.rule_id, f.severity, f.addresses) for f in findings] == [
         ("C008", Severity.ERROR, ("/$stat/A/stat",)), ("C008", Severity.ERROR, ("/$stat/B/stat",))]
-    assert " and 13 more take their input from it and outputs 33-40 on it carry a source" in findings[0].message
-    assert findings[1].message.startswith("AES50-B reads '-', so no stage box is on it, but "
-                                          "outputs 25-32 on it carry a source.")
+    assert " and 13 more or outputs AES50-A 33-40." in findings[0].message
+    # The maintainer's own sentence, from this desk (2026-10-25).
+    assert findings[1].message == ("Stage box AES50 port B appears to not be connected and can "
+                                   "not carry outputs AES50-B 25-32.")

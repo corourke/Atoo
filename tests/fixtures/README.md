@@ -46,6 +46,10 @@ The hand-written sample shows the suite builds from, each an input list
 | `touringband.csv`, `touringband.md` | a touring band converted by hand from a real show file | `test_cli.py`, `test_bundle.py`, `test_webui.py`, `test_preset_library.py` and more |
 | `touringband.plan.json`, `touringband.generated.plan.json` | plans for it: one from the compiler that preceded model builds, one a real model reply from before the `socket` rename | `test_verify_plan.py`, `test_bus_colours.py`, `test_plan_schema.py`, `test_generate_and_verify_cli.py` |
 | `touringband.watch.json` | its watch conditions, with a channel written as bare `Main` | `test_watch_scoped_names.py` |
+| `splits/splits.csv`, `splits/splits.md` | twelve inputs on AES50-A with a monitor split to AES50-B and a recording split to USB (Forge's split case; the same files as `evals/split/`) | `test_outputs_sheet.py` |
+| `live-show/plan.json`, `live-show/input.csv` | the live model eval's show: a plan and its input list with a stereo keys pair (the same files as `evals/live/fixtures/show/`) | `test_patch_stereo.py` |
+| `processed-feed/feeds.csv`, `processed-feed/feeds.md` | the split case's twelve inputs with two processed feeds: the lead vocal post-fader to USB 13, the stereo keys pre-fader to USB 14-15 (the same files as `evals/processed-feed/`) | `test_processed_feeds.py` |
+| `video-feed/input.csv`, `video-feed/plan.json`, `video-feed/instructions.md` | the Demo show's input list and plan (`starter/demo-show/`, copied 2026-10-27) with the Outputs instructions of a desk test: a recording split, the main mix to USB 18-19, the lead vocal post-fader to USB 20 | `test_outputs_sheet_overrides.py` |
 | `festival.csv`, `festival.md` | a festival template, deliberately partly filled (14 of 38 channels unpatched) | `test_webui_filebrowser.py` |
 | `real_plans.json`, `compiled_plans.json` | plans for four real shows of 9 to 38 channels, written by the compiler that preceded model builds | `test_plan_schema.py`, `test_preset_expand.py`, `test_apply.py`, `test_render.py`, and `conftest.py`'s `stub_build` |
 | `setup_viewer.plan.json` | a plan for the Setup page's plan viewer | `test_webui.py`, `test_conventions_ref.py` |
@@ -87,6 +91,9 @@ From real desks. `console-runs/` keeps its original sub-folder names.
 |---|---|---|
 | `console-runs/Initialized-Compact.snap`, `Initialized-Full.snap`, `Initialized-Rack.snap` | the factory state of a Compact, of a full-size WING and of a Rack (the Rack's from WING Edit 3.3.1, firmware 3.1-0-g9f314617, exported 2026-10-21; byte for byte `atoo/initialized/wing-rack.snap`; its `creator_name` is scrubbed to `WING-PP-SERIAL01` like the Compact's, nothing else in the file differs from the desk's export) | `test_audit_in_use.py`, `test_initialize.py`, `test_apply.py`, `test_alternate_input_plan.py` |
 | `console-runs/Church-Full.snap` | a full-size WING with a house mix on it | `test_alternate_input_plan.py` |
+| `church-full-dante.state.json` | a full-size WING with a Dante module, as `audit --state` takes it -- its Matrices, every send to a Matrix, the monitor sources and the output patch of LCL, AUX, AES50-A and `MOD` (Matrix 5 and 6 on MOD 36-37 and 44-45), flattened from the desk's WING Edit snapshot of 2026-10-24 (WING Edit 3.3.1). The snapshot carries no `/$syscfg/opt_mod` or `/$stat/*/stat`; `DANTE`, and an S32 on AES50-A reading `UPD`, are from a live read of the same desk on 2026-10-22. `/cards/$type` is left out: neither source states it. Console name removed; the snapshot carries no serial or address | `test_audit_bay_outputs.py` |
+| `church-full-fx.state.json` | the same full-size WING, whose effects are inserted on buses: every address of its read plan that the split-path rules read (each strip's sends, Main routes, mute, name and patch, each bus's and Main's routes, the strip and bus inserts and the sixteen FX models), looked up in the same WING Edit snapshot of 2026-10-24. Console name removed; the snapshot carries no serial or address | `test_audit_effect_send.py` |
+| `church-full-2026-10-24.snap` | the same full-size WING's whole WING Edit snapshot of 2026-10-24 (WING Edit 3.3.1, `snapshot.11`), as the desk exported it except that its `creator_name` is `WING-FULL` and the one person's name on a socket is `MIC1 Lead`; no serial or address was in it | `test_capture.py` |
 | `console-runs/2026-09-21/` | raw log and OSC captures of channel 1 with and without alternate inputs | `test_readback_index_base.py`, `test_alternate_input_plan.py`, `test_audit_alternate_input.py` |
 | `console-runs/2026-09-21-2100/`, `2026-09-22-2136/` | apply journals of two real runs | `test_undo.py` |
 | `console-runs/2026-09-22-2008/` | a read-speed measurement | `test_watch_scope.py` |
@@ -96,6 +103,7 @@ From real desks. `console-runs/` keeps its original sub-folder names.
 | `console-runs/2026-10-02-sixpiece-apply-excerpt.json` | an excerpt of the first full apply on a Compact (4,583 writes): every mismatch row, every `/bus/{n}/busmono` and `/bus/{n}/wid` row, and aux 2's `dyn/mdl` and `dynsc` rows, unchanged, each with its `index` in the journal | `test_initialize.py`, `test_preset_expand.py` |
 | `console-runs/session-2026-09-23-0928/` | a rebuilt plan with channel 18 removed | `test_amend.py` |
 | `touringband-2026-09-18.apply-journal.json` | the journal of a touring-band apply on a real desk | `test_apply.py`, `test_readback_index_base.py`, `test_webui_apply.py` |
+| `demo-preview/journal.json`, `demo-preview/plan.json` | a preview of the packaged Demo show on the Demo's simulated WING Compact (`atoo apply --show <Demo copy> --journal ...`, no `--confirm`, 2026-10-24): 1677 addresses read, 537 would change; the journal keeps each row's address, description, type, values, status and `forced_by`, and the plan is the Demo's as it stood | `test_preview_detail.py` |
 | `a18-full-size-unanswered.json` | what a full-size WING left unanswered in a read | `test_read_unanswered_family.py` |
 | `amend-demo/` | the amend walkthrough's files: a rebuilt plan, the same without one channel, and the desk's occupancy before and after a strip is taken over | `test_amend.py`, `test_amend_plan_json.py`, `test_webui_amend.py` |
 | `audit_demo_plan.json`, `audit_demo_state.json`, `audit_demo_state_before.json` | a hand-built console state and plan for trying `audit` with no console attached; the packaged copies are `starter/audit-demo/` | `test_audit_dump_state.py`, `test_help_examples.py`, `test_packaging.py` |
@@ -150,7 +158,10 @@ older Demo reads a frozen copy, and a test whose subject is the shipped Demo
   `demo-show/input.csv` and `instructions.md`, the `conventions.resolved.md`
   its resolve call wrote (169 citations), and `generator.reply.json`, the
   generator's reply. `test_quiet_build.py` replays that build with no model
-  and asserts the Findings dock reads 0 to check and 4 choices.
+  and asserts the Findings dock reads 0 to check and 4 choices. `knowledge.md` is
+  the domain knowledge as it stood on 2026-10-18, which its citations
+  quote; the shipped file has changed since (2026-10-24).
+  `test_conventions_resolve.py`'s backslash-n test quotes it too.
 - `preset_map_2026-10-13/`: a real-model build of a copy of `starter/`: its
   `conventions.md` and the `conventions.resolved.md` its resolve call wrote,
   which cites ten of the preset map's lines by no rule. Read by

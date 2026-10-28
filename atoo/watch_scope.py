@@ -1,11 +1,11 @@
 """The *"cheaper thing to try first"*: `watch` does not need all
-6,195 addresses, so work out exactly which ones the rules it is running
+6,197 addresses, so work out exactly which ones the rules it is running
 actually consume, and measure what scoping the read to those would buy.
 
 **The answer is: not enough.** The numbers are in `scope_report()` and
 reproduced in the requirements; the short version is that the
 structural catalogue (`audit.DEFAULT_RULES`, which `watch` always runs)
-reads **3,891 of the 6,195** addresses (3,392 of 5,712 when this was
+reads **3,893 of the 6,197** addresses (3,392 of 5,712 when this was
 measured; the alternate patch added 96 to both, the insert
 points and FX slots another 304 to both, the comms half one
 more, the socket widths 24, three AES50 link states and two
@@ -85,10 +85,10 @@ the `watch` command runs by default.
 
 Scoping drops nothing a dump would have fetched; skipping names does. A
 name is never taken from a dump (`audit.DUMP_UNSAFE_LEAVES`), so each is
-its own request -- 88 of the 323 on a Compact, plus up to one source-
+its own request -- 88 of the 325 on a Compact, plus up to one source-
 socket name per patched strip in the second pass. A live watch now reads
 them at Start and every `watch.DEFAULT_NAME_REFRESH` passes, and a pass
-between refreshes asks 235 (`ScopedReadPlan.node_dump_requests_between_refreshes`).
+between refreshes asks 237 (`ScopedReadPlan.node_dump_requests_between_refreshes`).
 That is `watch.refreshing_names`, not this module; nothing here reads.
 
 ## Wiring this in
@@ -261,7 +261,7 @@ FX_MODEL = r"^/fx/\d+/mdl$"
 #: Which strip talkback uses, and where TALK A and TALK B are routed. The routing is a second-pass read, asked only when the
 #: first is not OFF.
 TALK = r"^/cfg/talk/(?:assign|[AB]/(?:B|MX|M)\d+)$"
-#: Just which strip talkback is assigned to -- what CH001, L002 and
+#: Just which strip talkback is assigned to -- what L002 and
 #: T002 need to recognise the talk mic's strip, without the 56 switches.
 TALK_ASSIGN = r"^/cfg/talk/assign$"
 GLOBAL_ALT_SWITCH = r"^/io/altsw$"
@@ -292,9 +292,9 @@ AES50_OUTPUT = r"^/io/out/[ABC]/\d+/(?:grp|in)$"
 #: there reaches the phones with no socket of its own.
 MONITOR_SOURCE = r"^/cfg/mon/[12]/src$"
 #: Everything "does this reach an output" needs besides the routing: the
-#: output patch, the AES50 ports that widen it, the strip patches that
-#: also mark a port in use, and the monitor sources.
-_OUTPUT_SIDE = (OUTPUT_PATCH, AES50_STATUS, STRIP_PATCH, MONITOR_SOURCE)
+#: output patch, the AES50 ports and fitted bays that widen it, the strip patches that also mark a port in use, and the
+#: monitor sources.
+_OUTPUT_SIDE = (OUTPUT_PATCH, AES50_STATUS, EXPANSION_BAY, STRIP_PATCH, MONITOR_SOURCE)
 
 
 # `is_in_use(base)` for a strip, spelled out once: named, input patched,
@@ -378,13 +378,21 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # sends and Main routes with their levels, each bus's Main routes and
     # Matrix sends, each Main's Matrix sends, the mutes it names, and the
     # names the labels quote. R013 reads the same.
+    # The bus inserts and FX models tell an effect send from a dry split, so all three read them.
     "R012": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL,
                 BUS_MAIN_ON, MAIN_SEND_ON, MAIN_SEND_LVL, STRIP_MUTE, BUS_MUTE,
-                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME)
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME,
+                INSERT, FX_MODEL)
                + _IN_USE_STRIP,
     "R013": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL,
                 BUS_MAIN_ON, MAIN_SEND_ON, MAIN_SEND_LVL, STRIP_MUTE, BUS_MUTE,
-                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME)
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME,
+                INSERT, FX_MODEL)
+               + _IN_USE_STRIP,
+    "R014": (STRIP_SEND_ON, STRIP_SEND_LVL, STRIP_MAIN_ON, BUS_SEND_ON, BUS_SEND_LVL,
+                BUS_MAIN_ON, MAIN_SEND_ON, MAIN_SEND_LVL, STRIP_MUTE, BUS_MUTE,
+                MAIN_PRESENCE, MTX_PRESENCE, STRIP_NAME, SOURCE_NAME, BUS_NAME,
+                INSERT, FX_MODEL)
                + _IN_USE_STRIP,
     # 48V on a jack nothing takes: every strip's patch, every USER PATCH
     # slot's source, the jack's own `vph`, and the width of the socket
@@ -427,10 +435,9 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # Every insert on the desk, to know which slots are named at all.
     "E002": (INSERT, FX_MODEL),
     "E003": (INSERT, FX_MODEL, STRIP_NAME, SOURCE_NAME, BUS_NAME),
-    # Not in DEFAULT_RULES: added by Watch when the show's plan loads an
-    # FX bus's effect (`audit.plan_watch_rules`). The bus's
-    # insert, the engine's model, and the bus's name for the label.
-    "CV015": (INSERT, FX_MODEL, BUS_NAME),
+    # Not in DEFAULT_RULES: added by Watch when the show's plan inserts an
+    # effect (`audit.plan_watch_rules`; any strip's). The strip's insert, the engine's model, and names for the label.
+    "CV015": (INSERT, FX_MODEL, STRIP_NAME, SOURCE_NAME, BUS_NAME),
     # Added by Watch when the plan routes a channel: every
     # send and Main route of a strip, its label, the buses' names it
     # quotes, and what else it still reaches.
@@ -472,7 +479,6 @@ RULE_ADDRESS_PATTERNS: dict[str, tuple[str, ...]] = {
     # Which strip is the talk mic, and whether it is in use.
     "T002": (TALK_ASSIGN,) + _IN_USE_STRIP,
     # Membership lives in the strip's own tags string.
-    "CH001": (STRIP_TAGS, TALK_ASSIGN) + _IN_USE_STRIP,
     "CH002": (STRIP_TAGS, DCA_NAME, DCA_FDR) + _IN_USE_STRIP,
     "CH003": (STRIP_TAGS, MGRP_NAME, MGRP_MUTE) + _IN_USE_STRIP,
     "CH004": (STRIP_TAGS, DCA_NAME, DCA_MUTE) + _IN_USE_STRIP,
@@ -525,6 +531,9 @@ class ScopedReadPlan:
     reads_talkback: bool = False
     #: The same, for the outputs of every AES50 port in use:
     #: 96 per port with a stage box on it, none on a desk without one.
+    #: It also carries the outputs of a fitted module
+    #: or card (`audit.bay_output_addresses`): 64 per fitted bay, plus
+    #: one per socket patched.
     reads_aes50_outputs: bool = False
 
     @property
@@ -559,7 +568,7 @@ class ScopedReadPlan:
     @property
     def node_dump_requests_between_refreshes(self) -> int:
         """`node_dump_requests` for a watch pass between name refreshes, which takes every `name` from the last refresh and
-        asks for none: 323 -> 235 on a Compact's full plan."""
+        asks for none: 325 -> 237 on a Compact's full plan."""
         by_node, alone = audit.group_plan_by_node(
             [(a, t) for a, t in self.plan if not audit.is_name_address(a)])
         return len(by_node) + len(alone)
@@ -698,8 +707,8 @@ COMPACT_PLAN_KWARGS = dict(input_sockets={"LCL": 24}, output_sockets={"LCL": 8})
 #: structural rules `watch` runs already keep, so they widen no scope that
 #: has them.)
 REALISTIC_CONDITIONS: tuple[dict, ...] = (
-    {"id": "crowd-mic-never-muted", "channel": "Crowd Mic", "field": "muted"},
-    {"id": "crowd-mic-fader-capped", "channel": "Crowd Mic", "field": "fader_db"},
+    {"id": "crowd-mic-muted", "channel": "Crowd Mic", "field": "muted"},
+    {"id": "crowd-mic-fader-high", "channel": "Crowd Mic", "field": "fader_db"},
     {"id": "kick-in-drums-dca", "channel": "Kick", "field": "dca"},
     {"id": "spare-in-fx-mutes", "channel": "Spare", "field": "mute_group"},
     {"id": "talkback-patch", "channel": "Talkback", "field": "patch"},
@@ -739,15 +748,16 @@ def _as_conditions(sketches: Sequence[dict]) -> list[dict]:
     """Fill a `(id, channel, field)` sketch out into a condition the
     validator accepts, so the report's watchlists are real conditions
     rather than a second, looser shape of the same thing."""
-    from atoo.watch_conditions import parse_watch_conditions
+    from atoo.watch_conditions import new_document, parse_watch_conditions
     import json as _json
 
+    # Each alerts when the strip is not as wanted.
     defaults = {
-        "muted": ("==", False),
-        "fader_db": ("<=", -10.0),
-        "dca": ("==", "Drums"),
-        "mute_group": ("!=", "FX"),
-        "patch": ("==", "LCL 3"),
+        "muted": ("==", True),
+        "fader_db": (">", -10.0),
+        "dca": ("not in", "Drums"),
+        "mute_group": ("in", "FX"),
+        "patch": ("!=", "LCL 3"),
     }
     out = []
     for sketch in sketches:
@@ -761,7 +771,7 @@ def _as_conditions(sketches: Sequence[dict]) -> list[dict]:
             "value": value,
             "severity": "warning",
         })
-    return parse_watch_conditions(_json.dumps({"watch_conditions": out}),
+    return parse_watch_conditions(_json.dumps(new_document(out)),
                                   source="<watch_scope report>")
 
 

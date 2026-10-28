@@ -405,7 +405,7 @@ def test_a_build_applies_the_table_and_tells_the_generator(show, monkeypatch, ca
     code, provider = _build(show, monkeypatch, LEAN_REPLY)
     assert code == 0
     assert ("INFO category table: 3 categories in conventions.resolved.md -- code writes "
-            "their colour, HPF, DCA, mute group, fader and Main routing on every channel of "
+            "their color, HPF, DCA, mute group, fader and Main routing on every channel of "
             "the category whose reply leaves them out") in capsys.readouterr().err
 
     _system, user = provider.calls[0]

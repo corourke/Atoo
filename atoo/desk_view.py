@@ -17,6 +17,10 @@ write. A strip the plan writes no name or colour to is drawn dimmed, as
 "not in the plan" (a full build resets it to initialized). The preview's
 journal says which strips the write would change.
 
+A full build's drawing also carries every row of the
+preview in the tile it belongs to (`preview_detail`), with four more banks
+after Mute groups (Inputs, Outputs, FX, Console), for Apply's Detail.
+
 **Patch** (`patch_desk`): the desk as it is, read -- the occupancy read's
 names and verdicts (`amend.strip_occupancy`) plus one colour per strip and
 a name and colour per bus, main, matrix and DCA (`face_read_plan`, read by
@@ -153,27 +157,33 @@ def _section(kind: str, title: str, strip) -> dict:
 
 def full_build_desk(plan: "dict | None", records: "list[dict] | None" = None) -> dict:
     """The desk as a full build of `plan` leaves it. `records` are the
-    preview journal's rows; a strip with any row that would change is
-    marked `changes`."""
+    preview journal's rows; a tile with any row that would change is
+    marked `changes`.
+
+    The drawing also carries every row of the preview in
+    the tile it belongs to (`tiles`, from `preview_detail`), and four more
+    banks after Mute groups: Inputs and Outputs, one tile per socket group,
+    FX and Console. Every strip carries the `key` of its tile (`ch/1`,
+    `in/A`) and the `label` its corner shows."""
+    from atoo import preview_detail
+
     faces = plan_faces(plan)
-    changing: set[tuple[str, int]] = set()
-    for row in records or []:
-        if row.get("status") == "dry_run" and row.get("would_change"):
-            where = strip_of(row.get("address", ""))
-            if where is not None:
-                changing.add(where)
+    tiles = preview_detail.detail(records, faces)
 
     def strip(kind: str, n: int) -> dict:
+        key = f"{kind}/{n}"
         face = faces.get((kind, n))
+        out = {"key": key, "label": str(n),
+               "changes": bool((tiles.get(key) or {}).get("changes"))}
         if face is None:
-            return {"state": "unused", "name": None, "colour": None,
-                    "changes": (kind, n) in changing}
-        return {"state": "plan", "name": face["name"], "colour": face["colour"],
-                "changes": (kind, n) in changing}
+            return dict(out, state="unused", name=None, colour=None)
+        return dict(out, state="plan", name=face["name"], colour=face["colour"])
 
     sections = [_section(kind, title, strip) for kind, title in SECTIONS]
-    return {"mode": "full", "sections": sections,
-            "counts": {"in_plan": len(faces), "changing": len(changing)}}
+    sections += preview_detail.banks(tiles, faces)
+    return {"mode": "full", "sections": sections, "tiles": tiles,
+            "counts": {"in_plan": len(faces),
+                       "changing": sum(1 for t in tiles.values() if t["changes"])}}
 
 
 def _desk_name(value: object) -> "str | None":

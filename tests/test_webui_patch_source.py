@@ -82,14 +82,13 @@ def test_a_ribbon_with_48v_is_a_blocked_review_that_cannot_arm(client, desk, mod
     assert _writes(desk) == []
 
 
-def test_the_input_is_refused_and_the_refusal_names_what_can_be_set(client, desk, model):
+def test_a_new_input_is_reviewed_as_an_edit_and_the_patch_stays(client, desk, model):
     model.response = _change({"source.input": "Bagpipes"})
     status = _preview(client, text="the snare is the bagpipes")
-    assert status["exit_code"] == 2
-    [refused] = [c for c in status["review"]["changes"] if c["kind"] == "refused"]
-    assert "how a running strip is recognised" in refused["reason"]
-    for field in ("source.phantom", "source.model"):
-        assert field in refused["reason"]
+    assert status["exit_code"] == 0, status["log"]
+    assert [c["kind"] for c in status["review"]["changes"]
+            if c["kind"] != "unchanged"] == ["edited"]
+    assert any("its patch stays A 2" in line for line in status["log"])
 
 
 @pytest.fixture

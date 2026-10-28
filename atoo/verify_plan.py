@@ -44,7 +44,7 @@ from atoo.diagnostics import Diagnostic, Severity
 # parsing, not plan derivation. It used to be borrowed from the compiler;
 # since that path was retired it lives with the input list itself, which
 # is whose column format it is.
-from atoo.input_list import InputRow, InputRows, parse_socket_spec as _parse_socket_spec
+from atoo.input_list import InputRow, InputRows, format_socket, parse_socket_spec as _parse_socket_spec
 from atoo import plan_compat
 from atoo.plan_schema import PLAN_SCHEMA
 from atoo.schema_check import validate as validate_schema
@@ -344,7 +344,7 @@ def _report_colour_aliases(r: VerifyResult, code: str, aliased: dict[str, list[s
         desk = facts.COLOUR_NAMES[index]
         r.add(Severity.INFO, code, "plan",
               f"{colour!r} is the desk's {desk} ({index}): {', '.join(names)}. The desk has "
-              f"no colour called {colour!r}; Atoo used that name for {index} until the "
+              f"no color called {colour!r}; Atoo used that name for {index} until the "
               f"desk was asked, so it still resolves. Say {desk!r} to use the desk's own word")
 
 
@@ -355,10 +355,10 @@ def _report_unwritable_colours(r: VerifyResult, code: str, counted: str, those: 
         return
     named = "; ".join(f"{colour!r} ({', '.join(strips)})" for colour, strips in sorted(unresolved.items()))
     r.add(SEVERITY_WARNING, code, "plan",
-          f"{sum(len(v) for v in unresolved.values())} {counted} state a colour the console does "
+          f"{sum(len(v) for v in unresolved.values())} {counted} state a color the console does "
           f"not have: {named}. The desk's eighteen are "
           f"{', '.join(facts.COLOUR_NAMES[i] for i in sorted(facts.COLOUR_NAMES))}. Those {those} "
-          f"keep whatever colour they already had -- pick one of the eighteen, or set 'col' "
+          f"keep whatever color they already had -- pick one of the eighteen, or set 'col' "
           f"directly to the index you want")
 
 
@@ -720,22 +720,33 @@ def _check_user_sources(plan: dict, r: VerifyResult, console_model: str | None) 
                       fix=f"add a `user_sources` entry for slot {slot} saying what feeds it, "
                           "or patch the channel at the physical socket instead")
 
-    for slot in sorted(set(defined) - used):
-        r.add(SEVERITY_WARNING, "user-source.unused", f"user_sources[slot {slot}]",
-              f"USR {slot} is defined here but no channel patches it -- a slot nothing "
-              "reads is a routing change on the desk with no purpose in this plan, and a "
-              "mistyped slot number looks exactly like this")
+    # An output socket fed from a USR slot reads it too (`direct_outputs`): a processed or post-fader feed to a recorder.
+    for entry in plan.get("direct_outputs") or []:
+        source = entry.get("source") if isinstance(entry, dict) else None
+        if not isinstance(source, dict) or source.get("group") != "USR":
+            continue
+        slot = source.get("index")
+        if facts.user_slot_kind(slot) is None:
+            continue                    # direct-output.source-out-of-range said it
+        used.add(slot)
+        if slot not in defined:
+            socket = format_socket(entry.get('group'), entry.get('socket'))
+            r.add(SEVERITY_WARNING, "patch.user-source-undefined",
+                  f"direct_outputs[{socket}]",
+                  f"{socket} is fed from USR {slot}, a {facts.user_slot_kind(slot)}, but "
+                  f"nothing in this plan says what USR {slot} is, so the output carries "
+                  "whatever that slot is assigned to on the desk now",
+                  fix=f"add a `user_sources` entry for slot {slot} saying what feeds it")
 
-    if entries:
-        r.add(SEVERITY_WARNING, "user-source.not-written-by-apply", "plan",
-              f"this plan defines {len(entries)} USR slot(s) and `atoo apply` does not "
-              "write them yet. "
-              "Everything else in the plan applies normally, so a channel patched to one of "
-              "these slots gets its patch written against whatever that slot is currently "
-              "assigned to on the console",
-              fix="set the stated USR slots up on the console by hand before applying, and "
-                  "check them on the ROUTING > SOURCES screen afterwards",
-              issue=121)
+    # A slot nothing reads is kept, so a feed can be defined before it is
+    # patched (the maintainer's default); said at INFO, since a
+    # mistyped slot number looks exactly like this.
+    for slot in sorted(set(defined) - used):
+        r.add(Severity.INFO, "user-source.unused", f"user_sources[slot {slot}]",
+              f"USR {slot} is defined here but no channel patches it and no output is fed "
+              "from it yet: it is kept, and written to the desk, so a feed can be defined "
+              "before it is patched. If it was meant to feed something, check the slot "
+              "number: a mistyped one looks exactly like this")
 
 
 def _check_expansion_bays(plan: dict, r: VerifyResult) -> None:
@@ -1066,7 +1077,10 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
         if not destinations:
             single = (bus or {}).get("destination")
             destinations = [single] if single is not None else []
-        if not destinations:
+        # A bus that sends on to another bus or a Matrix
+        # feeds something, even with no destination of its own.
+        if not destinations and not (bus or {}).get("bus_sends") \
+                and not (bus or {}).get("matrix_sends"):
             r.add(SEVERITY_ERROR, "bus.no-destination", where,
                   "bus feeds nothing -- every channel sent to it would be inaudible")
         for i, dest in enumerate(destinations):
@@ -1159,6 +1173,14 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
         has_socket = bool(plan_compat.output_patches(out))
         if out.get("kind") == "matrix" and fed_by.get("type") == "main" and has_socket:
             main_indices_reached_via_a_matrix.add(fed_by.get("index"))
+    # The same, for a Main's own `matrix_sends`.
+    for out in outputs.values():
+        if not isinstance(out, dict) or out.get("kind") != "main":
+            continue
+        for send in out.get("matrix_sends") or []:
+            target = outputs.get(send.get("matrix")) if isinstance(send, dict) else None
+            if isinstance(target, dict) and plan_compat.output_patches(target):
+                main_indices_reached_via_a_matrix.add(out.get("index"))
 
     for out_name, out in outputs.items():
         where = f"outputs[{out_name}]"
@@ -1219,8 +1241,48 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
                 r.add(SEVERITY_ERROR, "reference.dangling", f"{where}.fed_by",
                       f"fed by bus {fed_by.get('name')!r}, which the plan never declares")
 
+    _check_direct_outputs(plan, r, console_model, output_claims)
     _report_output_socket_collisions(output_claims, r, console_model)
     _report_output_index_duplicates(outputs, r)
+
+
+def _check_direct_outputs(plan: dict, r: VerifyResult, console_model: str | None,
+                          claims: dict[tuple[str, int], list[str]]) -> None:
+    """`direct_outputs`: the sockets fed straight from a source, not a bus,
+    Main or Matrix -- the splits and recording feeds a capture records, and
+    Apply writes. Each socket must exist and is claimed like
+    any output's, so one a bus, a Main or a Matrix also patches is
+    `output.socket-collision`, naming both. Its source must be one the
+    desk's output routing offers, at a number that exists: a physical
+    group's own count, as for an input patch, or the routing's 1..64."""
+    for entry in plan.get("direct_outputs") or []:
+        if not isinstance(entry, dict):
+            continue
+        group, sock, source = entry.get("group"), entry.get("socket"), entry.get("source") or {}
+        socket = (format_socket(group, sock) if isinstance(group, str) else f"{group} {sock}")
+        where = f"direct_outputs[{socket}]"
+        _check_output_socket({"group": group, "sockets": [sock]}, where, r, console_model, claims)
+        source_group, index = source.get("group"), source.get("index")
+        if source_group not in facts.OUTPUT_SOURCE_GROUPS or source_group == "OFF":
+            offered = ", ".join(g for g in facts.OUTPUT_SOURCE_GROUPS if g != "OFF")
+            r.add(SEVERITY_ERROR, "direct-output.unknown-source", where,
+                  f"{socket} is fed from {source_group!r}, which the desk's output routing "
+                  f"does not offer -- it offers {offered}")
+            continue
+        if source_group in facts.INPUT_SOCKETS:
+            try:
+                limit = facts.input_socket_limit(source_group, console_model)
+            except facts.UnknownConsoleModel:
+                limit = facts.INPUT_SOCKETS[source_group]
+            what = f"{format_socket(source_group, 1)[:-2]} inputs are 1..{limit}"
+        else:
+            limit = facts.OUTPUT_SOURCE_INDEX_MAX
+            what = f"the routing numbers {source_group} 1..{limit}"
+        if (not isinstance(index, int) or isinstance(index, bool)
+                or not 1 <= index <= limit):
+            r.add(SEVERITY_ERROR, "direct-output.source-out-of-range", where,
+                  f"{socket} is fed from {format_socket(source_group, index)}, which does not "
+                  f"exist -- {what}")
 
 
 def _report_output_index_duplicates(outputs: dict, r: VerifyResult) -> None:
@@ -1388,6 +1450,45 @@ def _report_output_socket_collisions(claims: dict[tuple[str, int], list[str]],
 # reconciliation with the input list -- the omission and invention checks
 # --------------------------------------------------------------------------
 
+def _check_send_references(plan: dict, r: VerifyResult) -> None:
+    """The sends a plan states on a channel, a bus or a Main beyond a
+    channel's `bus_sends`: each `matrix_sends` entry
+    must name a Matrix the plan has, and each bus's `bus_sends` entry another
+    bus it has. A send to something the plan does not have cannot be applied,
+    exactly as a channel's send to an undeclared bus (`reference.dangling`).
+    A bus sending to itself is not a route the desk has."""
+    outputs = plan.get("outputs") or {}
+    busses = plan.get("busses") or {}
+    matrices = {name for name, out in outputs.items()
+                if isinstance(out, dict) and out.get("kind") == "matrix"}
+
+    def check(where: str, entry: dict, field: str, key: str, known: set, own: str | None = None):
+        for i, send in enumerate((entry.get(field) or []) if isinstance(entry, dict) else []):
+            target = send.get(key) if isinstance(send, dict) else None
+            if target == own:
+                r.add(SEVERITY_ERROR, "reference.dangling", f"{where}.{field}[{i}]",
+                      f"bus {own!r} sends to itself, which is not a route the desk has")
+            elif target not in known:
+                kind = "Matrix" if key == "matrix" else "bus"
+                r.add(SEVERITY_ERROR, "reference.dangling", f"{where}.{field}[{i}]",
+                      f"send to {kind} {target!r}, which the plan never declares")
+
+    for ch in plan.get("channels") or []:
+        if isinstance(ch, dict):
+            check(f"channels[{ch.get('name')}]", ch, "matrix_sends", "matrix", matrices)
+    for name, bus in busses.items():
+        check(f"busses[{name}]", bus, "bus_sends", "bus", set(busses), own=name)
+        check(f"busses[{name}]", bus, "matrix_sends", "matrix", matrices)
+    for name, out in outputs.items():
+        if not isinstance(out, dict) or not out.get("matrix_sends"):
+            continue
+        if out.get("kind") != "main":
+            r.add(SEVERITY_ERROR, "reference.dangling", f"outputs[{name}].matrix_sends",
+                  f"only a Main sends to a Matrix; {name!r} is a {out.get('kind') or 'output'}")
+            continue
+        check(f"outputs[{name}]", out, "matrix_sends", "matrix", matrices)
+
+
 def _check_channels_reach_an_output(plan: dict, r: VerifyResult) -> None:
     """A channel whose audio reaches no output
     (`routing.channel-reaches-nothing`, a WARNING): no route to a Main, no
@@ -1420,7 +1521,9 @@ def _check_channels_reach_an_output(plan: dict, r: VerifyResult) -> None:
         return level is None or (isinstance(level, (int, float)) and level > facts.MINUS_INF_DB)
 
     for ch in plan.get("channels") or []:
-        if not isinstance(ch, dict) or ch.get("main_routes"):
+        if not isinstance(ch, dict) or ch.get("main_routes") or ch.get("matrix_sends"):
+            # A send straight to a Matrix reaches an
+            # output: a Matrix is one.
             continue
         sends = [s for s in ch.get("bus_sends") or [] if isinstance(s, dict)]
         if any(reaches(s) for s in sends):
@@ -1458,10 +1561,10 @@ def _check_channels_reach_main(plan: dict, r: VerifyResult) -> None:
     Main by a `main_routes` entry, or by an audible send -- above -144 dB,
     or `null`, decided unity -- into a bus whose destination is a Main.
 
-    Only one hop: a bus's destination is a Main, a dedicated output or a
-    matrix (`plan_schema`), never another bus, so a bus that feeds a bus
-    cannot be expressed. A bus feeding only a Matrix does not count; a
-    Matrix is an output, not the Main mix.
+    A bus counts when its destination is a Main, or when it sends (its own
+    `bus_sends`) to a bus that does, however many buses
+    along. A bus feeding only a Matrix does not count; a Matrix is an output,
+    not the Main mix.
 
     Quiet for a click, guide or talkback strip, recognised by name
     (`_OFF_MAIN_BY_NAME`): the domain knowledge keeps click and guide off
@@ -1470,12 +1573,15 @@ def _check_channels_reach_main(plan: dict, r: VerifyResult) -> None:
     A bus feeding a Main that nothing sends to is not a finding here."""
     busses = plan.get("busses") or {}
 
-    def feeds_main(bus_name) -> bool:
+    def feeds_main(bus_name, seen=frozenset()) -> bool:
         bus = busses.get(bus_name) if isinstance(bus_name, str) else None
-        if not isinstance(bus, dict):
+        if not isinstance(bus, dict) or bus_name in seen:
             return False
         dests = bus.get("destinations") or ([bus["destination"]] if bus.get("destination") else [])
-        return any(isinstance(d, dict) and d.get("type") == "main" for d in dests)
+        if any(isinstance(d, dict) and d.get("type") == "main" for d in dests):
+            return True
+        return any(isinstance(s, dict) and feeds_main(s.get("bus"), seen | {bus_name})
+                   for s in bus.get("bus_sends") or [])
 
     def audible(send: dict) -> bool:
         level = send.get("level_db")
@@ -1552,7 +1658,6 @@ def _check_instructed(ch: dict, r: VerifyResult, layers, holders=None) -> None:
     With no texts to check against, the WARNING says the quote was not
     checked, as `reconcile.not-checked` does for a missing input list."""
     from atoo import instructed_channels as ic
-    from atoo.input_list import format_socket
 
     source = ch.get("source") or {}
     name = ch.get("name")
@@ -1948,6 +2053,64 @@ def _check_stated_presets(plan: dict, rows: list[InputRow], r: VerifyResult) -> 
               "before the list said so",
               fix="rebuild, or set processing.preset to the list's value and run "
                   "`atoo presets --expand PLAN`")
+
+
+def _check_captured_mix(plan: dict, r: VerifyResult) -> None:
+    """A captured plan states no mix (`inferred.plan_states_the_mix`), and
+    `apply` leaves it to the desk. Said once, at INFO, because
+    on a built plan an unstated fader means unity and here it does not."""
+    from atoo.inferred import plan_states_the_mix
+
+    if not plan_states_the_mix(plan):
+        r.add(Severity.INFO, "capture.mix-left-to-desk", "plan",
+              "this plan was captured from a desk and states no faders, mutes or send "
+              "levels: `atoo apply` leaves them as the desk has them, does not reset the "
+              "desk to initialized and does not unpatch the strips it does not hold, so "
+              "applied back to the desk it came from it changes nothing")
+
+
+def _check_sheet_columns(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:
+    """The desk sheets' `channel`, `dca` and `mute_group` columns
+    against the plan, wherever a row fills one.
+
+    `atoo capture` writes them from the desk and a build places channels by
+    them, and a Save in Build's step 04 carries them into the
+    plan, so a plan made any of those ways agrees with them. Where a filled
+    cell and the plan disagree, the plan was changed after it was made (an
+    edit by hand, `atoo patch`) or the list after the plan, and the cell has
+    had no effect: that is said, never left to look honoured. A WARNING, as
+    `preset.contradicts-input-list` is: which strip and which DCA are
+    judgements, and the desk works either way."""
+    from atoo.input_list import rows_feeding
+
+    for ch in plan["channels"]:
+        if not isinstance(ch, dict):
+            continue
+        feeding = rows_feeding(ch, rows)
+        if not feeding:
+            continue
+        row = feeding[0]
+        where = f"channels[{ch.get('name')}]"
+        said = []
+        if row.channel is not None and row.channel != (ch.get("bank") or "ch", ch.get("channel")):
+            bank, number = row.channel
+            on = f"{'Aux ' if ch.get('bank') == 'aux' else ''}{ch.get('channel')}"
+            said.append(f"puts {row.name} on channel {'Aux ' if bank == 'aux' else ''}"
+                        f"{number}, but the plan has it on {on}")
+        # Matched as the build matches a group, without case or extra spaces:
+        # the list's `DRUMS` is the plan's `Drums` (the report).
+        for column, word, cells, planned in (
+                ("dca", "DCA", row.dca, ch.get("dca")),
+                ("mute_group", "mute group", row.mute_group, ch.get("mute_group"))):
+            planned = list(planned or [])
+            if cells and sorted(map(_norm, cells)) != sorted(map(_norm, planned)):
+                said.append(f"puts {row.name} in {word} {'; '.join(cells)}, but the plan has it "
+                            f"in {'; '.join(planned) or f'no {word}'}")
+        for text in said:
+            r.add(SEVERITY_WARNING, "input-list.column-not-followed", where,
+                  f"The input list {text}: the plan was changed after it was built, or the list "
+                  "after the plan. Rebuild, or Save the input list in Build 04, to apply the "
+                  "cell; or clear the cell if the plan is right")
 
 
 # --------------------------------------------------------------------------
@@ -2490,9 +2653,11 @@ def verify_plan(plan: dict, rows: list[InputRow] | None = None, *,
     _check_patch(plan, r, resolved)
     _check_alt_patch(plan, r, resolved)
     _check_user_sources(plan, r, resolved)
+    _check_captured_mix(plan, r)
     _check_expansion_bays(plan, r)
     _check_values(plan, r)
     _check_references(plan, r, resolved)
+    _check_send_references(plan, r)
     _check_channels_reach_an_output(plan, r)
     _check_channels_reach_main(plan, r)
     _check_talkback(plan, r)
@@ -2509,5 +2674,6 @@ def verify_plan(plan: dict, rows: list[InputRow] | None = None, *,
     _check_reconciliation(plan, rows, r, layers)
     _check_stated_sockets(plan, rows, r)
     _check_stated_presets(plan, rows, r)
+    _check_sheet_columns(plan, rows, r)
     _check_safety(plan, rows, r)
     return r

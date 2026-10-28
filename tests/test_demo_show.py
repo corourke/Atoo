@@ -226,7 +226,7 @@ def _writes(home):
         ("/api/bundle/adopt", {"slot": "watch", "path": str(home / "w.json"),
                                "expected_bundle": demo_show}),
         ("/api/build/run", {"console_model": "wing-compact", "expected_bundle": demo_show}),
-        ("/api/watch-conditions/save", {"watch_conditions": []}),
+        ("/api/watch-conditions/save", {"version": 2, "watch_conditions": []}),
         ("/api/watch-conditions/new", {"expected_bundle": demo_show}),
         ("/api/watch-conditions/load", {"path": str(home / "w.json")}),
         ("/api/plan/load", {"path": str(home / "p.json")}),
@@ -236,7 +236,7 @@ def _writes(home):
 
 def test_every_write_endpoint_refuses_the_demo_show(client, home):
     (home / "x.csv").write_text("socket,name\nLCL 1,Kick\n")
-    (home / "w.json").write_text('{"watch_conditions": []}')
+    (home / "w.json").write_text('{"version": 2, "watch_conditions": []}')
     before = _fingerprint()
     _demo(client)
     for url, body in _writes(home):
@@ -275,7 +275,7 @@ def test_apply_previews_against_the_rig_and_never_writes(client):
     assert result["dry_run"] is True and result["counts"]["total"] > 1000
     assert result["counts"]["unreadable"] == 0
     kinds = [s["kind"] for s in result["drawing"]["sections"]]
-    assert kinds == ["ch", "aux", "bus", "main", "mtx", "dca", "mgrp"]
+    assert kinds == ["ch", "aux", "bus", "main", "mtx", "dca", "mgrp", "in", "out", "fx", "cfg"]
     assert _fingerprint() == before
 
 
@@ -590,9 +590,9 @@ def test_the_demo_watch_opens_with_no_sp_l002_row(home):
 
 
 @pytest.mark.parametrize("issue, condition", [
-    ("dca_closed", "WATCH:band-dca-open"),
+    ("dca_closed", "WATCH:band-dca-down"),
     ("fader_at_floor", "WATCH:mix-bus-fader-low"),
-    ("lead_vox_muted", "WATCH:lead-vox-unmuted"),
+    ("lead_vox_muted", "WATCH:lead-vox-muted"),
 ])
 def test_a_seeded_fault_trips_a_demo_watch_condition(issue, condition):
     values = dict(webui._load_demo_base())
@@ -648,7 +648,7 @@ def test_watch_on_the_demo_show_fires_its_conditions(client, monkeypatch):
             for _ in range(60):
                 payload = ws.receive_json()
                 new = [f["rule_id"] for f in payload.get("new_findings", [])]
-                if "WATCH:band-dca-open" in new:
+                if "WATCH:band-dca-down" in new:
                     fired = payload
                     break
             assert fired is not None

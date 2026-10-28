@@ -31,14 +31,14 @@ CAPTURES = sorted(FIXTURES.rglob("*.snap"))
 
 def _cond(**changes) -> dict:
     cond = {"id": "c", "description": "The click stays on in every IEM", "channel": "Click",
-            "field": "send_on", "bus": "BUS 5-6", "operator": "==", "value": True,
+            "field": "send_on", "bus": "BUS 5-6", "operator": "!=", "value": True,
             "severity": "error"}
     cond.update(changes)
     return {k: v for k, v in cond.items() if v is not None}
 
 
 def _load(*conds) -> list[dict]:
-    return parse_watch_conditions(json.dumps({"watch_conditions": list(conds)}), source="t.json")
+    return parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": list(conds)}), source="t.json")
 
 
 def _refused(**changes) -> str:
@@ -77,7 +77,7 @@ def _desk(**changes) -> ConsoleState:
 
 
 def test_the_new_fields_are_in_the_vocabulary_with_their_key():
-    loaded = _load(_cond(), _cond(id="d", field="send_db", operator=">", value=-10),
+    loaded = _load(_cond(), _cond(id="d", field="send_db", operator="<=", value=-10),
                    _cond(id="e", field="send_mode", value="pre"),
                    _cond(id="f", channel="CH 3-4", field="phantom", bus=None))
     assert [c["field"] for c in loaded] == ["send_on", "send_db", "send_mode", "phantom"]
@@ -117,7 +117,7 @@ def test_a_bus_that_no_console_could_satisfy_is_refused(bus, fragment):
 
 def test_a_route_to_a_main_has_a_switch_and_nothing_else():
     assert "a route to a Main has a switch and no level or mode" in _refused(
-        field="send_db", operator=">", value=-10, bus="MAIN 1")
+        field="send_db", operator="<=", value=-10, bus="MAIN 1")
     assert "a route to a Main has a switch and no level or mode" in _refused(
         field="send_mode", value="pre", bus="MAIN 1")
     assert "only a send to a bus is pre or post fader" in _refused(
@@ -127,8 +127,8 @@ def test_a_route_to_a_main_has_a_switch_and_nothing_else():
 @pytest.mark.parametrize("changes,fragment", [
     (dict(value="yes"), "field 'send_on' needs a boolean 'value'"),
     (dict(field="phantom", bus=None, value=1), "field 'phantom' needs a boolean 'value'"),
-    (dict(field="send_db", operator="<", value=True), "field 'send_db' needs a numeric 'value'"),
-    (dict(field="send_db", operator="<", value="-10"), "field 'send_db' needs a numeric 'value'"),
+    (dict(field="send_db", operator=">=", value=True), "field 'send_db' needs a numeric 'value'"),
+    (dict(field="send_db", operator=">=", value="-10"), "field 'send_db' needs a numeric 'value'"),
     (dict(field="send_mode", value="middle"),
      "field 'send_mode' needs a 'value' of 'pre', 'post', 'group'"),
 ])
@@ -137,8 +137,8 @@ def test_a_value_the_field_cannot_take_is_refused(changes, fragment):
 
 
 @pytest.mark.parametrize("changes", [
-    dict(operator=">"), dict(field="phantom", bus=None, operator="<="),
-    dict(field="send_mode", value="pre", operator=">="),
+    dict(operator="<="), dict(field="phantom", bus=None, operator=">"),
+    dict(field="send_mode", value="pre", operator="<"),
 ])
 def test_booleans_and_modes_take_equality_only(changes):
     message = _refused(**changes)
@@ -209,7 +209,7 @@ def test_a_range_of_strips_is_one_finding_per_violating_strip():
 
 def test_not_equal_asserts_the_send_is_not_on():
     state = _desk()
-    [finding] = _findings(state, _cond(channel="Click", bus="BUS 5", operator="!=", value=True,
+    [finding] = _findings(state, _cond(channel="Click", bus="BUS 5", operator="==", value=True,
                                        description="The click stays out of the drum IEM"))
     assert "switched on" in finding.message
 
@@ -254,7 +254,7 @@ def test_an_aux_has_sends_too():
 def test_a_send_level_below_the_floor_the_engineer_set():
     state = _desk(**{"/ch/1/send/5/lvl": -20.0})
     [finding] = _findings(state, _cond(
-        channel="Kick", field="send_db", bus="Drum IEM", operator=">", value=-10,
+        channel="Kick", field="send_db", bus="Drum IEM", operator="<=", value=-10,
         description="Kick stays above -10 in the drummer's IEM", severity="warning"))
     assert finding.severity == Severity.WARNING
     assert finding.message == ('CH 1 "Kick" has its send to BUS 5 "Drum IEM" at -20 dB -- '
@@ -265,13 +265,13 @@ def test_a_send_level_below_the_floor_the_engineer_set():
 def test_send_db_over_a_range_lists_each_level_and_reads_minus_infinity():
     state = _desk(**{"/ch/1/send/5/lvl": -20.0, "/ch/1/send/6/lvl": float("-inf")})
     [finding] = _findings(state, _cond(channel="Kick", field="send_db", bus="BUS 5-6",
-                                       operator=">", value=-10))
+                                       operator="<=", value=-10))
     assert 'has its sends to BUS 5 "Drum IEM" at -20 dB and BUS 6 "Bass IEM" at -inf dB' in finding.message
 
 
 def test_a_send_that_holds_the_level_says_nothing():
     assert _findings(_desk(), _cond(channel="Kick", field="send_db", bus="BUS 5-6",
-                                    operator=">", value=-10)) == []
+                                    operator="<=", value=-10)) == []
 
 
 def test_a_send_flipped_to_post_fader():
@@ -292,7 +292,7 @@ def test_group_mode_reads_as_a_word():
 def test_send_mode_not_equal():
     state = _desk()
     [finding] = _findings(state, _cond(channel="Kick", field="send_mode", bus="BUS 5",
-                                       operator="!=", value="pre"))
+                                       operator="==", value="pre"))
     assert "pre-fader" in finding.message
 
 
@@ -420,7 +420,7 @@ def test_a_condition_stands_beside_the_built_in_rules():
 
 
 def test_the_addresses_a_send_condition_reads():
-    [cond] = _load(_cond(field="send_db", operator=">", value=-10, bus="BUS 5-6"))
+    [cond] = _load(_cond(field="send_db", operator="<=", value=-10, bus="BUS 5-6"))
     patterns = condition_address_patterns(cond)
     assert r"^/ch/\d+/send/\d+/lvl$" not in patterns  # `{bank}` is the bank of `channel`
     assert any("send" in p and "lvl" in p for p in patterns)
@@ -463,14 +463,14 @@ def test_a_drafted_bus_is_written_in_its_one_spelling():
 
 
 def test_a_draft_keeps_the_bus_key_and_drops_one_it_does_not_know():
-    document = {"watch_conditions": [{**_cond(), "index": 3}]}
+    document = {"version": 2, "watch_conditions": [{**_cond(), "index": 3}]}
     kept, notes = salvage_drafted_conditions(document)
     assert kept[0]["bus"] == "BUS 5-6" and "index" not in kept[0]
     assert notes and "dropped unknown key(s) index" in notes[0]
 
 
 def test_a_draft_with_a_send_field_and_no_bus_is_refused_on_its_own():
-    document = {"watch_conditions": [_cond(bus=None), _cond(id="ok", field="muted", bus=None,
+    document = {"version": 2, "watch_conditions": [_cond(bus=None), _cond(id="ok", field="muted", bus=None,
                                                             value=False, channel="Kick")]}
     kept, notes = salvage_drafted_conditions(document)
     assert [c["id"] for c in kept] == ["ok"]
@@ -504,7 +504,10 @@ def test_the_prompts_examples_pass_the_loader_that_will_check_a_draft():
     assert len(blocks) >= 2
     fields = set()
     for block in blocks:
-        loaded = parse_watch_conditions(block, source="the prompt")
+        # A draft is the model's reply, not a file: it has no "version", and
+        # is checked condition by condition, as a build checks it.
+        loaded, notes = salvage_drafted_conditions(json.loads(block), source="the prompt")
+        assert notes == []
         fields |= {c["field"] for c in loaded}
     assert {"send_on", "phantom"} <= fields
 

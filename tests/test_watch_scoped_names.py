@@ -32,14 +32,14 @@ from atoo.watch_conditions import (
 def _cond(**overrides):
     base = {
         "id": "c1", "description": "test condition", "channel": "BUS Drums",
-        "field": "muted", "operator": "==", "value": False, "severity": "error",
+        "field": "muted", "operator": "!=", "value": False, "severity": "error",
     }
     base.update(overrides)
     return base
 
 
 def _parse(*conds):
-    return parse_watch_conditions(json.dumps({"watch_conditions": list(conds)}))
+    return parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": list(conds)}))
 
 
 def _run(state, *conds):
@@ -140,14 +140,14 @@ def test_patch_is_refused_on_a_scoped_name_of_a_kind_without_one(channel):
 
 def test_membership_is_refused_on_a_scoped_dca_and_bus():
     with pytest.raises(WatchConditionsError, match="cannot itself be a member"):
-        _parse(_cond(channel="DCA Vocals", field="dca", value="Drums"))
+        _parse(_cond(channel="DCA Vocals", field="dca", operator="not in", value="Drums"))
     with pytest.raises(WatchConditionsError, match="does not read"):
-        _parse(_cond(channel="BUS Drums", field="mute_group", value="FX"))
+        _parse(_cond(channel="BUS Drums", field="mute_group", operator="not in", value="FX"))
 
 
 @pytest.mark.parametrize("field, operator, value", [
-    ("muted", "==", False), ("fader_db", "<=", 0), ("dca", "==", "Drums"),
-    ("mute_group", "!=", "FX"), ("patch", "==", "LCL 1"),
+    ("muted", "!=", False), ("fader_db", ">", 0), ("dca", "not in", "Drums"),
+    ("mute_group", "in", "FX"), ("patch", "!=", "LCL 1"),
 ])
 def test_every_field_applies_to_a_scoped_channel_or_aux(field, operator, value):
     _parse(_cond(channel="CH Kick", field=field, operator=operator, value=value))
@@ -160,7 +160,7 @@ def test_row_problems_says_scoped_and_gives_the_canonical_spelling():
 
 
 def test_merge_treats_two_spellings_of_a_scoped_name_as_one_target():
-    existing = {"watch_conditions": [_cond(id="mine", channel="bus drums")]}
+    existing = {"version": 2, "watch_conditions": [_cond(id="mine", channel="bus drums")]}
     drafted = _parse(_cond(id="theirs", channel="BUS Drums", value=True),
                      _cond(id="other", channel="DCA drums"))
     document, report = merge_drafted_conditions(existing, drafted)
@@ -193,7 +193,7 @@ def test_a_scoped_name_resolves_and_says_so_at_info():
 
 def test_the_name_matches_case_insensitively():
     findings = _run(_state(), _cond(channel="dca VOCALS", field="fader_db",
-                                    operator="<=", value=0))
+                                    operator=">", value=0))
     assert "DCA VOCALS resolved to DCA 2" in findings[0].detail
     assert findings[1].addresses == ("/dca/2/fdr",)
 
@@ -202,7 +202,7 @@ def test_a_bus_dca_with_the_same_name_resolve_within_their_own_kind():
     findings = _run(_state(),
                     _cond(id="b", channel="BUS Drums", field="muted", value=True),
                     _cond(id="d", channel="DCA Drums", field="fader_db",
-                          operator=">=", value=0))
+                          operator="<", value=0))
     info = [f for f in findings if f.severity == Severity.INFO]
     assert [f.addresses for f in info] == [("/bus/1/name",), ("/dca/1/name",)]
 
@@ -281,7 +281,7 @@ def test_nothing_but_the_info_when_the_condition_holds():
 def test_a_scoped_channel_takes_membership_and_patch():
     state = _state(**{"/ch/1/tags": "#D1", "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1})
     findings = _run(state,
-                    _cond(id="d", channel="CH Kick", field="dca", value="Vocals"),
+                    _cond(id="d", channel="CH Kick", field="dca", operator="not in", value="Vocals"),
                     _cond(id="p", channel="CH Kick", field="patch", value="LCL 2"))
     real = [f for f in findings if f.severity != Severity.INFO]
     assert [(f.rule_id, f.addresses) for f in real] == [
@@ -332,7 +332,7 @@ def test_the_findings_do_not_churn_across_cycles():
 
 def test_main_and_matrix_names_are_read_once_at_start_and_never_again():
     conds = _parse(_cond(id="m", channel="MAIN PA"), _cond(id="x", channel="MTX Delay"),
-                   _cond(id="m2", channel="main pa", field="fader_db", operator="<=", value=0),
+                   _cond(id="m2", channel="main pa", field="fader_db", operator=">", value=0),
                    _cond(id="b", channel="BUS Drums"))
     addresses = start_name_addresses(conds)
     assert addresses == ([f"/main/{n}/name" for n in range(1, 5)]
@@ -385,7 +385,7 @@ def test_the_poll_reads_no_main_or_matrix_name():
 
 def test_a_scoped_target_reads_its_own_banks_names():
     patterns = condition_address_patterns(_parse(_cond(channel="DCA Vocals",
-                                                       field="fader_db", operator="<=",
+                                                       field="fader_db", operator=">",
                                                        value=0))[0])
     assert r"^/dca/\d+/name$" in patterns
     assert r"^/dca/\d+/fdr$" in patterns

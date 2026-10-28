@@ -384,7 +384,7 @@ def test_a_wide_table_scrolls_inside_its_box_never_the_page(served):
         _assert_36px_rows(m)
 
 
-def test_the_channel_table_with_its_input_columns_open_scrolls_in_its_box(served):
+def test_the_channel_table_with_every_sheet_column_scrolls_in_its_box(served):
     with _Browser() as b:
         page = b.page(served, 1440)
         _open_step(page, "plan")
@@ -393,13 +393,11 @@ def test_the_channel_table_with_its_input_columns_open_scrolls_in_its_box(served
         _assert_36px_rows(m)
         assert m["th"] == ["8px", "12px", "8px", "12px"], m
         assert m["text"] == ["8px", "12px", "8px", "12px"], m
-        # Open the Input group: the table is now 13 columns and wider than its box.
-        toggle = page.locator("#panel-plan table.ct .grp-toggle").first
-        if toggle.get_attribute("aria-expanded") != "true":
-            toggle.click()
-        m = page.evaluate(ROWS, "#panel-plan table.ct")
+        # One view with every column of the input list. This
+        # show's rows carry CHANGED chips and plan-only strips, which make it
+        # wider than its box: the box scrolls, never the page. A captured
+        # show's table fits (`test_a_captured_shows_channel_table_fits_its_box`).
         assert m["wrap"][2] in ("auto", "scroll")
-        assert m["wrap"][1] > m["wrap"][0], m
         assert m["page"][0] == m["page"][1], m
 
 
@@ -436,3 +434,166 @@ def test_every_button_shows_the_brass_ring_under_keyboard_focus(served):
                     checked["other"] += 1
         assert probes == {"probe-link-btn", "probe-bare"}, probes
         assert checked["btn"] >= 8, checked
+
+
+@pytest.fixture
+def served_church(home, tmp_path):
+    """The church desk's frozen snapshot, captured into a show."""
+    import copy
+
+    from atoo import capture
+    from atoo.snapshot import load_snapshot
+
+    snap = Path(__file__).parent / "fixtures" / "church-full-2026-10-24.snap"
+    state = capture.state_from_snap(load_snapshot(str(snap)), "wing-full")
+    result = capture.capture_desk(state, console_model="wing-full", made_from="snap",
+                                  captured="2026-10-24", snapshot="captures/church.snap")
+    directory = tmp_path / "church"
+    capture.write_bundle(copy.deepcopy(result), directory, evidence_name="church.snap",
+                         evidence=b"{}")
+    app = create_app(initial_bundle=str(directory),
+                     initial_plan=json.loads((directory / "plan.json").read_text()),
+                     initial_plan_path=str(directory / "plan.json"))
+    url, server, thread = _serve(app)
+    yield url
+    server.should_exit = True
+    thread.join(timeout=5)
+
+
+@pytest.mark.parametrize("width", [1440, 1920])
+def test_a_captured_shows_channel_table_fits_its_box(served_church, width):
+    """The Channels table fits its box beside the Findings panel, every
+    column in view; the box's scroll is a fallback for a narrow window."""
+    with _Browser() as b:
+        page = b.page(served_church, width)
+        _open_step(page, "plan")
+        page.wait_for_selector("#plan-channels-table", state="attached")
+        m = page.evaluate(ROWS, "#plan-channels-table")
+        assert m["wrap"][1] <= m["wrap"][0], m
+        for table in ("#plan-busses-table", "#plan-outputs-table"):
+            m = page.evaluate(ROWS, table)
+            assert m["wrap"][1] <= m["wrap"][0], (table, m)
+
+
+def test_edit_sheets_takes_the_same_page_to_build_and_back_to_the_running_watch(
+        served_church, monkeypatch):
+    """Watch's Edit sheets changes the page, not the tab (the maintainer,
+    2026-10-25: "it should just navigate to the Build page"): step 04 says
+    Watch is still running, and Back to Watch finds the same session, still
+    running, with no new tab and no restart."""
+    import copy
+
+    from atoo import capture, webui
+    from atoo.snapshot import load_snapshot
+
+    snap = Path(__file__).parent / "fixtures" / "church-full-2026-10-24.snap"
+    state = capture.state_from_snap(load_snapshot(str(snap)), "wing-full")
+    keep = ("/ch/1/", "/bus/9/")
+    small = type(state)(values={a: v for a, v in state.values.items() if a.startswith(keep)},
+                        console_model="wing-full")
+    monkeypatch.setattr(webui, "console_provider_factory",
+                        lambda address, **kw: ((lambda names=None: copy.deepcopy(small)), None))
+    with _Browser() as b:
+        page = b.page(served_church + "#watch", 1440)
+        started = page.request.post(served_church + "api/watch/start",
+                                    data={"source": "console", "console": "192.0.2.1",
+                                          "interval": 0.2})
+        assert started.ok, started.text()
+        page.wait_for_selector("#watch-edit-sheets:not([hidden])")
+        page.click("#watch-edit-sheets")
+        page.wait_for_selector("#panel-plan:not([hidden])")
+        assert page.evaluate("location.hash") == "#build"
+        assert len(page.context.pages) == 1
+        assert page.is_visible("#plan-from-watch")
+        assert "Watch is still running." in page.inner_text("#plan-from-watch")
+        page.click("#plan-back-to-watch")
+        assert page.evaluate("location.hash") == "#watch"
+        assert not page.is_visible("#plan-from-watch")
+        assert page.request.get(served_church + "api/status").json()["running"] is True
+        page.wait_for_selector("#alert-body tr")
+        page.request.post(served_church + "api/watch/stop")
+
+def test_a_long_refusal_wraps_inside_the_busses_box(served_church):
+    """A refused cell's reason is a sentence under its row, and it wraps: an
+    output two buses claim gave a reason long enough to stretch the Busses
+    table to ~3,000 px when the row's one-line rule won. The reason names
+    the rows as the sheet does, not by their plan paths. A row's sources are
+    in its disclosure since revision 3; a long list of names
+    nothing is called gives a long reason too."""
+    with _Browser() as b:
+        page = b.page(served_church, 1440)
+        _open_step(page, "plan")
+        page.click('#plan-busses-table tr[data-bus-label="Bus 10"] .row-expand-btn')
+        page.wait_for_selector('input[data-bus-row="Bus 10"][data-bus-col="sources"]')
+        page.fill('input[data-bus-row="Bus 10"][data-bus-col="sources"]',
+                  "; ".join(f"Nobody By That Name {n}" for n in range(12)))
+        page.wait_for_selector("#plan-busses-table tr.row-refusal")
+        m = page.evaluate(ROWS, "#plan-busses-table")
+        assert m["wrap"][1] <= m["wrap"][0], m
+        width = page.evaluate("document.querySelector('#plan-busses-table')"
+                              ".getBoundingClientRect().width")
+        assert width <= m["wrap"][0] + 1, (width, m)
+        reason = page.inner_text("#plan-busses-table tr.row-refusal")
+        assert "Nobody By That Name 0" in reason
+        assert "busses[" not in reason
+
+
+def test_a_page_that_joins_a_running_watch_shows_every_finding_already_there(
+        served_church, monkeypatch):
+    """A page that joins a running watch -- opened after Start,
+    reloaded, or reconnected -- is handed the server's last frame, whose
+    new_findings are only that pass's. It showed none of the findings already
+    there, so a stage box not connected (C008, an ERROR) vanished from the
+    table though nothing on the desk had changed. Every finding the frame
+    lists is on the table."""
+    import time
+
+    from atoo import webui
+    from atoo.audit import ConsoleState
+
+    desk = ConsoleState({"/$stat/A/stat": "-", "/$stat/B/stat": "-", "/$stat/C/stat": "-",
+                         "/io/out/B/25/grp": "LCL", "/io/out/B/25/in": 1,
+                         "/io/out/LCL/1/grp": "OFF", "/io/out/LCL/1/in": 0},
+                        console_model="wing-full")
+    monkeypatch.setattr(webui, "console_provider_factory",
+                        lambda address, **kw: ((lambda names=None: desk), None))
+    with _Browser() as b:
+        first = b.page(served_church + "#watch", 1440)
+        started = first.request.post(served_church + "api/watch/start",
+                                     data={"source": "console", "console": "192.0.2.1",
+                                           "interval": 0.2})
+        assert started.ok, started.text()
+        first.wait_for_selector("#alert-body tr:has-text('C008')")
+        time.sleep(1.5)   # several passes, so the last frame is not the baseline
+        joined = b.page(served_church + "#watch", 1440)
+        joined.wait_for_selector("#alert-body tr:has-text('C008')", timeout=10000)
+        assert ("Stage box AES50 port B appears to not be connected"
+                in joined.inner_text("#alert-body tr:has-text('C008')"))
+        first.reload()
+        first.wait_for_selector("#alert-body tr:has-text('C008')", timeout=10000)
+        first.request.post(served_church + "api/watch/stop")
+
+
+def test_choosing_a_role_leaves_the_page_where_it_was(served_church):
+    """Choosing a Role in the Busses table moved the page about
+    40-100 px when the check came back and the tables were drawn again. The
+    page stays put, and so does the cell."""
+    with _Browser() as b:
+        page = b.page(served_church, 1440)
+        _open_step(page, "plan")
+        cell = 'select[data-bus-row="Bus 2"][data-bus-col="role"]'
+        page.wait_for_selector(cell)
+        page.evaluate("s => { const e = document.querySelector(s); window.scrollTo(0, "
+                      "e.getBoundingClientRect().top + window.scrollY - 450); }", cell)
+        page.wait_for_timeout(300)
+        where = "s => [window.scrollY, document.querySelector(s).getBoundingClientRect().top]"
+        before = page.evaluate(where, cell)
+        page.click(cell)
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        # The check answers after 400 ms; the tables are drawn again then.
+        page.wait_for_function("document.querySelector('.bus-dirty-badge:not([hidden])')")
+        page.wait_for_timeout(1200)
+        after = page.evaluate(where, cell)
+        assert after[0] == before[0], (before, after)
+        assert abs(after[1] - before[1]) <= 3, (before, after)

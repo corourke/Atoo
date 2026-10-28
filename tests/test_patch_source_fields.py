@@ -215,13 +215,11 @@ def test_a_change_that_restates_the_whole_source_sets_what_changed_in_it():
 
 
 @pytest.mark.parametrize("fields,words", [
-    ({"source.input": "Bagpipes"}, "how a running strip is recognised"),
-    ({"source.pair_input": "Snare B"}, "second row of a stereo pair"),
     ({"source.from": "instructions"}, "the build's own record"),
     ({"source.quote": "snare on 2"}, "the build's own record"),
     ({"source.condition": "if available"}, "the build's own record"),
 ])
-def test_what_says_which_source_a_strip_is_is_still_refused(fields, words):
+def test_the_builds_record_of_a_source_is_still_refused(fields, words):
     plan = applied_plan()
     amendment, merge, targets = _review(plan, "Snare", fields)
     [refused] = _refusals(amendment)
@@ -229,21 +227,29 @@ def test_what_says_which_source_a_strip_is_is_still_refused(fields, words):
     assert merge.plan["channels"] == plan["channels"] and targets.to_write == []
 
 
-def test_the_refusal_names_the_parts_of_a_source_a_change_can_set():
-    amendment, _m, _t = _review(applied_plan(), "Snare", {"source.input": "Bagpipes"})
-    [refused] = _refusals(amendment)
-    for field in ("source.phantom", "source.model", "source.type"):
-        assert field in refused.reason
+def amend_get(obj: dict, path: str):
+    from atoo import amend
+    return amend.get_path(obj, path)
 
 
-def test_restating_the_whole_source_with_a_different_input_is_refused():
+@pytest.mark.parametrize("path", ["source.input", "source.pair_input"])
+def test_which_input_list_row_a_strip_takes_is_set(path):
+    """An instruction, carried out; the patch stays where
+    it is unless the change names a socket, and the INFO says so."""
+    amendment, merge, targets = _review(applied_plan(), "Snare", {path: "Bagpipes"})
+    assert not _refusals(amendment)
+    assert amend_get(_channel(merge.plan, "Snare"), path) == "Bagpipes"
+    assert any("its input-list row" in i and "its patch stays A 2" in i for i in merge.infos)
+    assert targets.to_write == []
+
+
+def test_restating_the_whole_source_with_a_different_input_sets_it():
     plan = applied_plan()
-    for changed in ({"input": "Bagpipes"},):
-        source = dict(_channel(plan, "Snare")["source"], phantom=True, **changed)
-        amendment, merge, _t = _review(plan, "Snare", {"source": source})
-        [refused] = _refusals(amendment)
-        assert f"source.{next(iter(changed))}" in refused.reason
-        assert merge.plan["channels"] == plan["channels"]
+    source = dict(_channel(plan, "Snare")["source"], phantom=True, input="Bagpipes")
+    amendment, merge, _t = _review(plan, "Snare", {"source": source})
+    assert not _refusals(amendment)
+    assert _channel(merge.plan, "Snare")["source"]["input"] == "Bagpipes"
+    assert _channel(merge.plan, "Snare")["source"]["phantom"] is True
 
 
 def test_a_field_a_source_lacks_is_still_refused_by_the_schema():
@@ -403,13 +409,12 @@ def test_patch_refuses_a_ribbon_with_48v_and_the_desk_is_untouched(tmp_path, des
     assert _leaves_written(desk) == set()
 
 
-def test_patch_still_refuses_to_change_the_input_and_says_what_can_be_set(
-        tmp_path, desk, model, capsys):
+def test_patch_changes_the_input_and_says_the_patch_stays(tmp_path, desk, model, capsys):
     model.response = json.dumps(_change_set(_modify("Snare", {"source.input": "Bagpipes"})))
     show = _bundle(tmp_path)
-    assert _patch(show, "the snare is the bagpipes", confirm=True) == 2
+    assert _patch(show, "the snare is the bagpipes", confirm=True) == 0
     out = capsys.readouterr().out
-    assert "how a running strip is recognised" in out and "source.phantom" in out
+    assert "its input-list row 'Snare' -> 'Bagpipes'" in out and "its patch stays A 2" in out
     assert _leaves_written(desk) == set()
 
 

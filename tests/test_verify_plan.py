@@ -1037,8 +1037,7 @@ DISJOINT_PAIR = _usr_plan([25, 26], [
 def test_the_pdfs_own_disjoint_pair_is_now_representable():
     """The headline: a stereo pair whose halves are CRD 1 and CRD 33
     could not be written down at all before this. It is one plan now, and
-    the only findings it raises are the two that say what was NOT done --
-    apply cannot write the slots yet, and nothing offline knows whether the
+    the only finding it raises says what offline cannot know: whether the
     card bay has a card in it."""
     result = verify_plan(DISJOINT_PAIR)
     assert not result.errors, result.report()
@@ -1081,26 +1080,17 @@ def test_an_undefined_usr_slot_is_a_warning_and_never_blocks_apply():
     assert "patch.user-source-undefined" not in {f.code for f in result.errors}
 
 
-def test_a_plan_defining_usr_slots_says_apply_does_not_write_them():
-    """The load-bearing warning of this slice. The schema and the verifier
-    landed before the write path, so a `user_sources` section apply silently
-    ignores must not read like one it honoured."""
-    result = verify_plan(DISJOINT_PAIR)
-    hit = next(f for f in result.findings
-               if f.code == "user-source.not-written-by-apply")
-    assert hit.severity == SEVERITY_WARNING
-    assert "2 USR slot(s)" in hit.message
-    assert "by hand" in hit.fix
-    # This one IS a limitation of Atoo rather than of the plan, which is
-    # what `issue=` renders as -- unlike the two findings around it.
-    assert hit.issue == 121
+def test_apply_writes_the_usr_slots_so_verify_no_longer_warns_it_does_not():
+    """`apply` writes `user_sources` (`apply.user_source_targets`),
+    so the warning that it did not is gone, and the disjoint pair's two slots
+    are written: what each takes and its name."""
+    from atoo.apply import user_source_targets
 
-
-def test_that_warning_is_raised_once_per_plan_and_only_when_the_section_exists():
-    codes_without = codes(verify_plan(_usr_plan([25, 26], [])))
-    assert "user-source.not-written-by-apply" not in codes_without
-    fired = [f.code for f in verify_plan(DISJOINT_PAIR).findings]
-    assert fired.count("user-source.not-written-by-apply") == 1
+    assert "user-source.not-written-by-apply" not in codes(verify_plan(DISJOINT_PAIR))
+    written = {t.address: t.compute_value(None) for t in user_source_targets(DISJOINT_PAIR)}
+    assert written == {"/io/in/USR/25/user/grp": "CRD", "/io/in/USR/25/user/in": 1,
+                       "/io/in/USR/25/name": "Trax L", "/io/in/USR/26/user/grp": "CRD",
+                       "/io/in/USR/26/user/in": 33, "/io/in/USR/26/name": "Trax R"}
 
 
 @pytest.mark.parametrize("slot", [0, 57, 100, "25", None])
@@ -1204,9 +1194,9 @@ def test_tap_and_leg_are_fine_on_a_user_signal(field, value):
         verify_plan(_usr_plan([1], [entry], stereo=False)))
 
 
-def test_a_defined_slot_no_channel_patches_is_reported():
-    """A slot nothing reads is a routing change on the desk with no purpose
-    in the plan -- and a mistyped slot number looks exactly like this."""
+def test_a_defined_slot_no_channel_patches_is_said_at_info():
+    """A slot nothing reads is kept, so a feed can be defined before it is
+    patched -- and said, since a mistyped slot number looks exactly like this."""
     plan = _usr_plan([25], [
         {"slot": 25, "source": {"group": "CRD", "index": 1}},
         {"slot": 40, "source": {"group": "CRD", "index": 33}},
@@ -1214,7 +1204,7 @@ def test_a_defined_slot_no_channel_patches_is_reported():
     result = verify_plan(plan)
     hit = next(f for f in result.findings if f.code == "user-source.unused")
     assert "USR 40" in hit.message
-    assert hit.severity == SEVERITY_WARNING
+    assert hit.severity == Severity.INFO
 
 
 def test_both_halves_of_a_stereo_pair_count_as_used():

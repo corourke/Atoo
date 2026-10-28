@@ -420,14 +420,15 @@ def test_the_findings_of_the_check_are_kept_in_the_plan(show, monkeypatch, capsy
 
 def test_the_fixup_reads_the_resolved_text_and_the_critic_the_raw(show, monkeypatch):
     _write_resolved(show)
-    provider = _use(monkeypatch, _reply(fixed=False), _reply(), "[]")
+    # The critic reads the first plan, before the fix-up round.
+    provider = _use(monkeypatch, _reply(fixed=False), "[]", _reply())
 
     assert _build(show, "--critic") == 0
-    assert provider.labels == ["generator", "fixup", "critic"]
-    _system, fixup_user = provider.calls[1]
+    assert provider.labels == ["generator", "critic", "fixup"]
+    _system, fixup_user = provider.calls[2]
     assert "Decided: drums are band instruments" in fixup_user
     assert "# The engineer's conventions (conventions.md)" not in fixup_user
-    _system, critic_user = provider.calls[2]
+    _system, critic_user = provider.calls[1]
     assert "# The engineer's conventions (conventions.md)" in critic_user
     assert "# Domain knowledge" in critic_user and "Decided:" not in critic_user
 
@@ -570,9 +571,12 @@ def test_a_budget_model_thinks_for_the_resolve_step():
 ])
 def test_a_line_break_written_as_backslash_n_is_whitespace(quote):
     """The model wrote the domain text's line wraps as the two characters
-    `\\` `n`; the check dropped the backslash and read `therenmay`."""
-    from atoo import conventions_audit as ca, generate
-    domain = ca.normalise(generate._domain_knowledge())
+    `\\` `n`; the check dropped the backslash and read `therenmay`. The
+    quotes are from the domain knowledge of that time, so the test reads the
+    frozen copy of it beside the Demo fixture, not the shipped file."""
+    from atoo import conventions_audit as ca
+    frozen = Path(__file__).parent / "fixtures" / "demo_2026-10-13" / "knowledge.md"
+    domain = ca.normalise(frozen.read_text())
     assert ca.contains(domain, ca._quote_core(quote))
 
 

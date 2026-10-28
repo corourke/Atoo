@@ -95,7 +95,7 @@ def test_no_config_file_returns_none_silently_for_watch_conditions(tmp_path, mon
 def test_valid_config_returns_the_default_watch_conditions_path(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     watch_conditions = tmp_path / "house.watch.json"
-    watch_conditions.write_text('{"watch_conditions": []}\n')
+    watch_conditions.write_text('{"version": 2, "watch_conditions": []}\n')
     (tmp_path / CONFIG_FILENAME).write_text(
         f'[watch_conditions]\ndefault = "{watch_conditions}"\n'
     )
@@ -107,7 +107,7 @@ def test_watch_conditions_config_supports_tilde_expansion(tmp_path, monkeypatch,
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     watch_dir = tmp_path / "watch"
     watch_dir.mkdir()
-    (watch_dir / "house.watch.json").write_text('{"watch_conditions": []}\n')
+    (watch_dir / "house.watch.json").write_text('{"version": 2, "watch_conditions": []}\n')
     (tmp_path / CONFIG_FILENAME).write_text(
         '[watch_conditions]\ndefault = "~/watch/house.watch.json"\n'
     )
@@ -155,7 +155,7 @@ def test_conventions_and_watch_conditions_defaults_are_independent(tmp_path, mon
     conventions = tmp_path / "house.md"
     conventions.write_text("# house conventions\n")
     watch_conditions = tmp_path / "house.watch.json"
-    watch_conditions.write_text('{"watch_conditions": []}\n')
+    watch_conditions.write_text('{"version": 2, "watch_conditions": []}\n')
     (tmp_path / CONFIG_FILENAME).write_text(
         f'[conventions]\ndefault = "{conventions}"\n\n'
         f'[watch_conditions]\ndefault = "{watch_conditions}"\n'

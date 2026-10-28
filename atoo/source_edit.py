@@ -28,7 +28,7 @@ import io
 from dataclasses import dataclass
 
 from atoo.input_list import (CANONICAL_COLUMNS, OLD_PATCH_COLUMN, ORDER_COLUMN,
-                                  PATCH_COLUMN, patch_column)
+                                  PATCH_COLUMN, SHEET_COLUMNS, patch_column)
 
 
 class EditError(ValueError):
@@ -197,14 +197,40 @@ def splice_input_list(text: str, rows: list[dict]) -> tuple[str, dict]:
     returned summary says what happened: ``{"changed": [...], "added":
     n, "removed": n, "columns_added": [...]}``.
     """
-    nl = newline_of(text)
-    header, records, header_end = read_records(text)
+    header, _records, _end = read_records(text)
     if not header:
         raise EditError("the input list has no header row -- it is empty")
     own_patch = patch_column(header)
     rows = [dict(row, values=_as_file_columns(row.get("values"), own_patch))
             for row in rows or []]
-    known = set(CANONICAL_COLUMNS) | {own_patch}
+    known = set(CANONICAL_COLUMNS) | set(SHEET_COLUMNS) | {own_patch}
+    return splice_rows(text, rows, known, lead=ORDER_COLUMN)
+
+
+def splice_bus_sheet(text: "str | None", rows: list[dict]) -> tuple[str, dict]:
+    """`busses.csv` with its rows replaced by ``rows``, as `splice_input_list`
+    does for the input list: an untouched row keeps its exact text, a changed
+    one is rewritten in the file's own column order, a column the page sends
+    that the header lacks is added at the end. With no file yet (``text``
+    None or empty: a built show's first Save in step 04), a new one is made
+    with the sheet's own header (`sheets.BUS_COLUMNS`), holding the rows sent."""
+    from atoo.sheets import BUS_COLUMNS
+
+    if not (text or "").strip():
+        text = ",".join(BUS_COLUMNS) + "\n"
+    header, _records, _end = read_records(text)
+    if not header:
+        raise EditError("busses.csv has no header row -- it is empty")
+    return splice_rows(text, rows, set(BUS_COLUMNS) | set(header))
+
+
+def splice_rows(text: str, rows: list[dict], known: set, *, lead: "str | None" = None
+                ) -> tuple[str, dict]:
+    """The splice both sheets share: ``rows`` are the page's table in order,
+    ``{"line": i | None, "values": {...}}``; ``known`` the columns a row may
+    write; ``lead`` a column that, added, goes first rather than last."""
+    nl = newline_of(text)
+    header, records, header_end = read_records(text)
     columns_added = []
     for row in rows:
         for column, value in (row.get("values") or {}).items():
@@ -215,8 +241,8 @@ def splice_input_list(text: str, rows: list[dict]) -> tuple[str, dict]:
     # numbering is the first thing read down the sheet). Adding a column
     # rewrites every row anyway, so putting it first costs nothing more;
     # any other new column goes at the end, as before.
-    lead = [c for c in columns_added if c == ORDER_COLUMN]
-    new_header = lead + header + [c for c in columns_added if c != ORDER_COLUMN]
+    first = [c for c in columns_added if c == lead]
+    new_header = first + header + [c for c in columns_added if c != lead]
 
     out_rows: list[tuple[str, str]] = []  # (record text, its own terminator or "")
     changed, added, used, order = [], 0, set(), []
@@ -246,7 +272,7 @@ def splice_input_list(text: str, rows: list[dict]) -> tuple[str, dict]:
             out_rows.append((_format_row([merged.get(c, "") for c in new_header]),
                              record.end))
             if not same:
-                changed.append(merged.get("name") or f"row {position + 1}")
+                changed.append(merged.get("name") or merged.get("bus") or f"row {position + 1}")
         else:
             out_rows.append((_format_row([sent.get(c, "") for c in new_header]), ""))
             added += 1

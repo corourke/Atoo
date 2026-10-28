@@ -86,6 +86,15 @@ class InstallInfo:
         ref = "detached HEAD" if self.detached else f"branch {self.branch}"
         return f"{head} ({where}; {ref}, {self.commit}, {state})"
 
+    def short(self) -> str:
+        """The line `atoo ui` starts with: ``atoo 0.2.6 (running from ~/x/atoo)``,
+        the version and where it runs from. The branch, commit and state are
+        `atoo --version`'s and the page's (`summary`)."""
+        head = f"atoo {self.version}"
+        if self.kind == "installed":
+            return f"{head} (installed copy at {_shown(self.package_dir)})"
+        return f"{head} (running from {_shown(self.package_dir)})"
+
     def version_text(self) -> str:
         """What ``atoo --version`` prints: the line, and the Python under it."""
         return f"{self.summary()}\nPython {self.python_version} at {_shown(self.python_path)}"
@@ -94,6 +103,7 @@ class InstallInfo:
         """What the web page is sent: the line, and its parts."""
         return {
             "line": self.summary(),
+            "short": self.short(),
             "version": self.version,
             "kind": self.kind,
             "path": str(self.package_dir),

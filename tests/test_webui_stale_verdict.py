@@ -165,7 +165,10 @@ def test_saving_an_edit_turns_ready_to_apply_into_stale_without_a_reload(served,
             # An edit not yet saved changes nothing: the file is still the one built from.
             page.evaluate("document.getElementById('tab-input-list').click()")
             page.wait_for_selector("#panel-input-list:not([hidden])", state="attached")
-            page.locator('#input-rows tr:nth-child(2) [data-col="name"]').fill("Snare Top")
+            # A category: the plan has no field for it (a rename, a patch or a
+            # DCA a Save carries into the plan itself), so only a
+            # rebuild takes it in.
+            page.locator('#input-rows tr:nth-child(2) [data-col="category"]').fill("percussion")
             page.wait_for_selector("#input-save-btn:not([disabled])")
             assert _verdict(page)["badge"] == "Ready to apply"
 

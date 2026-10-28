@@ -31,14 +31,14 @@ from atoo.watch_conditions import (
 def _cond(**overrides):
     base = {
         "id": "c1", "description": "test condition", "channel": "CH 1",
-        "field": "muted", "operator": "==", "value": False, "severity": "warning",
+        "field": "muted", "operator": "!=", "value": False, "severity": "warning",
     }
     base.update(overrides)
     return base
 
 
 def _parse(*conds):
-    return parse_watch_conditions(json.dumps({"watch_conditions": list(conds)}))
+    return parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": list(conds)}))
 
 
 def _run(state, *conds):
@@ -157,26 +157,26 @@ def test_patch_is_refused_on_anything_without_an_input_patch(channel):
 @pytest.mark.parametrize("field", ["dca", "mute_group"])
 def test_membership_is_refused_on_a_dca(field):
     with pytest.raises(WatchConditionsError, match="cannot itself be a member"):
-        _parse(_cond(channel="DCA 3", field=field, value="Drums"))
+        _parse(_cond(channel="DCA 3", field=field, operator="not in", value="Drums"))
 
 
 @pytest.mark.parametrize("channel", ["BUS 1", "MAIN 1-2", "ALL MTX"])
 def test_membership_on_a_bus_main_or_matrix_is_refused_as_unread(channel):
     with pytest.raises(WatchConditionsError, match="does not read"):
-        _parse(_cond(channel=channel, field="dca", value="Drums"))
+        _parse(_cond(channel=channel, field="dca", operator="not in", value="Drums"))
 
 
 @pytest.mark.parametrize("channel", ["CH 1", "AUX 1-4", "ALL CH"])
 @pytest.mark.parametrize("field, operator, value", [
-    ("muted", "==", False), ("fader_db", "<=", 0), ("dca", "==", "Drums"),
-    ("mute_group", "!=", "FX"), ("patch", "==", "LCL 1"),
+    ("muted", "!=", False), ("fader_db", ">", 0), ("dca", "not in", "Drums"),
+    ("mute_group", "in", "FX"), ("patch", "!=", "LCL 1"),
 ])
 def test_every_field_applies_to_a_channel_or_aux(channel, field, operator, value):
     _parse(_cond(channel=channel, field=field, operator=operator, value=value))
 
 
 @pytest.mark.parametrize("channel", ["BUS 1", "MAIN 1", "MTX 1", "DCA 1-16"])
-@pytest.mark.parametrize("field, operator, value", [("muted", "==", False), ("fader_db", "<=", 0)])
+@pytest.mark.parametrize("field, operator, value", [("muted", "!=", False), ("fader_db", ">", 0)])
 def test_mute_and_fader_apply_to_every_kind(channel, field, operator, value):
     _parse(_cond(channel=channel, field=field, operator=operator, value=value))
 
@@ -225,20 +225,20 @@ def test_all_of_a_kind_gives_one_finding_per_violating_strip_with_its_name():
 def test_a_range_checks_each_strip_and_skips_the_ones_never_read():
     # DCA 3 was never read: skipped, not a violation.
     findings = _run(_state(), _cond(channel="DCA 1-4", field="fader_db",
-                                    operator="<=", value=-10))
+                                    operator=">", value=-10))
     assert [f.addresses for f in findings] == [("/dca/1/fdr",), ("/dca/4/fdr",)]
     assert findings[0].detail.startswith('DCA 1 "Drums" has its fader at ')
     assert findings[1].detail.startswith('DCA 4 "Vox" has its fader at ')
 
 
 def test_a_strip_with_an_empty_name_is_cited_by_position_alone():
-    findings = _run(_state(), _cond(channel="CH 2", field="fader_db", operator=">=", value=0))
+    findings = _run(_state(), _cond(channel="CH 2", field="fader_db", operator="<", value=0))
     assert findings[0].detail.startswith("CH 2 has its fader at ")
 
 
 def test_a_bus_and_a_matrix_by_position():
     findings = _run(_state(),
-                    _cond(id="b", channel="bus1", field="fader_db", operator="<=", value=0),
+                    _cond(id="b", channel="bus1", field="fader_db", operator=">", value=0),
                     _cond(id="m", channel="MATRIX 2", field="muted", value=True))
     assert [(f.rule_id, f.addresses) for f in findings] == [
         ("WATCH:b", ("/bus/1/fdr",)), ("WATCH:m", ("/mtx/2/mute",))]
@@ -248,8 +248,8 @@ def test_membership_and_patch_by_position():
     state = _state()
     state.values.update({"/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1})
     findings = _run(state,
-                    _cond(id="d", channel="CH 1-2", field="dca", value="Drums"),
-                    _cond(id="p", channel="CH 1", field="patch", operator="!=", value="LCL 1"))
+                    _cond(id="d", channel="CH 1-2", field="dca", operator="not in", value="Drums"),
+                    _cond(id="p", channel="CH 1", field="patch", operator="==", value="LCL 1"))
     assert [(f.rule_id, f.addresses) for f in findings] == [
         ("WATCH:d", ("/ch/2/tags",)),
         ("WATCH:p", ("/ch/1/in/conn/grp", "/ch/1/in/conn/in"))]
@@ -295,7 +295,7 @@ def test_no_overlap_info_when_no_strip_is_named_like_the_position():
 
 
 def test_merge_treats_two_spellings_of_a_position_as_one_target():
-    existing = {"watch_conditions": [_cond(id="mine", channel="ch 10")]}
+    existing = {"version": 2, "watch_conditions": [_cond(id="mine", channel="ch 10")]}
     drafted = _parse(_cond(id="theirs", channel="CH10", value=True))
     document, report = merge_drafted_conditions(existing, drafted)
     assert report.overlaps == (("theirs", "mine"),)
@@ -318,7 +318,7 @@ def test_row_problems_names_the_cell_and_gives_the_canonical_spelling():
 @pytest.mark.parametrize("cond", [
     _cond(channel="BUS -"), _cond(channel="DCA 16-10"), _cond(channel="MAIN 9"),
     _cond(channel="BUS 1", field="patch", value="LCL 1"),
-    _cond(channel="DCA 2", field="mute_group", value="FX"),
+    _cond(channel="DCA 2", field="mute_group", operator="not in", value="FX"),
     _cond(channel="Kick", field="patch", value="LCL 99"),
 ])
 def test_row_problems_refuses_exactly_what_the_loader_refuses(cond):
@@ -331,7 +331,7 @@ def test_row_problems_refuses_exactly_what_the_loader_refuses(cond):
 
 def test_a_position_reads_its_own_banks_addresses():
     patterns = condition_address_patterns(_parse(_cond(channel="DCA 1-4", field="fader_db",
-                                                       operator="<=", value=0))[0])
+                                                       operator=">", value=0))[0])
     assert r"^/dca/\d+/fdr$" in patterns
     assert r"^/dca/\d+/name$" in patterns
     # The overlap INFO reads every channel and aux name.
@@ -346,10 +346,10 @@ def test_a_scoped_read_gives_the_same_findings_for_position_targets():
     from atoo.watch_scope import scoped_read_plan
 
     conds = _parse(
-        _cond(id="a", channel="ALL DCA", field="fader_db", operator="<=", value=-10),
+        _cond(id="a", channel="ALL DCA", field="fader_db", operator=">", value=-10),
         _cond(id="b", channel="MAIN 1", field="muted", value=False),
         _cond(id="c", channel="ALL AUX", field="muted", value=False),
-        _cond(id="d", channel="CH 1-2", field="dca", value="Drums"),
+        _cond(id="d", channel="CH 1-2", field="dca", operator="not in", value="Drums"),
     )
     rules = build_watch_rules(conds)
     state = _state()

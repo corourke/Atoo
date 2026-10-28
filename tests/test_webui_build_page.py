@@ -217,9 +217,12 @@ def test_setup_js_reads_the_comparison_the_build_keeps(client):
 def test_the_tables_mark_changed_rows_and_are_blocks(client):
     js = client.get("/static/setup.js").text
     assert "${changeRowClass(id)}" in js
-    for kind in ("channel", "bus", "output"):
-        assert f'changeChip(cardId("{kind}", ' in js, kind
-    for title in ('blockHead("Channels"', 'blockHead("Busses"', 'blockHead("Outputs"'):
+    assert 'changeChip(cardId("channel", ' in js
+    # Busses and Mains and Matrix draw one row builder (the bus sheet).
+    assert "changeChip(cardId(cardKind, key))" in js
+    assert 'busSheetRows("bus", busses, display, "bus")' in js
+    assert 'busSheetRows("output", outputs, display, "output")' in js
+    for title in ('blockHead("Channels"', 'blockHead("Busses"', 'blockHead("Mains and Matrix"'):
         assert title in js, title
     assert '<section class="panel box plan-table-section" id="plan-channels-block">' in js
     assert '<summary class="section-head"><h3>Changed since the last build</h3>' in js
@@ -246,9 +249,11 @@ def test_styles_carry_the_block_rule_and_the_type_floor(client):
     # Nora's §3: five sizes, nothing under 11px, in what this change added.
     sizes = {float(s) for s in re.findall(r"font(?:-size)?:[^;]*?(\d+(?:\.\d+)?)px", block)}
     assert sizes and min(sizes) >= 11, sizes
-    # ...and §2's one exception: the Watch verdict word, 22/800 caps, in its own rule and nowhere else.
+    # ...and §2's one exception: the Watch verdict word, 22/800 caps, in its own rule; and the disclosure triangle's glyph,
+    # drawn at 22px so the triangle is 11px wide (revision 3).
     assert sizes - {22} <= {11, 12, 13, 14, 16}, sizes
-    assert re.findall(r"([^{}]*)\{[^}]*font-size: 22px", block) == ["\n.verdict-word "]
+    assert re.findall(r"([^{}]*)\{[^}]*font-size: 22px", block) == [
+        "\n.verdict-word ", "\n.row-expand-btn "]
     assert re.search(r"\.block-head h2 \{[^}]*font-size: 16px", block)
     assert re.search(r"\.notation \{[^}]*font-size: 11px", block)
     assert re.search(r"\.section-head h3 \{[^}]*font-size: 11px", block)
@@ -326,8 +331,8 @@ def test_a_removed_strip_names_no_row_even_when_a_name_matches_its_tail():
 
 def test_the_demo_build_button_is_locked_not_only_labelled(client):
     js = client.get("/static/setup.js").text
-    assert ('runBtn.disabled = run.state === "running" || !bundle || !!bundle.demo || SP.isStale();'
-            in js)
+    assert ('runBtn.disabled = run.state === "running" || !bundle || !!bundle.demo || SP.isStale()\n'
+            '      || !!noModel;' in js)
     assert 'bundle.demo ? "the Demo show is read-only"' in js
 
 

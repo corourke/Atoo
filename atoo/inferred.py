@@ -89,8 +89,8 @@ OFF the list (rule 4 stands -- null is a working board):
     (`bus.unresolved-destination`).
   * output `fed_by`, `kind` -- a Matrix with no stated feed is warned
     about and not written; nothing is left in a state that cannot work.
-  * `user_sources.*.tap`/`leg`, `name` -- apply does not write USR slots
-    at all yet (`user-source.not-written-by-apply`).
+  * `user_sources.*.tap`/`leg`, `name` -- a null leaves the desk's value
+    (`apply.user_source_targets`).
 
 ALLOCATED, and marked the same way (`plan_schema.ALLOCATED_FIELDS`):
 
@@ -362,6 +362,26 @@ def needs_deciding(plan: dict) -> bool:
     return False
 
 
+#: `meta.made_from` on a plan `atoo capture` wrote.
+CAPTURED_FROM = ("desk", "snap")
+
+
+def plan_states_the_mix(plan: dict) -> bool:
+    """Does an unstated fader, mute or send level in this plan mean the
+    documented default (unity, unmuted, the fallback send level), as in a
+    plan a build wrote, or "whatever the desk has"?
+
+    A captured plan (`meta.made_from` `desk` or `snap`) leaves the mix out on
+    purpose: Atoo never mixes, a fader or mute moved during a service is not
+    a contradiction, and a capture applied back to its own desk must change
+    nothing. So for it, the second: `decide_unstated` fills no
+    send level or mode, `apply` writes no fader or mute the plan does not
+    state and does no whole-desk reset, and CV017 reports only a mute the
+    plan states."""
+    meta = plan.get("meta") if isinstance(plan.get("meta"), dict) else {}
+    return meta.get("made_from") not in CAPTURED_FROM
+
+
 def decide_unstated(plan: dict) -> int:
     """Fill every null bus width, send mode and send level, and every Main
     destination with no number (R6), IN PLACE, marking each one
@@ -370,8 +390,12 @@ def decide_unstated(plan: dict) -> int:
     Idempotent: a second call finds nothing null and changes nothing. A
     send into a bus the plan never declares is left alone -- that is
     `reference.dangling`'s to report, and there is no bus to decide from.
+
+    A captured plan (`plan_states_the_mix` false) keeps its null send
+    levels and modes: they are the desk's, and apply leaves them there.
     """
     decided = 0
+    states_mix = plan_states_the_mix(plan)
     busses = plan.get("busses") or {}
     main_indices = _plan_main_indices(plan)
     for bus in busses.values():
@@ -389,7 +413,7 @@ def decide_unstated(plan: dict) -> int:
             if not isinstance(send, dict):
                 continue
             bus = busses.get(send.get("bus"))
-            if not isinstance(bus, dict):
+            if not isinstance(bus, dict) or not states_mix:
                 continue
             if send.get("mode") is None:
                 mode, basis = send_mode_fallback(send["bus"], bus)

@@ -83,3 +83,29 @@ def test_a_stereo_channel_made_mono_keeps_its_first_socket(model):
                for i in merge.infos)
     written = {t.address: t.compute_value("") for t in amend.amendment_targets(amendment).to_write}
     assert written["/io/in/A/15/mode"] == "M"
+
+
+def test_a_stereo_channel_made_mono_lets_go_of_the_second_input_list_row(tmp_path):
+    """The second row of the pair (Keys R) stays on the list, unused; a change is
+    not called to account for it, and the review's pre-flight does not stop the change."""
+    import json
+    from pathlib import Path
+
+    from atoo import input_list
+    from atoo.verify_plan import rows_for_a_change, verify_plan
+
+    live = Path(__file__).resolve().parent / "fixtures" / "live-show"
+    plan = json.loads((live / "plan.json").read_text())
+    rows = input_list.parse_input_list((live / "input.csv").read_text())
+    stereo = next(c for c in plan["channels"] if (c["source"].get("pair_input")))
+    change_set = patch.empty_change_set("mono")
+    change_set["modify"] = [{"object": "channel", "name": stereo["name"], "change": "x",
+                             "fields": {"source.stereo": False}}]
+    merge = patch.merge_change(plan, patch.validate_change_set(change_set),
+                               console_model="wing-compact")
+    mono = next(c for c in merge.plan["channels"] if c["name"] == stereo["name"])
+    assert "pair_input" not in mono["source"] and len(mono["patch"]["sockets"]) == 1
+    assert any("second input-list row" in i for i in merge.infos)
+    cut, _stand_ins, _set_aside = rows_for_a_change(merge.plan, rows, changed={stereo["name"]})
+    result = verify_plan(merge.plan, rows=cut, console_model="wing-compact")
+    assert not [f for f in result.findings if f.code == "reconcile.dropped-input"]

@@ -149,6 +149,7 @@ def test_apply_screen_explanations_sit_behind_help_buttons(assets):
     apply = _static(assets, "apply.js")
     assert "no separate file picker" not in apply
     assert "One console for the whole page" not in apply
-    assert '"A preview: nothing was written."' in apply
+    # A preview has no journal panel at all.
+    assert '"A preview: nothing was written."' not in apply
     amend = _static(assets, "amend.js")
     assert "-- the console in the bundle bar." not in amend

@@ -1,0 +1,13 @@
+socket,name,category,type,model,phantom,notes
+AES50-A 1,Kick,drums,Mic,Beta 52,FALSE,
+AES50-A 2,Snare,drums,Mic,SM57,FALSE,
+AES50-A 3,Hi-Hat,drums,Mic,SM81,TRUE,
+AES50-A 4,Tom,drums,Mic,e604,FALSE,
+AES50-A 5,OH L,drums,Mic,SM81,TRUE,
+AES50-A 6,OH R,drums,Mic,SM81,TRUE,
+AES50-A 7,Bass DI,band,DI,Radial J48,TRUE,
+AES50-A 8,Gtr,band,Mic,SM57,FALSE,
+AES50-A 9,Keys L,band,DI,Radial ProD2,FALSE,
+AES50-A 10,Keys R,band,DI,Radial ProD2,FALSE,
+AES50-A 11,Lead Vox,vocals,Mic,SM58,FALSE,
+AES50-A 12,BV 1,vocals,Mic,SM58,FALSE,

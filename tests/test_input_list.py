@@ -60,9 +60,29 @@ def test_rejects_missing_required_column():
         parse_input_list(text)
 
 
-def test_rejects_channel_column():
-    text = "name,category,type,phantom,channel\nKick,drums,Mic,FALSE,1\n"
-    with pytest.raises(InputListError, match="conventions compute channel assignment"):
+def test_the_desk_sheet_columns_are_read():
+    """`channel`, `dca` and `mute_group`: the desk sheets'
+    optional columns, which `atoo capture` writes."""
+    text = ("name,category,type,phantom,channel,dca,mute_group\n"
+            "Kick,drums,Mic,FALSE,9,Drum LEVELS,BAND; ALL\n"
+            "Phone,playback,Line,FALSE,Aux 3,,\n"
+            "Spare,other,Mic,FALSE,,,\n")
+    kick, phone, spare = parse_input_list(text)
+    assert (kick.channel, kick.dca, kick.mute_group) == (("ch", 9), ("Drum LEVELS",), ("BAND", "ALL"))
+    assert phone.channel == ("aux", 3)
+    assert (spare.channel, spare.dca, spare.mute_group) == (None, (), ())
+
+
+@pytest.mark.parametrize("cell", ["41", "0", "Aux 9", "Bus 1", "nine"])
+def test_a_channel_the_desk_does_not_have_is_refused(cell):
+    text = f"name,category,type,phantom,channel\nKick,drums,Mic,FALSE,{cell}\n"
+    with pytest.raises(InputListError, match="column 'channel' must be a desk channel"):
+        parse_input_list(text)
+
+
+def test_rejects_ch_column_and_says_where_the_channel_goes():
+    text = "name,category,type,phantom,ch\nKick,drums,Mic,FALSE,1\n"
+    with pytest.raises(InputListError, match="goes in the 'channel' column"):
         parse_input_list(text)
 
 
@@ -84,10 +104,10 @@ def test_rejects_stereo_column():
 
 
 def test_the_forbidden_column_message_covers_all_of_them_at_once():
-    text = "name,category,type,phantom,stereo,channel\nKick,drums,Mic,FALSE,TRUE,1\n"
+    text = "name,category,type,phantom,stereo,ch\nKick,drums,Mic,FALSE,TRUE,1\n"
     with pytest.raises(InputListError) as exc:
         parse_input_list(text)
-    assert "'channel'" in str(exc.value) and "'stereo'" in str(exc.value)
+    assert "'ch'" in str(exc.value) and "'stereo'" in str(exc.value)
 
 
 def test_rejects_blank_name():

@@ -48,19 +48,29 @@ level meter reads a clipped converter at 0 dBFS to within a quantum.
 The WING's own clip indicator is what the desk test
 compares this against; if the two disagree, this constant is what moves.
 
-**One clip, however it flickers.** A converter near full scale hovers
-around the threshold, and a count of every crossing would say "clipped 222
-times" for one sustained overload. A run of clipped packets ends only when
-the strip has been below `RELEASE_THRESHOLD_DB` (-3 dBFS) for more than
-`RELEASE_SECONDS` (200 ms); a level between the two thresholds neither
-starts a clip nor ends one. "Clipped N times" counts runs, and the
-finding's sentence says so.
+**What a clip is: what lights the desk's clip LED.** A clip
+is the time a strip is at or above `CLIP_THRESHOLD_DB`, with dips below it
+shorter than `CLIP_BRIDGE_SECONDS` (200 ms) bridged, so a converter
+hovering at full scale is one clip and not "clipped 222 times". A new clip
+begins when the level reaches the threshold again after more than 200 ms
+below it -- seen in packets that say so, not assumed from packets that did
+not come. A gap in the data up to `GAP_BRIDGE` (the stream paused for its
+renewal) neither ends a clip nor counts as below; a longer one does end
+it. "Clipped N times" counts clips.
 
-**How long the clip lasted.** The span of a run, from its first clipped
-packet to its last, plus one packet interval -- reported only when packets
-come fast enough to mean something (`MAX_DURATION_INTERVAL`) and the run
-is long enough to measure (`MIN_DURATION`). Otherwise the finding says it
-clipped and nothing about for how long.
+It used to end only once the level stayed below -3 dBFS for 200 ms. On a
+desk, a snare mic's level between hits, and a hot drum mix's between
+peaks, stays above -3 dBFS, so a whole groove read as one clip "for about
+53 s", and the count never rose while the clip light flashed hit after
+hit.
+
+**How long the clip lasted.** A clip's span, from its first clipped packet
+to its last, plus one packet interval, the dips it bridged included, as the
+clip LED shows them -- reported only when packets come
+fast enough to mean something (`MAX_DURATION_INTERVAL`) and the clip is
+long enough to measure (`MIN_DURATION`). A duplicated or late packet adds
+nothing to it. The finding gives the longest clip, the count, and when the
+first and the last were.
 
 **The timer.** `ClipTracker` keeps, per strip, when it last clipped. A
 strip's ERROR stands for `HOLD_SECONDS` after that and a new clip starts
@@ -126,6 +136,11 @@ UNITS_PER_DB = 256
 CLIP_THRESHOLD_DB = -0.5
 CLIP_THRESHOLD = round(CLIP_THRESHOLD_DB * UNITS_PER_DB)
 
+#: A dip below the threshold shorter than this is part of the clip; once
+#: the level has been below it this long, the clip is over, and the next
+#: one is a new clip.
+CLIP_BRIDGE_SECONDS = 0.2
+
 #: How long a strip's ERROR stands after its last clip.
 HOLD_SECONDS = 60.0
 
@@ -135,12 +150,13 @@ HOLD_SECONDS = 60.0
 MAX_DURATION_INTERVAL = 0.25
 MIN_DURATION = 0.1
 
-#: A run of clips ends only when its strip has been below this level for
-#: more than `RELEASE_SECONDS`; levels between this and the clip threshold
-#: keep a run going and never start one.
-RELEASE_THRESHOLD_DB = -3.0
-RELEASE_THRESHOLD = round(RELEASE_THRESHOLD_DB * UNITS_PER_DB)
-RELEASE_SECONDS = 0.2
+#: A gap in the meter data up to this long (the stream paused for its
+#: renewal) neither ends a clip nor counts as quiet; a longer one ends it.
+GAP_BRIDGE = 1.0
+
+#: Two packets closer than this are one packet heard twice: they move no
+#: timing.
+DUPLICATE_WITHIN = 0.01
 
 #: A strip is carrying signal when a level word reads at or above this
 #: (-60 dBFS: an open mic's noise floor on a WING is well above it, a
@@ -268,33 +284,34 @@ class StripClip:
     ago: float                   # seconds since the last clipped packet
     remaining: float             # seconds until it clears unless it clips again
     longest: float | None = None  # longest clip, seconds -- None when not measurable
+    first_ago: float | None = None  # seconds since the first clip of this ERROR
 
 
 @dataclass
 class _Episode:
-    first_at: float
+    first_at: float                # the first clipped packet
     last_at: float                 # the last clipped packet
     count: int = 1
-    run_start: float = 0.0
-    run_last: float = 0.0          # the last clipped packet of the current run
-    last_loud: float = 0.0         # the last packet at or above the release level
-    longest_span: float = 0.0      # longest run, first to last clipped packet
+    clip_start: float = 0.0        # the current clip's first clipped packet
+    clip_last: float = 0.0         # ... and its last
+    longest_span: float = 0.0      # longest clip, first to last clipped packet
+    below_since: float | None = None  # first packet below the threshold since the last clipped one
+    released: bool = False         # the current clip has ended
 
 
 class ClipTracker:
     """Per-strip clip timers, driven by the times its caller passes.
 
-    `observe(now, clipped, loud)` is one meter packet: the set of strips
-    that clipped in it, and the set at or above the release level (a
-    superset of `clipped`; the same set when omitted). `snapshot(now)` is
-    every strip whose ERROR stands.
+    `observe(now, clipped)` is one meter packet: the set of strips that
+    clipped in it. `snapshot(now)` is every strip whose ERROR stands.
 
     A strip's episode starts at its first clip; each later clip adds to its
     count and moves its end `hold` seconds past it; and the episode is
     over once `hold` seconds pass with no clip. A strip that clips after
-    that starts a new episode, which is a new finding. A clip is a *run*:
-    it goes on while the strip stays loud, and ends once the strip has been
-    quiet (below the release level) for more than `RELEASE_SECONDS`.
+    that starts a new episode, which is a new finding. A clip goes on while
+    the strip clips, bridging dips shorter than `CLIP_BRIDGE_SECONDS`, and
+    ends once packets have shown it below the threshold that long, or the
+    data stopped for more than `GAP_BRIDGE`.
     """
 
     def __init__(self, hold: float = HOLD_SECONDS) -> None:
@@ -312,35 +329,41 @@ class ClipTracker:
         with self._lock:
             return self._interval
 
-    def observe(self, now: float, clipped: Iterable[str], loud: Iterable[str] | None = None) -> None:
+    def observe(self, now: float, clipped: Iterable[str]) -> None:
         clipped = set(clipped)
-        loud = clipped if loud is None else set(loud) | clipped
         with self._lock:
             before = self._last_packet_at
-            if before is not None and 0 < now - before < 2.0:
-                dt = now - before
+            dt = None if before is None else now - before
+            if dt is not None and DUPLICATE_WITHIN <= dt < 2.0:
                 self._interval = dt if self._interval is None else 0.8 * self._interval + 0.2 * dt
             self._last_packet_at = now
             self.packets += 1
             self._expire(now)
+            step = self._interval or 0.0
+            for base, ep in self._episodes.items():
+                if dt is not None and dt > GAP_BRIDGE:
+                    ep.released = True           # the data stopped: whatever was, is over
+                if base in clipped:
+                    ep.below_since = None
+                    continue
+                if ep.below_since is None:
+                    ep.below_since = now
+                # Below for the bridge time, as the packets show it: N packets
+                # cover N intervals.
+                if now - ep.below_since + step >= CLIP_BRIDGE_SECONDS - 1e-9:
+                    ep.released = True
             for base in clipped:
                 ep = self._episodes.get(base)
                 if ep is None:
-                    self._episodes[base] = _Episode(now, now, run_start=now, run_last=now,
-                                                    last_loud=now)
+                    self._episodes[base] = _Episode(now, now, clip_start=now, clip_last=now)
                     continue
-                if now - ep.last_loud <= RELEASE_SECONDS:
-                    ep.run_last = now                # the same clip, still going
-                else:
+                if ep.released:
                     ep.count += 1                    # a new clip, the minute restarts
-                    ep.run_start = now
-                    ep.run_last = now
+                    ep.clip_start = now
+                    ep.released = False
+                ep.clip_last = now
                 ep.last_at = now
-                ep.longest_span = max(ep.longest_span, ep.run_last - ep.run_start)
-            for base in loud:
-                ep = self._episodes.get(base)
-                if ep is not None:
-                    ep.last_loud = now
+                ep.longest_span = max(ep.longest_span, ep.clip_last - ep.clip_start)
 
     def observe_live(self, now: float, live: Iterable[str]) -> None:
         """The strips of one meter packet carrying signal."""
@@ -369,7 +392,8 @@ class ClipTracker:
                     if seconds >= MIN_DURATION:
                         longest = seconds
                 out.append(StripClip(base, ep.count, now - ep.last_at,
-                                     self.hold - (now - ep.last_at), longest))
+                                     self.hold - (now - ep.last_at), longest,
+                                     first_ago=now - ep.first_at))
             return tuple(sorted(out, key=lambda c: _strip_order(c.base)))
 
 
@@ -410,7 +434,8 @@ class ClipMonitor:
     def __init__(self, host: str, *, port: int = NATIVE_PORT, connect_timeout: float = 2.0,
                  clock: Callable[[], float] = time.monotonic,
                  connect: "Callable[[], socket.socket] | None" = None,
-                 udp_socket: "Callable[[], socket.socket] | None" = None) -> None:
+                 udp_socket: "Callable[[], socket.socket] | None" = None,
+                 record: "str | None" = None) -> None:
         self.host = host
         self.port = port
         self.clock = clock
@@ -429,11 +454,17 @@ class ClipMonitor:
         #: layout says, if any came.
         self._bad_words: int | None = None
         self._strips = report_strips(REPORT_TYPES)
+        #: Where every datagram from the desk is written as it comes, for a
+        #: replay (`replay_recording`); None when not recording.
+        self._record_path = record
+        self._record = None
 
     # -- the public face --
 
     def start(self) -> None:
         self._started_at = self.clock()
+        if self._record_path:
+            self._record = open_recording(self._record_path, self.host)
         self._thread = threading.Thread(target=self._run, name="atoo-clip-monitor", daemon=True)
         self._thread.start()
 
@@ -441,6 +472,9 @@ class ClipMonitor:
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=3)
+        if self._record is not None:
+            self._record.close()
+            self._record = None
 
     def snapshot(self) -> tuple[StripClip, ...]:
         return self.tracker.snapshot(self.clock())
@@ -482,8 +516,8 @@ class ClipMonitor:
                 "console for it again; clip detection comes back by itself when packets do.")
         rate = self._rate()
         parts = [f"Listening to the console's meters for clips (a strip clips at {threshold}; "
-                 f"a clip ends once the strip has been below {RELEASE_THRESHOLD_DB:g} dBFS for "
-                 f"{RELEASE_SECONDS * 1000:.0f} ms, and \"clipped N times\" counts those clips); "
+                 f"a clip ends once the strip has been below that for "
+                 f"{CLIP_BRIDGE_SECONDS * 1000:.0f} ms, and \"clipped N times\" counts those clips); "
                  f"an ERROR stands for {HOLD_SECONDS:.0f} s after its last clip."]
         summary = "on"
         if rate:
@@ -572,6 +606,8 @@ class ClipMonitor:
             if udp in ready:
                 data, addr = udp.recvfrom(65535)
                 if addr[0] == self.host:
+                    if self._record is not None:
+                        write_recorded(self._record, self.clock() - (self._started_at or 0.0), data)
                     self.feed(data)
 
     def feed(self, data: bytes) -> None:
@@ -593,9 +629,76 @@ class ClipMonitor:
             if self._first_packet_at is None:
                 self._first_packet_at = now
             self._last_packet_at = now
-        self.tracker.observe(now, clipped_strips(self._strips, words),
-                             clipped_strips(self._strips, words, RELEASE_THRESHOLD))
+        self.tracker.observe(now, clipped_strips(self._strips, words))
         self.tracker.observe_live(now, live_strips(self._strips, words))
+
+
+# --- recording and replaying the meter stream ----------------
+#
+# A desk test cannot be rerun here, but what the desk sent can: `atoo watch
+# --record-meters FILE` writes every datagram from the desk, as it came,
+# with its time, and `replay_recording` feeds a recording through the same
+# reading and tracker a live watch uses. A recording is JSON lines: a header
+# `{"atoo_meter_recording": 1, "host": ..., "report_types": [...],
+# "words_per_strip": 8}`, then one `{"t": seconds since the start, "packet":
+# hex}` per datagram.
+
+RECORDING_VERSION = 1
+
+
+def open_recording(path: str, host: str):
+    handle = open(path, "w", encoding="utf-8")
+    import json
+
+    handle.write(json.dumps({"atoo_meter_recording": RECORDING_VERSION, "host": host,
+                             "report_types": list(REPORT_TYPES),
+                             "words_per_strip": WORDS_PER_STRIP}) + "\n")
+    handle.flush()
+    return handle
+
+
+def write_recorded(handle, t: float, data: bytes) -> None:
+    import json
+
+    handle.write(json.dumps({"t": round(t, 4), "packet": data.hex()}) + "\n")
+    handle.flush()
+
+
+def iter_recording(lines: Iterable[str], *, hold: float = HOLD_SECONDS):
+    """A recording fed through the monitor's own reading (`ClipMonitor.feed`)
+    on its recorded times, one datagram at a time: yields `(time, tracker)`
+    after each. ValueError for a file that is not a recording."""
+    import json
+
+    clock = [0.0]
+    monitor = ClipMonitor("replay", clock=lambda: clock[0])
+    monitor.tracker.hold = hold
+    header = None
+    for line in lines:
+        if not line.strip():
+            continue
+        record = json.loads(line)
+        if header is None:
+            if record.get("atoo_meter_recording") != RECORDING_VERSION:
+                raise ValueError("not an Atoo meter recording (no header on line 1)")
+            header = record
+            continue
+        clock[0] = float(record["t"])
+        monitor.feed(bytes.fromhex(record["packet"]))
+        yield clock[0], monitor.tracker
+    if header is None:
+        raise ValueError("an empty file is not a meter recording")
+
+
+def replay_recording(lines: Iterable[str], *, hold: float = HOLD_SECONDS
+                     ) -> "tuple[ClipTracker, float]":
+    """The tracker a whole recording leaves, and the time of its last packet."""
+    now, tracker = 0.0, None
+    for now, tracker in iter_recording(lines, hold=hold):
+        pass
+    if tracker is None:
+        tracker = ClipTracker(hold)
+    return tracker, now
 
 
 def with_clip_detection(provider: Callable[[], object], host: str,

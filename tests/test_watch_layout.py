@@ -1,4 +1,5 @@
-"""The Watch page's layout, look B of `mockups/watch-layout/`.
+"""The Watch page's layout, look B of `mockups/watch-layout/`
+(removed 2026-10-27, in git at `86ac89c5`).
 
 Choosing it: *"B, with no thin colored border (keep
 the thicker colored bars), and the flash option off by default."*
@@ -53,6 +54,8 @@ STATE = ConsoleState({"/ch/6/name": "Bass DI", "/bus/1/name": "Drums", "/mtx/1/n
     (("/ch/3/name", "/ch/4/name"), "CH 3, CH 4"),
     (("/io/in/LCL/9/vph",), "LCL 9"),
     (("/io/out/A/12/grp",), "A 12"),
+    # A stage box's link (C008, C009): the port.
+    (("/$stat/B/stat",), "AES50-B"),
     (("/cfg/something",), None),
     ((), None),
 ])
@@ -361,7 +364,9 @@ def test_the_watch_header_and_verdict_are_pinned_and_the_bars_above_are_hidden(a
     panel = _watch_panel(html)
     assert panel.index('id="watch-verdict"') < panel.index('aria-label="Alerts"')
     head = re.search(r"\.watch-shell > \.watch-head \{([^}]*)\}", css).group(1)
-    assert "position: sticky" in head and "top: 0" in head
+    # Under the app header and bundle bar while they show (`--pin-h`, 0
+    # while a watch runs and hides them).
+    assert "position: sticky" in head and "top: var(--pin-h, 0px)" in head
     verdict = re.search(r"\.watch-shell > \.verdict-bar \{([^}]*)\}", css).group(1)
     assert "position: sticky" in verdict and "var(--watch-head-h" in verdict
     heads = re.search(r"#alert-table thead th \{([^}]*)\}", css).group(1)
@@ -433,6 +438,153 @@ def test_the_pinned_header_and_verdict_stay_in_view_in_the_real_page(tmp_path, m
                 page.click("#stop-btn")
                 page.wait_for_function("!document.body.classList.contains('is-watching')")
                 assert page.evaluate(shown, ".topbar") and page.evaluate(shown, "#bundle-chrome")
+                page.close()
+        finally:
+            browser.close()
+
+
+def test_build_and_apply_keep_the_header_and_bundle_bar_pinned_in_the_real_page(tmp_path,
+                                                                                monkeypatch):
+    """The app header and the show bundle bar stay at the top of the window
+    in Build and Apply, as Watch's header does;
+    Build's tiles and the Findings panel pin under them, and a jump to a row
+    lands below them. On a phone only the app header stays."""
+    import os
+    import socket
+    import threading
+    import time
+    from pathlib import Path
+
+    sync_api = pytest.importorskip("playwright.sync_api")
+    uvicorn = pytest.importorskip("uvicorn")
+    chromium = os.environ.get("ATOO_TEST_CHROMIUM", "/opt/pw-browsers/chromium")
+    if not Path(chromium).exists():
+        pytest.skip(f"no Chromium at {chromium} (set ATOO_TEST_CHROMIUM)")
+    from atoo import webui
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setenv("HOME", str(home))
+    for name in ("ATOO_CONSOLE", "ATOO_CONSOLE_PORT"):
+        monkeypatch.delenv(name, raising=False)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(webui.create_app(), host="127.0.0.1", port=port,
+                                           log_level="warning"))
+    threading.Thread(target=server.run, daemon=True).start()
+    while not server.started:
+        time.sleep(0.05)
+    url = f"http://127.0.0.1:{port}/"
+    box = "(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.top, r.bottom]; }"
+    pin = "parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pin-h'))"
+    with sync_api.sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=chromium)
+        try:
+            for width in (1440, 1920, 390):
+                page = browser.new_page(viewport={"width": width, "height": 600})
+                page.add_init_script("try { localStorage.setItem('atoo.demoPopupSeen', '1'); } catch (e) {}")
+                page.goto(url + "#build")
+                assert page.request.post(url + "api/console", data={"demo": True}).ok
+                page.reload()
+                page.wait_for_function("document.body.classList.contains('is-demo-show')")
+                page.click("#tab-plan")
+                page.wait_for_selector("#plan-channels-table tbody tr")
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(300)
+                assert page.evaluate("scrollY") > 0
+                top_bar = page.evaluate(box, "body.shell > .topbar")
+                assert abs(top_bar[0]) <= 1, (width, top_bar)
+                pinned = page.evaluate(pin)
+                if width > 600:
+                    chrome = page.evaluate(box, "#bundle-chrome")
+                    assert abs(chrome[0] - top_bar[1]) <= 1 and abs(pinned - chrome[1]) <= 1, \
+                        (width, chrome, pinned)
+                    assert abs(page.evaluate(box, "#pipeline-wrap")[0] - pinned) <= 1
+                    assert page.evaluate(box, "#dock-col")[0] >= pinned
+                else:
+                    # The bundle bar scrolls away; only the header is pinned.
+                    assert page.evaluate(box, "#bundle-chrome")[1] <= 0
+                    assert abs(pinned - top_bar[1]) <= 1
+                # A jump to a row lands below the pinned bars.
+                row = page.evaluate("document.querySelector('#plan-channels-table tbody tr[id]').id")
+                page.evaluate("(id) => window.Atoo.jumpTo({mode: 'build', target: '#' + id})", row)
+                page.wait_for_timeout(600)
+                assert page.evaluate(box, "#" + row)[0] >= pinned, width
+                # Apply keeps them too.
+                page.goto(url + "#apply")
+                page.wait_for_selector("#mode-apply:not([hidden])")
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(300)
+                assert abs(page.evaluate(box, "body.shell > .topbar")[0]) <= 1, width
+                page.close()
+        finally:
+            browser.close()
+
+
+# ---- a long Where wraps -----------------------
+#
+# "In Watch, finding column is way too small." One finding whose Where is a
+# list of strips held its line (white-space: nowrap), and the table widened
+# the Where column for every row, squeezing the Finding beside it.
+
+
+def test_a_where_wraps_at_its_spaces(assets):
+    rule = _rule(assets["css"], ".row-where")
+    assert "nowrap" not in rule
+    assert "overflow-wrap: anywhere" in rule
+
+
+def test_a_long_where_leaves_the_finding_its_width_in_the_real_page(tmp_path, monkeypatch):
+    import os
+    import socket
+    import threading
+    import time
+    from pathlib import Path
+
+    sync_api = pytest.importorskip("playwright.sync_api")
+    uvicorn = pytest.importorskip("uvicorn")
+    chromium = os.environ.get("ATOO_TEST_CHROMIUM", "/opt/pw-browsers/chromium")
+    if not Path(chromium).exists():
+        pytest.skip(f"no Chromium at {chromium} (set ATOO_TEST_CHROMIUM)")
+    from atoo import webui
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setenv("HOME", str(home))
+    for name in ("ATOO_CONSOLE", "ATOO_CONSOLE_PORT"):
+        monkeypatch.delenv(name, raising=False)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(webui.create_app(), host="127.0.0.1", port=port,
+                                           log_level="warning"))
+    threading.Thread(target=server.run, daemon=True).start()
+    while not server.started:
+        time.sleep(0.05)
+    # Two rows as watch.js draws them: a short Where, and a long list.
+    rows = """
+      const row = (where) => '<tr class="sev-row-warning"><td class="col-hide"></td>' +
+        '<td class="col-sev"></td><td class="col-where"><span class="row-where">' + where +
+        '</span></td><td class="col-title"><span class="row-claim">Clipped</span>' +
+        '<span class="row-why">MTX 2 clipped 3 times; the last was 9.9 s ago.</span></td>' +
+        '<td class="col-rule"></td><td class="col-since"></td></tr>';
+      document.getElementById('alert-body').innerHTML = row('MTX 2') +
+        row('CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38, CH 40, AUX 3-4');
+      const w = (s) => document.querySelector('#alert-body tr td' + s).getBoundingClientRect().width;
+      return [w('.col-where'), w('.col-title')];
+    """
+    with sync_api.sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=chromium)
+        try:
+            for width in (1000, 1440):
+                page = browser.new_page(viewport={"width": width, "height": 700})
+                page.goto(f"http://127.0.0.1:{port}/#watch")
+                where, finding = page.evaluate(f"() => {{ {rows} }}")
+                assert where <= 221, (width, where)
+                assert finding > where, (width, where, finding)
                 page.close()
         finally:
             browser.close()

@@ -38,9 +38,9 @@ FIXTURES = Path(__file__).parent / "fixtures"
 HOUSE = "# house\n\n## Inputs\nPatch input sockets according to the supplied input list.\n"
 
 HAND = {"id": "kick-muted", "description": "Kick muted", "channel": "Kick",
-        "field": "muted", "operator": "==", "value": True, "severity": "warning"}
+        "field": "muted", "operator": "!=", "value": True, "severity": "warning"}
 DRAFTED_ROW = {"id": "vox-in-band", "description": "Vox stays in Band", "channel": "Vox",
-               "field": "dca", "operator": "==", "value": "Band", "severity": "info",
+               "field": "dca", "operator": "not in", "value": "Band", "severity": "info",
                "source": "drafted"}
 
 
@@ -55,7 +55,7 @@ def _bundle(tmp_path, name, conditions=None, drafted=None):
     directory.mkdir()
     (directory / "input.csv").write_text((FIXTURES / "touringband.csv").read_text())
     if conditions is not None:
-        document = {"watch_conditions": conditions}
+        document = {"version": 2, "watch_conditions": conditions}
         if drafted is not None:
             document["drafted"] = drafted
         (directory / "watch.json").write_text(json.dumps(document, indent=2) + "\n")
@@ -188,7 +188,7 @@ def test_a_build_leaves_a_watch_file_pointed_at_by_hand_alone(drafting, tmp_path
     what a build drafts into."""
     directory = _bundle(tmp_path, "show", [HAND])
     elsewhere = tmp_path / "elsewhere.watch.json"
-    elsewhere.write_text(json.dumps({"watch_conditions": [HAND]}))
+    elsewhere.write_text(json.dumps({"version": 2, "watch_conditions": [HAND]}))
     app = create_app(initial_bundle=str(directory), initial_conventions=str(drafting),
                      initial_watch_conditions_path=str(elsewhere))
     with fastapi_testclient.TestClient(app) as c:
@@ -207,7 +207,7 @@ def test_save_keeps_a_drafted_source_and_an_absent_one_absent(client, tmp_path):
     the engineer's. The `drafted` bookkeeping is carried forward either
     way, so deleting a drafted row sticks."""
     path = tmp_path / "watch.json"
-    path.write_text(json.dumps({"watch_conditions": [DRAFTED_ROW, HAND],
+    path.write_text(json.dumps({"version": 2, "watch_conditions": [DRAFTED_ROW, HAND],
                                 "drafted": ["vox-in-band", "gone"]}))
     edited = dict(HAND, severity="error")
     r = client.post("/api/watch-conditions/save",
@@ -277,7 +277,7 @@ def test_the_source_column_speaks_pythons_source_vocabulary(client):
     html = client.get("/static/shell.html").text
     head = html[html.index('<table id="wc-table">'):html.index("</thead>", html.index('<table id="wc-table">'))]
     assert re.findall(r"<th[^>]*>([^<]*)</th>", head) == [
-        "ID", "Description", "Channel", "Field", "Operator", "Value", "Severity", "Source", ""]
+        "ID", "Description", "Channel", "Alert when", "Operator", "Value", "Severity", "Source", ""]
 
 
 def _js_array(js: str, name: str) -> list:
@@ -286,31 +286,35 @@ def _js_array(js: str, name: str) -> list:
     return json.loads(m.group(1))
 
 
-def test_the_relational_fields_offer_only_the_two_equality_operators(client):
-    """`dca`, `mute_group` and `patch` ask a yes/no question and
-    take `==`/`!=` only. The editor's list of them has to BE Python's list,
-    and the operators it narrows them to have to be exactly Python's two
-    -- the editor must not offer an operator the loader would refuse."""
+def test_each_field_offers_exactly_the_operators_the_loader_takes(client):
+    """An earlier change and an earlier change: the editor must not offer an operator the
+    loader would refuse. dca and mute_group take `not in`/`in`; patch, the
+    booleans and send_mode take `==`/`!=`; the levels take every ordering.
+    The editor's lists have to BE Python's."""
     js = client.get("/static/watch.js").text
     assert set(_js_array(js, "WC_TEXT_FIELDS")) == wc._RELATIONAL_FIELDS
+    assert set(_js_array(js, "WC_GROUP_FIELDS")) == wc._GROUP_FIELDS
+    assert set(_js_array(js, "WC_GROUP_OPERATORS")) == wc._GROUP_OPERATORS
     assert set(_js_array(js, "WC_BOOL_OPERATORS")) == wc._BOOL_COMPATIBLE_OPERATORS
     assert set(_js_array(js, "WC_FIELDS")) == wc._ALLOWED_FIELDS
     assert set(_js_array(js, "WC_OPERATORS")) == set(wc._OPERATORS)
     assert set(_js_array(js, "WC_BOOL_FIELDS")) == wc._BOOLEAN_FIELDS
     assert set(_js_array(js, "WC_SEND_FIELDS")) == wc._SEND_FIELDS
     assert _js_array(js, "WC_SEND_MODES") == list(wc._SEND_MODES)
-    assert ('const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(WC_TEXT_FIELDS, ["send_mode"]);'
+    assert ('const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(["patch", "send_mode"]);'
             in js)
-    # ... and that is exactly the set the loader holds to `==` and `!=`.
-    assert (set(_js_array(js, "WC_BOOL_FIELDS")) | set(_js_array(js, "WC_TEXT_FIELDS"))
-            | {"send_mode"}) == wc._BOOLEAN_FIELDS | wc._EQUALITY_ONLY_FIELDS
-    # The narrowing itself, at the two places it happens: when a row is
-    # drawn, and when its field changes under an ordering operator.
-    assert ("const opOptions = WC_EQUALITY_ONLY_FIELDS.includes(cond.field)\n"
-            "      ? WC_BOOL_OPERATORS : WC_OPERATORS;") in js
-    assert ("if (WC_EQUALITY_ONLY_FIELDS.includes(cond.field)\n"
-            "          && !WC_BOOL_OPERATORS.includes(cond.operator)) {\n"
-            "        cond.operator = \"==\";") in js
+    assert (set(_js_array(js, "WC_BOOL_FIELDS")) | {"patch", "send_mode"}) == \
+        wc._BOOLEAN_FIELDS | wc._EQUALITY_ONLY_FIELDS
+    # Every operator the editor offers for a field, the loader takes.
+    for field in wc._ALLOWED_FIELDS:
+        offered = (wc._GROUP_OPERATORS if field in wc._GROUP_FIELDS
+                   else wc._BOOL_COMPATIBLE_OPERATORS
+                   if field in wc._BOOLEAN_FIELDS | wc._EQUALITY_ONLY_FIELDS
+                   else set(wc._OPERATORS))
+        assert all(wc.operator_problem(field, op) is None for op in offered), field
+    # The narrowing itself, at the two places it happens.
+    assert "const opOptions = wcOperatorsFor(cond.field);" in js
+    assert "if (!allowed.includes(cond.operator)) cond.operator = allowed[0];" in js
 
 
 @pytest.mark.parametrize("field", sorted(wc._RELATIONAL_FIELDS))
@@ -321,8 +325,8 @@ def test_the_loader_refuses_an_ordering_operator_on_a_relational_field(field, op
     value = "AES50-A 1" if field == "patch" else "Drums"
     cond = {"id": "x", "description": "x", "channel": "Kick", "field": field,
             "operator": operator, "value": value, "severity": "info"}
-    with pytest.raises(wc.WatchConditionsError, match="only supports"):
-        wc.parse_watch_conditions(json.dumps({"watch_conditions": [cond]}))
+    with pytest.raises(wc.WatchConditionsError, match="only supports|takes 'in' or 'not in'"):
+        wc.parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [cond]}))
 
 
 def test_watch_js_rereads_watch_json_on_entering_watch_but_never_over_edits(client):
@@ -373,14 +377,14 @@ def test_watch_js_still_renders_the_coverage_caveat_off_every_event(client):
 
 
 def test_the_check_endpoint_answers_per_row_with_the_loaders_reasons(client):
-    rows = [dict(HAND, channel="dca1-4", field="fader_db", operator="<=", value=0),
+    rows = [dict(HAND, channel="dca1-4", field="fader_db", operator=">", value=0),
             dict(HAND, channel="BUS -"),
-            dict(HAND, channel="DCA 1", field="patch", operator="==", value="LCL 1"),
+            dict(HAND, channel="DCA 1", field="patch", operator="!=", value="LCL 1"),
             HAND,
             dict(HAND, channel="bus Drums"),
             dict(HAND, channel="BUS"),
-            dict(HAND, channel="DCA Vocals", field="patch", operator="==", value="LCL 1")]
-    r = client.post("/api/watch-conditions/check", json={"watch_conditions": rows})
+            dict(HAND, channel="DCA Vocals", field="patch", operator="!=", value="LCL 1")]
+    r = client.post("/api/watch-conditions/check", json={"version": 2, "watch_conditions": rows})
     assert r.status_code == 200
     answer = [{k: v for k, v in row.items() if k != "explanation"} for row in r.json()["rows"]]
     assert r.json()["rows"][0]["explanation"].startswith("Alerts as ")
@@ -514,7 +518,7 @@ def test_demo_start_resolves_scoped_names_and_says_so(client, tmp_path, monkeypa
     from atoo import webui
     monkeypatch.setattr(webui, "_DEMO_DIR", FIXTURES / "old-demo-rig")
     path = tmp_path / "watch.json"
-    path.write_text(json.dumps({"watch_conditions": [
+    path.write_text(json.dumps({"version": 2, "watch_conditions": [
         dict(HAND, id="drums-bus-muted", channel="BUS Drums", field="muted", value=True),
         dict(HAND, id="pa-muted", channel="MAIN PA", field="muted", value=True),
         dict(HAND, id="horns", channel="BUS Horns", field="muted", value=True),
@@ -562,7 +566,7 @@ def test_console_start_reads_main_names_only_when_a_scoped_main_needs_them(
 
     monkeypatch.setattr(webui, "console_provider_factory", factory)
     path = tmp_path / "watch.json"
-    path.write_text(json.dumps({"watch_conditions": [dict(HAND, channel=channel)]}))
+    path.write_text(json.dumps({"version": 2, "watch_conditions": [dict(HAND, channel=channel)]}))
     with fastapi_testclient.TestClient(create_app()) as c:
         r = c.post("/api/watch/start", json={
             "source": "console", "console": "192.0.2.1", "interval": 0.1,
@@ -605,7 +609,7 @@ def _rig_on_an_address(client, monkeypatch):
 def test_saving_the_watched_list_swaps_it_into_the_running_session(client, tmp_path, monkeypatch):
     path = tmp_path / "watch.json"
     old = dict(HAND, id="old-drums", channel="BUS 1", field="muted", value=True)
-    path.write_text(json.dumps({"watch_conditions": [old]}))
+    path.write_text(json.dumps({"version": 2, "watch_conditions": [old]}))
     client.post("/api/watch-conditions/load", json={"path": str(path)})
     _rig_on_an_address(client, monkeypatch)
     r = client.post("/api/watch/start", json={
@@ -628,9 +632,9 @@ def test_saving_the_watched_list_swaps_it_into_the_running_session(client, tmp_p
 
 def test_saving_some_other_file_leaves_the_running_watch_alone(client, tmp_path, monkeypatch):
     watched = tmp_path / "watch.json"
-    watched.write_text(json.dumps({"watch_conditions": [HAND]}))
+    watched.write_text(json.dumps({"version": 2, "watch_conditions": [HAND]}))
     other = tmp_path / "other.json"
-    other.write_text(json.dumps({"watch_conditions": []}))
+    other.write_text(json.dumps({"version": 2, "watch_conditions": []}))
     client.post("/api/watch-conditions/load", json={"path": str(watched)})
     _rig_on_an_address(client, monkeypatch)
     client.post("/api/watch/start", json={
@@ -646,7 +650,7 @@ def test_saving_some_other_file_leaves_the_running_watch_alone(client, tmp_path,
 
 def test_saving_while_not_watching_reloads_nothing(client, tmp_path):
     path = tmp_path / "watch.json"
-    path.write_text(json.dumps({"watch_conditions": []}))
+    path.write_text(json.dumps({"version": 2, "watch_conditions": []}))
     client.post("/api/watch-conditions/load", json={"path": str(path)})
     saved = client.post("/api/watch-conditions/save", json={
         "path": str(path), "watch_conditions": [HAND]})

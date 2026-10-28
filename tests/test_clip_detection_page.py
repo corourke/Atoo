@@ -112,8 +112,8 @@ def test_the_demo_clips_in_the_real_page(home, demo_copy, monkeypatch):
                 # same row.
                 page.wait_for_function(
                     "[...document.querySelectorAll('#alert-body tr')].some("
-                    "r => /clipped \\d+ times \\(a clip ends once the level stays below -3 dBFS "
-                    "for 200 ms\\)/.test(r.innerText))", timeout=60000)
+                    "r => /clipped \\d+ times; .*the first was [0-9.]+ s ago and the last "
+                    "[0-9.]+ s ago\\./.test(r.innerText))", timeout=60000)
                 # Where it is said: the strip as the desk names it.
                 text = page.locator("#alert-body").inner_text()
                 assert any(label in text for label in

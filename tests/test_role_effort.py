@@ -65,7 +65,7 @@ def wire(monkeypatch):
     plan["outputs"]["Matrix"]["socket"] = {"group": "USB", "sockets": [40]}
     replies = {
         generate.critic_system(): ("critic", json.dumps({"findings": []})),
-        generate.watchlist_system(): ("watchlist", json.dumps({"watch_conditions": []})),
+        generate.watchlist_system(): ("watchlist", json.dumps({"version": 2, "watch_conditions": []})),
     }
     sent: dict = {}
 

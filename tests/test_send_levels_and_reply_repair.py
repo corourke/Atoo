@@ -255,7 +255,7 @@ def test_a_category_given_no_colour_is_dropped_from_the_map_and_said():
     reply = json.loads(SIXPIECE.read_text())
     notes = reply_expand.repair_reply(reply)
     assert all(e.get("color") for e in reply["category_colors"])
-    assert any("'misc' given no colour" in n for n in notes)
+    assert any("'misc' given no color" in n for n in notes)
 
 
 def test_a_marker_for_a_field_the_object_cannot_carry_is_dropped_and_said():

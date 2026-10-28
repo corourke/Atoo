@@ -1,30 +1,31 @@
 {
+  "version": 2,
   "watch_conditions": [
     {
-      "id": "lead-vox-unmuted",
+      "id": "lead-vox-muted",
       "description": "Lead Vox muted is the one mistake the whole room hears. A mute left on after a speech or a guest's song is the usual way it happens.",
       "channel": "Lead Vox",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
-      "id": "band-dca-open",
+      "id": "band-dca-down",
       "description": "The Band DCA rides bass, guitars and keys. Pulled to the floor, the band drops out of the PA while the stage still sounds fine.",
       "channel": "DCA Band",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -20.0,
       "severity": "warning"
     },
     {
-      "id": "pa-unmuted",
+      "id": "pa-muted",
       "description": "The PA must never be muted mid-show.",
       "channel": "MAIN PA",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
@@ -33,7 +34,7 @@
       "channel": "MAIN 1",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error",
       "source": "drafted"
     },
@@ -42,7 +43,7 @@
       "description": "PA Main 1 fader has dropped below -40 dB, so the house is effectively off.",
       "channel": "MAIN 1",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -40,
       "severity": "error",
       "source": "drafted"
@@ -53,7 +54,7 @@
       "channel": "BUS Drum IEM",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error",
       "source": "drafted"
     },
@@ -63,7 +64,7 @@
       "channel": "BUS Vox Wedge",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "warning",
       "source": "drafted"
     },
@@ -73,7 +74,7 @@
       "channel": "DCA Vocals",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error",
       "source": "drafted"
     },
@@ -83,7 +84,7 @@
       "channel": "BUS Drums",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error",
       "source": "drafted"
     },
@@ -92,7 +93,7 @@
       "description": "Drums bus fader has dropped below -40 dB. The whole kit reaches Main only through it, so the drums are gone from the PA.",
       "channel": "BUS Drums",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -40,
       "severity": "error"
     },
@@ -102,7 +103,7 @@
       "channel": "BUS Vocals",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
@@ -110,7 +111,7 @@
       "description": "Vocals bus fader has dropped below -40 dB, so every vocal is effectively out of the PA.",
       "channel": "BUS Vocals",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -40,
       "severity": "error"
     },
@@ -120,7 +121,7 @@
       "channel": "BUS Vox Verb",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "warning"
     },
     {
@@ -128,7 +129,7 @@
       "description": "Vox Verb bus fader has dropped below -40 dB, so the vocals are effectively dry.",
       "channel": "BUS Vox Verb",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -40,
       "severity": "warning"
     },
@@ -138,7 +139,7 @@
       "channel": "DCA 1-5",
       "field": "muted",
       "operator": "==",
-      "value": false,
+      "value": true,
       "severity": "error"
     },
     {
@@ -146,7 +147,7 @@
       "description": "A DCA fader has dropped below -30 dB, so the strips it rides are effectively out of the mix.",
       "channel": "DCA 1-5",
       "field": "fader_db",
-      "operator": ">=",
+      "operator": "<",
       "value": -30,
       "severity": "warning"
     }

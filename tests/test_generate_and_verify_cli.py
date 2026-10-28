@@ -324,7 +324,10 @@ def test_generate_strategy_reports_a_provider_failure_clearly(touring, capsys, m
                  "--conventions", str(touring / "touringband.md"),
                  "--out", str(touring / "p.json")])
     assert code == 1
-    assert "generation failed" in capsys.readouterr().err
+    # Said before anything starts, in the provider's own words.
+    assert ("build failed: no provider configured. See 'Setting up an AI provider' in the user "
+            "guide. Nothing was changed.") in capsys.readouterr().err
+    assert not (touring / "p.json").exists()
 
 
 def test_generate_strategy_end_to_end_against_a_canned_model(touring, capsys, monkeypatch):

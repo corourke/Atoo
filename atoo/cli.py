@@ -12,9 +12,11 @@ argument sets.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import errno
 import json
 import os
+import re
 import socket
 import sys
 import threading
@@ -388,58 +390,152 @@ def _fixup_model(provider) -> str:
     return str(model or "the generator's model")
 
 
+def _fixup_counts(fixup: dict) -> tuple[int, int, int]:
+    """(verify errors, routing warnings, critic omissions) the round
+    carried. `fixup["errors"]` holds them in that order."""
+    w, o = fixup.get("warnings", 0), fixup.get("omissions", 0)
+    return len(fixup["errors"]) - w - o, w, o
+
+
 def _say_fixup(fixup: dict) -> None:
     """The progress line for a fix-up round: "fix-up: 2 verify errors sent
     back to claude-haiku-4-5"."""
-    w = fixup.get("warnings", 0)
-    n = len(fixup["errors"]) - w
+    n, w, o = _fixup_counts(fixup)
     what = "verify" if fixup["checker"] == "verify" else "format"
     sent = [f"{n} {what} error{'' if n == 1 else 's'}"] if n else []
     if w:
         sent.append(f"{w} routing warning{'' if w == 1 else 's'}")
+    if o:
+        sent.append(f"{o} line{'' if o == 1 else 's'} the critic found not carried out")
     print(f"fix-up: {' and '.join(sent)} sent back to {fixup['model']}",
           file=sys.stderr, flush=True)
 
 
 def _fixup_found(fixup: dict) -> str:
     """"verify refused the first reply with 1 error(s)", or, when the
-    round also carried routing warnings, what verify found."""
-    w = fixup.get("warnings", 0)
-    n = len(fixup["errors"]) - w
-    if not w:
+    round also carried routing warnings or the critic's omissions, what
+    verify and the critic found."""
+    n, w, o = _fixup_counts(fixup)
+    if not w and not o:
         return f"{fixup['checker']} refused the first reply with {n} error(s)"
-    return (f"{fixup['checker']} found {n} error(s) and {w} routing warning(s) in the first "
-            "reply")
+    found = []
+    if n or w:
+        found.append(f"{fixup['checker']} found {n} error(s)"
+                     + (f" and {w} routing warning(s)" if w else ""))
+    if o:
+        found.append(f"the critic found {o} line(s) of the instructions or conventions not "
+                     "carried out")
+    return " and ".join(found) + " in the first reply"
 
 
 def _fixup_finding(fixup: dict, still: list[str]) -> "diagnostics.Diagnostic":
     """The build finding for a fix-up round: INFO naming what was fixed
     when the corrected reply passes, WARNING when it did not (the plan
-    written is still refused by apply, and verify's own errors say why).
-    Kept in `meta.build_findings`, so a plan says it was corrected."""
+    written is still refused by apply, and verify's own errors say why),
+    when the round produced no usable plan, or when its plan was worse on
+    verify than the first and was not kept. Kept in `meta.build_findings`,
+    so a plan says it was corrected."""
     first = fixup["errors"]
-    n = len(first)
     listed = "; ".join(first)
+    sent = f"{_fixup_found(fixup)}, sent back to {fixup['model']} in one fix-up round"
     if fixup.get("failed"):
         return diagnostics.Diagnostic(
             severity=diagnostics.Severity.WARNING, code="build.fixup-failed", where="build",
             source="build",
-            message=(f"{_fixup_found(fixup)}, sent back "
-                     f"to {fixup['model']} in one fix-up round; that round did not produce a "
-                     f"usable plan ({fixup['failed']}), so the first plan stands. "
-                     f"Refused: {listed}"))
+            message=(f"{sent}; that round did not produce a usable plan ({fixup['failed']}), "
+                     f"so the first plan stands. Refused: {listed}"))
+    if fixup.get("rejected"):
+        return diagnostics.Diagnostic(
+            severity=diagnostics.Severity.WARNING, code="build.fixup-rejected", where="build",
+            source="build",
+            message=(f"{sent}; the corrected reply was worse on verify ({fixup['rejected']}), so "
+                     f"it was not kept and the first plan stands. Still open: {listed}"))
     if still:
         return diagnostics.Diagnostic(
             severity=diagnostics.Severity.WARNING, code="build.fixup-unresolved", where="build",
             source="build",
-            message=(f"{_fixup_found(fixup)}, sent back "
-                     f"to {fixup['model']} in one fix-up round; the corrected reply still has "
+            message=(f"{sent}; the corrected reply still has "
                      f"{len(still)} of them (below). First round: {listed}"))
     return diagnostics.Diagnostic(
         severity=diagnostics.Severity.INFO, code="build.fixup", where="build", source="build",
         message=(f"{_fixup_found(fixup)}; one fix-up "
                  f"round sent them back to {fixup['model']}, and the corrected reply passes. "
                  f"Fixed: {listed}"))
+
+
+def _omission_line(finding: "diagnostics.Diagnostic") -> str:
+    """A critic omission as the fix-up sends it: what is missing, then the
+    engineer's line it comes from, verbatim."""
+    what = finding.title or finding.message
+    return (f"{finding.where}: {what} -- not carried out: '{finding.line}' "
+            "(critic.omission)")
+
+
+def _on_the_first_plan(finding: "diagnostics.Diagnostic") -> "diagnostics.Diagnostic":
+    """A critic finding about a first plan the fix-up round replaced, its
+    headline (or, with none, its text) starting "On the first plan:"."""
+    if finding.title:
+        return dataclasses.replace(finding, title=f"On the first plan: {finding.title}")
+    return dataclasses.replace(finding, message=f"On the first plan: {finding.message}")
+
+
+def _verify_worse(before, after) -> str:
+    """Why `after` is worse on verify than `before` ("3 errors where the
+    first had 1"), or "" when it is not: more errors, or as many and more of
+    the routing warnings the fix-up is sent."""
+    if before is None or after is None:
+        return ""
+    b, a = len(before.errors), len(after.errors)
+    if a != b:
+        return f"{a} error(s) where the first had {b}" if a > b else ""
+    bw, aw = len(generate.fixup_warning_lines(before)), len(generate.fixup_warning_lines(after))
+    return (f"{aw} routing warning(s) where the first had {bw}" if aw > bw else "")
+
+
+def _omissions_after(omissions: list, first_plan: dict, plan: dict, repaired: bool,
+                     critic_findings: list) -> tuple[list, list]:
+    """The critic's quoted omissions, checked again against the plan
+    written, without asking the critic again. Returns `(critic_findings,
+    build_findings)`: an omission carried out leaves the critic's list and
+    is said at INFO (`build.critic-repair`); one still missing stays in it,
+    a WARNING, saying so.
+
+    A line naming output sockets that the first plan did not patch is
+    checked: carried out when the plan written patches them all. Any other
+    line code cannot read for itself, so when the round's plan was kept the
+    INFO says only that the round was asked to carry it out, never that it
+    did."""
+    from atoo import outputs_sheet
+
+    first_patched = set(outputs_sheet.output_sources(first_plan))
+    patched = set(outputs_sheet.output_sources(plan))
+    sent = {id(o) for o in omissions}
+    kept, said = [], []
+    for finding in critic_findings:
+        if id(finding) not in sent:
+            kept.append(finding)
+            continue
+        sockets = _sockets_named(finding.line)
+        checked = bool(sockets) and not sockets <= first_patched
+        done = sockets <= patched if checked else repaired
+        if not done:
+            kept.append(dataclasses.replace(
+                finding, message=f"{finding.message} -- still not carried out after the "
+                                 "fix-up round"))
+            continue
+        found = (f"the critic found '{finding.line}' not carried out in the first reply "
+                 f"({finding.title or finding.message})")
+        if checked:
+            message = (f"{found}; the fix-up round carried it out: the plan written patches "
+                       + _socket_runs_words(
+                           sorted(sockets, key=lambda s: outputs_sheet.socket_order(*s))))
+        else:
+            message = (f"{found}; the fix-up round was asked to carry it out, and code can't "
+                       "check this kind of line, so confirm it in the plan or at soundcheck")
+        said.append(diagnostics.Diagnostic(
+            severity=diagnostics.Severity.INFO, code="build.critic-repair", where=finding.where,
+            line=finding.line, source="build", message=message))
+    return kept, said
 
 
 def _display_resolved(path: Path) -> str:
@@ -453,6 +549,229 @@ def _display_resolved(path: Path) -> str:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+class SheetRefused(Exception):
+    """One of the show's sheets (`busses.csv`, `outputs.csv`) has a cell that
+    cannot work on the desk; the build stops, naming the sheet and the cell."""
+
+    def __init__(self, sheet: str, message: str):
+        super().__init__(message)
+        self.sheet = sheet
+
+
+def _lay_on_bus_sheet(plan: dict, show, input_csv: str,
+                      console_model: "str | None", *,
+                      outputs_cells: "dict[str, str] | None" = None) -> list:
+    """The show's `busses.csv` laid onto `plan`, in place, as a Save in
+    Build's step 04 lays it (`sheets.overlay_busses`): a filled
+    cell wins over the conventions and the reply. Every change and every
+    choice made on the way is an INFO (`build.bus-sheet`); a cell that cannot
+    physically work -- the overlay's own refusals, and any ERROR `verify`
+    would newly find because of the sheet -- raises `SheetRefused` with
+    step 04's own wording. No show, or no sheet: nothing, and no findings."""
+    from atoo import sheets, source_edit
+
+    if show is None or not (show.directory / bundle.BUSSES).is_file():
+        return []
+    text = (show.directory / bundle.BUSSES).read_text(encoding="utf-8-sig")
+    rows = [r.values for r in source_edit.read_records(text)[1]]
+    if outputs_cells is not None:
+        # `outputs.csv` decides the sockets (`_lay_on_sheets`): the column is
+        # kept aside, to be compared once that sheet is laid on.
+        rows = [dict(row) for row in rows]
+        for row in rows:
+            cell = (row.get("outputs") or "").strip()
+            if cell:
+                outputs_cells[(row.get("bus") or "").strip()] = cell
+            row["outputs"] = ""
+    result = sheets.overlay_busses(plan, rows,
+                                   categories=sheets.categories_by_channel(plan, input_csv))
+    if not result.refusals:
+        sheets.refuse_new_errors(plan, result, console_model=console_model)
+    if result.refusals:
+        raise SheetRefused(bundle.BUSSES, "; ".join(r.text() for r in result.refusals))
+
+    def info(message: str) -> diagnostics.Diagnostic:
+        return diagnostics.Diagnostic(severity=diagnostics.Severity.INFO, code="build.bus-sheet",
+                                      where=bundle.BUSSES, message=message, source="build")
+
+    findings = [info(f"{bundle.BUSSES} wins over the conventions: {change}.")
+                for change in result.changes]
+    findings += [info(note) for note in result.notes]
+    plan.clear()
+    plan.update(result.plan)
+    return findings
+
+
+def _lay_on_sheets(plan: dict, show, input_csv: str, console_model: "str | None",
+                   layers: "list[tuple[str, str | None]] | None" = None) -> list:
+    """The show's `busses.csv`, then its `outputs.csv`, laid onto
+    `plan`, in place.
+
+    `outputs.csv` is where each output socket's source is kept (answer A): when the show has one, it alone says which sockets a bus, a
+    Main or a Matrix feeds, and `busses.csv`'s `outputs` column -- derived
+    from it, and kept in step with it by a Busses-table Save -- is not laid
+    on. Where that column says something else, one INFO names both files."""
+    from atoo import outputs_sheet
+
+    has_outputs = show is not None and (show.directory / bundle.OUTPUTS).is_file()
+    cells: dict[str, str] = {}
+    findings = _lay_on_bus_sheet(plan, show, input_csv, console_model,
+                                 outputs_cells=cells if has_outputs else None)
+    findings += _lay_on_outputs_sheet(plan, show, console_model, layers)
+    findings += _lay_on_user_sheet(plan, show, console_model)
+    if not cells:
+        return findings
+    from atoo import sheets
+
+    now = outputs_sheet.output_sources(plan)
+    groups = {"Bus": "BUS", "Main": "MAIN", "Matrix": "MTX"}
+    for label, cell in cells.items():
+        kind, _, number = label.partition(" ")
+        if kind not in groups or not number.isdigit():
+            continue
+        obj = (groups[kind], int(number))
+        sockets = {socket for socket, src in now.items()
+                   if src[0] == obj[0] and (src[1] + 1) // 2 == obj[1]}
+        if sheets._socket_set(cell) == sockets:
+            continue
+        said = sheets._socket_runs([{"group": g, "sockets": [n]} for g, n in sockets]) or "nowhere"
+        findings.append(diagnostics.Diagnostic(
+            severity=diagnostics.Severity.INFO, code="build.outputs-sheet", where=bundle.BUSSES,
+            message=(f"{bundle.BUSSES} says {label} goes to {cell}, {bundle.OUTPUTS} says {said}: "
+                     f"{bundle.OUTPUTS} is where each socket's source is kept, so it wins, and "
+                     f"{bundle.BUSSES}'s Outputs column follows it. Edit {bundle.OUTPUTS}, or "
+                     f"its rows in Build 04's Outputs table, to move a bus."),
+            source="build"))
+    return findings
+
+
+def _lay_on_user_sheet(plan: dict, show, console_model: "str | None") -> list:
+    """The show's `user.csv` laid onto `plan`, in place (`user_sheet.overlay`): a row with a filled source sets its USR slot over the
+    conventions and the reply, `OFF` takes the slot out, and a slot the sheet
+    does not name is left to them. Every change is an INFO
+    (`build.user-sheet`); a row that cannot physically work raises
+    `SheetRefused`. No show, or no sheet: nothing."""
+    from atoo import user_sheet
+
+    if show is None or not (show.directory / bundle.USER).is_file():
+        return []
+    rows = user_sheet.read_rows((show.directory / bundle.USER).read_text(encoding="utf-8-sig"))
+    result = user_sheet.overlay(plan, rows, complete=False, console_model=console_model)
+    if result.refusals:
+        raise SheetRefused(bundle.USER, "; ".join(r.text() for r in result.refusals))
+    findings = [diagnostics.Diagnostic(
+        severity=diagnostics.Severity.INFO, code="build.user-sheet", where=bundle.USER,
+        message=f"{bundle.USER} wins over the conventions: {change}.", source="build")
+        for change in result.changes]
+    plan.clear()
+    plan.update(result.plan)
+    return findings
+
+
+def _lay_on_outputs_sheet(plan: dict, show, console_model: "str | None",
+                          layers: "list[tuple[str, str | None]] | None" = None) -> list:
+    """The show's `outputs.csv` laid onto `plan`, in place
+    (`outputs_sheet.overlay`): each row with a filled source wins
+    over the conventions and the reply, `OFF` disconnects that socket, and a
+    socket the sheet does not name is left to them -- but a bus, Main or Matrix
+    the sheet names feeds the sockets its rows give it and no others. Every change is an INFO (`build.outputs-sheet`); a row that cannot
+    physically work raises `SheetRefused`. No show, or no sheet: nothing.
+
+    Where the sheet takes a socket off a bus, Main or Matrix and
+    a line of `layers` (`[("instructions", text), ("conventions", text)]`)
+    names that socket, the engineer asked for it in words and does not get
+    it: that is a WARNING quoting the line (`build.outputs-sheet-overrides`),
+    never an INFO alone."""
+    from atoo import outputs_sheet
+
+    if show is None or not (show.directory / bundle.OUTPUTS).is_file():
+        return []
+    rows = outputs_sheet.read_rows(
+        (show.directory / bundle.OUTPUTS).read_text(encoding="utf-8-sig"))
+    result = outputs_sheet.overlay(plan, rows, complete=False, console_model=console_model)
+    if result.refusals:
+        raise SheetRefused(bundle.OUTPUTS, "; ".join(r.text() for r in result.refusals))
+    findings = [diagnostics.Diagnostic(
+        severity=diagnostics.Severity.INFO, code="build.outputs-sheet", where=bundle.OUTPUTS,
+        message=f"{bundle.OUTPUTS} wins over the conventions: {change}.", source="build")
+        for change in result.changes]
+    findings += _sheet_overrides_said(plan, result.plan, layers or [])
+    plan.clear()
+    plan.update(result.plan)
+    return findings
+
+
+_SOCKET_WORDS = re.compile(r"\b(AES50-[ABC]|[A-Za-z]{2,4})\s*(\d{1,2})(?:\s*[-\u2013]\s*(\d{1,2}))?\b")
+
+
+def _sockets_named(line: str) -> set:
+    """The output sockets a line of text names: `USB 18-19` -> `{("USB", 18),
+    ("USB", 19)}`, `AES50-A 3` -> `{("A", 3)}`."""
+    from atoo import outputs_sheet
+
+    found = set()
+    for group, first, last in _SOCKET_WORDS.findall(line):
+        start, end = int(first), int(last or first)
+        if end < start or end - start > 64:
+            continue
+        for n in range(start, end + 1):
+            socket = outputs_sheet.parse_output(f"{group} {n}")
+            if socket is not None:
+                found.add(socket)
+    return found
+
+
+def _sheet_overrides_said(before: dict, after: dict,
+                          layers: "list[tuple[str, str | None]]") -> list:
+    """A WARNING for each bus, Main or Matrix whose sockets the outputs sheet
+    took off where an instructions or conventions line names them: what the
+    line asked, that it is not carried out, and how to carry it out."""
+    from atoo import outputs_sheet
+
+    was, now = outputs_sheet.output_sources(before), outputs_sheet.output_sources(after)
+    objects = {"BUS": "Bus", "MAIN": "Main", "MTX": "Matrix"}
+    lost: dict[str, list] = {}
+    for socket, source in was.items():
+        if source[0] in objects and now.get(socket) != source:
+            lost.setdefault(f"{objects[source[0]]} {(source[1] + 1) // 2}", []).append(socket)
+    findings = []
+    for label, sockets in lost.items():
+        quoted = None
+        for where, text in layers:
+            for line in (text or "").splitlines():
+                if _sockets_named(line) & set(sockets):
+                    quoted = (where, line.strip().lstrip("-*").strip())
+                    break
+            if quoted:
+                break
+        if quoted is None:
+            continue
+        group, n = label.split()
+        kept = sorted((s for s, src in now.items()
+                       if src[0] == {"Bus": "BUS", "Main": "MAIN", "Matrix": "MTX"}[group]
+                       and (src[1] + 1) // 2 == int(n)),
+                      key=lambda s: outputs_sheet.socket_order(*s))
+        gone = _socket_runs_words(sorted(sockets, key=lambda s: outputs_sheet.socket_order(*s)))
+        has = _socket_runs_words(kept) or "none"
+        findings.append(diagnostics.Diagnostic(
+            severity=diagnostics.Severity.WARNING, code="build.outputs-sheet-overrides",
+            where=bundle.OUTPUTS,
+            message=(f"{bundle.OUTPUTS} decides {label}'s sockets ({has}), so the {quoted[0]}' "
+                     f"'{quoted[1]}' is not carried out: {gone} "
+                     f"{'is' if len(sockets) == 1 else 'are'} not patched from {label}. "
+                     f"Add {gone} to {bundle.OUTPUTS}, or edit them in Build 04's Outputs table, "
+                     "to carry it out."),
+            source="build"))
+    return findings
+
+
+def _socket_runs_words(sockets: list) -> str:
+    """`[("USB", 18), ("USB", 19)]` -> `USB 18-19`."""
+    from atoo import sheets
+
+    return sheets._socket_runs([{"group": g, "sockets": [n]} for g, n in sockets])
 
 
 def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None) -> int:
@@ -678,6 +997,17 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                  if show is not None else ""), file=sys.stderr)
         return 1
 
+    # A build is a model call: with no model set up it cannot happen, and it
+    # says so before anything on disk moves -- plan.json stays as it is, so
+    # Apply still has the plan it had.
+    try:
+        provider = provider_from_env()
+    except AIProviderError as exc:
+        message = (f"{exc}. See 'Setting up an AI provider' in the user guide. Nothing was "
+                   "changed" + (f": {bundle.PLAN} is as it was." if show is not None else "."))
+        print(f"build failed: {message}", file=sys.stderr)
+        return 1
+
     # A rebuild clears the current plan and current findings, because none of
     # that is still current.
     # A show's plan.json is moved aside the moment its rebuild starts, so a
@@ -707,7 +1037,6 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     category_table = None
     instructed_strips = None
     try:
-        provider = provider_from_env()
         ctx["provider"] = provider
         if resolve_off is None:
             resolve_state = conventions_resolve.freshness(conventions_path, conventions_raw)
@@ -899,8 +1228,16 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
 
     def settle(plan: dict, expansion_findings: list):
         """What follows a plan out of the model, for the first reply and a
-        fix-up's alike: the conventions audit, preset expansion and verify.
-        Returns `(build_findings, audit_findings, preset_findings, verdict)`."""
+        fix-up's alike: the show's bus sheet laid on, the conventions audit,
+        preset expansion and verify. Returns `(build_findings,
+        audit_findings, preset_findings, verdict)`; raises `SheetRefused`
+        for a sheet cell that cannot work."""
+        # The bus sheet wins over the conventions where it has
+        # a filled cell, before presets are expanded and verify reads the
+        # plan, so both see the plan that will be written.
+        expansion_findings = expansion_findings + _lay_on_sheets(
+            plan, show, input_csv, getattr(args, "console_model", None),
+            [("instructions", instructions_text), ("conventions", conventions_raw)])
         # FR-6.2, folded into the build: the problems the
     # generator found in the conventions TEXT -- a conflict it had to pick
     # a side in, something declared that nothing joins -- with every quote
@@ -937,51 +1274,27 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                                       **resolved_layer))
         return build_findings, audit_findings, preset_findings, verdict
 
-    build_findings, audit_findings, preset_findings, verdict = settle(plan, expansion_findings)
+    try:
+        build_findings, audit_findings, preset_findings, verdict = settle(plan, expansion_findings)
+    except SheetRefused as exc:
+        message = (f"{exc.sheet} cannot be laid onto this plan, so nothing was written: "
+                   f"{exc}. Change the cell"
+                   + (" (Build's step 04 shows it)" if exc.sheet == bundle.BUSSES else "")
+                   + ", or clear it to leave it to the conventions.")
+        print(f"build failed: {message}", file=sys.stderr)
+        _write_build_log(ctx, status=build_log_module.FAILED, reason=message)
+        return 1
 
-    # The fix-up round for verify's ERRORS -- only when the round was not
-    # already spent on the format check above: one round per build, never
-    # a loop. Warnings and notes are not sent, except a strip that reaches
-    # no output (`generate.FIXUP_WARNING_CODES`): a routing slip, not a
-    # judgement call, and one the model mends when it is shown it.
-    def fixup_lines(verdict) -> tuple[list[str], list[str]]:
-        if verdict is None:
-            return [], []
-        return generate.verify_error_lines(verdict), generate.fixup_warning_lines(verdict)
-
-    fix_errors, fix_warnings = fixup_lines(verdict)
-    if (fix_errors or fix_warnings) and fixup_budget and fixup is None and replies:
-        errors = fix_errors + fix_warnings
-        fixup = {"checker": "verify", "errors": errors, "warnings": len(fix_warnings),
-                 "model": _fixup_model(provider)}
-        _say_fixup(fixup)
-        fixed_findings: list = []
-        try:
-            fixed = generate.fixup_plan(
-                conventions_raw, input_csv, replies[-1], errors,
-                checker="verify", provider=provider,
-                findings=fixed_findings, replies=replies, **gen_kwargs)
-        except (AIProviderError, generate.GenerationError, generate.PromptError) as exc:
-            # The first plan still stands -- written, and refused by apply,
-            # exactly as a build without a fix-up leaves it -- and the round
-            # that did not produce a better one says why.
-            fixup["failed"] = str(exc)
-            print(f"fix-up: the round did not produce a usable plan, so the first one "
-                  f"stands: {exc}", file=sys.stderr, flush=True)
-        else:
-            plan = fixed
-            build_findings, audit_findings, preset_findings, verdict = settle(
-                plan, fixed_findings)
-    if fixup is not None:
-        still_errors, still_warnings = fixup_lines(verdict)
-        still = still_errors + (still_warnings if fixup.get("warnings") else [])
-        build_findings = build_findings + [_fixup_finding(fixup, still)]
-
-    warnings = list(plan.get("notes") or [])
-
-    # The critic reads the plan that will be written -- after any fix-up,
-    # so it is never paid to review a plan that was replaced. Its findings
-    # are opinion, not errors, and are never fed back to the generator.
+    # The critic reads the settled first plan, before the fix-up round
+    # (the plan's author, 2026-10-27): its findings are opinion, not
+    # errors, and stay report-only -- except an omission quoting, verbatim,
+    # a line of the instructions or conventions the plan did not carry out
+    # (`conventions_audit.check_critic_omission` sets its `line`). Those
+    # join verify's errors in the one round, or spend it on their own: the
+    # engineer's own words are the check, never the critic's opinion. The
+    # critic is not asked again afterwards; each omission's line is checked
+    # against the plan written (`_omissions_after`).
+    omissions: list = []
     if args.critic:
         critic_ran = True
         critic_findings = generate.critique_plan(
@@ -992,6 +1305,79 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             instructions=instructions_text,
             instructions_name=Path(instructions_path).name if instructions_path else None,
         )
+        omissions = [f for f in critic_findings if f.code == "critic.omission" and f.line]
+
+    # The fix-up round for verify's ERRORS and the critic's quoted
+    # omissions -- only when the round was not already spent on the format
+    # check above: one round per build, never a loop. Warnings and notes are
+    # not sent, except a strip that reaches no output
+    # (`generate.FIXUP_WARNING_CODES`): a routing slip, not a judgement
+    # call, and one the model mends when it is shown it. The corrected plan
+    # is kept only when verify finds it no worse than the first.
+    def fixup_lines(verdict) -> tuple[list[str], list[str]]:
+        if verdict is None:
+            return [], []
+        return generate.verify_error_lines(verdict), generate.fixup_warning_lines(verdict)
+
+    first_plan = plan
+    repaired = False
+    fix_errors, fix_warnings = fixup_lines(verdict)
+    omission_lines = [_omission_line(f) for f in omissions]
+    if ((fix_errors or fix_warnings or omission_lines) and fixup_budget and fixup is None
+            and replies):
+        errors = fix_errors + fix_warnings + omission_lines
+        fixup = {"checker": "verify", "errors": errors, "warnings": len(fix_warnings),
+                 "omissions": len(omission_lines), "model": _fixup_model(provider)}
+        _say_fixup(fixup)
+        fixed_findings: list = []
+        try:
+            fixed = generate.fixup_plan(
+                conventions_raw, input_csv, replies[-1], errors,
+                checker=("the critic" if not (fix_errors or fix_warnings)
+                         else "verify and the critic" if omission_lines else "verify"),
+                provider=provider,
+                findings=fixed_findings, replies=replies, **gen_kwargs)
+        except (AIProviderError, generate.GenerationError, generate.PromptError) as exc:
+            # The first plan still stands -- written, and refused by apply,
+            # exactly as a build without a fix-up leaves it -- and the round
+            # that did not produce a better one says why.
+            fixup["failed"] = str(exc)
+            print(f"fix-up: the round did not produce a usable plan, so the first one "
+                  f"stands: {exc}", file=sys.stderr, flush=True)
+        else:
+            try:
+                settled = settle(fixed, fixed_findings)
+            except SheetRefused as exc:
+                # The first plan, which the sheet went onto, still stands.
+                fixup["failed"] = f"{exc.sheet} cannot be laid onto it: {exc}"
+                print(f"fix-up: {fixup['failed']}, so the first plan stands",
+                      file=sys.stderr, flush=True)
+            else:
+                worse = _verify_worse(verdict, settled[3])
+                if worse:
+                    fixup["rejected"] = worse
+                    print(f"fix-up: the corrected reply is worse on verify ({worse}), so the "
+                          "first plan stands", file=sys.stderr, flush=True)
+                else:
+                    plan = fixed
+                    repaired = True
+                    build_findings, audit_findings, preset_findings, verdict = settled
+    if fixup is not None:
+        still_errors, still_warnings = fixup_lines(verdict)
+        still = still_errors + (still_warnings if fixup.get("warnings") else [])
+        build_findings = build_findings + [_fixup_finding(fixup, still)]
+    if repaired and critic_findings:
+        # The critic read the first plan, which the round replaced: what it
+        # said about it may already be mended, so it says which plan it read.
+        sent = {id(o) for o in omissions}
+        critic_findings = [f if id(f) in sent else _on_the_first_plan(f)
+                           for f in critic_findings]
+    if omissions:
+        critic_findings, repairs = _omissions_after(
+            omissions, first_plan, plan, repaired, critic_findings)
+        build_findings = build_findings + repairs
+
+    warnings = list(plan.get("notes") or [])
 
     # `build`'s own record of itself, namespaced under one key
     # (PLAN_SCHEMA's "meta") rather than several new top-level fields, so
@@ -1101,6 +1487,18 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     except Exception as exc:  # noqa: BLE001 -- see above
         print(f"WARNING could not record what each strip was made from, so the next rebuild "
               f"cannot grade its changes strip by strip: {exc}", file=sys.stderr)
+    # The plan was made from the show's bus sheet (`settle`
+    # laid it on), so it records the sheet as it records the input list, and
+    # an edit to it afterwards reads Stale.
+    if show is not None and (show.directory / bundle.BUSSES).is_file():
+        plan["meta"]["bus_sheet"] = plan_freshness.input_list_record(
+            show.directory / bundle.BUSSES, bundle_dir)
+    if show is not None and (show.directory / bundle.OUTPUTS).is_file():
+        plan["meta"]["outputs_sheet"] = plan_freshness.input_list_record(
+            show.directory / bundle.OUTPUTS, bundle_dir)
+    if show is not None and (show.directory / bundle.USER).is_file():
+        plan["meta"]["user_sheet"] = plan_freshness.input_list_record(
+            show.directory / bundle.USER, bundle_dir)
     changes = _changes_since_previous(show, out_path, plan)
     if changes is not None:
         try:
@@ -1167,6 +1565,12 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             f"console) -- not a conventions file, and not a WING show file. Nothing has been "
             f"written to any console -- `atoo apply` does that."
         )
+        # The splits and recording feeds, which the channel count
+        # does not show.
+        from atoo import outputs_sheet
+        direct = outputs_sheet.summary_line(plan)
+        if direct is not None:
+            print(direct)
         if args.pretty:
             print()
             print(render_plan(plan, warnings))
@@ -1269,12 +1673,11 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         if fixup is not None and fixup["checker"] == "verify" and verdict.errors:
             # Both rounds' errors: what the first reply was refused for,
             # then (below) what the corrected one still is.
-            w = fixup.get("warnings", 0)
-            counted = f"{len(fixup['errors']) - w} error(s)" + (
-                f" and {w} routing warning(s)" if w else "")
+            n, w, _ = _fixup_counts(fixup)
+            counted = f"{n} error(s)" + (f" and {w} routing warning(s)" if w else "")
             print(f"\nVerification of the first reply -- {counted}, "
                   "sent back in one fix-up round:", file=sys.stderr)
-            for line in fixup["errors"]:
+            for line in fixup["errors"][:n + w]:
                 print(f"  {line}", file=sys.stderr)
             print("\nVerification of the plan written, after the fix-up round:",
                   file=sys.stderr)
@@ -1836,7 +2239,8 @@ def _resolve_console_settings(args: argparse.Namespace) -> None:
     if not hasattr(args, "console"):
         return
 
-    offline = getattr(args, "state", None) or getattr(args, "state_sequence", None)
+    offline = (getattr(args, "state", None) or getattr(args, "state_sequence", None)
+               or getattr(args, "snap", None))
     resolved = resolve_console_defaults()
 
     if args.console is None and not offline and resolved["address"]:
@@ -1996,7 +2400,7 @@ def _read_progress(args: argparse.Namespace, read_kwargs: dict, *, names_known: 
     """A `ReadProgress` for one live console read, or None if the user
     asked for silence.
 
-    A live read is 6,195 addresses on a WING Compact -- 323
+    A live read is 6,197 addresses on a WING Compact -- 325
     requests by node dump, pipelined eight in flight by default (`ATOO_CONSOLE_WINDOW`) -- and it used to print nothing at all
     for the whole of them; it could not be told from
     a hang at the desk, and the last tool that looked hung got killed
@@ -2093,10 +2497,77 @@ def ping_cmd(args: argparse.Namespace) -> int:
             token = facts.identity_model_token(getattr(args, "console_identity", None))
             said = (f"{token!r} is not a model Atoo has measured" if token
                     else "the desk stated no model")
-            print(f"Detected model: not recognised ({said}). `apply` will check sockets "
+            print(f"Detected model: not recognized ({said}). `apply` will check sockets "
                   "against the plan's own model only, and warn before writing.")
         else:
             print(f"Detected model: {facts.CONSOLE_MODELS[model]['label']} ({model})")
+    return 0
+
+
+def capture_cmd(args: argparse.Namespace) -> int:
+    """`atoo capture` (desk sheets piece 1) -- a desk you didn't
+    build, as a show bundle: `input.csv`, `busses.csv`, `outputs.csv`, `user.csv`, a plan of the desk as
+    it is, an empty `watch.json`, and the snapshot it was made from.
+
+    **No model, and nothing written to the desk.** The whole job is in
+    `atoo.capture`; this reads the source and writes the folder. Every value
+    the desk does not state is decided there and printed here, at INFO."""
+    import datetime
+
+    from atoo import capture
+    from atoo.firstrun import default_directory
+
+    captured = datetime.date.today().isoformat()
+    if args.snap and args.console:
+        print("capture reads one desk: give --console or --snap, not both", file=sys.stderr)
+        return 1
+    if args.snap:
+        model = args.console_model
+        if model is None:
+            print(f"a .snap does not say which WING wrote it, and the socket counts differ "
+                  f"between them -- pass --console-model ({', '.join(sorted(facts.CONSOLE_MODELS))})",
+                  file=sys.stderr)
+            return 1
+        try:
+            read = capture.from_snap(expand_home(args.snap), model, captured=captured)
+        except SnapshotError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        source = f"the snapshot {args.snap}"
+    else:
+        if args.console is None:
+            return _no_console_address()
+        console = _open_console(args)
+        if console is None:
+            return 1
+        with console:
+            model = getattr(args, "detected_console_model", None) or args.console_model
+            if model is None:
+                print("the desk stated a model Atoo does not know, so its sockets cannot be "
+                      "checked -- pass --console-model", file=sys.stderr)
+                return 1
+            read = capture.from_console(
+                console, model, captured=captured,
+                progress=_read_progress(args, dict(capture.live_read_kwargs(model), bulk=True)))
+        source = f"the desk at {args.console}"
+
+    result = read.capture
+    parent = Path(expand_home(args.dir)) if args.dir else (load_default_workspace()
+                                                           or default_directory())
+    target = capture.free_directory(parent, args.name or read.name)
+    capture.write_bundle(result, target, evidence_name=read.evidence_name, evidence=read.evidence)
+
+    print(f"Captured {source} to {target}/")
+    for line in capture.summary_lines(result):
+        print(f"  {line}")
+    print(f"  {bundle.CAPTURES}/{read.evidence_name}")
+    if result.notes:
+        print(f"\nWhat the desk does not state, decided or left out "
+              f"({len(result.notes)}):")
+        for note in result.notes:
+            print(f"  [INFO] {note}")
+    print(f"\nNothing was written to the desk. Watch it with this show:\n"
+          f"  atoo watch --show {target} --console <address>")
     return 0
 
 
@@ -2413,8 +2884,9 @@ def audit_cmd(args: argparse.Namespace) -> int:
 # `/cfg/talk/assign`, 6,114 once `/io/altsw` was read, 6,138 once
 # each phantom-capable socket's width was read, 6,143 once three AES50 link
 # states and two monitor sources were read, 6,167 once
-# each local socket's own mute was read, and it is 6,195 since the width of each bus,
-# Main and Matrix was read -- a
+# each local socket's own mute was read, 6,195 once the width of each bus,
+# Main and Matrix was read, and it is 6,197 since what each expansion bay holds
+# was read -- a
 # hand-maintained number that went stale every time the read changed, and
 # that never included the physical sockets at all. `read_addresses()` counts the
 # plan instead, for the exact flags this invocation is using.
@@ -2497,8 +2969,8 @@ def _watch_estimate(read_kwargs: dict, max_iterations: int | None,
     """The line `watch --console` prints before its first pass: how many
     addresses, how many requests, and how long that is on hardware.
 
-    A pass is a node-dump read by default -- 323
-    requests on a Compact, 235 between name refreshes, and
+    A pass is a node-dump read by default -- 325
+    requests on a Compact, 237 between name refreshes, and
     seconds rather than minutes -- so the gap BETWEEN passes is no
     longer negligible next to the pass itself, and a total that left it
     out would be wrong by half at the default two-second interval.
@@ -2553,6 +3025,10 @@ def watch_cmd(args: argparse.Namespace) -> int:
     except bundle.BundleError as exc:
         print(str(exc), file=sys.stderr)
         return 1
+    if getattr(args, "record_meters", None) and not args.console:
+        print("--record-meters records the console's meter stream, so it needs --console: "
+              "a state file or the Demo has no meters to record.", file=sys.stderr)
+        return 2
 
     watch_conditions_path = args.watch_conditions
     if not watch_conditions_path:
@@ -2671,7 +3147,8 @@ def watch_cmd(args: argparse.Namespace) -> int:
         # says so at INFO and carries on.
         from atoo.metering import with_clip_detection
 
-        state_provider, stop_listening = with_clip_detection(state_provider, args.console)
+        state_provider, stop_listening = with_clip_detection(
+            state_provider, args.console, record=getattr(args, "record_meters", None))
 
         max_iterations = args.count
         label = f"{args.console}:{args.port}"
@@ -3256,8 +3733,8 @@ def _say_plan_json_untouched(show, plan_path, *, modified: list | None = None) -
         return
     print(f"{bundle.PLAN} is unchanged -- only a build writes it. What is on this desk now is "
           f"recorded in its journal entry, which the next patch or amend of this desk reads; "
-          f"a full `atoo apply --show {show.directory}` would replace it, and says so "
-          "first.")
+          f"a full `atoo apply --show {show.directory}` would replace it, and warns "
+          "before it does.")
     if modified:
         print(f"  INFO not written, because each would change something already running: "
               f"{', '.join(modified)}.")
@@ -4312,6 +4789,22 @@ def patch_cmd(args: argparse.Namespace) -> int:
         compiled_by = f"--change-set {args.change_set}"
         for info in compile_infos:
             print(f"  INFO {info}")
+    if mode == "patch" and patch_engine.changes_nothing(change_set):
+        # An instruction that compiles to nothing was not carried out: the
+        # model judged it impossible and said so in its notes rather than
+        # writing it for the code to refuse (a send to a bus the desk does
+        # not have). Refused, with the model's own reason, never "nothing
+        # to add".
+        if console is not None:
+            console.close()
+        notes = [n for n in change_set.get("notes") or [] if isinstance(n, str) and n.strip()]
+        for note in notes:
+            print(f"  NOTE {note.strip()}")
+        print("\nRefusing to patch: the change, as compiled, adds, drops and edits nothing, "
+              "so it was not carried out" + (" -- the reason is the note above." if notes
+                                             else ". Say it again, more exactly.")
+              + " Nothing was written.", file=sys.stderr)
+        return 2
     change = None
     saved = None
     if mode == "patch":
@@ -4867,7 +5360,7 @@ def _add_patch_arguments(ap: argparse.ArgumentParser) -> None:
              "build expands them into a plan. Not needed as a rule: without it, the library "
              "the plan on the desk was built with (or the packaged starter presets, when "
              "its files match them), else [presets] default in ~/.atoo.config; an INFO "
-             "says which. With none, a change that names presets says so up front, as a "
+             "says which. With none, a change that names presets warns up front, as a "
              "WARNING, and its new strips are written without those presets' values.")
     _add_console_model_argument(ap)
     ap.add_argument(
@@ -4921,7 +5414,7 @@ PATCH_DESCRIPTION = (
     "add, what to drop, which named fields to set on things already on the desk,\n"
     "and a short name -- never a whole plan. Code merges it and\n"
     "refuses a reference to anything that does not exist (a send to a bus that is\n"
-    "neither on the desk nor added). Sockets the change names are honoured; others\n"
+    "neither on the desk nor added). Sockets the change names are honored; others\n"
     "are chosen, and each choice is said at INFO.\n"
     "\n"
     "Everything after that is amend's: new channels are placed on genuinely free\n"
@@ -4995,8 +5488,8 @@ AMEND_DESCRIPTION = (
     "\n"
     "The same operation covers a vocalist who has left and a set of delay speakers\n"
     "dropped from the rider. A channel the rebuild DROPPED is RETURNED TO FREE --\n"
-    "unpatched (OFF, as a full apply leaves a strip the plan does not use; an INFO\n"
-    "says so), left unmuted, its fader at -inf, and its name, colour and icon cleared on the strip\n"
+    "unpatched (OFF, as a full apply leaves a strip the plan does not use, with an\n"
+    "INFO), left unmuted, its fader at -inf, and its name, color and icon cleared on the strip\n"
     "and on the source socket -- only where the desk still reads as the strip your\n"
     "plan built: a strip somebody has renamed, repatched or named on its SOURCE\n"
     "socket since is reported and left exactly as it is, and so is one that did not\n"
@@ -5201,8 +5694,8 @@ def _add_verify_arguments(ap: argparse.ArgumentParser) -> None:
 
 CONSOLE_FLAG_HELP = (
     "Console IP address. Falls back to $ATOO_CONSOLE, then to a "
-    "[console] default in ~/.atoo.config -- a run that uses either says so "
-    "on stderr."
+    "[console] default in ~/.atoo.config -- a run that uses either prints "
+    "where the address came from, on stderr."
 )
 
 
@@ -5294,6 +5787,28 @@ def _add_ping_arguments(ap: argparse.ArgumentParser) -> None:
                     help="Per-request timeout in seconds (default: 1.0)")
 
 
+def _add_capture_arguments(ap: argparse.ArgumentParser) -> None:
+    """One source, a live desk or a `.snap`; where the show goes."""
+    ap.add_argument("--console", default=None, help=CONSOLE_FLAG_HELP)
+    ap.add_argument("--snap", default=None, metavar="FILE",
+                    help="Capture a .snap show file saved on the console instead of a live "
+                         "desk. Needs --console-model: a .snap does not say which WING wrote it.")
+    ap.add_argument("--console-model", choices=sorted(facts.CONSOLE_MODELS), default=None,
+                    help="Which WING the --snap came from. A live desk states its own model.")
+    ap.add_argument("--dir", default=None, metavar="DIR",
+                    help="The folder to make the show in (default: your Atoo folder, "
+                         "~/Documents/Atoo unless ~/.atoo.config's [workspace] says otherwise).")
+    ap.add_argument("--name", default=None,
+                    help="The show folder's name (default: the .snap's name, or the desk's "
+                         "model and today's date). A name already taken gets -2, -3.")
+    # See `_add_console_read_arguments` on why these default to None.
+    ap.add_argument("--port", type=int, default=None, help="Console OSC port (default: 2223)")
+    ap.add_argument("--timeout", type=float, default=None,
+                    help="Per-request timeout in seconds (default: 1.0)")
+    ap.add_argument("--no-progress", action="store_true",
+                    help="Do not print the progress line while reading the console.")
+
+
 def _add_audit_arguments(ap: argparse.ArgumentParser) -> None:
     _add_show_argument(ap)
     # Not `required=True` any more -- the environment or the
@@ -5381,7 +5896,7 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
         help="Seconds between reads (default: 2.0). Read-only polling -- WING's OSC offers only "
              "a single, network-wide event subscription that expires every 10 seconds, so "
              "nothing here pushes. Note this is the gap BETWEEN reads, not their period: one "
-             "read of a live console is 6,195 addresses, fetched by node dump in about 320 "
+             "read of a live console is 6,197 addresses, fetched by node dump in about 320 "
              "requests and ~5 seconds on a WING Compact, so at the default a pass starts "
              "every seven seconds or so. With --per-leaf a read is about two minutes and an "
              "interval this short changes almost nothing.",
@@ -5415,6 +5930,12 @@ def _add_watch_arguments(ap: argparse.ArgumentParser) -> None:
              "stop. Read-only: nothing is written to the desk, and no key is ever in it.",
     )
     ap.add_argument(
+        "--record-meters", default=None, metavar="FILE",
+        help="With --console: write every meter packet the console sends to FILE as it comes, "
+             "with its time (JSON lines), so the clips a watch reported can be replayed and "
+             "checked later exactly as the desk sent them. Read-only, like the rest of watch.",
+    )
+    ap.add_argument(
         "--watch-conditions", default=None,
         help="Path to a JSON file of operator-authored watch conditions -- alerts on top "
              "of the built-in structural rules, e.g. \"the crowd mic must never be unmuted.\" "
@@ -5438,7 +5959,7 @@ LESSONS_DESCRIPTION = (
     "and verify warnings -- grouped by topic, most-recurring first. It opens with\n"
     "where each build's thinking went: every role's share of time spent on\n"
     "mechanical work, conventions questions, the plan format itself, writing the\n"
-    "reply, and judgement. Read-only, no model call.\n"
+    "reply, and judgment. Read-only, no model call.\n"
     "\n"
     "  atoo lessons --show my-show\n"
     "  atoo lessons --show my-show --last 2  # only the 2 newest\n"
@@ -5468,7 +5989,7 @@ def _add_lessons_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--git", type=int, default=0, metavar="N",
                     help="Also read the last N committed versions of plan.json from git "
                          "history, if the bundle is inside a git repository -- otherwise "
-                         "this says so and reads the current plan only. Useful for an older "
+                         "this notes it and reads the current plan only. Useful for an older "
                          "plan that still carries its build log inline.")
     ap.add_argument("--json", action="store_true",
                     help="Machine-readable output instead of the plain-text report.")
@@ -5515,7 +6036,7 @@ PRESETS_DESCRIPTION = (
     "\n"
     "It also reports two things that are otherwise invisible until some plan happens\n"
     "to name the preset carrying them: a preset with a field this tool does not\n"
-    "recognise or a sidechain keyed off another channel, and two files claiming the\n"
+    "recognize or a sidechain keyed off another channel, and two files claiming the\n"
     "same name. Neither stops a build -- the newest of two duplicates wins -- so this\n"
     "exits 0 either way. Nothing is read from a console and nothing is written.\n"
     "\n"
@@ -5525,13 +6046,44 @@ PRESETS_DESCRIPTION = (
     "each preset's processing values are put INTO the plan, keyed by the address each\n"
     "is written to, so the plan says exactly what `apply` will write. Where the plan\n"
     "states a value of its own at the same address (a high-pass, an EQ band), the\n"
-    "plan wins, and says so. Processing only -- a preset never writes sends, main\n"
+    "plan wins, with an INFO. Processing only -- a preset never writes sends, main\n"
     "routing, fader, mute, the input patch or tags. A bus preset also loads the\n"
     "effect it inserts into an FX engine, chosen by code (reverbs and delays on 1-8,\n"
     "the preset's own engine when it is free) and announced. Preset writes are read\n"
     "back like every other write; they have not yet been confirmed on a desk."
 )
 
+
+CAPTURE_DESCRIPTION = (
+    "Capture a desk you didn't build as a show you can watch and edit.\n"
+    "\n"
+    "  atoo capture --console 192.0.2.148\n"
+    "  atoo capture --snap CCC-20261024.snap --console-model wing-full\n"
+    "\n"
+    "Reads the desk, or a .snap saved on it, and makes a show folder in your Atoo\n"
+    "folder: input.csv (one row per input, with its channel, DCAs and mute groups),\n"
+    "busses.csv (one row per bus, Main and Matrix: what feeds it, where it goes, its\n"
+    "effects), outputs.csv (one row per output socket the desk patches: a split, a\n"
+    "recording feed, a bus's side), user.csv (only when the desk uses one: each USR\n"
+    "slot a channel or an output reads, and what it takes), plan.json (the desk as\n"
+    "it is: patch, routing, membership and widths, not faders or EQ), an empty\n"
+    "watch.json, and the snapshot under captures/.\n"
+    "\n"
+    "No model, and nothing is written to the desk. Every name is written in: a\n"
+    "channel with no name of its own takes its source's. What the desk does not\n"
+    "state is decided and said, at INFO: a category from the channel's first DCA,\n"
+    "a type from its source, the role fx for a bus whose effects are all reverbs,\n"
+    "delays or modulation set fully wet. Every send is in the plan, on its source,\n"
+    "with its tap: a channel sent to a Matrix, a bus sent to a bus. Every effect\n"
+    "inserted on a channel, bus, Main or Matrix is in the plan with its engine's\n"
+    "settings (from a live desk, one more request per engine after the desk's read),\n"
+    "so apply loads it back. What the plan cannot hold yet (a GRP-mode tap) stays in\n"
+    "the sheets and the snapshot, and is listed too.\n"
+    "\n"
+    "Then watch it with the show: atoo watch --show DIR --console ADDRESS, and edit\n"
+    "its sheets in `atoo ui`, Build step 04, whose Save updates the plan. The UI's\n"
+    "New show... > From a desk does the same as this command."
+)
 
 PING_DESCRIPTION = (
     "Check that a console is reachable, and say which one answered.\n"
@@ -5545,7 +6097,7 @@ PING_DESCRIPTION = (
     "\n"
     "It also prints the model the desk states for itself, which is what `atoo\n"
     "apply` cross-checks a plan against before writing anything -- worth seeing\n"
-    "before an apply rather than during one. A model it does not recognise is\n"
+    "before an apply rather than during one. A model it does not recognize is\n"
     "printed as the desk spelled it: that is the string to report."
 )
 
@@ -5624,8 +6176,8 @@ WATCH_DESCRIPTION = (
     "With --console it also listens to the console's meters (a read-only native connection on\n"
     "port 2222, one of its 24 client slots) and raises L003 Clipped, an ERROR, for a channel,\n"
     "aux, bus, main or matrix that clips (-0.5 dBFS) for 60 seconds after its last clip. A clip\n"
-    "ends once the strip has been below -3 dBFS for 200 ms. If the connection cannot be had, or\n"
-    "the meter data stops, it says so at INFO (W002) and carries on.\n"
+    "ends once the strip has been below -0.5 dBFS for 200 ms. If the connection cannot be had, or\n"
+    "the meter data stops, it notes it at INFO (W002) and carries on.\n"
     "\n"
     "A channel on its alternate input (C004) and the global alternate switch (C005) are\n"
     "warnings, since a show never starts on them. During a virtual soundcheck they are\n"
@@ -5647,25 +6199,29 @@ WATCH_DESCRIPTION = (
     "is mono or stereo where the plan states the other (CV020), talkback that reaches\n"
     "some destinations but not a monitor mix the plan builds (CV021; CV022 is the INFO\n"
     "naming the busses it took for monitor mixes), and an\n"
-    "FX bus's effect bypassed or changed (CV015). The plan's output\n"
-    "sockets are read too, and the outputs of any AES50 stage box the desk reports.\n"
+    "effect the plan inserts bypassed or changed (CV015). The plan's output\n"
+    "sockets are read too. With or without a plan, so are the outputs of any AES50\n"
+    "stage box, and of any module or card, the desk reports.\n"
     "\n"
     "--watch-conditions PATH adds operator-authored alerts on top of the built-in\n"
-    "structural rules -- deterministic, structured, no AI in the runtime path. A JSON file of:\n"
+    "structural rules -- deterministic, structured, no AI in the runtime path. Each\n"
+    "condition says when to alert: it fires while it is true. A JSON file of:\n"
     "\n"
-    "  { \"watch_conditions\": [\n"
-    "      { \"id\": \"crowd-mic-never-muted\",\n"
-    "        \"description\": \"Crowd Mic must never be muted\",\n"
+    "  { \"version\": 2, \"watch_conditions\": [\n"
+    "      { \"id\": \"crowd-mic-muted\",\n"
+    "        \"description\": \"Crowd Mic is muted\",\n"
     "        \"channel\": \"Crowd Mic\", \"field\": \"muted\", \"operator\": \"==\",\n"
-    "        \"value\": false, \"severity\": \"error\" } ] }\n"
+    "        \"value\": true, \"severity\": \"error\" } ] }\n"
     "\n"
     "  atoo watch --console 203.0.113.50 --watch-conditions my_show.watch.json\n"
     "\n"
-    "Fields: \"muted\" (bool), \"fader_db\" (number), and -- asking a yes/no question, so \"==\"\n"
-    "asserts it holds and \"!=\" asserts it does not -- \"dca\" and \"mute_group\" (a group NAME,\n"
-    "e.g. \"Drums\") and \"patch\" (a socket written the way an input list's patch column\n"
-    "writes one -- \"AES50-A 12\", \"LCL 3\", \"AES 1\", \"CRD 64\"). Those three take \"==\"/\"!=\"\n"
-    "only. Note \"AES 1\" (AES/EBU) and \"AES50-A 1\" are different sockets.\n"
+    "Fields: \"muted\" (bool), \"fader_db\" (number), \"dca\" and \"mute_group\" (a group NAME,\n"
+    "e.g. \"Drums\"; \"not in\" alerts when the strip is not in it, \"in\" when it is) and\n"
+    "\"patch\" (a socket written the way an input list's patch column writes one --\n"
+    "\"AES50-A 12\", \"LCL 3\", \"AES 1\", \"CRD 64\"; \"!=\" alerts when it is patched anywhere\n"
+    "else, \"==\" when it is patched there). Note \"AES 1\" (AES/EBU) and \"AES50-A 1\" are\n"
+    "different sockets. A file without \"version\": 2 was written when a condition said\n"
+    "what should hold, and is refused with how to convert it.\n"
     "\n"
     "Sends and 48V: \"send_on\" (bool), \"send_db\" (number) and \"send_mode\" (\"pre\", \"post\" or\n"
     "\"group\") are about the channel's send to the bus a \"bus\" key names -- written like\n"
@@ -5673,8 +6229,8 @@ WATCH_DESCRIPTION = (
     "\"phantom\" (bool) is the 48V on the socket the strip is patched to (and the next, for\n"
     "a stereo source).\n"
     "\n"
-    "  { \"id\": \"kick-stays-in-drums\", \"description\": \"Kick must stay in the Drums DCA\",\n"
-    "    \"channel\": \"Kick\", \"field\": \"dca\", \"operator\": \"==\", \"value\": \"Drums\",\n"
+    "  { \"id\": \"kick-out-of-drums\", \"description\": \"Kick is not in the Drums DCA\",\n"
+    "    \"channel\": \"Kick\", \"field\": \"dca\", \"operator\": \"not in\", \"value\": \"Drums\",\n"
     "    \"severity\": \"warning\" }\n"
     "\n"
     "\"channel\" is a channel's or aux's name, matched case-insensitively; a name matching zero\n"
@@ -5852,21 +6408,16 @@ def ui_cmd(args: argparse.Namespace) -> int:
     # `http://127.0.0.1:0`, an address nothing can open.
     port = sock.getsockname()[1]
 
-    # One page -- Build, Apply and Watch all at `/`, so
-    # one URL is the whole announcement. (`/app`, where the shell lived
-    # before Watch moved in, redirects here.)
     # Which copy of Atoo this is comes first: it is what a tester running a
-    # branch checks before reading anything else.
-    print(app.state.install["line"])
-    print(f"Atoo: http://{args.host}:{port} -- Build, Apply and Watch (Ctrl-C to stop)")
-    # This said "Read-only" until the shell's Apply screen shipped. It is the first thing a run prints about itself, so it is
-    # where a claim that stopped being true had to be corrected -- and
-    # what replaces it has to be narrower, not vaguer: which mode writes,
-    # and what has to be true before it does.
-    print("Session-based: closing this stops whatever it was watching, and nothing is kept "
-          "between runs.")
-    print("Watch and Build never write to a console. The shell's Apply mode is the "
-          "one screen that does, and only with Arm ticked.")
+    # branch checks before reading anything else. Short since 2026-10-27
+    # (the maintainer asked for the start to be three lines: the version and
+    # where it runs from, the console, the working folder); the branch and
+    # commit are `atoo --version`'s and the page's.
+    print(app.state.install["short"])
+    # The page opens in the browser by itself; with --no-browser this line
+    # is the only place its address is said, so it stays for that case.
+    if args.no_browser:
+        print(f"Atoo: http://{args.host}:{port} (Ctrl-C to stop)")
     if plan is not None:
         print(f"Plan: {args.plan} -- on Build step 04")
     if watch_conditions_path:
@@ -5876,15 +6427,12 @@ def ui_cmd(args: argparse.Namespace) -> int:
     # and this line is the same announcement every other command makes
     # when it is pointed somewhere the command line never named.
     if console_defaults["address"]:
-        print(f"Console: {console_defaults['address']} from "
-              f"{console_defaults['address_source']} -- the bundle bar shows it, and its "
-              f"Change… sets another without a restart.")
+        print(f"Console: {console_defaults['address']} from {console_defaults['address_source']}")
     else:
         print("Console: none configured -- set one in the bundle bar (Change…) before "
               "Ping, Apply or a live Watch.")
     if workspace is not None:
-        print(f"Working folder: {config_value_for(workspace)} -- Open… and New show… "
-              "start here.")
+        print(f"Working folder: {config_value_for(workspace)}")
     elif show is None:
         # The judgement call: say how to get started, once, on
         # stdout. Not stderr -- nothing is wrong, and nothing is refused.
@@ -5985,15 +6533,14 @@ def _can_open_browser() -> bool:
 def _open_browser(url: str) -> None:
     import webbrowser
     if not _can_open_browser():
-        print("(No display here, so no browser was opened -- open the address above "
-              "yourself.)", flush=True)
+        print(f"No display here, so no browser was opened -- open {url} yourself.", flush=True)
         return
     try:
         opened = webbrowser.open(url)
     except Exception:  # noqa: BLE001 -- a browser that will not start is not a server failure
         opened = False
     if not opened:
-        print("(Couldn't open a browser -- open the address above yourself.)", flush=True)
+        print(f"Couldn't open a browser -- open {url} yourself.", flush=True)
 
 
 def _open_browser_when_ready(url: str, host: str, port: int, instance: str,
@@ -6057,7 +6604,7 @@ INIT_DESCRIPTION = (
     "\n"
     "It never overwrites. A file already there is left alone and reported; a config\n"
     "value already set to something else is left alone, and the line says what init\n"
-    "would have set. Run twice, the second run changes nothing and says so. --force\n"
+    "would have set. Run twice, the second run changes nothing and reports that. --force\n"
     "replaces those config values, and starter files that are UNCHANGED copies of an\n"
     "older starter set (init records what it copied in .atoo-starter.json) --\n"
     "never a file you have edited. A demo-show folder already there is left whole,\n"
@@ -6239,7 +6786,7 @@ UI_DESCRIPTION = (
 def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
     _add_console_model_argument(
         ap, extra=" With --show, a show that has been built before takes the model "
-                  "from its own plan.json and says so; this flag overrides that.")
+                  "from its own plan.json, with an INFO; this flag overrides that.")
     _add_show_argument(ap)
     ap.add_argument(
         "--input", default=None,
@@ -6264,8 +6811,10 @@ def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
         help="Run a second model pass in a separate reviewer role over the generated plan, "
              "looking for omissions first, then at the conventions text itself (every such "
              "finding must quote your files, and is downgraded to a note when it does not). "
-             "Its findings are printed, "
-             "never enforced -- only the deterministic verifier gates anything.")
+             "It reads the first plan, before the fix-up round: an omission quoting a line of "
+             "your instructions or conventions exactly goes back to the model in that round. "
+             "Its other findings are printed, never enforced -- only the deterministic "
+             "verifier gates anything.")
     ap.add_argument(
         "--no-constrain", action="store_true",
         help="Don't constrain decoding to the reply schema (the shorter form the model "
@@ -6289,7 +6838,7 @@ def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
     ap.add_argument(
         "--no-category-rules", action="store_true",
         help="Ignore the resolved conventions' Category table: code writes no per-category "
-             "channel setting (colour, HPF, DCA, mute group, gain, trim, fader, Main routing) "
+             "channel setting (color, HPF, DCA, mute group, gain, trim, fader, Main routing) "
              "and the generator writes every one. Equivalent to "
              "ATOO_CATEGORY_RULES=0. For comparing builds with and without it; the plan "
              "records which at meta.resolved_conventions.category_table.")
@@ -6337,7 +6886,11 @@ BUILD_DESCRIPTION = (
     "\n"
     "A show bundle (--show DIR) supplies input.csv and instructions.md\n"
     "from one directory and writes plan.json back into it. An explicit flag always wins\n"
-    "over the bundle.\n"
+    "over the bundle. A bundle's busses.csv (the bus sheet: one row per bus, Main and\n"
+    "Matrix), outputs.csv (one row per output socket: what feeds it) and user.csv (one\n"
+    "row per USR slot: what it takes) are laid onto the plan, in that order: a filled\n"
+    "cell wins over the conventions, each change is a note, and a cell that cannot\n"
+    "work on the desk stops the build, naming it.\n"
     "\n"
     "A bundle build also DRAFTS that bundle's watch.json -- the short list of\n"
     "things worth an alert if they move mid-show. Drafted conditions are marked\n"
@@ -6362,15 +6915,15 @@ BUILD_DESCRIPTION = (
     "with every open question marked \"Decided:\". When its fingerprint matches (the\n"
     "conventions, the domain knowledge and the resolve prompt are unchanged), the generator\n"
     "and the fix-up read it IN PLACE OF both. When it is missing or stale, the build makes\n"
-    "it first -- one extra model call, role `resolve` -- and says so. The critic still reads\n"
+    "it first -- one extra model call, role `resolve` -- and notes it. The critic still reads\n"
     "your raw conventions. --no-resolve (or ATOO_RESOLVE=0) turns this off; the plan\n"
     "records which it was at meta.resolved_conventions.\n"
     "\n"
-    "CATEGORY TABLE. The resolved file ends with a Category table: each category's colour,\n"
+    "CATEGORY TABLE. The resolved file ends with a Category table: each category's color,\n"
     "HPF, DCA, mute group, gain, trim, fader and Main routing, restating its prose. Code\n"
     "writes those values on every channel built from an input-list row of that category,\n"
     "wherever the generator's reply leaves them out -- a value the reply writes wins -- and\n"
-    "says so, one note per category. A channel the instructions ask for (Talkback) gets\n"
+    "notes it, one note per category. A channel the instructions ask for (Talkback) gets\n"
     "nothing from it. --no-category-rules (or ATOO_CATEGORY_RULES=0) turns it off.\n"
     "\n"
     "An HTML comment, <!-- like this -->, inline or across lines, is a note to yourself:\n"
@@ -6389,12 +6942,12 @@ BUILD_DESCRIPTION = (
     "show never uses -- and reports them, quoting the lines; a quote that is not really in\n"
     "your files is marked untrusted (meta.build_findings).\n"
     "\n"
-    "What it tells you goes to stderr, severity-labelled, worst first:\n"
+    "What it tells you goes to stderr, severity-labeled, worst first:\n"
     "  ERROR    something you asked for will NOT happen -- read this before applying\n"
     "  WARNING  a default was applied, or a rule matched nothing\n"
     "  NOTE     a choice made where your conventions were silent, or nothing to do;\n"
     "           said out loud rather than hidden, and never blocks\n"
-    "A finding that is a limitation of Atoo itself says so -- editing your\n"
+    "A finding that is a limitation of Atoo itself tells you -- editing your\n"
     "conventions file will not fix it. The code in parentheses is\n"
     "stable across rewordings; quote it in a bug report."
 )
@@ -6408,13 +6961,13 @@ APPLY_DESCRIPTION = (
     "\n"
     "The first form changes nothing: it reads the console's current value for every\n"
     "address the plan would touch and shows you the before/after. Writing requires\n"
-    "--confirm. It reads each address again just before writing it and sends only\n"
+    "--confirm. It reads every address again before its writes and sends only\n"
     "those that differ, so the number written is the number the preview said would\n"
     "change (unless the console moved in between); each is journalled with its prior\n"
     "value so it can be reversed.\n"
     "\n"
     "Every address written is read back afterwards -- remote console writes can fail\n"
-    "silently, so an acknowledgement is not proof. Anything that didn't land is\n"
+    "silently, so an acknowledgment is not proof. Anything that didn't land is\n"
     "reported by address, and the command exits 2 -- the code build, verify, compare\n"
     "and apply use for \"it ran and found problems\", as against 1 when the command\n"
     "could not run at all. audit and watch report their own findings\n"
@@ -6516,7 +7069,7 @@ UNDO_DESCRIPTION = (
     "at a new address is the same desk (said at INFO), and a different serial is\n"
     "refused even at the same address, naming both. There is no override. A desk that\n"
     "states no serial is matched by its address. An entry recorded before entries\n"
-    "named their desk is taken to be this desk's, and undo says so.\n"
+    "named their desk is taken to be this desk's, and undo notes it.\n"
     "\n"
     "An undo reverses OUR RUN and nothing else -- which is what a console snapshot\n"
     "cannot do. A snapshot puts the whole desk back to a moment, throwing away every\n"
@@ -6572,7 +7125,7 @@ RESOLVE_DESCRIPTION = (
     "\n"
     "One model call (role `resolve`) reads your conventions file and Atoo's domain\n"
     "knowledge and writes <conventions-stem>.resolved.md beside the conventions file:\n"
-    "plain Markdown that states, per category, the HPF, colour, DCA, mute group, monitor\n"
+    "plain Markdown that states, per category, the HPF, color, DCA, mute group, monitor\n"
     "and bus sends, Main routing, gain, trim and phantom; the busses, outputs, groups,\n"
     "head-amp scope, faders and channel order; every open question settled once as a\n"
     "\"Decided:\" line with its reason; and every conventions line that yields no rule,\n"
@@ -6592,7 +7145,7 @@ RESOLVE_DESCRIPTION = (
     "it is empty or none of its citations is found.\n"
     "\n"
     "The file ends with a Category table: one JSON object per category restating its\n"
-    "colour, HPF, DCA, mute group, gain, trim, fader and Main routing, which the build\n"
+    "color, HPF, DCA, mute group, gain, trim, fader and Main routing, which the build\n"
     "writes on every channel of that category the generator leaves them out of. Code\n"
     "checks its shape; an invalid table is a WARNING and is not applied. --check says\n"
     "whether it is valid.\n"
@@ -6842,6 +7395,16 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
     _add_ping_arguments(ping_ap)
     ping_ap.set_defaults(announce_install=True, func=ping_cmd)
 
+    capture_ap = sub.add_parser(
+        "capture",
+        help="Capture a desk, or a .snap, as a show: input.csv, busses.csv, outputs.csv, "
+             "user.csv when the desk uses a USR slot, and a plan of the desk as it is -- no model, nothing written to the desk",
+        description=CAPTURE_DESCRIPTION,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_capture_arguments(capture_ap)
+    capture_ap.set_defaults(announce_install=True, func=capture_cmd)
+
     audit_ap = sub.add_parser(
         "audit",
         help="Audit a console's live state against structural rules, and trace signal paths",
@@ -6902,6 +7465,7 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
     return ap, {
         "init": init_ap, "build": build_ap, "verify": verify_ap, "compare": compare_ap, "apply": apply_ap,
         "patch": patch_ap, "amend": amend_ap, "undo": undo_ap, "ping": ping_ap, "audit": audit_ap,
+        "capture": capture_ap,
         "watch": watch_ap,
         "presets": presets_ap, "ui": ui_ap, "lessons": lessons_ap, "resolve": resolve_ap,
     }

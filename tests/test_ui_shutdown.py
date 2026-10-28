@@ -41,11 +41,12 @@ def ui_server(tmp_path):
            "PYTHONPATH": os.pathsep.join(filter(None, [repo, os.environ.get("PYTHONPATH")]))}
     proc = subprocess.Popen(
         [sys.executable, "-c", "import sys; from atoo.cli import main; sys.exit(main())",
-         "ui", "--port", "0"],
+         "ui", "--port", "0", "--no-browser"],
         cwd=tmp_path, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
     try:
-        # The first line says which copy of Atoo this is; the banner is the next.
+        # The first line says which copy of Atoo this is; with --no-browser the
+        # address is the next (a start that opens the browser does not print it).
         line = proc.stdout.readline() + proc.stdout.readline()
         match = re.search(r"http://([\d.]+):(\d+)", line)
         assert match, f"no URL banner from `atoo ui`: {line!r}"

@@ -21,16 +21,16 @@ from atoo.watch_conditions import (
 
 
 def _doc(*conditions):
-    return json.dumps({"watch_conditions": list(conditions)})
+    return json.dumps({"version": 2, "watch_conditions": list(conditions)})
 
 
 def _condition(**overrides):
     base = {
-        "id": "crowd-mic-never-muted",
+        "id": "crowd-mic-muted",
         "description": "Crowd Mic must never be muted",
         "channel": "Crowd Mic",
         "field": "muted",
-        "operator": "==",
+        "operator": "!=",
         "value": False,
         "severity": "error",
     }
@@ -44,7 +44,7 @@ def _condition(**overrides):
 def test_valid_file_loads_correctly():
     conditions = parse_watch_conditions(_doc(_condition()))
     assert len(conditions) == 1
-    assert conditions[0]["id"] == "crowd-mic-never-muted"
+    assert conditions[0]["id"] == "crowd-mic-muted"
 
 
 def test_missing_file_raises_oserror(tmp_path):
@@ -64,7 +64,7 @@ def test_missing_watch_conditions_key_is_a_clear_error():
 
 def test_watch_conditions_not_a_list_is_a_clear_error():
     with pytest.raises(WatchConditionsError, match="must be a list"):
-        parse_watch_conditions(json.dumps({"watch_conditions": {"id": "x"}}), source="test.json")
+        parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": {"id": "x"}}), source="test.json")
 
 
 def test_unknown_field_is_a_clear_error():
@@ -83,7 +83,7 @@ def test_invalid_operator_is_a_clear_error():
 
 def test_muted_with_numeric_operator_is_a_clear_error():
     with pytest.raises(WatchConditionsError, match="only supports"):
-        parse_watch_conditions(_doc(_condition(field="muted", operator=">", value=True)))
+        parse_watch_conditions(_doc(_condition(field="muted", operator="<=", value=True)))
 
 
 @pytest.mark.parametrize("op", ["<", "<=", ">", ">="])
@@ -127,7 +127,7 @@ def test_muted_value_must_be_bool():
 def test_fader_db_value_must_be_numeric():
     with pytest.raises(WatchConditionsError, match="numeric"):
         parse_watch_conditions(_doc(_condition(
-            field="fader_db", operator="==", value="loud", channel="Crowd Mic",
+            field="fader_db", operator="!=", value="loud", channel="Crowd Mic",
         )))
 
 
@@ -135,7 +135,7 @@ def test_fader_db_rejects_bool_value():
     # bool is a subclass of int in Python -- must not sneak past the
     # "numeric" check for fader_db.
     with pytest.raises(WatchConditionsError, match="numeric"):
-        parse_watch_conditions(_doc(_condition(field="fader_db", operator="==", value=True)))
+        parse_watch_conditions(_doc(_condition(field="fader_db", operator="!=", value=True)))
 
 
 def test_duplicate_ids_are_a_clear_error():
@@ -159,7 +159,7 @@ def test_muted_condition_fires_when_channel_is_muted():
     findings = rules[0].check(state)
     assert len(findings) == 1
     f = findings[0]
-    assert f.rule_id == "WATCH:crowd-mic-never-muted"
+    assert f.rule_id == "WATCH:crowd-mic-muted"
     assert f.severity == Severity.ERROR
     assert f.category == "watch"
     assert "Crowd Mic" in f.detail
@@ -174,7 +174,7 @@ def test_muted_condition_does_not_fire_when_channel_is_not_muted():
 def test_fader_db_condition_fires_on_mismatch():
     cond = _condition(
         id="crowd-mic-fader-down", description="Crowd Mic fader must be at floor",
-        field="fader_db", operator="==", value=-144.0, severity="warning",
+        field="fader_db", operator="!=", value=-144.0, severity="warning",
     )
     state = ConsoleState({"/ch/1/name": "Crowd Mic", "/ch/1/fdr": -20.0})
     rules = build_watch_rules([cond])
@@ -186,7 +186,7 @@ def test_fader_db_condition_fires_on_mismatch():
 def test_fader_db_condition_does_not_fire_when_matching():
     cond = _condition(
         id="crowd-mic-fader-down", description="Crowd Mic fader must be at floor",
-        field="fader_db", operator="==", value=-144.0, severity="warning",
+        field="fader_db", operator="!=", value=-144.0, severity="warning",
     )
     state = ConsoleState({"/ch/1/name": "Crowd Mic", "/ch/1/fdr": -144.0})
     rules = build_watch_rules([cond])
@@ -242,7 +242,7 @@ def _member_condition(**overrides):
         "description": "Kick must stay in the Drums DCA",
         "channel": "Kick",
         "field": "dca",
-        "operator": "==",
+        "operator": "not in",
         "value": "Drums",
         "severity": "warning",
     }
@@ -275,7 +275,7 @@ def test_dca_membership_fires_on_an_untagged_channel():
 def test_dca_non_membership_fires_when_channel_is_a_member():
     cond = _member_condition(
         id="kick-out-of-fx", description="Kick must not be in the FX DCA",
-        operator="!=", value="FX",
+        operator="==", value="FX",
     )
     state = ConsoleState({
         "/ch/1/name": "Kick", "/ch/1/tags": "#D2",
@@ -287,7 +287,7 @@ def test_dca_non_membership_fires_when_channel_is_a_member():
 
 
 def test_dca_non_membership_does_not_fire_when_channel_is_not_a_member():
-    cond = _member_condition(operator="!=", value="FX")
+    cond = _member_condition(operator="==", value="FX")
     state = ConsoleState({
         "/ch/1/name": "Kick", "/ch/1/tags": "#D1",
         "/dca/1/name": "Drums", "/dca/2/name": "FX",
@@ -298,7 +298,7 @@ def test_dca_non_membership_does_not_fire_when_channel_is_not_a_member():
 def test_mute_group_membership_reads_the_mgrp_tag():
     cond = _member_condition(
         id="kick-in-band-mutes", description="Kick must be in the Band mute group",
-        field="mute_group", value="Band",
+        field="mute_group", operator="not in", value="Band",
     )
     in_group = ConsoleState({
         "/ch/1/name": "Kick", "/ch/1/tags": "#M3",
@@ -349,7 +349,7 @@ def _patch_condition(**overrides):
         "description": "Kick must stay patched to LCL 5",
         "channel": "Kick",
         "field": "patch",
-        "operator": "==",
+        "operator": "!=",
         "value": "LCL 5",
         "severity": "error",
     }
@@ -395,7 +395,7 @@ def test_patch_condition_with_unread_patch_is_no_finding_no_crash():
 def test_patch_non_membership_fires_when_patched_there():
     cond = _patch_condition(
         id="kick-off-lcl1", description="Kick must not be on LCL 1",
-        operator="!=", value="LCL 1",
+        operator="==", value="LCL 1",
     )
     state = ConsoleState({
         "/ch/1/name": "Kick", "/ch/1/in/conn/grp": "LCL", "/ch/1/in/conn/in": 1,
@@ -453,7 +453,9 @@ def test_aes_ebu_and_aes50_are_not_the_same_socket():
 @pytest.mark.parametrize("operator", [">", "<", ">=", "<="])
 def test_relational_fields_reject_ordering_operators(field, operator):
     value = "LCL5" if field == "patch" else "Drums"
-    with pytest.raises(WatchConditionsError, match="yes/no question"):
+    # dca and mute_group take `in`/`not in`; patch takes == and !=.
+    with pytest.raises(WatchConditionsError,
+                       match="yes/no question|takes 'in' or 'not in'"):
         parse_watch_conditions(_doc(_condition(
             field=field, operator=operator, value=value,
         )))
@@ -463,7 +465,7 @@ def test_relational_fields_reject_ordering_operators(field, operator):
 @pytest.mark.parametrize("value", [1, True, None, "", "   "])
 def test_group_fields_need_a_non_empty_string_name(field, value):
     with pytest.raises(WatchConditionsError, match="group NAME"):
-        parse_watch_conditions(_doc(_condition(field=field, value=value)))
+        parse_watch_conditions(_doc(_condition(field=field, operator="not in", value=value)))
 
 
 @pytest.mark.parametrize("value", [
@@ -484,8 +486,8 @@ def test_all_five_fields_load():
     conditions = parse_watch_conditions(_doc(
         _condition(id="a", field="muted", value=False),
         _condition(id="b", field="fader_db", value=-144.0),
-        _condition(id="c", field="dca", value="Drums"),
-        _condition(id="d", field="mute_group", value="Band"),
+        _condition(id="c", field="dca", operator="not in", value="Drums"),
+        _condition(id="d", field="mute_group", operator="in", value="Band"),
         _condition(id="e", field="patch", value="LCL 5"),
     ))
     assert [c["field"] for c in conditions] == [

@@ -30,9 +30,9 @@ from atoo import watch_conditions as wc  # noqa: E402
 from atoo.webui import create_app  # noqa: E402
 
 WATCH_JSON = {
-    "watch_conditions": [
+    "version": 2, "watch_conditions": [
         {"id": "kick-unmuted", "description": "The kick drives the room.",
-         "channel": "Kick", "field": "muted", "operator": "==", "value": False,
+         "channel": "Kick", "field": "muted", "operator": "!=", "value": False,
          "severity": "error"},
     ],
 }
@@ -127,16 +127,21 @@ def test_the_page_authors_a_send_condition_and_saves_its_bus(served_show, show):
             assert row.locator(".wc-bus").count() == 1
             assert row.locator(".wc-value-checkbox").count() == 1
             assert row.locator(".wc-operator option").all_inner_texts() == ["==", "!="]
-            row.locator(".wc-id").fill("click-in-iem")
-            row.locator(".wc-description").fill("The click stays on in every IEM")
+            row.locator(".wc-id").fill("click-off-in-iem")
+            row.locator(".wc-description").fill("The click is off in an IEM")
             row.locator(".wc-channel").fill("Click")
-            row.locator(".wc-value-checkbox").check()
+            # It alerts when the send is off.
+            row.locator(".wc-value-checkbox").uncheck()
 
             # A bus the loader would refuse is outlined, with its reason.
             row.locator(".wc-bus").fill("BUS 17")
             row.locator(".wc-bus").blur()
-            page.wait_for_selector("#wc-body tr:nth-child(2) .wc-bus.is-invalid")
-            assert "BUS 17 does not exist" in row.locator(".wc-bus + .wc-cell-error").inner_text()
+            # The empty cell is already invalid ("needs a 'bus' key"), so wait
+            # for this value's own reason, not for the outline.
+            page.wait_for_function(
+                "(document.querySelector('#wc-body tr:nth-child(2) .wc-bus + .wc-cell-error')"
+                " || {}).innerText?.includes('BUS 17 does not exist')")
+            assert row.locator(".wc-bus").get_attribute("class").split().count("is-invalid") == 1
             # ... and a loose spelling of a good one is written back once left.
             row.locator(".wc-bus").fill("bus5-8")
             row.locator(".wc-bus").blur()
@@ -155,6 +160,15 @@ def test_the_page_authors_a_send_condition_and_saves_its_bus(served_show, show):
             row.locator(".wc-field").select_option("send_mode")
             row = page.locator("#wc-body tr").nth(1)
             assert row.locator(".wc-value-select option").all_inner_texts() == ["pre", "post", "group"]
+            # Membership in words: not in / in, and patch == / !=.
+            row.locator(".wc-field").select_option("dca")
+            row = page.locator("#wc-body tr").nth(1)
+            assert row.locator(".wc-operator option").all_inner_texts() == ["not in", "in"]
+            assert row.locator(".wc-operator").input_value() == "not in"
+            row.locator(".wc-field").select_option("patch")
+            row = page.locator("#wc-body tr").nth(1)
+            assert row.locator(".wc-operator option").all_inner_texts() == ["==", "!="]
+            assert page.locator("#wc-table thead th").nth(3).inner_text().lower() == "alert when"
             row.locator(".wc-field").select_option("send_on")
 
             # 48V has no bus: the box goes, and so does the key.
@@ -168,7 +182,7 @@ def test_the_page_authors_a_send_condition_and_saves_its_bus(served_show, show):
             row.locator(".wc-bus").blur()
             page.wait_for_function(
                 "!document.querySelector('#wc-body tr:nth-child(2) .wc-bus.is-invalid')")
-            row.locator(".wc-value-checkbox").check()
+            row.locator(".wc-value-checkbox").uncheck()
 
             page.wait_for_selector("#wc-save-btn:not([disabled])")
             page.click("#wc-save-btn")
@@ -176,7 +190,7 @@ def test_the_page_authors_a_send_condition_and_saves_its_bus(served_show, show):
         finally:
             browser.close()
     saved = json.loads((show / "watch.json").read_text())["watch_conditions"]
-    assert saved[1] == {"id": "click-in-iem", "description": "The click stays on in every IEM",
-                        "channel": "Click", "field": "send_on", "operator": "==", "value": True,
+    assert saved[1] == {"id": "click-off-in-iem", "description": "The click is off in an IEM",
+                        "channel": "Click", "field": "send_on", "operator": "==", "value": False,
                         "severity": "warning", "bus": "BUS 5-8"}
     wc.load_watch_conditions(show / "watch.json")

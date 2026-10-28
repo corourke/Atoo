@@ -51,12 +51,12 @@ from atoo.webui import create_app  # noqa: E402
 LOCAL = dict(client=("127.0.0.1", 50123), base_url="http://127.0.0.1:8420")
 
 COND = {"id": "kick-muted", "description": "Kick muted", "channel": "Kick",
-        "field": "muted", "operator": "==", "value": True, "severity": "warning"}
+        "field": "muted", "operator": "!=", "value": True, "severity": "warning"}
 OTHER = dict(COND, id="vox-muted", channel="Lead Vox")
 
 
 def _doc(*conds) -> str:
-    return json.dumps({"watch_conditions": list(conds)}, indent=2) + "\n"
+    return json.dumps({"version": 2, "watch_conditions": list(conds)}, indent=2) + "\n"
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def home(tmp_path, monkeypatch):
     (home / "rules").mkdir()
     (home / "rules" / "kick.json").write_text(_doc(COND))
     (home / "rules" / "vox.json").write_text(_doc(OTHER))
-    (home / "rules" / "broken.json").write_text('{"watch_conditions": [{"id": "x"}]}')
+    (home / "rules" / "broken.json").write_text('{"version": 2, "watch_conditions": [{"id": "x"}]}')
     return home
 
 
@@ -161,7 +161,7 @@ def test_new_file_makes_an_empty_watch_json_in_the_bundle(client, show):
     r = client.post("/api/watch-conditions/new", json={"expected_bundle": str(show)})
     assert r.status_code == 200, r.text
     data = r.json()
-    assert json.loads((show / "watch.json").read_text()) == {"watch_conditions": []}
+    assert json.loads((show / "watch.json").read_text()) == {"version": 2, "watch_conditions": []}
     assert data["path"] == str(show / "watch.json")
     assert data["watch_conditions"] == []
     assert data["bundle_file"]["present"] is True
@@ -180,9 +180,9 @@ def test_new_file_from_a_stale_page_writes_nothing(client, show, home):
 
 
 def test_save_with_no_path_writes_the_bundles_watch_json(client, show):
-    r = client.post("/api/watch-conditions/save", json={"watch_conditions": [COND]})
+    r = client.post("/api/watch-conditions/save", json={"version": 2, "watch_conditions": [COND]})
     assert r.status_code == 200, r.text
-    assert json.loads((show / "watch.json").read_text()) == {"watch_conditions": [COND]}
+    assert json.loads((show / "watch.json").read_text()) == {"version": 2, "watch_conditions": [COND]}
     assert r.json()["path"] == str(show / "watch.json")
 
 
@@ -200,7 +200,7 @@ def test_with_no_bundle_a_file_is_used_where_it_is(home):
         assert r.json()["bundle_file"] is None
         r = c.post("/api/watch-conditions/new", json={})
         assert r.status_code == 400 and "no show bundle open" in r.json()["error"]
-        r = c.post("/api/watch-conditions/save", json={"watch_conditions": [COND]})
+        r = c.post("/api/watch-conditions/save", json={"version": 2, "watch_conditions": [COND]})
         assert r.status_code == 400 and "no show bundle open" in r.json()["error"]
         r = c.post("/api/bundle/adopt", json={"slot": "watch",
                                               "path": str(home / "rules" / "kick.json")})

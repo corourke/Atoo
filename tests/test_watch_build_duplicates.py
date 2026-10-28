@@ -2,7 +2,7 @@
 
 `merge_drafted_conditions` used to compare ids alone, and a model names the
 same rule differently each time it is asked, so a rebuild put `pa-main-muted`
-(`MAIN 1` muted) beside the `pa-unmuted` (`MAIN PA` muted) already in
+(`MAIN 1` muted) beside the `pa-muted` (`MAIN PA` muted) already in
 `watch.json`. Two conditions are now the same when they cover the same
 strips -- a name is looked up in the plan -- and ask the same field,
 operator and value; ids, descriptions, severities and the spelling of the
@@ -40,7 +40,7 @@ def existing() -> dict:
     return json.loads((FIXTURES / "watch-build-duplicates.watch.json").read_text(encoding="utf-8"))
 
 
-def cond(cond_id: str, channel: str, field: str = "muted", op: str = "==", value=False,
+def cond(cond_id: str, channel: str, field: str = "muted", op: str = "==", value=True,
          severity: str = "error") -> dict:
     return {"id": cond_id, "description": f"{channel} {field}", "channel": channel,
             "field": field, "operator": op, "value": value, "severity": severity}
@@ -78,11 +78,11 @@ def test_a_range_covers_the_strips_it_names_and_a_name_the_plan_cannot_settle_st
 
 
 def test_the_draft_for_the_same_pa_under_other_ids_adds_nothing():
-    drafted = [cond("main-muted", "MAIN 1"),                     # = pa-unmuted ("MAIN PA")
-               cond("main-low", "Main 1", "fader_db", ">=", -40.0)]   # = pa-main-fader-low
+    drafted = [cond("main-muted", "MAIN 1"),                     # = pa-muted ("MAIN PA")
+               cond("main-low", "Main 1", "fader_db", "<", -40.0)]   # = pa-main-fader-low
     document, report = merge(drafted)
     assert report.added == ()
-    assert report.duplicates == (("main-muted", "pa-unmuted"), ("main-low", "pa-main-fader-low"))
+    assert report.duplicates == (("main-muted", "pa-muted"), ("main-low", "pa-main-fader-low"))
     assert not report.changed
     assert document["watch_conditions"] == existing()["watch_conditions"]
 
@@ -100,10 +100,10 @@ def test_a_draft_wider_than_the_range_it_overlaps_is_added():
 
 
 def test_a_different_threshold_operator_field_or_value_is_not_a_duplicate():
-    drafted = [cond("lower", "MAIN 1", "fader_db", ">=", -50),
-               cond("strict", "MAIN 1", "fader_db", ">", -40),
-               cond("muted-wanted", "MAIN 1", value=True),
-               cond("patch", "Lead Vox", "patch", "==", "AES50-A 13")]
+    drafted = [cond("lower", "MAIN 1", "fader_db", "<", -50),
+               cond("strict", "MAIN 1", "fader_db", "<=", -40),
+               cond("muted-wanted", "MAIN 1", value=False),
+               cond("patch", "Lead Vox", "patch", "!=", "AES50-A 13")]
     _, report = merge(drafted)
     assert report.added == ("lower", "strict", "muted-wanted", "patch")
     assert report.duplicates == ()
@@ -111,26 +111,26 @@ def test_a_different_threshold_operator_field_or_value_is_not_a_duplicate():
 
 def test_severity_and_wording_are_not_part_of_the_meaning():
     document, report = merge([cond("pa", "MAIN PA", severity="warning")])
-    assert report.duplicates == (("pa", "pa-unmuted"),)
+    assert report.duplicates == (("pa", "pa-muted"),)
     assert not report.added
 
 
 def test_a_condition_repeated_inside_the_draft_is_added_once():
-    document, report = merge([cond("a", "Lead Vox", "fader_db", ">=", -40),
-                              cond("b", "CH 10", "fader_db", ">=", -40.0)])
+    document, report = merge([cond("a", "Lead Vox", "fader_db", "<", -40),
+                              cond("b", "CH 10", "fader_db", "<", -40.0)])
     assert report.added == ("a",) and report.duplicates == (("b", "a"),)
 
 
 def test_a_duplicate_is_not_recorded_as_drafted():
     """Never put in the file, so deleting the rule it duplicated later must
     let the draft propose it again."""
-    document, _ = merge([cond("main-muted", "MAIN 1"), cond("new", "BUS Drums", "fader_db", "<=", 6)])
+    document, _ = merge([cond("main-muted", "MAIN 1"), cond("new", "BUS Drums", "fader_db", ">", 6)])
     assert "main-muted" not in document["drafted"]
     assert "new" in document["drafted"]
 
 
 def test_the_merged_file_still_loads():
-    document, _ = merge([cond("new", "Kick", "fader_db", "<=", 6)])
+    document, _ = merge([cond("new", "Kick", "fader_db", ">", 6)])
     assert parse_watch_conditions(json.dumps(document))
 
 
@@ -164,7 +164,7 @@ def test_a_rebuild_that_drafts_the_same_rules_again_leaves_watch_json_as_it_is(
 
     assert path.read_text(encoding="utf-8") == before
     err = capsys.readouterr().err
-    assert "'main-muted' says what your 'pa-unmuted' already says" in err
+    assert "'main-muted' says what your 'pa-muted' already says" in err
     assert "'vocals-bus' says what your 'vocals-bus-muted' already says" in err
     assert "the same strips, field, operator and value" in err
     assert "added nothing new" in err

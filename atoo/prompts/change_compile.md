@@ -36,7 +36,7 @@ the desk. Everything you leave out stays exactly as it is on the desk.
 Emit exactly one JSON object, no prose and no fence:
 
   name     a short name for this change, a few words, that states what it
-           does ("Add Trumpet, Sax and Trombone on LCL 21-23", "Lose the MD
+           does ("Add Cello, Violin and Viola on LCL 21-23", "Lose the MD
            vocal"). It names the change in the journal. Do not state or
            imply when or why the change is wanted: no time, occasion or
            reason, only the change. At most 48 characters; a longer name is cut.
@@ -90,7 +90,10 @@ this change is the only new source of inputs.
    group or output only when the change needs one that is not on the desk --
    and then every reference to it must use the name you gave it. A
    reference to something that is neither on the desk nor added here is
-   refused, and the whole change with it.
+   refused, and the whole change with it. So when the change asks for
+   something the desk does not have (a bus, a socket, or a number past its
+   range), write it exactly as asked anyway: the code refuses it and names
+   what is missing. Never answer a change with notes alone.
 
 4. A RUNNING OBJECT CHANGES ONLY IN THE FIELDS THE CHANGE NAMES. A new
    send on a channel already on the desk, a changed filter, moving a channel
@@ -99,19 +102,27 @@ this change is the only new source of inputs.
    may also be "ch 5"). `fields` holds ONLY what the change names, each at
    the plan format's path, with its new value:
      "rename ch 5 Kick In"          {"name": "Kick In"}
-     "HPF 100 on the lead vocal"    {"processing.hpf_hz": 100}
+     "HPF 80 on the bass"           {"processing.hpf_hz": 80} 
      "sax in MON3 at -10"           {"bus_sends": [the channel's whole list,
                                      MON3's entry now at -10]}
-     "horns in the Band DCA"        {"dca": [its DCAs, plus "Band"]} (one
+     "strings in the Orch DCA"      {"dca": [its DCAs, plus "Orch"]} (one
                                      entry per horn channel)
      "move the bass to A 30"        {"patch": {"group": "A", "sockets": [30],
                                      "stated": true}}
-     "use the Snare preset on      {"processing.preset": "Snare"} -- a channel's
-      the Kick"                     preset by its library name; its values are
+     "use the Tom preset on        {"processing.preset": "Tom"} -- a channel's
+      the Floor Tom"                preset by its library name; its values are
                                     the code's job, never `preset_values`
+     "Vox Verb on the Drums bus"    {"preset": "Vox Verb"} -- a bus's preset;
+                                    the code loads its effect into an engine
      "make ch 5 stereo"             {"source.stereo": true} -- the code takes the
                                     odd socket pair; name the pair only if the
                                     change does, as `patch` too
+     "move the Kick to ch 20"       {"channel": 20} -- the code moves the whole
+                                    strip; "swap Kick and Snare" is one entry
+                                    for each, with the other's number
+     "ch 5 is now the Gtr 2 mic"    {"source.input": "Gtr 2"} -- the input-list
+                                    row; add `patch` only if the change names
+                                    the socket, and `name` only if it renames
      "48V on the sax"               {"source.phantom": true}
      "the vocal mic is an SM58"     {"source.model": "SM58"}
      "48V on the keys" (a stereo   {"source.phantom": true} -- it switches both
@@ -119,8 +130,10 @@ this change is the only new source of inputs.
                                     on its own, the desk does not take one side
    A list is replaced whole, so copy it from the desk plan and change only
    what was asked. NEVER set `fader` unless the change says "fader" (or
-   "mute" for `fader.muted`) -- a send level is not the fader. Never set
-   `channel`, `bank`, `source.input` or an `index`, and never rename a bus,
+   "mute" for `fader.muted`) -- a send level is not the fader. Set a
+   channel's `channel` or `bank`, or an object's `index` or an output's
+   `kind`, only when the change moves it ("make the Drums bus bus 14":
+   {"index": 14}); the code moves what points at it. Never rename a bus,
    DCA or mute group (its name is how everything refers to it). Never put a
    changed copy of a running object in `add`: it would be refused.
 
@@ -143,21 +156,21 @@ this change is the only new source of inputs.
 7. DROPPING. "Lose the MD vocal", "the keyboard player went home": name the
    channel(s) in `drop.channels`. The code returns each strip to free only
    if the desk still reads as the strip the show built.
-   BUSSES. "Clear bus 5 and 6", "get rid of the drum bus": name each bus
+   BUSSES. "Clear bus 9 and 10", "get rid of the drum bus": name each bus
    in `drop.busses`, exactly as the plan on the desk spells it -- by its
-   name, so "bus 5" is whatever name the plan gives its index 5. The code
+   name, so "bus 9" is whatever name the plan gives its index 9. The code
    returns each to free (a bus as an initialized desk has it, and every
    send into it off), so never put a changed copy of it in `add`, and do
    not edit its sends yourself. A drop is an instruction: it is carried
-   out, not a suggestion to be held back. "Clear bus 5 and 6 ... add a
-   stereo IEM bus (reuse bus 5) and output to LCL 3-4" is `drop.busses`
-   holding the names of buses 5 and 6, and `add.busses` holding the IEM
-   with `index: 5`, `mono: false` (stereo), and a `dedicated_output`
-   destination whose `patch` is group `LCL`, `sockets: [3, 4]`, `stated:
+   out, not a suggestion to be held back. "Clear bus 9 and 10 ... add a
+   stereo wedge bus (reuse bus 9) and send it to LCL 7-8" is `drop.busses`
+   holding the names of buses 9 and 10, and `add.busses` holding the wedge
+   with `index: 9`, `mono: false` (stereo), and a `dedicated_output`
+   destination whose `patch` is group `LCL`, `sockets: [7, 8]`, `stated:
    true` -- a stereo bus on a socket pair carries its left on the first
    and its right on the second.
-   DCAS, MUTE GROUPS, OUTPUTS. "Get rid of the FX DCA", "clear mute group
-   2", "drop the delay speakers": name each in `drop.dcas`,
+   DCAS, MUTE GROUPS, OUTPUTS. "Lose the Strings DCA", "clear mute group
+   4", "drop the delay speakers": name each in `drop.dcas`,
    `drop.mute_groups` or `drop.outputs`, exactly as the plan on the desk
    spells it. The code returns each to free (a DCA or mute group as an
    initialized desk has it and every channel taken off it; an output as

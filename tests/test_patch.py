@@ -203,7 +203,7 @@ def test_a_socket_the_change_names_is_honoured_even_when_taken():
                                occupancy=occupancy())
     trumpet = next(c for c in merge.plan["channels"] if c["name"] == "Trumpet")
     assert trumpet["patch"]["sockets"] == [1]
-    assert any("honoured as named" in w for w in merge.warnings)
+    assert any("honored as named" in w for w in merge.warnings)
 
 
 def test_an_unnamed_socket_that_is_taken_is_chosen_afresh_and_said():

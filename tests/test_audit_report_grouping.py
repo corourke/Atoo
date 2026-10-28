@@ -4,8 +4,8 @@ Two things an engineer at a desk should not have to translate:
 
 * **a strip named by its OSC address** -- `/ch/3 (Vocal)` -- where the
   desk and everyone at it says `CH 3`;
-* **one rule repeated once per strip** -- five `CH001` entries, one
-  after the other, for five channels in no DCA.
+* **one rule repeated once per strip** -- five `L002` entries, one
+  after the other, for five channels with their faders at the floor.
 
 So findings name strips as `CH 3 "Vocal"` (the shape Watch's own
 findings already use), and `audit`/`watch` print one entry per rule. The
@@ -24,10 +24,10 @@ from atoo.diagnostics import Diagnostic, Severity
 from atoo.watch import WatchEvent, render_event
 
 
-def _no_dca(position: str, name: str) -> Diagnostic:
+def _at_floor(position: str, name: str) -> Diagnostic:
     return Diagnostic.audit(
-        "CH001", Severity.INFO, "channels", "Channel Not In Any DCA",
-        f'{position} "{name}" is in use but belongs to no DCA group.', ())
+        "L002", Severity.INFO, "levels", "Active Strip Fader At Floor",
+        f'{position} "{name}" is unmuted and in use, but its own fader is at -144dB.', ())
 
 
 def _dead_send(position: str, level: int) -> Diagnostic:
@@ -65,20 +65,20 @@ def test_a_named_strip_quotes_its_name_after_its_position():
 
 
 def test_one_rule_on_five_strips_is_one_entry_naming_all_five():
-    findings = [_no_dca(f"CH {n}", name) for n, name in
+    findings = [_at_floor(f"CH {n}", name) for n, name in
                 [(3, "Vocal"), (4, "Vocal"), (5, "Bass"), (6, "Bass DI"), (7, "Playback")]]
     text = render_findings(findings)
 
     assert text.startswith("Audit findings: 5 info.\n")
-    assert text.count("CH001") == 1
-    assert ('[INFO] CH001 Channel Not In Any DCA (5)\n'
+    assert text.count("L002") == 1
+    assert ('[INFO] L002 Active Strip Fader At Floor (5)\n'
             '  CH 3 "Vocal", CH 4 "Vocal", CH 5 "Bass", CH 6 "Bass DI", CH 7 "Playback"\n'
-            '  Each is in use but belongs to no DCA group.\n') in text
+            '  Each is unmuted and in use, but its own fader is at -144dB.\n') in text
 
 
 def test_a_rule_that_fired_once_reads_as_it_always_has():
-    text = render_findings([_no_dca("CH 3", "Vocal")])
-    assert '[INFO] CH001 Channel Not In Any DCA\n  CH 3 "Vocal" is in use' in text
+    text = render_findings([_at_floor("CH 3", "Vocal")])
+    assert '[INFO] L002 Active Strip Fader At Floor\n  CH 3 "Vocal" is unmuted' in text
     assert "(1)" not in text and "Each" not in text
 
 
@@ -92,7 +92,7 @@ def test_sentences_that_differ_past_the_strip_are_each_kept_under_one_heading():
 
 
 def test_a_long_list_of_strips_wraps_rather_than_running_off_the_screen():
-    findings = [_no_dca(f"CH {n}", f"Input {n}") for n in range(1, 25)]
+    findings = [_at_floor(f"CH {n}", f"Input {n}") for n in range(1, 25)]
     lines = render_findings(findings).splitlines()
     assert all(len(line) <= 80 for line in lines)
     item_lines = [line.strip() for line in lines if '"Input ' in line]
@@ -104,29 +104,29 @@ def test_a_long_list_of_strips_wraps_rather_than_running_off_the_screen():
 
 
 def test_severity_is_part_of_the_group():
-    a = _no_dca("CH 3", "Vocal")
-    b = Diagnostic.audit("CH001", Severity.WARNING, a.category, a.title, a.detail, ())
+    a = _at_floor("CH 3", "Vocal")
+    b = Diagnostic.audit("L002", Severity.WARNING, a.category, a.title, a.detail, ())
     assert len(rule_groups([a, b])) == 2
 
 
 def test_grouping_is_display_only():
-    findings = [_no_dca("CH 3", "Vocal"), _no_dca("CH 4", "Vocal")]
+    findings = [_at_floor("CH 3", "Vocal"), _at_floor("CH 4", "Vocal")]
     before = list(findings)
     render_findings(findings)
     assert findings == before
     assert shared_sentence(findings) == (['CH 3 "Vocal"', 'CH 4 "Vocal"'],
-                                         " is in use but belongs to no DCA group.")
+                                         " is unmuted and in use, but its own fader is at -144dB.")
 
 
 # -- watch's NEW / CLEARED lines group the same way ---------------------------
 
 
 def test_watch_reports_one_line_per_rule_that_started_tripping():
-    new = [_no_dca("CH 3", "Vocal"), _no_dca("CH 4", "Vocal")]
+    new = [_at_floor("CH 3", "Vocal"), _at_floor("CH 4", "Vocal")]
     text = render_event(WatchEvent(1, "T", new, new, []))
     assert text.splitlines()[1:] == [
-        '  NEW     [INFO] CH001 Channel Not In Any DCA (2): CH 3 "Vocal", CH 4 "Vocal" '
-        "-- each is in use but belongs to no DCA group."]
+        '  NEW     [INFO] L002 Active Strip Fader At Floor (2): CH 3 "Vocal", CH 4 "Vocal" '
+        "-- each is unmuted and in use, but its own fader is at -144dB."]
 
 
 def test_watch_keeps_one_finding_on_one_line():

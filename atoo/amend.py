@@ -268,6 +268,12 @@ from atoo.audit import ConsoleState, is_in_use, source_is_named
 from atoo.verify_plan import resolve_console_model
 
 
+#: The provenance of an output the plan did not know and a patch read off the
+#: desk: its sockets were not read, so dropping it leaves
+#: them patched as they are.
+READ_FROM_DESK = "read from the desk: not built by Atoo"
+
+
 # --------------------------------------------------------------------------
 # 1. The scoped occupancy read
 # --------------------------------------------------------------------------
@@ -1160,6 +1166,10 @@ class Amendment:
     #: Exact addresses, never a strip's base -- an edit owns the leaves its
     #: fields change and nothing else on the strip.
     edit_scope: AmendScope = field(default_factory=AmendScope)
+    #: The addresses a patch writes from what it read off the desk for an
+    #: object the plan did not know (`patch._renumber_adopted_output`): the
+    #: plan's own render of that object is not written beside them.
+    read_from_desk: set = field(default_factory=set)
     #: Writes an edit needs that the effective plan cannot produce, because
     #: the edit takes something AWAY: a send the change removed is turned
     #: off, a high-pass it removed is switched off, a DCA it left is taken
@@ -1228,6 +1238,9 @@ class Amendment:
             entry["fields"] = [{"object": e.word, "name": e.name, "slot": e.slot,
                                 "path": e.path, "old": e.old, "new": e.new}
                                for e in self.edits]
+        if self.edited or self.edit_scope.grants:
+            # A patch's writes on what the desk read and the plan does not
+            # hold are granted here with no edit beside.
             entry["grants"] = {**entry["grants"], **self.edit_scope.grants}
         if self.shifted:
             # Which strips this run renumbered, as "name: ch:3 -> ch:4" --
@@ -1302,6 +1315,21 @@ def _note_placement(effective: dict, placed: str, proposed: str,
     if isinstance(provenance, dict):
         earlier = provenance.get("channel")
         provenance["channel"] = f"{earlier}; {note}" if earlier else note
+
+
+def _leaves_slot(slot, applied_by_slot: dict, amended_by_source: dict, moving: set,
+                 occupancy, console_model: str | None) -> bool:
+    """Whether the running channel on `slot` leaves it in this change --
+    dropped, or moved elsewhere -- and the desk still reads the strip as
+    the one this plan built, so it is returned to free."""
+    occupant = applied_by_slot.get(slot)
+    if occupant is None:
+        return False
+    key = _source_key(occupant)
+    if key in amended_by_source and key not in moving:
+        return False
+    status = next((s for s in occupancy if s.label == _slot_label(slot)), None)
+    return release_refusal(occupant, status, console_model=console_model) is None
 
 
 def plan_amendment(applied_plan: dict, amended_plan: dict,
@@ -1444,6 +1472,9 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
     applied_sockets = _patched_sockets(applied_plan)
 
     taken: set[tuple[str, int]] = set()
+    #: Strips a moved channel lands on (label -> the channel), so a strip
+    #: the same change frees says what lands on it.
+    landings: dict[str, str] = {}
     shift_scope = AmendScope()
     shifted: list[tuple[str, str, str]] = []
     shift_occupants: list[tuple[str, dict]] = []
@@ -1547,6 +1578,12 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             # here and has moved down, so it is not "free" by the desk's
             # read, and is this channel's by the change's own words.
             placed = slot[1]
+        elif key in moving and slot not in taken and _leaves_slot(
+                slot, applied_by_slot, amended_by_source, moving, occupancy, console_model):
+            # A channel the change moves onto a strip the same change frees
+            # ("swap the Kick and the Snare"): written once, by
+            # the channel that lands (`amendment_targets`).
+            placed = slot[1]
         elif at_or_after:
             placed = at_or_after[0]
         elif free:
@@ -1574,8 +1611,13 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         changes.append(Change(
             ChangeKind.ADDED, "channel", where,
             "new channel, inserted here: the channels after it move down one strip"
-            if key in inserted else "new channel, placed on a free strip",
+            if key in inserted else
+            f"moved here from {_slot_label(_channel_slot(applied_by_source[key]))}, and "
+            "written whole on this strip" if key in moving else
+            "new channel, placed on a free strip",
             slot=label, proposed=_slot_label(slot), asked_by=by))
+        if key in moving:
+            landings[label] = where
         if key in moving:
             infos.append(
                 f"channel {where}: {by} drops it from "
@@ -1601,7 +1643,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             if (group, socket) in applied_sockets:
                 warnings.append(
                     f"channel {where} is patched to {group} {socket}, which an already-applied "
-                    "channel also uses. The socket's own name, colour, phantom and head-amp gain "
+                    "channel also uses. The socket's own name, color, phantom and head-amp gain "
                     "belong to that running strip and are NOT written -- the new strip carries "
                     "its own name instead.")
                 continue
@@ -1660,11 +1702,15 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                     "and it is cleared because the change named it")
         changes.append(Change(
             ChangeKind.RELEASED, "channel", where,
-            f"dropped by {by}, and {reads_as} -- "
-            "unpatched (OFF), left unmuted, and its name, "
-            "colour, icon, DCA/mute-group tags, bus sends and this plan's own processing "
-            "cleared, on the source socket as well as the strip, so the next person to "
-            "allocate a strip finds this one genuinely free",
+            (f"moved off it by {by}, and channel {landings[label]} moves onto it: written "
+             f"whole by {landings[label]}, and what {where} set there that {landings[label]} "
+             "does not is cleared to the untouched reading"
+             if label in landings else
+             f"{'moved off it' if key in moving else 'dropped'} by {by}, and {reads_as} -- "
+             "unpatched (OFF), left unmuted, and its name, "
+             "color, icon, DCA/mute-group tags, bus sends and this plan's own processing "
+             "cleared, on the source socket as well as the strip, so the next person to "
+             "allocate a strip finds this one genuinely free"),
             slot=label))
         releases.append(channel)
         released.append(label)
@@ -1678,7 +1724,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                 if key not in moving:
                     warnings.append(
                         f"channel {where} is being returned to free, but {group} {socket} "
-                        f"still feeds a strip {by} keeps -- the socket's own name, colour, "
+                        f"still feeds a strip {by} keeps -- the socket's own name, color, "
                         "icon and phantom are left exactly as they are")
                 continue
             release_scope.grant(f"/io/in/{group}/{socket}",
@@ -1695,7 +1741,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
             why = "its patch is left as it is, because this plan never patched it"
         infos.append(
             f"channel {where} on {label} was dropped by {by} and is returned to free. "
-            f"Patch: {why}. Its name, colour, icon, DCA/mute-group tags, bus sends and the "
+            f"Patch: {why}. Its name, color, icon, DCA/mute-group tags, bus sends and the "
             "processing this plan set are all cleared -- the reading an untouched strip gives. "
             "Its direct Main routing goes back to the factory's too: Main 1 on, the other "
             "Mains off. "
@@ -1715,7 +1761,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         changes.append(Change(
             ChangeKind.RELEASED, "bus", repr(name),
             f"dropped by {by}: bus {index} is returned to free -- every setting on it reads "
-            "as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, "
+            "as an initialized bus (name, color, icon, width, fader, mute, EQ, dynamics, "
             "inserts, tags, routes to the Mains and matrices), the output it fed is "
             "unpatched, and the channels' sends into it are switched off",
             slot=f"bus:{index}"))
@@ -1743,12 +1789,15 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
         root = {"dcas": "/dca", "mute_groups": "/mgrp"}.get(key)
         if key == "outputs" and index is not None and entry.get("kind") in ("main", "matrix"):
             root = "/main" if entry["kind"] == "main" else "/mtx"
-        what = {"dcas": "its fader, mute, name, colour and icon read as an initialized DCA's and "
+        what = {"dcas": "its fader, mute, name, color and icon read as an initialized DCA's and "
                         "its members are taken off it",
                 "mute_groups": "its name and mute read as an initialized mute group's and its "
                                "members are taken off it",
                 "outputs": "the Main or Matrix behind it reads as an initialized one and the "
                            "socket it fed read as an initialized desk's"}[key]
+        if key == "outputs" and entry.get("provenance") == READ_FROM_DESK:
+            what = ("the Main or Matrix behind it reads as an initialized one; the sockets "
+                    "it fed are not in the plan and stay patched as the desk has them")
         changes.append(Change(
             ChangeKind.RELEASED, word, repr(name),
             f"dropped by {by}: returned to free -- {what}"
@@ -1785,6 +1834,7 @@ def plan_amendment(applied_plan: dict, amended_plan: dict,
                      freed={name for name, _i, _e in freed})
     _plan_new_outputs(applied_plan, amended_plan, scope, changes, warnings, infos,
                       freed={n for k, n, _i, _e in freed_other if k == "outputs"})
+    _plan_user_sources(applied_plan, amended_plan, scope, changes)
 
     edit_scope = AmendScope()
     edit_extra: list = []
@@ -1913,6 +1963,18 @@ def _own_bases(plan: dict, edit: FieldEdit) -> list[str]:
     return [f"{root}/{index}"] if root else []
 
 
+def _engine_bases(*objs) -> list[str]:
+    """`/fx/{e}` for every FX engine the strips `objs` insert: what an edit of
+    a bus's preset (its `preset_values`) owns besides the bus, since the
+    preset's effect is loaded into its engine."""
+    from atoo import bus_presets
+
+    return list(dict.fromkeys(
+        f"/fx/{ins['engine']}" for obj in objs if isinstance(obj, dict)
+        for ins in bus_presets.strip_inserts(obj)
+        if isinstance(ins.get("engine"), int) and ins.get("model") is not None))
+
+
 def _probe(target) -> tuple:
     """What a write target would write, as something comparable: its value
     for a few readings of the current value (`/ch/n/tags` is merged into
@@ -1976,6 +2038,20 @@ def _vanished_target(address: str, before, edit: FieldEdit, label: str,
             return apply_module.WriteTarget(
                 address, cleared[0].value_type,
                 f"{label}: the old preset's {leaf} -> as initialized (the new preset sets none)",
+                apply_module._const(cleared[0].value), before.stage)
+    if edit.path in ("index", "kind"):
+        # The object's old number, and every send, tag and route into it,
+        # left by a renumber: the reading an initialized
+        # desk gives, as a dropped object's are.
+        from atoo import initialize
+        as_first = re.sub(r"^/(\w+)/\d+/", r"/\1/1/", address)
+        cleared = [x for candidate in (address, as_first)
+                   for x in initialize.freed_leaves(console_model, candidate)
+                   if x.address == candidate][:1]
+        if cleared:
+            return apply_module.WriteTarget(
+                address, cleared[0].value_type,
+                f"{label}: {leaf} on its old number -> as initialized (renumbered)",
                 apply_module._const(cleared[0].value), before.stage)
     match = _SEND_TO.match(address)
     if match and int(match.group(1)) in freed_indices:
@@ -2095,14 +2171,30 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
 
     extra: dict[str, object] = {}
     written: list[FieldEdit] = []
+    renumbered_together: set[tuple[str, str]] = set()
     for edit in present:
         label = edit_label(edit)
         variant = copy.deepcopy(reverted)
         set_path(edited_object(variant, edit), edit.path, edit.new)
+        if edit.path in ("index", "kind"):
+            # An output's kind and number are one move (a Matrix made Main
+            # 2): both are set, and the object's addresses granted once.
+            if (edit.key, edit.name) in renumbered_together:
+                written.append(edit)
+                continue
+            renumbered_together.add((edit.key, edit.name))
+            for other in present:
+                if other is not edit and (other.key, other.name) == (edit.key, edit.name) \
+                        and other.path in ("index", "kind"):
+                    set_path(edited_object(variant, other), other.path, other.new)
         after = _target_map(variant)
         changed = [a for a, t in after.items() if a not in base or _probe(t) != _probe(base[a])]
         vanished = [a for a in base if a not in after]
         own = _own_bases(reverted, edit)
+        if edit.path in ("index", "kind"):
+            own = own + _own_bases(variant, edit)
+        if edit.key == "busses" and edit.path == "preset_values":
+            own = own + _engine_bases(edited_object(reverted, edit), edited_object(variant, edit))
         index = (edited_object(reverted, edit) or {}).get("index")
         feed = re.compile(rf"/send/MX{index}(/|$)") if edit.key == "outputs" else None
 
@@ -2112,6 +2204,19 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
                     or bool(feed and feed.search(address)))
 
         stray = [a for a in changed + vanished if not owned(a) and not named(a)]
+        if stray and edit.path in ("index", "kind"):
+            # A new number moves every send, tag and route into the object
+            # with it, on objects the change does not name (item 2): the engineer named the number, so that is the
+            # instruction.
+            # Carried out, and every other object it moves is said.
+            owners = _stray_owners(stray, reverted)
+            infos.append(f"{label}: the new number moves {len(stray)} address(es) on "
+                         f"{', '.join(owners)} with it -- the sends, tags and routes into it, "
+                         "written on its new number and cleared on its old one")
+            for address in stray:
+                if address in changed:
+                    edit_scope.grant(address, f"{label}: {edit.path}, moved with it")
+            stray = []
         if stray:
             # Decision of 2026-10-22: an edit that would also move
             # or re-address objects the engineer did not name is REFUSED and
@@ -2138,9 +2243,22 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
         for socket, leaves in held.items():
             warnings.append(
                 f"{edit.line()}: {socket} -- its {', '.join(leaves)} NOT written; a socket's "
-                "own name, colour, phantom and gain belong to the running strip on it")
+                "own name, color, phantom and gain belong to the running strip on it")
+        # An engine's model and parameters the bus's new preset no longer
+        # sets are not written: an engine the bus still inserts, holding
+        # another model now, drops the old model's parameters itself, and an
+        # engine it no longer inserts keeps its effect, inserted nowhere.
+        still = set(_engine_bases(edited_object(variant, edit)))
+        for engine in sorted({"/".join(a.split("/")[:3]) for a in vanished
+                              if a.startswith("/fx/")}):
+            fx = "FX" + engine.rsplit("/", 1)[1]
+            infos.append(f"{label}: {fx} " + (
+                "holds the new preset's effect; the old effect's parameters go with its model"
+                if engine in still else
+                "is no longer inserted on it; it keeps the old preset's effect and its values, "
+                "inserted nowhere, as the desk has it"))
         for address in vanished:
-            if socket_clash(address, edit):
+            if socket_clash(address, edit) or address.startswith("/fx/"):
                 continue
             target = _vanished_target(address, base[address], edit, label, freed_indices,
                                       console_model)
@@ -2195,14 +2313,25 @@ def _plan_edits(effective_plan: dict, edits: list[FieldEdit], occupancy: list[St
         labels.append(label)
         mine = [e for e in written if edit_label(e) == label]
         marker = next((e.live_marker for e in mine if e.live_marker), "")
+        renumbered = [e for e in mine if e.path in ("index", "kind")]
         changes.append(Change(
             ChangeKind.EDITED, edit.word, repr(edit.name),
-            marker
-            + f"only the field(s) the change names are written ({', '.join(e.path for e in mine)}); "
-            f"nothing else on this {edit.word} is touched, and the rest of it is in the "
-            "untouched proof", slot=edit.slot))
+            marker + (
+                f"renumbered ({', '.join(e.describe() for e in renumbered)}): written on its new "
+                "number and cleared on its old one, with the sends, tags and routes into it -- "
+                "every other object that moves is named below"
+                if renumbered else
+                f"only the field(s) the change names are written "
+                f"({', '.join(e.path for e in mine)}); nothing else on this {edit.word} is "
+                "touched, and the rest of it is in the untouched proof"), slot=edit.slot))
         infos.append(f"{label}: the change edits " + "; ".join(e.describe() for e in mine))
-    return written, [extra[a] for a in extra if edit_scope.allows(a)], labels
+    # Each edit is weighed alone, so a renumber clears its old number even
+    # where another object the same change renumbers lands on it (two busses
+    # swapping numbers). The landing is the write, as for strips ("written
+    # once, by the channel that lands"): a clear of an address the changed
+    # plan still writes is not made.
+    return written, [extra[a] for a in extra
+                     if edit_scope.allows(a) and a not in effective], labels
 
 
 #: `(plan key, console address root, human word)` for the two objects that
@@ -2362,6 +2491,32 @@ def _plan_new_outputs(applied_plan: dict, amended_plan: dict, scope: AmendScope,
                         "-- and nothing else about it is touched.")
 
 
+def _plan_user_sources(applied_plan: dict, amended_plan: dict, scope: AmendScope,
+                       changes: list) -> None:
+    """The USR slots the amended plan defines (`user_sources`).
+    A slot the applied plan did not define is new, and written, ahead of the
+    channel or output that reads it (`apply.user_source_targets`). One it
+    defined differently is a running slot, and is reported, not written, as
+    a running strip is (D14); one it defined the same is left alone."""
+    def by_slot(plan: dict) -> dict:
+        return {e["slot"]: e for e in plan.get("user_sources") or []
+                if isinstance(e, dict) and isinstance(e.get("slot"), int)}
+
+    applied, amended = by_slot(applied_plan), by_slot(amended_plan)
+    for slot, entry in sorted(amended.items()):
+        source = entry.get("source") or {}
+        words = f"{source.get('group')} {source.get('index')}"
+        if slot not in applied:
+            changes.append(Change(ChangeKind.ADDED, "USR slot", f"USR {slot}",
+                                  f"new, from {words}", slot=f"usr:{slot}"))
+            scope.grant(f"/io/in/USR/{slot}", f"new USR slot {slot}, from {words}")
+        elif applied[slot] != entry:
+            changes.append(Change(ChangeKind.MODIFIED, "USR slot", f"USR {slot}",
+                                  f"defined differently (now from {words}); a slot already "
+                                  "set on the desk is not changed by an amend",
+                                  slot=f"usr:{slot}"))
+
+
 def _fed_by_base(fed_by: dict, plan: dict) -> str | None:
     """The console base of whatever feeds a matrix, or None if the plan
     does not say (`apply.py` warns about that case; here it simply means
@@ -2498,6 +2653,10 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
                 or amendment.shift_scope.allows(target))
 
     shift_clears = shift_clear_targets(amendment, targets, warnings)
+    # A clear an edit already writes (a renumbered bus's old send, on a strip
+    # the insert moved): written once, by the edit.
+    extra_addresses = {t.address for t in amendment.edit_extra}
+    shift_clears = [t for t in shift_clears if t.address not in extra_addresses]
     # A strip a dropped channel leaves and another channel lands on in the
     # same change (an insert beside a drop) is written once, by
     # the channel that lands: the landing's own value is the clear.
@@ -2507,9 +2666,15 @@ def amendment_targets(amendment: Amendment) -> AmendmentTargets:
     # An edit's addresses are the effective plan's own targets at exactly
     # the addresses `_plan_edits` granted, plus the writes that take away
     # what an edit removed (`edit_extra`, which the plan cannot produce).
-    edits = [t for t in targets if amendment.edit_scope.allows(t)] + list(amendment.edit_extra)
-    to_write = ([t for t in targets if owned(t)] + releases + list(amendment.edit_extra)
-                + shift_clears)
+    # An object a patch read off the desk and renumbered
+    # is written at the values the desk read, not at what the plan's entry
+    # for that same object renders (a name, a unity fader): its addresses
+    # are written by those writes alone.
+    read = amendment.read_from_desk
+    edits = [t for t in targets if amendment.edit_scope.allows(t)
+             and t.address not in read] + list(amendment.edit_extra)
+    to_write = ([t for t in targets if owned(t) and t.address not in read]
+                + releases + list(amendment.edit_extra) + shift_clears)
     withheld = [t for t in targets if not owned(t)]
 
     applied_targets, applied_warnings = apply_module._build_write_targets(
@@ -2579,6 +2744,7 @@ def release_targets(amendment: Amendment, *, warnings: list[str] | None = None) 
         dca_index=_indexed_names(applied, "dcas"),
         mute_group_index=_indexed_names(applied, "mute_groups"),
         bus_index=_indexed_names(applied, "busses"),
+        matrix_index=apply_module.matrix_indices(applied),
         keep_sockets=amendment.keep_sockets,
         shared_sockets=apply_module._shared_source_sockets(applied),
         console_model=amendment.console_model,
@@ -2612,6 +2778,7 @@ def shift_clear_targets(amendment: Amendment, built: list, warnings: list[str]) 
                 dca_index=_indexed_names(applied, "dcas"),
                 mute_group_index=_indexed_names(applied, "mute_groups"),
                 bus_index=_indexed_names(applied, "busses"),
+                matrix_index=apply_module.matrix_indices(applied),
                 keep_sockets=amendment.keep_sockets,
                 shared_sockets=apply_module._shared_source_sockets(applied),
                 console_model=amendment.console_model,

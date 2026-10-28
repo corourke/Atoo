@@ -631,12 +631,17 @@ def test_there_is_no_click_to_open_a_strip(assets):
 
 
 def test_a_preview_with_nothing_to_write_cannot_arm_a_write(client, desk, monkeypatch):
-    """A change that adds nothing and drops nothing: exit 0, nothing to
-    write. That is not a review of anything, and a write armed on it is
-    refused."""
-    fake_model(monkeypatch, patch.empty_change_set("Nothing"))
+    """A change that compiles to nothing -- adds, drops and edits nothing --
+    was not carried out, and is refused (exit 2) with the model's note: it
+    is not a review of anything, and a write armed on it is refused."""
+    nothing = patch.empty_change_set("Nothing")
+    nothing["notes"] = ["There is no bus MON9 on the desk."]
+    fake_model(monkeypatch, nothing)
     status = _preview(client, "leave everything as it is")
-    assert status["exit_code"] == 0 and status["review"]["to_write"] == []
+    assert status["exit_code"] == 2 and status["review"] is None
+    log = "\n".join(status["log"]) if isinstance(status["log"], list) else status["log"]
+    assert "NOTE There is no bus MON9 on the desk." in log
+    assert "adds, drops and edits nothing, so it was not carried out" in log
     r = _write(client, "leave everything as it is")
     _wait(client)
     assert _writes(desk) == []

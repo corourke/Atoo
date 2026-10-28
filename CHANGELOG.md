@@ -2,6 +2,19 @@
 
 What changed in each release, newest first.
 
+## 0.2.6 -- 2026-10-28
+
+Capture a desk you didn't build, edit every sheet in Build with no AI, and Watch that counts clips the way the clip light does.
+
+- **Capture a desk you didn't build.** **New show… → From a desk**, or `atoo capture`, reads a WING (or a `.snap` saved on one) into a show you can watch and edit: `input.csv`, `busses.csv`, `outputs.csv` (every patched output socket) and `user.csv` (the USR slots in use), and a plan of the desk as it is. It needs no AI and writes nothing to the desk. Effects, and a Main's or Matrix's DCAs and mute groups, come with it, and the desk's own colors are captured and shown.
+- **Build: the sheets are the editor.** Build step 04 edits Channels, Busses, Mains and Matrix, Outputs, and User signals and patches in place, and **Save** updates the plan with no AI. A filled cell in `busses.csv` or `outputs.csv` wins over the conventions. The input list's `channel`, `dca` and `mute_group` columns place a channel, and a DCA or mute group takes the input list's spelling (`DRUMS`). A processed feed the conventions state (a strip and its tap) gets its USR slot from code.
+- **Build carries out a dropped instruction.** With the critic on, an instruction the first plan left out, quoted word for word, is carried out in the one repair round, and the repaired plan is kept only if it verifies no worse. With no AI set up, **Build plan** and **Rebuild** are locked with the reason, and nothing on disk moves.
+- **Validate and audit.** Apply writes a plan's splits and recording feeds (its direct outputs) and its USR slots, and `--confirm` reads the desk's starting values up front, as Preview does. Preview's tiles open a **Detail** in the side bar: each value now and after, and what is already on the desk.
+- **Patch.** A typed change can move a running channel to another strip or swap two, set which input-list row a strip takes, renumber a bus, DCA, mute group, Main or Matrix (its sends and tags follow), make an output a Main or a Matrix, switch a running bus's preset, effect and all, and insert a channel and edit it in the same change. On a desk set up by hand, a bus, DCA, mute group, Main or Matrix the plan doesn't know is read off the desk and carried out against, and Undo restores it.
+- **Watch.** A clip is what lights the clip LED: each one is counted, timed as long as the light stayed lit, and the row says what each number is (`--record-meters` saves a desk's meter stream to replay). `ACTIVE` in a condition's Channel cell (`ACTIVE ALL BUS`) limits it to strips on the show's sheets or in use on the desk, and the built-in checks use the same "active". A condition now states when to alert; **a `watch.json` without `"version": 2` is refused, with the one command that converts it.** Watch reads the Dante module's outputs, a page that joins a running watch shows every finding already there, and "Channel not in any DCA" is gone.
+- **`atoo ui` starts in three lines:** the version and where it runs from, the console, and the working folder.
+- **The guide is rewritten:** Getting Started from install to the command line, Capture a desk you didn't build, a Rules reference listing every check, an AI provider reference, and Reporting a problem (zip the show folder, with a reading of the desk inside).
+
 ## 0.2.5 -- 2026-10-22
 
 Patch does what you plainly ask, the WING Rack is covered end to end, Watch is

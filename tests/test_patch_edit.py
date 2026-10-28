@@ -207,7 +207,7 @@ def test_a_repatch_onto_a_socket_somebody_on_the_desk_uses_leaves_that_socket_al
         "BassDI", {"patch": {"group": "LCL", "sockets": [20], "stated": True}})))
     written = {t.address for t in targets.to_write}
     assert written == {"/ch/7/in/conn/grp", "/ch/7/in/conn/in"}
-    assert any("honoured as named" in w for w in amendment.warnings)
+    assert any("honored as named" in w for w in amendment.warnings)
     [held] = [w for w in amendment.warnings if "/io/in/LCL/20" in w]
     assert "ch:20 on the desk also uses" in held and "NOT written" in held
 
@@ -246,8 +246,8 @@ def test_a_repatch_to_a_socket_the_desk_lacks_is_refused_by_the_preflight():
 
 
 @pytest.mark.parametrize("fields,words", [
-    ({"channel": 40}, "renumber"),
-    ({"source.input": "Bagpipes"}, "how a running strip is recognised"),
+    ({"channel": 41}, "there is no ch:41"),
+    ({"provenance": "typed"}, "the build's own record"),
     ({"colour": "Red"}, "carries no field 'colour'"),
     ({"processing.foo": 1}, "not a field this format has"),
     ({"processing.hpf_hz": 5}, "hpf_hz"),

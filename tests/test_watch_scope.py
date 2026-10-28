@@ -47,35 +47,35 @@ _DEFAULTS = {
     # A factory desk's busses, Mains and Matrices are all stereo.
     "busmono": 0,
     # No device on any AES50 port; no monitor source.
-    "stat": "-", "src": "OFF",
+    "stat": "-", "src": "OFF", "$type": "NONE", "opt_mod": "NONE",
 }
 
 #: The watchlist the fixture state is built to trip, one condition per
 #: field in the vocabulary.
-CONDITIONS_JSON = json.dumps({"watch_conditions": [
+CONDITIONS_JSON = json.dumps({"version": 2, "watch_conditions": [
     {"id": "crowd-never-muted", "description": "Crowd Mic must never be muted",
-     "channel": "Crowd Mic", "field": "muted", "operator": "==", "value": False,
+     "channel": "Crowd Mic", "field": "muted", "operator": "!=", "value": False,
      "severity": "error"},
     {"id": "crowd-fader-capped", "description": "Crowd Mic fader stays under -10dB",
-     "channel": "Crowd Mic", "field": "fader_db", "operator": "<=", "value": -10.0,
+     "channel": "Crowd Mic", "field": "fader_db", "operator": ">", "value": -10.0,
      "severity": "warning"},
     {"id": "bass-not-in-drums", "description": "Bass must not ride the Drums DCA",
-     "channel": "Bass", "field": "dca", "operator": "!=", "value": "Drums",
+     "channel": "Bass", "field": "dca", "operator": "in", "value": "Drums",
      "severity": "warning"},
     {"id": "gtr-out-of-fx", "description": "Gtr must not be in the FX mute group",
-     "channel": "Gtr", "field": "mute_group", "operator": "!=", "value": "FX",
+     "channel": "Gtr", "field": "mute_group", "operator": "in", "value": "FX",
      "severity": "warning"},
     {"id": "crowd-patch", "description": "Crowd Mic is on LCL 9",
-     "channel": "Crowd Mic", "field": "patch", "operator": "==", "value": "LCL 9",
+     "channel": "Crowd Mic", "field": "patch", "operator": "!=", "value": "LCL 9",
      "severity": "warning"},
     {"id": "piano-in-iem", "description": "Piano stays on in the drummer IEM",
-     "channel": "Piano", "field": "send_on", "bus": "BUS 9", "operator": "==", "value": True,
+     "channel": "Piano", "field": "send_on", "bus": "BUS 9", "operator": "!=", "value": True,
      "severity": "error"},
     {"id": "piano-iem-level", "description": "Piano stays above -10 in the drummer IEM",
-     "channel": "Piano", "field": "send_db", "bus": "BUS 9", "operator": ">=", "value": -10,
+     "channel": "Piano", "field": "send_db", "bus": "BUS 9", "operator": "<", "value": -10,
      "severity": "warning"},
     {"id": "piano-48v", "description": "48V stays on for the Piano",
-     "channel": "Piano", "field": "phantom", "operator": "==", "value": True,
+     "channel": "Piano", "field": "phantom", "operator": "!=", "value": True,
      "severity": "error"},
 ]})
 
@@ -130,7 +130,7 @@ def _full_state() -> ConsoleState:
     # C002: two strips off one jack. Also makes both "in use".
     for base in ("/ch/2", "/ch/3"):
         values[f"{base}/in/conn/grp"], values[f"{base}/in/conn/in"] = "LCL", 5
-    # CH001: named, so in use, and in no DCA.
+    # Named, so in use.
     values["/ch/2/name"] = "Snare Top"
     # CH002: an active member of a DCA whose fader is 30dB down.
     values["/ch/4/name"], values["/ch/4/tags"] = "Bass", "#D1"
@@ -252,6 +252,12 @@ def _full_state() -> ConsoleState:
     values["/ch/20/name"] = "Split Kick"
     values["/ch/20/main/4/on"], values["/ch/20/send/3/on"] = 1, 1
     values["/bus/3/main/4/on"] = 1
+    # R014: the same shape through bus 14, which inserts a reverb: an effect send, so not R012 but its INFO.
+    values["/ch/22/name"] = "Verb Vox"
+    values["/ch/22/main/4/on"], values["/ch/22/send/14/on"] = 1, 1
+    values["/bus/14/main/4/on"] = 1
+    values["/bus/14/preins/on"], values["/bus/14/preins/ins"] = 1, "FX4"
+    values["/fx/4/mdl"] = "VSS3"
     # The watch conditions: muted when it must not be, fader over its cap,
     # patched somewhere other than LCL 9.
     values["/ch/10/name"], values["/ch/10/mute"], values["/ch/10/fdr"] = "Crowd Mic", 1, -5.0
@@ -306,7 +312,11 @@ def _restrict(state: ConsoleState, addresses, source_names: bool = False,
     # is in use (`audit.aes50_output_addresses`). A scope that dropped the
     # port's status leaf therefore loses the port's outputs, as a real
     # scoped read would.
-    wanted = {a for a, _ in audit.aes50_output_addresses(ConsoleState(keep))}
+    # The same for a fitted module or card.
+    wanted = {a for a, _ in audit.aes50_output_addresses(ConsoleState(keep))
+              + audit.bay_output_addresses(ConsoleState(keep))}
+    keep.update({a: v for a, v in state.values.items() if a in wanted})
+    wanted = {a for a, _ in audit.bay_output_index_addresses(ConsoleState(keep))}
     keep.update({a: v for a, v in state.values.items() if a in wanted})
     return ConsoleState(keep, console_model=state.console_model)
 
@@ -336,7 +346,7 @@ def test_the_scope_is_a_subsequence_of_the_full_plan(scoped):
     assert len(scoped.plan) < len(full)
 
 
-def test_a_compact_plan_is_6195_addresses_and_the_scope_is_3891(scoped):
+def test_a_compact_plan_is_6197_addresses_and_the_scope_is_3893(scoped):
     """The numbers an earlier change is answered with. They are pinned here so a
     plan change that moves them is visible rather than silent.
 
@@ -352,9 +362,12 @@ def test_a_compact_plan_is_6195_addresses_and_the_scope_is_3891(scoped):
     3,847 since each local socket's own mute (C007), 24 on a Compact; 3,863
     since a DCA's mute (CH004), 16 on a Compact, which only the scope grows
     by: the full plan already held them; 6,195 and 3,891 since the width of
-    each bus, Main and Matrix (`busmono`, R011): 28 on a Compact, in both."""
-    assert len(scoped.full) == 6195
-    assert len(scoped.plan) == 3891
+    each bus, Main and Matrix (`busmono`, R011): 28 on a Compact, in both;
+    6,197 and 3,893 since an earlier change added what is fitted in each
+    expansion bay (`/cards/$type`, `/$syscfg/opt_mod`), which the
+    output-side rules read to know whose outputs to follow."""
+    assert len(scoped.full) == 6197
+    assert len(scoped.plan) == 3893
 
 
 def test_only_the_unread_send_family_is_dropped(scoped):
@@ -542,7 +555,7 @@ def test_only_the_bound_cv006_reads_a_sends_pre_post_mode():
     rule = audit.bus_send_drift_rule(
         {"channels": [{"bank": "ch", "channel": 30, "bus_sends": [{"bus": "A"}]}]})
     assert mode in watch_scope.scoped_read_plan(rules=[rule], **COMPACT).addresses
-    assert len(default.full) == 6195  # a Compact's read is not larger for it
+    assert len(default.full) == 6197  # a Compact's read is not larger for it
 
 
 def test_an_unknown_rule_widens_the_scope_to_everything():
@@ -587,9 +600,10 @@ def test_each_condition_field_keeps_what_evaluating_it_reads(field, expected):
     value = {"muted": False, "fader_db": -10.0, "dca": "Drums",
              "mute_group": "FX", "patch": "LCL 3", "send_on": True, "send_db": -10.0,
              "send_mode": "pre", "phantom": True}[field]
-    operator = "<=" if field in ("fader_db", "send_db") else "=="
+    operator = (">" if field in ("fader_db", "send_db")
+                else "not in" if field in ("dca", "mute_group") else "!=")
     extra = {"bus": "BUS 5"} if field.startswith("send_") else {}
-    conditions = parse_watch_conditions(json.dumps({"watch_conditions": [{
+    conditions = parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [{
         "id": "c", "description": "d", "channel": "Crowd Mic", "field": field,
         "operator": operator, "value": value, "severity": "warning", **extra}]}))
     result = watch_scope.scoped_read_plan(
@@ -761,6 +775,10 @@ MUTATIONS = [
     ("R012", "/ch/20/main/4/on"),
     ("R012", "/ch/20/send/3/on"),
     ("R012", "/bus/3/main/4/on"),
+    ("R014", "/ch/22/send/14/on"),
+    ("R014", "/bus/14/preins/on"),
+    ("R014", "/bus/14/preins/ins"),
+    ("R014", "/fx/4/mdl"),
     ("R011", "/bus/6/busmono"),
     ("R011", "/main/1/busmono"),
     ("R011", "/mtx/7/busmono"),
@@ -794,7 +812,6 @@ MUTATIONS = [
     ("C006", "/cfg/talk/assign"),
     ("C006", "/io/altsw"),
     ("C006", "/ch/16/in/conn/altgrp"),
-    ("CH001", "/ch/4/tags"),
     ("CH002", "/dca/1/fdr"),
     ("CH002", "/dca/1/name"),
     ("CH002", "/ch/4/tags"),
@@ -860,7 +877,8 @@ def test_mutating_a_rules_own_scope_is_caught(full_state, rule_id, address):
 
 def test_r013_reads_what_r012_reads():
     assert (watch_scope.RULE_ADDRESS_PATTERNS["R013"]
-            == watch_scope.RULE_ADDRESS_PATTERNS["R012"])
+            == watch_scope.RULE_ADDRESS_PATTERNS["R012"]
+            == watch_scope.RULE_ADDRESS_PATTERNS["R014"])
 
 
 def test_dropping_a_send_mode_changes_nothing(full_state, scoped):
@@ -903,14 +921,14 @@ def test_scoping_does_not_get_a_full_watch_pass_under_the_budget(scoped):
     budget = watch_scope.RESPONSIVENESS_BUDGET_SECONDS[1]
     assert scoped.per_leaf_seconds > budget
     full = watch_scope.ScopedReadPlan(scoped.full, scoped.full)
-    assert scoped.node_dump_requests == full.node_dump_requests == 323
+    assert scoped.node_dump_requests == full.node_dump_requests == 325
     assert scoped.node_dump_seconds == full.node_dump_seconds
     # An earlier change is what did move the node-dump path: names, not scope. A
     # watch pass between name refreshes skips the 88 name leaves -- ~3.3s
     # down to ~2.4s at A11's rates -- and the first pass and each refresh
-    # stay at 323.
-    assert full.node_dump_requests_between_refreshes == 235
-    assert scoped.node_dump_requests_between_refreshes == 235
+    # stay at 325 (323 and 235 until the two bay leaves).
+    assert full.node_dump_requests_between_refreshes == 237
+    assert scoped.node_dump_requests_between_refreshes == 237
 
 
 def test_watch_conditions_alone_would_fit_the_budget():
@@ -934,4 +952,4 @@ def test_scope_report_names_every_scope_and_its_verdict():
     assert "full read plan (no scoping)" in text
     assert "DEFAULT_RULES + realistic watchlist" in text
     assert "OVER the 3-4s budget" in text
-    assert "6195" in text and "3891" in text
+    assert "6197" in text and "3893" in text

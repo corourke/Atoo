@@ -19,7 +19,7 @@ relies on:
   DATA DUMP: the whole node's settable values, recursively, as one flat
   `key=value,` string (spec pp24-25). `node_dump`/`parse_node_dump`
   below. This is the difference between ~6,100 round trips for a live
-  audit read and 323 on a Compact -- measured at 118.8s against
+  audit read and 325 on a Compact -- measured at 118.8s against
   4.8s on real hardware (A11, 2026-09-24), with the two paths agreeing on
   every value, which is why it is the CLI's default read.
 - OSC port 2223, UDP, no bundles, 32kB max packet from WING; this client's

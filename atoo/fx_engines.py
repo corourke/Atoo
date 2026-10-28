@@ -194,6 +194,25 @@ def _template(param: str) -> dict | None:
     return leaf_types().get(f"/fx/{{n}}/{param}")
 
 
+def value_from_text(param: str, text: str) -> object:
+    """A parameter's value from a node dump's text (a live
+    capture): typed as the parameter map types `param`, else as the text
+    reads -- a whole number, a fraction, or text. None when the map's type
+    cannot read it."""
+    from atoo import console as osc
+
+    spec = _template(param)
+    if spec is not None:
+        value, error = osc.value_from_dump_text(text, spec["osc"])
+        return None if error is not None else value
+    for kind in (int, float):
+        try:
+            return kind(text)
+        except ValueError:
+            pass
+    return text
+
+
 def param_type(param: str, value: object) -> tuple[str | None, bool]:
     """`(osc, from_map)`: the OSC type tag `param` is written with, and
     whether the map said so (False: taken from the saved value). None
@@ -212,9 +231,16 @@ def param_type(param: str, value: object) -> tuple[str | None, bool]:
     return None, False
 
 
-def coerce_param(param: str, value: object) -> tuple[object, str | None, bool]:
+def coerce_param(param: str, value: object, *,
+                 check_choices: bool = True) -> tuple[object, str | None, bool]:
     """`(value, refusal, from_map)` -- the value in the type the desk
-    takes, or a refusal saying why it cannot be written."""
+    takes, or a refusal saying why it cannot be written.
+
+    `check_choices=False` takes a text value the desk itself gave (a
+    capture's) without checking it against the map's choices:
+    those are the choices of the one model the engine held when the desk
+    was walked, and `mode` offers others under other models (TAP-DL's
+    MOVE). The write is read back either way."""
     from atoo.initialize import coerce
 
     osc, from_map = param_type(param, value)
@@ -224,7 +250,7 @@ def coerce_param(param: str, value: object) -> tuple[object, str | None, bool]:
     if osc in ("i", "f") and (isinstance(value, str) or value is None):
         return None, f"{value!r} is not a number", from_map
     out = coerce(value, spec)
-    if osc == "s":
+    if osc == "s" and check_choices:
         tokens = spec.get("tokens")
         if tokens and out not in tokens:
             return None, (f"{value!r} is not a choice the desk offers for {param} "

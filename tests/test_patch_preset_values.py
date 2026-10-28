@@ -182,16 +182,17 @@ def test_the_expanded_values_of_a_bus_are_not_a_setting_either():
     assert "the build's own record" in refused.reason
 
 
-def test_switching_a_running_bus_preset_is_still_reported_not_written():
-    """A bus preset carries an FX engine that has to be allocated; until that
-    is built the plan would name one preset and carry the values of another,
-    and nothing on the desk would move. (A channel's preset is switched:
-    `test_patch_preset_switch.py`, an earlier change.)"""
+def test_a_bus_preset_switch_with_no_library_loaded_is_held_saying_why():
+    """With no preset library there are no values to write: the switch is
+    held, the plan unchanged, and the reason given. (With one, the bus
+    preset is switched, its effect included: `test_patch_bus_preset_switch.py`,
+    an earlier change.)"""
     plan = preset_plan()
     amendment, merge = _review(plan, _change_set(_modify("Drums", {"preset": "Vocal"}, obj="bus")))
     assert _refusals(amendment) == [] and merge.edits == []
     [held] = [c for c in amendment.changes if c.kind is ChangeKind.MODIFIED]
-    assert "not written" in held.reason and "carrying the values of another" in held.reason
+    assert held.reason == ("preset -> 'Vocal' -- not written: no preset library is loaded to "
+                           "read the preset's values from")
     assert merge.plan["channels"] == plan["channels"]
     for field in ("preset", "preset_values"):
         assert merge.plan["busses"]["Drums"][field] == plan["busses"]["Drums"][field]

@@ -73,7 +73,16 @@
   const WC_BOOL_FIELDS = ["muted", "send_on", "phantom"];
   const WC_SEND_FIELDS = ["send_on", "send_db", "send_mode"];
   const WC_SEND_MODES = ["pre", "post", "group"];
-  const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(WC_TEXT_FIELDS, ["send_mode"]);
+  // A condition says when to ALERT. dca and mute_group ask
+  // about membership in words, `not in` and `in`; patch and the boolean and
+  // send-mode fields take == and != (watch_conditions.operator_problem).
+  const WC_GROUP_FIELDS = ["dca", "mute_group"];
+  const WC_GROUP_OPERATORS = ["not in", "in"];
+  const WC_EQUALITY_ONLY_FIELDS = WC_BOOL_FIELDS.concat(["patch", "send_mode"]);
+  function wcOperatorsFor(field) {
+    if (WC_GROUP_FIELDS.includes(field)) return WC_GROUP_OPERATORS;
+    return WC_EQUALITY_ONLY_FIELDS.includes(field) ? WC_BOOL_OPERATORS : WC_OPERATORS;
+  }
   const WC_BUS_PLACEHOLDER = "to bus: BUS 5-8, or a name";
   // What a valid value looks like, shown as placeholder text. A patch is
   // written the way an input list's patch column writes it and the way
@@ -92,7 +101,7 @@
   // refused, is decided by the SERVER (`POST /api/watch-conditions/check`,
   // `watch_conditions.row_problems`) -- the loader's own rules -- rather
   // than by a second copy of them here that could drift.
-  const WC_CHANNEL_PLACEHOLDER = "name, or CH 10, DCA 1-4, ALL AUX, BUS Drums";
+  const WC_CHANNEL_PLACEHOLDER = "name, or CH 10, DCA 1-4, ALL AUX, BUS Drums, ACTIVE ALL BUS";
   // Who wrote a condition. atoo.watch_conditions
   // knows two values -- "drafted" (a bundle build proposed it) and
   // "hand" -- and an ABSENT key means "hand", so a file a person wrote
@@ -380,12 +389,14 @@
     });
     // A position is written in its one display spelling (`ch10` -> `CH
     // 10`), and a scoped name's kind word likewise (`bus Drums` -> `BUS
-    // Drums`), once the cell is left, as Save would write it. A bare name
-    // is never touched, nor a scoped name's own spelling.
+    // Drums`), once the cell is left, as Save would write it; ACTIVE moves
+    // to the front (`all bus active` -> `ACTIVE ALL BUS`). A
+    // bare name is never otherwise touched, nor a scoped name's own spelling.
     channelInput.addEventListener("blur", async () => {
       await wcRunCheck();
       const check = wcRowChecks[index];
-      if (check && (check.position || check.scoped) && !check.channel && check.canonical
+      if (check && (check.position || check.scoped || check.active) && !check.channel
+          && check.canonical
           && check.canonical !== cond.channel) {
         // `Main` alone is read as MAIN 1: the server's `check.note` says
         // so, and stays under the cell (not red) until it is edited.
@@ -404,10 +415,8 @@
     fieldSelect.addEventListener("change", () => {
       cond.field = fieldSelect.value;
       edited();
-      if (WC_EQUALITY_ONLY_FIELDS.includes(cond.field)
-          && !WC_BOOL_OPERATORS.includes(cond.operator)) {
-        cond.operator = "==";
-      }
+      const allowed = wcOperatorsFor(cond.field);
+      if (!allowed.includes(cond.operator)) cond.operator = allowed[0];
       // The value's TYPE is a function of the field, so switching field
       // has to carry the value across or reset it -- a number left in a
       // `dca` row would be rejected at load time by the Python side.
@@ -455,8 +464,7 @@
     tr.appendChild(fieldCell);
 
     const opCell = document.createElement("td");
-    const opOptions = WC_EQUALITY_ONLY_FIELDS.includes(cond.field)
-      ? WC_BOOL_OPERATORS : WC_OPERATORS;
+    const opOptions = wcOperatorsFor(cond.field);
     const opSelect = wcMakeSelect(opOptions, cond.operator, "wc-operator");
     opSelect.addEventListener("change", () => { cond.operator = opSelect.value; edited(); });
     opCell.appendChild(opSelect);
@@ -696,7 +704,7 @@
     wcSetDirty(true);
     wcConditions.push({
       id: "", description: "", channel: "", field: "muted", operator: "==",
-      value: false, severity: "warning",
+      value: true, severity: "warning",
     });
     wcRenderTable();
   });
@@ -1467,10 +1475,33 @@
     return { where, claim: sentenceCase(f.title), why: detail };
   }
 
+  // A sheet edit the desk does not have yet (CV023) offers its
+  // two ways on, in this page (the watch keeps running on the server): Apply
+  // with the full build's preview run, and Build's step 04 on the row.
+  const SHEET_DIFFERS = "CV023";
+  const STRIP_KIND = { CH: "channel", AUX: "channel", BUS: "bus", MAIN: "output", MTX: "output" };
+
+  function planRowId(where) {
+    const m = /^(CH|AUX|BUS|MAIN|MTX)\s+\d+\s+"(.*)"$/.exec(where || "");
+    if (!m) return "";
+    return "plan-" + STRIP_KIND[m[1]] + "-" + m[2].toLowerCase().replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  function sheetLinks(f) {
+    if (f.rule_id !== SHEET_DIFFERS) return "";
+    const row = planRowId(f.strip);
+    return '<span class="row-actions">' +
+      '<button type="button" class="link-btn" data-sheet-go="apply" ' +
+      'title="Go to Apply and run the full build\'s preview of what would change">Open in Apply</button>' +
+      '<button type="button" class="link-btn" data-sheet-go="build" data-row="' + escapeHtml(row) + '" ' +
+      'title="Go to Build\'s step 04, on this row">Show in Build 04</button></span>';
+  }
+
   function findingHtml(f) {
     const parts = splitFinding(f);
     let html = '<span class="row-claim">' + escapeHtml(parts.claim) + "</span>" +
-      '<span class="row-why">' + escapeHtml(parts.why) + "</span>";
+      '<span class="row-why">' + escapeHtml(parts.why) + "</span>" + sheetLinks(f);
     for (const g of f.also || []) {
       html += '<span class="finding-also">Also <code>' + escapeHtml(g.rule_id) + "</code> " +
         escapeHtml(sentenceCase(g.title)) + ": " + escapeHtml(g.detail) + "</span>";
@@ -1825,6 +1856,7 @@
   // keeps its label: it is still reading what it was started on.
   function forgetStoppedReading() {
     if (serverRunning === true) return;
+    renderSheetRead(null);
     lastReadingAt = null;
     waitingSince = null;
     lastUpdated.className = "meta";
@@ -1946,6 +1978,7 @@
     coverageNote.textContent = caveat;
 
     renderNotes(payload.notes || []);
+    renderSheetRead(payload.sheet_read || null);
 
     if (payload.baseline) {
       shown = new Map();
@@ -1972,17 +2005,31 @@
         f._isNew = true;
         shown.set(findingKey(f), f);
       }
-      // A row already showing keeps its Since and takes this reading's
-      // detail and folded findings; renderTable redraws its Detail cell.
+      // `all_findings` is the table as it is now, on every frame. A row
+      // already showing keeps its Since and takes this reading's detail and
+      // folded findings; renderTable redraws its Detail cell. A finding this
+      // page does not have is added quietly, not as news: a
+      // page that joins a running watch, a reload, or a socket that
+      // reconnected is handed the server's last frame, not its baseline,
+      // and its new_findings are only that pass's. Before this, such a page
+      // showed none of what was already there -- a C008 ERROR included.
       for (const f of payload.all_findings) {
         const known = shown.get(findingKey(f));
-        if (known && known !== f) {
+        if (!known) {
+          f._since = now;
+          shown.set(findingKey(f), f);
+        } else if (known !== f) {
           known.detail = f.detail;
           known.also = f.also;
         }
       }
       renderTable();
-      for (const f of payload.cleared_findings) {
+      const current = new Set(payload.all_findings.map(findingKey));
+      const gone = [...payload.cleared_findings];
+      for (const [key, f] of shown) {
+        if (!current.has(key) && !gone.some((c) => findingKey(c) === key)) gone.push(f);
+      }
+      for (const f of gone) {
         shown.delete(findingKey(f));
         // Cleared, so no longer suppressed: if it comes back it is new.
         suppressed.delete(findingKey(f));
@@ -2000,6 +2047,65 @@
       else if (fresh.includes("warning")) flashScreen("warning");
     }
   }
+
+  // One line saying when this watch read the sheets after a
+  // Save in Build's step 04, and how many of their edits wait for Apply.
+  const sheetReadLine = document.getElementById("watch-sheet-read");
+
+  function clockTime(iso) {
+    const d = iso ? new Date(iso) : null;
+    return d && !isNaN(d) ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+  }
+
+  function renderSheetRead(read) {
+    if (!sheetReadLine) return;
+    if (!read) {
+      sheetReadLine.hidden = true;
+      return;
+    }
+    const n = read.waiting || 0;
+    sheetReadLine.innerHTML = "Read " + escapeHtml(read.sheet) + " at " + escapeHtml(clockTime(read.read_at)) +
+      ", after its Save at " + escapeHtml(clockTime(read.saved_at)) + " in Build 04: <strong>" +
+      (n ? n + (n === 1 ? " change waits" : " changes wait") + " for Apply."
+        : "nothing waits for Apply.") + "</strong>";
+    sheetReadLine.hidden = false;
+  }
+
+  // Edit sheets: only with a show open that can be edited (not the Demo).
+  // With none open, Make a show from this desk captures the desk Watch reads
+  // (the bar's console) into one, in the New show dialog; Watch keeps running.
+  const editSheets = document.getElementById("watch-edit-sheets");
+  const makeShow = document.getElementById("watch-make-show");
+  function renderEditSheets() {
+    const show = wcBundle();
+    if (editSheets) editSheets.hidden = !show || !!show.demo;
+    if (makeShow) makeShow.hidden = !!show || !(SP && SP.makeShowFromDesk);
+  }
+  const madeShow = document.getElementById("watch-made-show");
+  if (makeShow) makeShow.addEventListener("click", () => SP.makeShowFromDesk((said) => {
+    if (!madeShow) return;
+    madeShow.textContent = said + " Watch keeps running; Edit sheets opens its sheets in Build 04.";
+    madeShow.hidden = false;
+  }));
+  renderEditSheets();
+  if (SP && typeof SP.onBundleChange === "function") SP.onBundleChange(renderEditSheets);
+  // Edit sheets, and a CV023 row's two ways on, change the page, not the
+  // tab: the watch runs on the server and this page stays subscribed, so
+  // coming back to Watch finds it running, the next pass having read any
+  // Save (the maintainer: "it should just navigate to the
+  // Build page").
+  if (editSheets) editSheets.addEventListener("click", () => SP.sheetsFromWatch());
+  const alertBodyEl = document.getElementById("alert-body");
+  if (alertBodyEl) alertBodyEl.addEventListener("click", (ev) => {
+    const go = ev.target.closest("[data-sheet-go]");
+    if (!go) return;
+    if (go.dataset.sheetGo === "apply") {
+      SP.activateMode("apply");
+      if (typeof SP.applyTheDifference === "function") SP.applyTheDifference();
+    } else {
+      SP.sheetsFromWatch(go.dataset.row || "");
+    }
+  });
 
   // The server's word on the switch, for a running watch; and Off again once
   // a watch that was running has stopped. A choice made before Start is kept

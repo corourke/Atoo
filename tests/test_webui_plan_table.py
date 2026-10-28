@@ -237,63 +237,65 @@ def client():
 def test_setup_js_draws_channels_busses_and_outputs_as_tables(client):
     js = client.get("/static/setup.js").text
     for text in ('id="plan-channels-table"', 'id="plan-busses-table"', 'id="plan-outputs-table"',
-                 'id="plan-rows"', "ct--input-slim", "ct--plan-collapsed",
+                 'id="plan-rows"', "ct ct-sheet",
                  'class="row-expand-btn"', 'class="row-detail"', 'class="row-detail-inner"',
-                 "cell-input-extra", "cell-plan", "cell-plan-collapsed-note",
-                 'id="grp-toggle-input"', 'id="grp-toggle-plan"', 'id="grpth-input"',
-                 'id="grpth-plan"', 'data-group="input"', 'data-group="plan"',
                  '-detail"', "setup-provenance", "colour-chip", "colour-unknown",
                  "row-pair", "row-unplanned", "ct-unassigned", "plan.unassigned_inputs",
                  'id="plan-input-toolbar-slot"'):
         assert text in js, f"setup.js never has {text}"
-    # The cards are gone, and nothing still draws one.
-    for gone in ("setup-card", "setup-grid", "renderChannel", "renderBus(", "renderOutput("):
+    # The cards are gone, and nothing still draws one; nor the Input / Plan
+    # column groups, which one editable view replaced.
+    for gone in ("setup-card", "setup-grid", "renderChannel", "renderBus(", "renderOutput(",
+                 "grp-toggle", "ct--input-slim", "ct--plan-collapsed", "cell-plan-collapsed-note"):
         assert gone not in js, f"setup.js still has {gone}"
 
 
 def test_setup_js_reads_the_keys_the_server_adds_for_the_table(client):
     """`channel_display` and `patch_key` cross the wire; a rename on the
     Python side is otherwise a blank Written-to line and an unjoined row.
-    The names before an earlier change are still read, for a payload or plan from then."""
+    The names before an earlier change are still
+    read, for a payload or plan from then. The Busses and
+    Outputs rows are `GET /api/build/bus-sheet`'s `derived` rows, which
+    `sheets.bus_rows_from_plan` reads through `plan_compat` (an output's
+    `socket`/`sockets` included)."""
     js = client.get("/static/setup.js").text
-    for key in ("current.channel_display", "d.patch_keys || d.socket_keys", "item.d.sockets",
-                "display.name_home", "r.patch_key || r.socket_key", "entry.patches", "entry.patch",
-                "entry.sockets", "entry.socket", "values.patch", "values.socket",
+    for key in ("current.channel_display", "d.patch_keys || d.socket_keys", "(d && d.sockets)",
+                "display.name_home", "r.patch_key || r.socket_key", "values.patch", "values.socket",
                 "display.colour", "home.linked", "home.addresses", "home.why",
                 "home.shared_with", "colour.index", "colour.name", "colour.stated",
                 "sources.input_list.records",
                 "current.bus_display", "current.output_display", "item.d.label",
-                "display.label", "bd.label", "bd.colour", "od.label", "od.colour"):
+                "display.label", "bd.label", "bd.colour",
+                'fetch("/api/build/bus-sheet")', "data.derived", "data.bus_sheet", "data.roles",
+                "data.plan_behind", "r.sheet", "r.row", "r.column", "r.reason", "r.text"):
         assert key in js, f"setup.js never reads {key}"
 
 
 def test_every_table_starts_with_the_desk_number_in_its_colour(client):
     js = client.get("/static/setup.js").text
     # The number is the first cell of every row of all three tables...
-    assert js.count('<td class="col-num">') >= 5
-    assert '<th class="col-num" rowspan="2"' in js
+    assert js.count('<td class="col-num">') >= 4
     assert js.count('<th class="col-num" title=') == 2
     # ...a stereo pair's second socket carrying the same number, quieter.
     assert "numChip(item.d.label, item.d.colour, null, true)" in js
     assert "num-chip-sub" in js
     # The chip is painted by the colour name, and says it.
     assert 'attr = ` data-colour="${esc(String(colour.name).toLowerCase())}"`;' in js
-    assert "title = `Colour: ${colour.name} (col ${colour.index})`;" in js
+    assert "title = `Color: ${colour.name} (col ${colour.index})`;" in js
     # The Plan group's Ch # is gone: the number is the first column now.
     assert "Ch&nbsp;#" not in js
-    # Strip is gone (2026-09-28): Patch leads the Plan group instead.
-    assert '<th class="subhead-plan col-patch">Patch</th>' in js
-    # 2026-09-28 (UI batch): the Plan group gained Phantom, and a Findings
-    # column follows it -- 13 became 15.
-    assert "const CHANNEL_COLS = 15;" in js
+    # One view of the input list's columns: Ch, the triangle,
+    # the eight sheet columns, the row's remove and Findings.
+    assert "const CHANNEL_COLS = 12;" in js
 
 
 def test_number_chips_share_the_colour_chips_palette_with_readable_text(client):
     css = client.get("/static/styles.css").text
     # Apply's scribble strips (`.desk-strip-name`) take the
-    # same palette, from the same rule.
+    # same palette, from the same rule; since an earlier change the whole tile
+    # (`.desk-strip`) does.
     rules = re.findall(r'\.colour-chip\[data-colour="(\w+)"\], \.num-chip\[data-colour="(\w+)"\], '
-                       r'\.desk-strip-name\[data-colour="\w+"\] '
+                       r'\.desk-strip-name\[data-colour="\w+"\], \.desk-strip\[data-colour="\w+"\] '
                        r'\{ background: #([0-9a-f]{6}); color: #([0-9a-f]{6}); \}', css)
     # The desk's eighteen, plus the two retired names still accepted as
     # aliases (Crimson, Magenta), each painting the colour it now maps to.
@@ -356,8 +358,9 @@ def test_the_shell_page_carries_step_04s_input_toolbar(client):
 
 def test_styles_carry_the_tables_rules(client):
     css = client.get("/static/styles.css").text
-    for rule in (".ct.ct--input-slim td.cell-input-extra { display: none; }",
-                 ".ct.ct--plan-collapsed th.subhead-plan, .ct.ct--plan-collapsed td.cell-plan { display: none; }",
+    for rule in ('.ct.ct-sheet :is(input, select)::placeholder { color: var(--text-dim); font-style: italic; }',
+                 ".ct.ct-sheet :is(input, select, .detail-input).is-edited {",
+                 ".ct.ct-sheet tr.row-refusal td {",
                  '.row-expand-btn[aria-expanded="true"] .chevron { transform: rotate(90deg); }',
                  ".row-detail-inner {", '.colour-chip[data-colour="red"]',
                  '.colour-chip[data-colour="white"]', ".colour-unknown {", "tr.jump-flash {"):
@@ -377,25 +380,23 @@ def _channel_header(js):
     return js[start:js.index("function busTable(", start)]
 
 
-def test_step_04_has_patch_in_the_plan_group_and_no_strip_column(client):
+def test_step_04_shows_the_input_lists_own_columns_in_one_view(client):
+    """An earlier change, mockup revision 3: one editable view, the sheet's own
+    columns in the sheet's order -- no Input / Plan groups, no Strip."""
     js = client.get("/static/setup.js").text
+    assert 'const SHEET_COLS = ["channel", "patch", "name", "category", "type", "phantom", "dca", "mute_group"];' in js
+    for head in ('channel: "Channel"', 'patch: "Patch"', 'name: "Name"', 'category: "Category"',
+                 'type: "Type"', 'phantom: "48V"', 'dca: "DCA"', 'mute_group: "Mute group"'):
+        assert head in js, f"setup.js never heads a column {head}"
     header = _channel_header(js)
-    # No Socket column before the Input group, and no Strip heading at all.
-    assert "Socket" not in header
-    assert ">Strip<" not in header
-    # Patch is the Plan group's first subhead, then Phantom (the UI batch,
-    # 2026-09-28), DCAs and Mute Groups.
-    plan_heads = re.findall(r'<th class="subhead-plan(?: [^"]*)?"[^>]*>([^<]+)</th>', header)
-    assert plan_heads == ["Patch", "Phantom", "DCAs", "Mute Groups"]
-    # The Plan group spans those four columns when open.
-    assert 'colspan="${planCollapsed ? 1 : PLAN_COLS}"' in header
-    assert "const PLAN_COLS = 4;" in js
-    # Every row draws its patch through planCells' first cell.
-    assert '`<td class="cell-plan col-patch">${patch}</td>' in js
-    assert "planCells(patchText(patch), phantomCell(ch), listOrDash(ch.dca), listOrDash(ch.mute_group))" in js
-    assert '<td class="col-sock">' not in js
-    # The outputs table says Patch too.
-    assert "<th>Output</th><th>Kind</th><th>Patch</th><th>Fed by</th>" in js
+    assert "Socket" not in header and ">Strip<" not in header
+    assert "SHEET_COLS.map((col) => `<th class=\"subhead-sheet" in header
+    # A blank cell's placeholder is the plan's value.
+    assert "function planCellValues(ch, d, pairIndex)" in js
+    assert '` placeholder="${esc(shown[col])}" title="Blank in the input list; the plan has ${esc(shown[col])}"`' in js
+    # The bus sheet's columns head the Busses and Mains and Matrix tables.
+    # Revision 3: sources and tap fold open under the row.
+    assert 'const BUS_ROW_COLS = ["name", "role", "width", "outputs"];' in js
 
 
 def test_what_the_strip_column_carried_is_still_drawn(client):
@@ -405,14 +406,12 @@ def test_what_the_strip_column_carried_is_still_drawn(client):
     # The plan's name for the strip, under the Name cell, only when it differs.
     assert "const deskName = row && row.values.name !== ch.name" in js
     assert "on desk: ${esc(ch.name)}" in js
-    assert "inputCells(row, editable, deskName)" in js
-    # The pair's second row says whose it is, beside its patch (it said
-    # "+ stereo pair" until the ST badge, 2026-09-28).
-    assert "`second input of ${esc(item.ch.name)}</span>`" in js
-    assert '"+ stereo pair</span>"' not in js
-    # "unassigned" / "not in this plan" beside the unplaced input's patch.
-    assert "planCells(`${patchOf(row.values) ? patchText(patchOf(row.values))" in js
-    assert ">unassigned</span>" in js and ">not in this plan</span>" in js
+    assert "sheetCells(row, editable, planCellValues(ch, item.d, 0), deskName)" in js
+    # The pair's second row says whose it is, on the row.
+    assert "`title=\"The second input of ${esc(item.ch.name)}'s stereo pair: the same strip\">`" in js
+    # "unassigned" / "not in this plan" beside the unplaced input's name.
+    assert "sheetCells(row, editable, {}, mark)" in js
+    assert ">unassigned</span>" in js and "not in this plan</span>" in js
     css = client.get("/static/styles.css").text
     assert ".ct-desk-name {" in css
 
@@ -422,13 +421,15 @@ def test_step_02_draws_patch_last_and_notes_as_an_icon(client):
     start = html.index('<table class="it" id="input-table">')
     head = html[start:html.index("</thead>", start)]
     heads = re.findall(r"<th(?:\s[^>]*)?>([^<]*)<", head)
-    assert heads == ["", "Order", "Name", "Category", "Type", "Model", "Phantom", "Preset",
-                     "Notes", "Patch", ""]
+    # The desk sheets' channel, DCA and mute-group columns sit
+    # beside the input's own.
+    assert heads == ["", "Order", "Channel", "Name", "Category", "Type", "Model", "Phantom",
+                     "DCA", "Mute group", "Preset", "Notes", "Patch", ""]
     assert "Socket" not in head
     shell = client.get("/static/shell.js").text
     # The cells follow the header: the patch drawn last, under either name.
     assert 'const PATCH_COLUMNS = ["patch", "socket"];' in shell
-    assert "return inputColumns.filter((c) => PATCH_COLUMNS.indexOf(c) === -1).concat(patch);" in shell
+    assert "return INPUT_DISPLAY_ORDER.filter((c) => inputColumns.indexOf(c) !== -1).concat(patch);" in shell
     # An empty Patch cell shows nothing that reads like a value.
     assert 'placeholder = "LCL 3"' not in shell
     assert 'box.title = "Where this input is patched' in shell
@@ -482,9 +483,8 @@ def test_a_stereo_channel_carries_st_and_its_partner_row_says_so(client):
 
 def test_step_04_notes_are_step_02s_icon_and_popup_with_no_second_save_path(client):
     js = client.get("/static/setup.js").text
-    # The table cell and the row's disclosure both draw the same button...
-    assert 'if (col === "notes") return `<td class="${cls}">${noteButton(row)}</td>`;' in js
-    assert 'row ? ["Notes", notesDesc(row, editable)] : null,' in js
+    # The row's disclosure draws step 02's button, with the model and preset.
+    assert 'return kv([field("model", "Model"), field("preset", "Preset"), ["Notes", notesDesc(row, editable)]])' in js
     assert "editor.noteIcon(text)" in js
     # ...and a click opens step 02's popup on step 02's own row.
     assert "SP_.inputEditor.editNote(note.dataset.noteKey, note);" in js
@@ -500,25 +500,28 @@ def test_step_04_notes_are_step_02s_icon_and_popup_with_no_second_save_path(clie
     assert shell.count('fetch("/api/build/input-list/save"') == 1
 
 
-def test_step_04_has_a_phantom_column_as_the_plan_sets_it(client):
+def test_step_04_has_a_48v_column_on_the_input_lists_own_tick(client):
     js = client.get("/static/setup.js").text
+    # Editable, step 02's own phantom tick; a plan-only row shows the plan's.
+    assert '`<td class="${cls} col-phantom"><input type="checkbox" data-input-col="phantom" `' in js
     assert "const on = !!(ch && ch.source && ch.source.phantom);" in js
     assert '<span class="prop" title="Phantom power (48V) on' in js
-    assert '<th class="subhead-plan col-plan-phantom"' in js
-    assert "if (th) th.colSpan = open ? PLAN_COLS : 1;" in js
     assert ".phantom-badge" not in client.get("/static/styles.css").text
 
 
 def test_findings_badges_count_the_docks_findings_by_its_own_jump_targets(client):
     js = client.get("/static/setup.js").text
-    # One Findings cell per row of all three tables, filled from the dock.
-    assert js.count("findingsCell(cardId(") == 3
-    assert js.count("FINDINGS_TH") >= 4
+    # One Findings cell per row of every table, filled from the dock: the
+    # sheet tables', and the Outputs table's per socket.
+    assert js.count("findingsCell(cardId(") == 2 and "html += findingsCell(id) + \"</tr>\";" in js
+    assert 'findingsCell(cardId("socket", label))' in js
+    assert js.count("FINDINGS_TH") >= 3
     # A finding is a row's when one of its jump links lands on that row,
     # or its structured `where` names it (Apply's pre-flight links to its
     # own panel, but `channels[Snare].patch` is still Snare's row).
     assert "/^#plan-(channel|bus|output)-/.test(j.target)" in js
-    assert "const m = /^(channels|busses|outputs)\\[([^\\]]+)\\]/.exec(f.where || \"\");" in js
+    assert ("const m = /^(channels|busses|outputs|direct_outputs)\\[([^\\]]+)\\]/"
+            ".exec(f.where || \"\");") in js
     assert "if (!findingRowIds(f)[id]) return;" in js
     assert "if (f._resolved) return;" in js
     for text in ('["error", "E", "error"]', '["warning", "W", "warning"]', '["info", "I", "info"]',

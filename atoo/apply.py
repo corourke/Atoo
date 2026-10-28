@@ -295,8 +295,10 @@ _VPH_CAPABLE_GROUPS = facts.PHANTOM_CAPABLE_GROUPS
 # in the parameter map for every group the plan's patch vocabulary can
 # name (LCL/A/B/C/SC/USB/CRD/MOD/AES) -- listed explicitly anyway,
 # same defensive pattern as vph, rather than assuming "every group" holds
-# forever.
-_MODE_CAPABLE_GROUPS = {"LCL", "A", "B", "C", "SC", "USB", "CRD", "MOD", "AES"}
+# forever. `USR` too: each user signal or patch slot carries the same
+# `/io/in/USR/{n}/mode` leaf (`console_facts`, the USR section), and a stereo
+# channel on a USR pair needs both slots ST.
+_MODE_CAPABLE_GROUPS = {"LCL", "A", "B", "C", "SC", "USB", "CRD", "MOD", "AES", "USR"}
 
 # Plan send-mode text (conventions.py's _SEND_MODE_MAP: "pre"/"post"/
 # "group") -> WING's own enum (/ch/{n}/send/{n}.mode: PRE/POST/GRP).
@@ -906,7 +908,8 @@ def _ordered_processing(targets: list[WriteTarget]) -> list[WriteTarget]:
     return sorted(targets, key=lambda t: preset_expand.write_order(t.address))
 
 
-def _fader_targets(base: str, label: str, fader: dict | None) -> list[WriteTarget]:
+def _fader_targets(base: str, label: str, fader: dict | None, *,
+                   states_mix: bool = True) -> list[WriteTarget]:
     """Both starting-level WriteTargets for one strip this plan builds --
     a channel/aux strip, a bus, a DCA, or a Main/Matrix output -- built together
     since they share the same "plan value or documented default"
@@ -914,15 +917,21 @@ def _fader_targets(base: str, label: str, fader: dict | None) -> list[WriteTarge
     `{"fader_db": ..., "muted": ...}` dict; missing or None (an older plan
     predating this field, or a mute group, which has no fader) is treated
     as "nothing stated" exactly like every other optional plan field this
-    module reads, never an error. A DCA has one (2026-10-01)."""
+    module reads, never an error. A DCA has one (2026-10-01).
+
+    `states_mix` false (a captured plan, `inferred.plan_states_the_mix`): an
+    unstated fader or mute is the desk's, and gets no target at all."""
     fader = fader or {}
     fader_db = fader.get("fader_db")
-    if fader_db is None:
-        fader_db = facts.FADER_DEFAULT_DB
     muted = fader.get("muted")
-    if muted is None:
-        muted = facts.MUTED_DEFAULT
-    return [_fader_starting_target(base, label, fader_db), _mute_starting_target(base, label, muted)]
+    targets = []
+    if fader_db is not None or states_mix:
+        targets.append(_fader_starting_target(
+            base, label, facts.FADER_DEFAULT_DB if fader_db is None else fader_db))
+    if muted is not None or states_mix:
+        targets.append(_mute_starting_target(
+            base, label, facts.MUTED_DEFAULT if muted is None else muted))
+    return targets
 
 
 def source_name_link(group: str, sockets: list, shared_sockets:
@@ -1135,6 +1144,8 @@ def _channel_write_targets(
     warnings: list[str],
     set_fader_levels: bool,
     shared_sockets: dict[tuple[str, int], list[str]] | None = None,
+    states_mix: bool = True,
+    matrix_index: dict[str, int] | None = None,
 ) -> list[WriteTarget]:
     shared_sockets = shared_sockets or {}
     n = channel["channel"]
@@ -1152,14 +1163,18 @@ def _channel_write_targets(
         bank = "ch"
     strip_label = bank
     base = f"/{bank}/{n}"
+    # Where a captured plan found the name (`name_on`): on the
+    # socket, on the strip, or nowhere. Absent on a built plan.
+    name_on = channel.get("name_on")
     targets: list[WriteTarget] = [
         # The strip's own name. It is NOT what the desk displays when the
         # strip is patched (see `clink` below) -- it is the identity the
         # strip falls back on, and it is what `audit`'s conventions diff
         # and every offline reader compare against, so it is written
-        # either way.
+        # either way -- except on a captured plan whose desk showed the
+        # socket's name or none, where the strip's own name is left as it is.
         WriteTarget(f"{base}/name", "s", f"{strip_label} {n} ({name}): name", _const(name), STAGE_NAMES),
-    ]
+    ] if name_on in (None, "strip") else []
     # Confirmed OSC addresses (ch.{n}.col int [1..18], ch.{n}.icon
     # int [0..999]) -- distinct from the plan's free-text `color` field,
     # which stays UI-only (no confirmed name-to-palette mapping, see
@@ -1274,8 +1289,18 @@ def _channel_write_targets(
     # The socket's label is
     # written once by `_shared_source_name_targets`, not fought over here.
     linked, why = source_name_link(group, sockets, shared_sockets)
+    if name_on == "socket" and linked:
+        # The desk showed this socket's name: written to the patched socket
+        # only, so a stereo pair's other socket keeps its own.
+        sockets_named = sockets[:1]
+    else:
+        sockets_named = sockets
 
-    if linked:
+    if name_on in ("strip", "none"):
+        # A captured strip that showed its own name, or none: the link is
+        # left as the desk had it, and no socket is named.
+        pass
+    elif linked:
         targets.append(WriteTarget(
             f"{base}/clink", "i",
             f"{strip_label} {n} ({name}): link customization to source "
@@ -1284,7 +1309,7 @@ def _channel_write_targets(
         ))
         # Both sockets of a stereo pair, so the name is right whichever
         # one the surface reads and whichever way the pair is later split.
-        for socket in sockets:
+        for socket in sockets_named:
             targets.append(WriteTarget(
                 f"/io/in/{group}/{socket}/name", "s",
                 f"{strip_label} {n} ({name}): name on source {group} {socket}",
@@ -1293,7 +1318,7 @@ def _channel_write_targets(
             if col is not None:
                 targets.append(WriteTarget(
                     f"/io/in/{group}/{socket}/col", "i",
-                    f"{strip_label} {n} ({name}): colour on source {group} {socket}",
+                    f"{strip_label} {n} ({name}): color on source {group} {socket}",
                     _const(col), STAGE_SOURCE_LABEL,
                 ))
             if channel.get("icon") is not None:
@@ -1394,7 +1419,10 @@ def _channel_write_targets(
     stereo_wanted = bool(channel["source"]["stereo"])
     wing_mode = "ST" if stereo_wanted else "M"
     if group in _MODE_CAPABLE_GROUPS:
-        for socket in sockets:
+        # A captured mono strip on the even socket of a pair: the width
+        # belongs to the pair, which the desk set; it is left as it is.
+        width_sockets = [s for s in sockets if states_mix or stereo_wanted or s % 2 == 1]
+        for socket in width_sockets:
             targets.append(WriteTarget(
                 f"/io/in/{group}/{socket}/mode", "s",
                 f"{strip_label} {n} ({name}): {wing_mode} width on {group} {socket}",
@@ -1414,10 +1442,18 @@ def _channel_write_targets(
     explicit = _channel_processing_targets(channel, bank, base, warnings)
     targets.extend(_ordered_processing(explicit + _preset_write_targets(
         channel, bank, base, {t.address for t in explicit}, warnings)))
+    # The effects the strip inserts (a capture's), the engine
+    # loaded before the insert names it.
+    fx_targets, insert_targets = _fx_targets(base, bank, f"{strip_label} {n} ({name})",
+                                             channel, warnings)
+    targets.extend(fx_targets + insert_targets)
 
     dca_names = channel.get("dca") or []
     mute_names = channel.get("mute_group") or []
-    if dca_names or mute_names:
+    # A captured plan's membership is the complete statement of it, empty
+    # included (a DCA taken out of a sheet comes off the desk);
+    # a built plan's full apply starts from an initialized desk, which has none.
+    if dca_names or mute_names or not states_mix:
         missing_dca = [d for d in dca_names if d not in dca_index]
         missing_mute = [m for m in mute_names if m not in mute_group_index]
         for missing in missing_dca:
@@ -1426,7 +1462,7 @@ def _channel_write_targets(
             warnings.append(f"{strip_label} {n} ({name!r}): mute group {missing!r} has no console index in this plan -- membership not written for it")
         dca_idxs = [dca_index[d] for d in dca_names if d in dca_index]
         mute_idxs = [mute_group_index[m] for m in mute_names if m in mute_group_index]
-        if dca_idxs or mute_idxs:
+        if dca_idxs or mute_idxs or not states_mix:
             targets.append(WriteTarget(
                 f"{base}/tags", "s", f"{strip_label} {n} ({name}): DCA/mute-group tags",
                 lambda current, d=dca_idxs, m=mute_idxs: _merge_tags(current, d, m),
@@ -1449,6 +1485,28 @@ def _channel_write_targets(
             targets.append(WriteTarget(f"{send_base}/mode", "s", f"{strip_label} {n} ({name}): send to {bus_name} mode", _const(wing_mode), STAGE_SENDS))
         elif send.get("mode") is not None:
             warnings.append(f"{strip_label} {n} ({name!r}): send to {bus_name!r} has unrecognized mode {send['mode']!r} -- mode not written")
+
+    # A channel's sends straight to a Matrix
+    # (`/{bank}/{n}/send/MX{m}`, with on, lvl and the same PRE/POST mode leaf
+    # as a bus send). An unstated level or tap takes a Matrix feed's
+    # defaults (unity, post), except on a captured plan, where it is the desk's.
+    for send in channel.get("matrix_sends") or []:
+        matrix = send.get("matrix") if isinstance(send, dict) else None
+        midx = (matrix_index or {}).get(matrix)
+        if midx is None:
+            warnings.append(f"{strip_label} {n} ({name!r}): send to Matrix {matrix!r}, which has "
+                            "no console index in this plan -- send not written")
+            continue
+        send_base = f"{base}/send/MX{midx}"
+        targets.append(WriteTarget(f"{send_base}/on", "i", f"{strip_label} {n} ({name}): send to {matrix} on", _const(1), STAGE_SENDS))
+        level = send.get("level_db")
+        if level is None and states_mix:
+            level = MAIN_ROUTE_LEVEL_DEFAULT_DB
+        if level is not None:
+            targets.append(WriteTarget(f"{send_base}/lvl", "f", f"{strip_label} {n} ({name}): send to {matrix} level", _const(float(level)), STAGE_SENDS))
+        wing_mode = _SEND_MODE_TO_WING.get(send.get("mode") or ("post" if states_mix else None))
+        if wing_mode is not None:
+            targets.append(WriteTarget(f"{send_base}/mode", "s", f"{strip_label} {n} ({name}): send to {matrix} mode", _const(wing_mode), STAGE_SENDS))
 
     # A channel routed straight to Main, no bus and no DCA at
     # all (the plan's channel["main_routes"], from a "## Processing"
@@ -1477,6 +1535,9 @@ def _channel_write_targets(
         listed_mains.add(route_index)
         main_base = f"{base}/main/{route_index}"
         targets.append(WriteTarget(f"{main_base}/on", "i", f"{strip_label} {n} ({name}): routed directly to Main {route_index}", _const(1), STAGE_ROUTING))
+        if not states_mix:
+            # A captured plan: the route's level and tap are the desk's.
+            continue
         targets.append(WriteTarget(f"{main_base}/lvl", "f", f"{strip_label} {n} ({name}): direct Main {route_index} level", _const(MAIN_ROUTE_LEVEL_DEFAULT_DB), STAGE_ROUTING))
         targets.append(WriteTarget(f"{main_base}/pre", "i", f"{strip_label} {n} ({name}): direct Main {route_index} pre/post-fader", _const(MAIN_ROUTE_PRE_DEFAULT), STAGE_ROUTING))
     for main_index in facts.main_indices():
@@ -1495,13 +1556,15 @@ def _channel_write_targets(
         # signal actually flows. See the module docstring. Both banks
         # carry fdr/mute (confirmed key list for aux, same as ch), so
         # this isn't bank-conditional the way flt is.
-        targets.extend(_fader_targets(base, f"{strip_label} {n} ({name})", channel.get("fader")))
+        targets.extend(_fader_targets(base, f"{strip_label} {n} ({name})", channel.get("fader"),
+                                      states_mix=states_mix))
 
     return targets
 
 
 def _group_name_targets(plan: dict, warnings: list[str],
-                        set_fader_levels: bool = True) -> list[WriteTarget]:
+                        set_fader_levels: bool = True, *,
+                        states_mix: bool = True) -> list[WriteTarget]:
     targets: list[WriteTarget] = []
     for name, entry in plan.get("dcas", {}).items():
         idx = entry["index"]
@@ -1515,7 +1578,8 @@ def _group_name_targets(plan: dict, warnings: list[str],
         # strip with a fader and a mute like a bus, and takes the same
         # starting level: the plan's, else unity, unmuted.
         if set_fader_levels:
-            targets.extend(_fader_targets(f"/dca/{idx}", f"DCA {idx} ({name})", entry.get("fader")))
+            targets.extend(_fader_targets(f"/dca/{idx}", f"DCA {idx} ({name})", entry.get("fader"),
+                                          states_mix=states_mix))
     for name, entry in plan.get("mute_groups", {}).items():
         idx = entry["index"]
         if idx > facts.CAPACITY["mgrp"]:
@@ -1541,7 +1605,7 @@ def bus_col(entry: dict) -> int | None:
 
 def _bus_write_targets(
     plan: dict, dca_index: dict[str, int], mute_group_index: dict[str, int],
-    warnings: list[str], set_fader_levels: bool,
+    warnings: list[str], set_fader_levels: bool, *, states_mix: bool = True,
 ) -> list[WriteTarget]:
     targets: list[WriteTarget] = []
     for name, entry in plan.get("busses", {}).items():
@@ -1549,7 +1613,17 @@ def _bus_write_targets(
         if idx > facts.CAPACITY["bus"]:
             warnings.append(f"bus {name!r} (index {idx}) exceeds this console's capacity ({facts.CAPACITY['bus']}) -- not applying")
             continue
-        targets.append(WriteTarget(f"/bus/{idx}/name", "s", f"bus {idx} ({name}): name", _const(name), STAGE_NAMES))
+        if entry.get("name_on") != "none":
+            targets.append(WriteTarget(f"/bus/{idx}/name", "s", f"bus {idx} ({name}): name",
+                                       _const(name), STAGE_NAMES))
+        # What this bus sends to other buses and to Matrices.
+        label = f"bus {idx} ({name})"
+        targets.extend(_pre_flag_send_targets(
+            f"/bus/{idx}", label, entry.get("bus_sends"), bus_indices(plan), "bus", "send/{n}",
+            warnings, states_mix=states_mix))
+        targets.extend(_pre_flag_send_targets(
+            f"/bus/{idx}", label, entry.get("matrix_sends"), matrix_indices(plan), "matrix",
+            "send/MX{n}", warnings, states_mix=states_mix))
         # Confirmed OSC addresses (bus.{n}.col int [1..18],
         # bus.{n}.icon int [0..999]). None means unstated.
         # `col` wins when set; otherwise the colour NAME the conventions
@@ -1656,7 +1730,7 @@ def _bus_write_targets(
         # channel, same merge helper, so nothing else here changes.
         bus_dca_names = entry.get("dca") or []
         bus_mute_names = entry.get("mute_group") or []
-        if bus_dca_names or bus_mute_names:
+        if bus_dca_names or bus_mute_names or not states_mix:
             missing_dca = [d for d in bus_dca_names if d not in dca_index]
             missing_mute = [m for m in bus_mute_names if m not in mute_group_index]
             for missing in missing_dca:
@@ -1665,7 +1739,7 @@ def _bus_write_targets(
                 warnings.append(f"bus {name!r}: mute group {missing!r} has no console index in this plan -- membership not written for it")
             dca_idxs = [dca_index[d] for d in bus_dca_names if d in dca_index]
             mute_idxs = [mute_group_index[m] for m in bus_mute_names if m in mute_group_index]
-            if dca_idxs or mute_idxs:
+            if dca_idxs or mute_idxs or not states_mix:
                 targets.append(WriteTarget(
                     f"/bus/{idx}/tags", "s", f"bus {idx} ({name}): DCA/mute-group tags",
                     lambda current, d=dca_idxs, m=mute_idxs: _merge_tags(current, d, m),
@@ -1673,7 +1747,8 @@ def _bus_write_targets(
                 ))
 
         if set_fader_levels:
-            targets.extend(_fader_targets(f"/bus/{idx}", f"bus {idx} ({name})", entry.get("fader")))
+            targets.extend(_fader_targets(f"/bus/{idx}", f"bus {idx} ({name})", entry.get("fader"),
+                                          states_mix=states_mix))
 
         # The bus's own EQ/tilt. Outside the
         # set_fader_levels guard above on purpose -- `--no-faders` is about
@@ -1686,7 +1761,8 @@ def _bus_write_targets(
         # order the desk needs them -- the engine's model, then the
         # parameters that model has, then the bus's own processing, then
         # the insert pointed at the engine and switched on.
-        fx_targets, insert_targets = _bus_fx_targets(name, entry, idx, warnings)
+        fx_targets, insert_targets = _fx_targets(f"/bus/{idx}", "bus", f"bus {idx} ({name})",
+                                                  entry, warnings)
         preset_targets = _bus_preset_targets(
             name, entry, idx, {t.address for t in proc_targets}, warnings)
         targets.extend(fx_targets)
@@ -1733,13 +1809,15 @@ def _bus_preset_targets(name: str, entry: dict, idx: int, explicit: set[str],
     return targets
 
 
-def _bus_fx_targets(name: str, entry: dict, idx: int,
-                    warnings: list[str]) -> tuple[list[WriteTarget], list[WriteTarget]]:
-    """`(engine writes, insert writes)` for each effect a bus preset
-    inserts: `/fx/{e}/mdl`, then each parameter, and then
-    `/bus/{idx}/{point}/ins` = `FX{e}` and `/bus/{idx}/{point}/on` = 1.
+def _fx_targets(base: str, bank: str, label: str, entry: dict,
+                warnings: list[str]) -> tuple[list[WriteTarget], list[WriteTarget]]:
+    """`(engine writes, insert writes)` for each effect the plan inserts on
+    the strip at `base` (`bus_presets.strip_inserts`: a bus preset's, and the strip's own): `/fx/{e}/mdl`, then each
+    parameter, and then `{base}/{point}/ins` = `FX{e}` and
+    `{base}/{point}/on` = 1. An insert the plan takes off (model None) is
+    `{base}/{point}/ins` = NONE, and its engine is left as it is.
 
-    The insert is switched ON whatever the preset was saved with: an FX
+    The insert is switched ON whatever a preset was saved with: an FX
     bus with its effect bypassed is silent (build said so at INFO,
     `fx.insert-switched-on`). An effect verify refuses -- a model no engine
     offers, an engine that cannot hold it, no engine at all -- writes
@@ -1749,11 +1827,18 @@ def _bus_fx_targets(name: str, entry: dict, idx: int,
 
     engine_writes: list[WriteTarget] = []
     insert_writes: list[WriteTarget] = []
-    label = f"bus {idx} ({name})"
-    for ins in bus_presets.inserts(entry):
+    own = bus_presets.own_inserts(entry)
+    for ins in bus_presets.strip_inserts(entry):
         point, model, engine = ins.get("point"), ins.get("model"), ins.get("engine")
-        if point not in facts.INSERT_POINTS["bus"]:
-            warnings.append(f"{label}: insert point {point!r} is not one a bus has -- not written")
+        if point not in facts.INSERT_POINTS.get(bank, ()):
+            warnings.append(f"{label}: insert point {point!r} is not one a {bank} strip has -- "
+                            "not written")
+            continue
+        word = "pre-insert" if point == "preins" else "post-insert"
+        if model is None:
+            insert_writes.append(WriteTarget(
+                f"{base}/{point}/ins", "s", f"{label}: {word} taken off",
+                _const(facts.FX_EMPTY), STAGE_PROCESSING))
             continue
         if not fx_engines.is_known_model(model):
             warnings.append(f"{label}: effect {model!r} is offered by no FX engine -- not loaded, "
@@ -1770,7 +1855,9 @@ def _bus_fx_targets(name: str, entry: dict, idx: int,
         for param, raw in (ins.get("parameters") or {}).items():
             if not fx_engines.is_engine_parameter(param):
                 continue
-            value, why, _ = fx_engines.coerce_param(param, raw)
+            # A strip's own insert holds what the desk had.
+            value, why, _ = fx_engines.coerce_param(
+                param, raw, check_choices=not any(ins is o for o in own))
             if why is not None:
                 warnings.append(f"{label}: FX{engine} {model} {param} not written -- {why}")
                 continue
@@ -1778,12 +1865,11 @@ def _bus_fx_targets(name: str, entry: dict, idx: int,
             engine_writes.append(WriteTarget(
                 fx_engines.engine_address(engine, param), osc,
                 f"{label}: FX{engine} {model} {param}", _const(value), STAGE_PROCESSING))
-        word = "pre-insert" if point == "preins" else "post-insert"
         insert_writes.append(WriteTarget(
-            f"/bus/{idx}/{point}/ins", "s", f"{label}: {word} -> FX{engine} ({model})",
+            f"{base}/{point}/ins", "s", f"{label}: {word} -> FX{engine} ({model})",
             _const(fx_engines.insert_value(engine)), STAGE_PROCESSING))
         insert_writes.append(WriteTarget(
-            f"/bus/{idx}/{point}/on", "i", f"{label}: {word} on"
+            f"{base}/{point}/on", "i", f"{label}: {word} on"
             + (" (the preset was saved bypassed)" if ins.get("saved_on") is False else ""),
             _const(1), STAGE_PROCESSING))
     return engine_writes, insert_writes
@@ -1800,6 +1886,115 @@ def bus_indices(plan: dict) -> dict[str, int]:
     different number from the one apply writes."""
     return {name: e["index"] for name, e in (plan.get("busses") or {}).items()
             if isinstance(e, dict) and isinstance(e.get("index"), int)}
+
+
+def matrix_indices(plan: dict) -> dict[str, int]:
+    """Each Matrix's console index, by its `outputs` key: what a
+    `matrix_sends` entry names."""
+    return {name: e["index"] for name, e in (plan.get("outputs") or {}).items()
+            if isinstance(e, dict) and e.get("kind") == "matrix" and isinstance(e.get("index"), int)}
+
+
+def _unlisted_send_targets(plan: dict) -> list[WriteTarget]:
+    """On a captured plan, every send between two objects the plan holds that
+    the plan does not list, switched OFF.
+
+    **A captured plan's sends are the complete statement of its routing**, as
+    `main_routes` and a bus's `destinations` are for the Mains. A built plan's
+    full apply starts from an initialized desk, where no send is on, so it
+    needs no such write; a captured plan's apply skips that reset (it keeps the
+    desk's mix), so a send someone took out of `busses.csv` would stay on
+    the desk unless it is written off here. Only the switch is written: the
+    level and the tap of a send that is off are left as the desk has them.
+
+    Covers a channel's sends to the plan's buses and Matrices, a bus's to the
+    other buses and the Matrices, and a Main's to the Matrices. A send to an
+    object the plan does not hold is not the plan's to switch."""
+    targets: list[WriteTarget] = []
+    bus_index = bus_indices(plan)
+    matrix_index = matrix_indices(plan)
+    fed: dict[tuple[str, str], set[str]] = {}
+    for matrix, feeds in plan_compat.matrix_feeds(plan).items():
+        for kind, key, _mode in feeds:
+            fed.setdefault((kind, key), set()).add(matrix)
+
+    def off(address: str, label: str, target: str) -> None:
+        targets.append(WriteTarget(
+            f"{address}/on", "i",
+            f"{label}: NOT sent to {target} -- the plan lists no send there",
+            _const(0), STAGE_SENDS))
+
+    for channel in plan.get("channels") or []:
+        if not isinstance(channel, dict) or not isinstance(channel.get("channel"), int):
+            continue
+        bank = channel.get("bank") or "ch"
+        base = f"/{bank}/{channel['channel']}"
+        label = f"{bank} {channel['channel']} ({channel.get('name')})"
+        listed = {s.get("bus") for s in channel.get("bus_sends") or [] if isinstance(s, dict)}
+        for bus, idx in bus_index.items():
+            if bus not in listed:
+                off(f"{base}/send/{idx}", label, bus)
+        for matrix, idx in matrix_index.items():
+            if matrix not in fed.get(("channel", channel.get("name")), set()):
+                off(f"{base}/send/MX{idx}", label, matrix)
+    for name, entry in (plan.get("busses") or {}).items():
+        own = bus_index.get(name)
+        if own is None:
+            continue
+        label = f"bus {own} ({name})"
+        listed = {s.get("bus") for s in entry.get("bus_sends") or [] if isinstance(s, dict)}
+        for bus, idx in bus_index.items():
+            if bus != name and bus not in listed:
+                off(f"/bus/{own}/send/{idx}", label, bus)
+        for matrix, idx in matrix_index.items():
+            if matrix not in fed.get(("bus", name), set()):
+                off(f"/bus/{own}/send/MX{idx}", label, matrix)
+    for name, entry in (plan.get("outputs") or {}).items():
+        if not isinstance(entry, dict) or entry.get("kind") != "main" \
+                or not isinstance(entry.get("index"), int):
+            continue
+        for matrix, idx in matrix_index.items():
+            if matrix not in fed.get(("main", name), set()):
+                off(f"/main/{entry['index']}/send/MX{idx}", f"output {name} (main {entry['index']})",
+                    matrix)
+    return targets
+
+
+def _pre_flag_send_targets(base: str, label: str, sends, index: dict[str, int], key: str,
+                           address: str, warnings: list[str], *,
+                           states_mix: bool) -> list[WriteTarget]:
+    """The sends a bus or a Main states: a bus's
+    `bus_sends` (`/bus/{n}/send/{b}`) and a bus's or Main's `matrix_sends`
+    (`.../send/MX{m}`). Those sends take `on`, `lvl` and a `pre` switch, as a
+    Matrix's `fed_by` does, and an unstated level or tap takes `fed_by`'s
+    defaults (unity, post) -- except on a captured plan (`states_mix` false),
+    where it is the desk's and not written. `address` is the send's leaf
+    under `base`, with `{n}` for the target's index."""
+    targets: list[WriteTarget] = []
+    for send in sends or []:
+        if not isinstance(send, dict):
+            continue
+        target = send.get(key)
+        idx = index.get(target)
+        if idx is None:
+            warnings.append(f"{label}: send to {key} {target!r}, which has no console index "
+                            "in this plan -- send not written")
+            continue
+        send_base = f"{base}/{address.replace('{n}', str(idx))}"
+        targets.append(WriteTarget(f"{send_base}/on", "i", f"{label}: send to {target} on",
+                                   _const(1), STAGE_ROUTING))
+        level = send.get("level_db")
+        if level is None and states_mix:
+            level = MAIN_ROUTE_LEVEL_DEFAULT_DB
+        if level is not None:
+            targets.append(WriteTarget(f"{send_base}/lvl", "f", f"{label}: send to {target} level",
+                                       _const(float(level)), STAGE_ROUTING))
+        mode = send.get("mode") or ("post" if states_mix else None)
+        if mode in facts.PLAN_SEND_MODES:
+            targets.append(WriteTarget(f"{send_base}/pre", "i",
+                                       f"{label}: send to {target} pre/post-fader",
+                                       _const(1 if mode == "pre" else 0), STAGE_ROUTING))
+    return targets
 
 
 def desk_label(kind: str, index: int, bank: str = "ch") -> str:
@@ -1879,7 +2074,83 @@ def _declared_output_patches(plan: dict) -> dict[tuple[str, int], tuple[str, int
             if isinstance(socket, dict):
                 record(socket.get("group"), socket.get("sockets"), wing_grp, index)
 
+    # A socket a captured plan records as fed straight from an input
+    # (`direct_outputs`): declared, so CV009 reports it only if it changes,
+    # and neither `--clean-output-sockets` nor a full apply's disconnect of
+    # the panel touches it. Apply writes it (`_direct_output_targets`).
+    for (group, sock), source in direct_output_sources(plan).items():
+        declared[(group, sock)] = source
+
     return declared
+
+
+def direct_output_sources(plan: dict) -> dict[tuple[str, int], tuple[str, int]]:
+    """`{("USB", 1): ("A", 1), ...}`: each well-formed `direct_outputs`
+    entry, the socket and the source that feeds it. A malformed entry is
+    `verify_plan`'s to report, and is left out here."""
+    found: dict[tuple[str, int], tuple[str, int]] = {}
+    for entry in plan.get("direct_outputs") or []:
+        if not isinstance(entry, dict) or not isinstance(entry.get("source"), dict):
+            continue
+        group, sock, source = entry.get("group"), entry.get("socket"), entry["source"]
+        if (isinstance(group, str) and isinstance(sock, int) and not isinstance(sock, bool)
+                and isinstance(source.get("group"), str)
+                and isinstance(source.get("index"), int)
+                and not isinstance(source.get("index"), bool)):
+            found[(group, sock)] = (source["group"], source["index"])
+    return found
+
+
+def user_source_targets(plan: dict) -> list[WriteTarget]:
+    """What each USR slot the plan defines takes (`user_sources`): `/io/in/USR/{n}/user/grp` and `/in` always; on a user signal
+    (slots 1-24) its `tap` and `lr` when the plan states them, a null leaving
+    the desk's; and the slot's `name` when stated. Its stereo width is the
+    channel's to set, on a USR pair a channel patches (`_MODE_CAPABLE_GROUPS`).
+    A malformed entry is `verify_plan`'s to report, and is left out."""
+    targets: list[WriteTarget] = []
+    for entry in plan.get("user_sources") or []:
+        if not isinstance(entry, dict) or not isinstance(entry.get("source"), dict):
+            continue
+        slot = entry.get("slot")
+        kind = facts.user_slot_kind(slot)
+        group, index = entry["source"].get("group"), entry["source"].get("index")
+        if kind is None or not isinstance(group, str) or not isinstance(index, int):
+            continue
+        base = f"/io/in/USR/{slot}"
+        label = f"USR {slot} ({kind})"
+        targets.append(WriteTarget(f"{base}/user/grp", "s", f"{label}: source {group}",
+                                   _const(group), STAGE_PATCH))
+        targets.append(WriteTarget(f"{base}/user/in", "i", f"{label}: {group} {index}",
+                                   _const(index), STAGE_PATCH))
+        if kind == facts.USER_SIGNAL:
+            if entry.get("tap") in facts.USER_SIGNAL_TAPS:
+                targets.append(WriteTarget(f"{base}/user/tap", "s", f"{label}: tap",
+                                           _const(entry["tap"]), STAGE_PATCH))
+            if entry.get("leg") in facts.USER_SIGNAL_LEGS:
+                targets.append(WriteTarget(f"{base}/user/lr", "s", f"{label}: leg",
+                                           _const(entry["leg"]), STAGE_PATCH))
+        if isinstance(entry.get("name"), str) and entry["name"].strip():
+            targets.append(WriteTarget(f"{base}/name", "s", f"{label}: name",
+                                       _const(entry["name"]), STAGE_NAMES))
+    return targets
+
+
+def _direct_output_targets(plan: dict) -> list[WriteTarget]:
+    """The splits and recording feeds (`direct_outputs`): each
+    socket's source, the same two leaves a bus's or a Main's output patch
+    writes (`/io/out/{group}/{socket}/grp` and `/in`), in the same stage.
+    The source is the desk's own pair as a capture read it, so `in` is the
+    source's socket number, not a bus's L/R slot (`_output_slot`)."""
+    targets: list[WriteTarget] = []
+    for (group, sock), (source_group, index) in direct_output_sources(plan).items():
+        where = f"direct output {group} {sock}"
+        targets.append(WriteTarget(f"/io/out/{group}/{sock}/grp", "s",
+                                   f"{where}: source {source_group}", _const(source_group),
+                                   STAGE_ROUTING))
+        targets.append(WriteTarget(f"/io/out/{group}/{sock}/in", "i",
+                                   f"{where}: {source_group} {index}", _const(index),
+                                   STAGE_ROUTING))
+    return targets
 
 
 # --------------------------------------------------------------------------
@@ -1949,6 +2220,10 @@ def plan_expansion_bay_use(plan: dict) -> dict[str, list[str]]:
 
     for (group, socket), _target in _declared_output_patches(plan).items():
         note(group, f"an output routed to {group} {socket}")
+    # A split or recording feed taken from a card's or a module's input is
+    # as silent as a channel patched from an empty bay.
+    for (group, socket), (source_group, index) in direct_output_sources(plan).items():
+        note(source_group, f"{group} {socket} fed from {source_group} {index}")
 
     return use
 
@@ -2686,6 +2961,7 @@ def release_write_targets(channels: list[dict], *,
                           dca_index: dict[str, int] | None = None,
                           mute_group_index: dict[str, int] | None = None,
                           bus_index: dict[str, int] | None = None,
+                          matrix_index: dict[str, int] | None = None,
                           keep_sockets: set[tuple[str, int]] | None = None,
                           shared_sockets: dict[tuple[str, int], list[str]] | None = None,
                           console_model: str | None = None,
@@ -2786,7 +3062,7 @@ def release_write_targets(channels: list[dict], *,
                 if (group, socket) in keep_sockets:
                     warnings.append(
                         f"{was} is being returned to free, but {group} {socket} still feeds a "
-                        "strip the plan keeps -- the socket's own name, colour, icon and "
+                        "strip the plan keeps -- the socket's own name, color, icon and "
                         "phantom are left exactly as they are")
                     continue
                 # 2. Phantom down while the patch still says where it is.
@@ -2804,7 +3080,7 @@ def release_write_targets(channels: list[dict], *,
                     if col is not None:
                         targets.append(WriteTarget(
                             f"/io/in/{group}/{socket}/col", "i",
-                            f"returned to free: colour cleared on source {group} {socket} ({was})",
+                            f"returned to free: color cleared on source {group} {socket} ({was})",
                             _const(facts.FACTORY_SOURCE_COLOUR_INDEX), STAGE_SOURCE_LABEL))
                     if icon is not None:
                         targets.append(WriteTarget(
@@ -2835,7 +3111,7 @@ def release_write_targets(channels: list[dict], *,
             _const(facts.FACTORY_STRIP_NAME), STAGE_NAMES))
         if col is not None:
             targets.append(WriteTarget(
-                f"{base}/col", "i", f"returned to free: {was} colour cleared",
+                f"{base}/col", "i", f"returned to free: {was} color cleared",
                 _const(facts.FACTORY_STRIP_COLOUR_INDEX), STAGE_NAMES))
         if icon is not None:
             targets.append(WriteTarget(
@@ -2875,6 +3151,14 @@ def release_write_targets(channels: list[dict], *,
             targets.append(WriteTarget(
                 f"{base}/send/{bidx}/on", "i",
                 f"returned to free: {was} no longer sends to bus {bidx}",
+                _const(0), STAGE_SENDS))
+        for send in channel.get("matrix_sends") or []:
+            midx = (matrix_index or {}).get(send.get("matrix")) if isinstance(send, dict) else None
+            if midx is None:
+                continue
+            targets.append(WriteTarget(
+                f"{base}/send/MX{midx}/on", "i",
+                f"returned to free: {was} no longer sends to Matrix {midx}",
                 _const(0), STAGE_SENDS))
         # The direct Main routes, back to the factory's: Main 1 ON, every
         # other Main OFF (console_facts.FACTORY_STRIP_MAIN_INDEX) --
@@ -3227,7 +3511,7 @@ def _shared_source_name_targets(shared: dict[tuple[str, int], list[str]],
         warnings.append(
             f"{group} {socket} feeds {len(names)} strips ({', '.join(names)}) -- they share one "
             f"head amp, so gain and phantom are common to all of them. Each strip is named "
-            f"directly and the socket is labelled {composite!r}."
+            f"directly and the socket is labeled {composite!r}."
         )
         targets.append(WriteTarget(
             f"/io/in/{group}/{socket}/name", "s",
@@ -3245,6 +3529,7 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
     # the value verify's INFO said it would. amend builds through here
     # too, so both halves of its diff are decided the same way.
     plan = inferred.with_decisions(plan)
+    states_mix = inferred.plan_states_the_mix(plan)
     warnings: list[str] = []
     dca_index = {name: e["index"] for name, e in plan.get("dcas", {}).items()}
     mute_group_index = {name: e["index"] for name, e in plan.get("mute_groups", {}).items()}
@@ -3253,10 +3538,17 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
     shared = _shared_source_sockets(plan)
 
     targets: list[WriteTarget] = []
-    targets.extend(_group_name_targets(plan, warnings, set_fader_levels))
-    targets.extend(_bus_write_targets(plan, dca_index, mute_group_index, warnings, set_fader_levels))
+    # The USR slots first: a channel patched to one, and an
+    # output fed from one, read what the slot takes, so it is set before them.
+    # The same stage as a channel's patch, and ahead of it (the sort is stable).
+    targets.extend(user_source_targets(plan))
+    targets.extend(_group_name_targets(plan, warnings, set_fader_levels, states_mix=states_mix))
+    targets.extend(_bus_write_targets(plan, dca_index, mute_group_index, warnings, set_fader_levels,
+                                      states_mix=states_mix))
     for channel in plan.get("channels", []):
-        targets.extend(_channel_write_targets(channel, dca_index, mute_group_index, bus_index, warnings, set_fader_levels, shared))
+        targets.extend(_channel_write_targets(channel, dca_index, mute_group_index, bus_index, warnings,
+                                              set_fader_levels, shared, states_mix=states_mix,
+                                              matrix_index=matrix_indices(plan)))
     targets.extend(_shared_source_name_targets(shared, warnings))
 
     for output_name, output_entry in plan.get("outputs", {}).items():
@@ -3297,10 +3589,56 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
         # (`_bus_write_targets`), an output's never was. The plan's key IS the name ("Phones",
         # "Matrix 1"), written whether or not a socket is patched: a
         # Matrix used as the phones source is found on the desk by it.
-        if wing_grp is not None and index is not None:
+        if kind == "main" and isinstance(index, int):
+            # A Main's sends to Matrices.
+            targets.extend(_pre_flag_send_targets(
+                f"/main/{index}", f"output {output_name} (main {index})",
+                output_entry.get("matrix_sends"), matrix_indices(plan), "matrix", "send/MX{n}",
+                warnings, states_mix=states_mix))
+
+        # A Main's or Matrix's own width, as a bus's
+        # (`/main/{n}/busmono`, `/mtx/{n}/busmono`). Stated only by a capture
+        # or the bus sheet; unstated leaves the desk's.
+        if wing_grp is not None and index is not None and output_entry.get("mono") is not None:
+            targets.append(WriteTarget(
+                f"{'/main' if kind == 'main' else '/mtx'}/{index}/busmono", "i",
+                f"output {output_name} ({kind} {index}): mono width",
+                _const(1 if output_entry["mono"] else 0), STAGE_ROUTING))
+
+        # A Main's or Matrix's own DCA and mute-group membership,
+        # the same `tags` leaf and merge as a bus's. Written when the plan
+        # states it (a capture, or the bus sheet): a built plan that names no
+        # group leaves the desk's, and a captured one's empty list clears it.
+        out_dca = output_entry.get("dca")
+        out_mute = output_entry.get("mute_group")
+        if (wing_grp is not None and index is not None
+                and (isinstance(out_dca, list) or isinstance(out_mute, list))
+                and (out_dca or out_mute or not states_mix)):
+            base = f"{'/main' if kind == 'main' else '/mtx'}/{index}"
+            for missing in [d for d in out_dca or [] if d not in dca_index]:
+                warnings.append(f"output {output_name!r}: DCA {missing!r} has no console index in "
+                                "this plan -- membership not written for it")
+            for missing in [m for m in out_mute or [] if m not in mute_group_index]:
+                warnings.append(f"output {output_name!r}: mute group {missing!r} has no console "
+                                "index in this plan -- membership not written for it")
+            dca_idxs = [dca_index[d] for d in out_dca or [] if d in dca_index]
+            mute_idxs = [mute_group_index[m] for m in out_mute or [] if m in mute_group_index]
+            targets.append(WriteTarget(
+                f"{base}/tags", "s", f"output {output_name} ({kind} {index}): DCA/mute-group tags",
+                lambda current, d=dca_idxs, m=mute_idxs: _merge_tags(current, d, m),
+                STAGE_TAGS))
+
+        if wing_grp is not None and index is not None and output_entry.get("name_on") != "none":
             targets.append(WriteTarget(
                 f"{'/main' if kind == 'main' else '/mtx'}/{index}/name", "s",
                 f"output {output_name} ({kind} {index}): name", _const(output_name), STAGE_NAMES))
+        # Its own colour, as a bus's, when the plan states one (a
+        # capture does); unstated leaves the desk's.
+        out_col = bus_col(output_entry)
+        if wing_grp is not None and index is not None and out_col is not None:
+            targets.append(WriteTarget(
+                f"{'/main' if kind == 'main' else '/mtx'}/{index}/col", "i",
+                f"output {output_name} ({kind} {index}): color", _const(out_col), STAGE_NAMES))
 
         # A Main/Matrix's own starting fader/mute lives on the internal
         # object itself (/main/{n}, /mtx/{n}) -- independent of whether
@@ -3309,7 +3647,8 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
         # otherwise fully-identified Main/Matrix.
         if set_fader_levels and wing_grp is not None and index is not None:
             out_base = f"/main/{index}" if kind == "main" else f"/mtx/{index}"
-            targets.extend(_fader_targets(out_base, f"output {output_name} ({kind} {index})", output_entry.get("fader")))
+            targets.extend(_fader_targets(out_base, f"output {output_name} ({kind} {index})",
+                                          output_entry.get("fader"), states_mix=states_mix))
 
         # A Main's or a Matrix's own EQ/tilt, on that
         # same internal object -- and, like the bus's above, independent of
@@ -3325,6 +3664,13 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
                     output_entry.get("processing"))
                 targets.extend(proc_targets)
                 warnings.extend(proc_warnings)
+            # A Main's or a Matrix's own inserts.
+            if kind in ("main", "matrix"):
+                fx_targets, insert_targets = _fx_targets(
+                    f"/main/{index}" if kind == "main" else f"/mtx/{index}",
+                    "main" if kind == "main" else "mtx", f"output {output_name} ({kind} {index})",
+                    output_entry, warnings)
+                targets.extend(fx_targets + insert_targets)
 
         # What FEEDS a matrix's input. A matrix has no per-
         # source routing table of its own (confirmed against docs/
@@ -3355,8 +3701,15 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
             if source_base is not None:
                 send_base = f"{source_base}/send/MX{index}"
                 targets.append(WriteTarget(f"{send_base}/on", "i", f"{source_desc}: feed to matrix {output_name} on", _const(1), STAGE_ROUTING))
-                targets.append(WriteTarget(f"{send_base}/lvl", "f", f"{source_desc}: feed to matrix {output_name} level", _const(MAIN_ROUTE_LEVEL_DEFAULT_DB), STAGE_ROUTING))
-                targets.append(WriteTarget(f"{send_base}/pre", "i", f"{source_desc}: feed to matrix {output_name} pre/post-fader", _const(MAIN_ROUTE_PRE_DEFAULT), STAGE_ROUTING))
+                if states_mix:
+                    # A captured plan leaves the feed's level and tap to the desk.
+                    targets.append(WriteTarget(f"{send_base}/lvl", "f", f"{source_desc}: feed to matrix {output_name} level", _const(MAIN_ROUTE_LEVEL_DEFAULT_DB), STAGE_ROUTING))
+                    targets.append(WriteTarget(f"{send_base}/pre", "i", f"{source_desc}: feed to matrix {output_name} pre/post-fader", _const(MAIN_ROUTE_PRE_DEFAULT), STAGE_ROUTING))
+
+    targets.extend(_direct_output_targets(plan))
+
+    if not states_mix:
+        targets.extend(_unlisted_send_targets(plan))
 
     # Last, over the whole write set (review 2026-09-28, R19): it used to
     # run before the outputs loop above, so a socket a bus's dedicated
@@ -3583,11 +3936,12 @@ class ReadStats:
         self.single_seconds += single_seconds
         self.unanswered_addresses.extend(unanswered_addresses)
 
-    def line(self, path: str, *, window: int = 1, lone_request: float | None = None) -> str:
+    def line(self, path: str, *, window: int = 1, lone_request: float | None = None,
+             who: str = "the preview") -> str:
         from atoo import audit
 
         requests = self.dumps + self.singles
-        text = (f"INFO the preview read the desk with {requests:,} requests "
+        text = (f"INFO {who} read the desk with {requests:,} requests "
                 f"({self.dumps:,} node dumps, {self.singles:,} single reads) in "
                 f"{self.seconds:.1f}s: {path}")
         if self.resends:
@@ -3635,9 +3989,17 @@ def _lone_request_seconds(console, plan_read) -> float | None:
     return took[len(took) // 2]
 
 
-def _dump_values_to_reread(targets: list[WriteTarget], dumped: dict, texts: dict) -> list[str]:
+def _dump_values_to_reread(targets: list[WriteTarget], dumped: dict, texts: dict,
+                           writes: bool = False) -> list[str]:
     """The addresses, in target order, whose baseline a node dump gave but whose
-    verdict the dump's rounding could change (`_dump_verdict_is_certain`)."""
+    verdict the dump's rounding could change (`_dump_verdict_is_certain`).
+
+    `writes` (a real run): also every float the dump printed
+    rounded, whatever its verdict, because the run journals its prior -- Undo
+    puts a written one back, and one a selector governs even when it was
+    skipped -- and that must be the desk's value, not the dump's text."""
+    from atoo import console as osc
+
     again: list[str] = []
     seen: set[str] = set()
     for target in targets:
@@ -3646,8 +4008,14 @@ def _dump_values_to_reread(targets: list[WriteTarget], dumped: dict, texts: dict
             continue
         seen.add(address)
         value, error = dumped[address]
-        if error is None and not _dump_verdict_is_certain(
-                target, value, target.compute_value(value), texts.get(address)):
+        if error is not None:
+            continue
+        intended = target.compute_value(value)
+        text = texts.get(address)
+        if not _dump_verdict_is_certain(target, value, intended, text):
+            again.append(address)
+        elif (writes and target.value_type == "f" and text is not None
+              and osc.dump_text_rounding_band(text) != 0.0):
             again.append(address)
     return again
 
@@ -3776,6 +4144,153 @@ def _adopt_reply(pending: _PendingCheck, value, source: str) -> bool:
     return True
 
 
+def _recheck_skipped(console, targets: list[WriteTarget], records: list, pending: list,
+                     phases, governed_by: dict) -> "tuple[str | None, list[str]]":
+    """After a real run's writes, read again every setting it skipped as already
+    set, in one batched pass, and write each that no longer holds the plan's
+    value: `(abort_reason, what was written)`.
+
+    A run that reads its baselines up front decides "already set" before any
+    write. A write can move another setting on the desk -- a stereo pair's
+    mode carries its partner, a link copies a pair's settings -- and a skipped
+    setting is never read back, so without this a knock-on would be left
+    wrong with nobody told. One that moved is written and read back like any
+    other, and journalled with the value it held before the run, so Undo puts
+    back what was there. Its record takes the skipped one's place, at the end
+    of the journal: the last thing the run wrote."""
+    from atoo import console as osc
+    from atoo import initialize as init
+
+    by_address = {t.address: t for t in targets}
+    skipped = [r for r in records if r.status == "skipped_no_change" and r.address in by_address]
+    if not skipped:
+        return None, []
+    pairs = _plan_read_pairs([by_address[r.address] for r in skipped])
+    phase = phases.start(SKIPPED_RECHECK_PHASE, len(pairs))
+    read = init.read_desk(console, [], progress=phase, extra=pairs, governed_by=governed_by)
+    phase.finish()
+    if read.abort_reason is not None:
+        return read.abort_reason, []
+    now: dict[str, tuple[object, "str | None"]] = {}
+    unsure: list[str] = []
+    for record in skipped:
+        address, target = record.address, by_address[record.address]
+        if address in read.replies:
+            now[address] = _extract_reply_value(read.replies[address], target.value_type, address)
+        elif address in read.plan_values:
+            value, error = read.plan_values[address]
+            now[address] = (value, error)
+            if error is None and not _dump_verdict_is_certain(
+                    target, value, target.compute_value(value), read.plan_texts.get(address)):
+                unsure.append(address)
+    for address, reply in osc.read_in_windows(console, unsure):
+        if reply is not None and reply.is_socket_error:
+            return (reply.args[0] if reply.args else "socket error"), []
+        now[address] = _extract_reply_value(reply, by_address[address].value_type, address)
+    moved: list[str] = []
+    for record in skipped:
+        if record.address not in now:
+            continue
+        target = by_address[record.address]
+        value, error = now[record.address]
+        intended = target.compute_value(value)
+        if error is not None or _values_equal(target.value_type, value, intended, target.address):
+            continue
+        written, check, abort_reason = _write_and_read_back(
+            console, target, intended, record.prior_value,
+            datetime.now(timezone.utc).isoformat(), record.forced_by)
+        if abort_reason is not None:
+            return abort_reason, moved
+        records.remove(record)
+        records.append(written)
+        if check is not None:
+            pending.append(check)
+        moved.append(f"{target.description} (it read {value!r})")
+    return None, moved
+
+
+def _write_and_read_back(console, target: WriteTarget, intended_value, prior_value,
+                         timestamp: str, forced: "str | None"):
+    """Write one target and read it back: `(record, check, abort_reason)`.
+    `check` is a `_PendingCheck` when the read-back disagreed, for
+    `_recheck_disagreements`; `abort_reason` when the connection failed (no
+    record then)."""
+    # The mark goes here, before the write: any datagram the client
+    # receives from now on is a candidate answer to THIS write, and
+    # anything it already had is not (see `_late_confirmation`).
+    mark = _reply_mark(console)
+    try:
+        method, ack = _write_target(console, target, intended_value)
+    except OSError as exc:
+        return None, None, str(exc)
+    # Read back -- and when the readback disagrees, do NOT conclude
+    # anything yet. This is a race, confirmed twice on hardware.
+    # `set_param` is fire-and-forget: the protocol gives it no ack, so
+    # there is nothing to wait on before reading, and the console
+    # answers the read from the value it held BEFORE the write, then
+    # pushes the new one as its own datagram a moment later:
+    #
+    #   SET (no-ack) /bus/10/name = 'VOX Delay'
+    #   GET /bus/10/name -> ''            <- the reply we believed
+    #   GET /bus/11/name -> '' for /bus/10/name    (stale, discarded)
+    #   GET /bus/11/name -> 'VOX Delay' for /bus/10/name  (stale, discarded)
+    #
+    # (from the A1 raw log of 2026-09-21.
+    # `/ch/7/tags` on the 21:00 run of the same night does it one
+    # worse: the readback AND an immediate re-read both answered '',
+    # and the value arrives in two datagrams drained during
+    # `/ch/8/tags`.)
+    #
+    # The write had landed both times; the journal called both a
+    # MISMATCH. Those are the only writes in the run that took the
+    # unacked path, because `_UNSAFE_NODE_COMMAND_CHARS` sends any
+    # value containing a space, comma or equals through `set_param` --
+    # 'VOX Delay' has a space, '#D7,#M1' has a comma.
+    #
+    # A false mismatch is not harmless here. It is the tool crying
+    # wolf about its own central claim, and the exit code is non-zero,
+    # so a script cannot tell one from the real thing.
+    #
+    # So: consult the datagrams the client drained (free), and if they do not settle it, hold the address back for
+    # `_recheck_disagreements` after the loop rather than spending a
+    # round trip and a sleep here, in the middle of the race.
+    readback_reply = console.get(target.address)
+    readback_value, readback_error = _extract_reply_value(
+        readback_reply, target.value_type, target.address)
+    readback_source = None
+    disagrees = readback_error is not None or not _values_equal(
+        target.value_type, readback_value, intended_value, target.address)
+    if disagrees and not (readback_reply is not None and readback_reply.is_socket_error):
+        late = _late_confirmation(console, target, intended_value, mark)
+        if late is not None:
+            readback_reply = late
+            readback_value, readback_error = _extract_reply_value(
+                late, target.value_type, target.address)
+            readback_source = "late_reply"
+
+    if readback_reply is not None and readback_reply.is_socket_error:
+        return None, None, (
+            f"{readback_reply.args[0] if readback_reply.args else 'socket error'} "
+            f"(the write to {target.address} was sent -- whether it landed is unknown)"
+        )
+    if readback_error is not None:
+        status = "unreadable"
+    elif _values_equal(target.value_type, readback_value, intended_value, target.address):
+        status = "match"
+    else:
+        status = "mismatch"
+    record = WriteRecord(
+        address=target.address, description=target.description, value_type=target.value_type,
+        method=method, ack=ack,
+        prior_value=prior_value, intended_value=intended_value, readback_value=readback_value,
+        status=status, timestamp=timestamp, readback_source=readback_source,
+        forced_by=forced,
+    )
+    check = (_PendingCheck(record=record, target=target, intended_value=intended_value, mark=mark)
+             if status in ("mismatch", "unreadable") else None)
+    return record, check, None
+
+
 def _recheck_disagreements(console, pending: list[_PendingCheck], *,
                            phases=None) -> str | None:
     """Second look at every address whose readback disagreed, once the
@@ -3870,6 +4385,9 @@ RESET_WRITE_PHASE = "resetting to initialized, reading each back"
 #: at, and its summary line says how many of them were written.
 WRITE_PHASE = "checking each setting, writing what differs"
 RECHECK_PHASE = "reading back again what disagreed"
+#: A real run that read its baselines up front checks, after its writes, that
+#: what it skipped as already set still is.
+SKIPPED_RECHECK_PHASE = "checking what was already set still is"
 
 
 def apply_plan(
@@ -4064,7 +4582,20 @@ def apply_plan(
                          "target_filter or extra_targets")
     if initialize and not full_apply:
         raise ValueError("initialize resets the whole desk: it is only part of a full_apply")
+    captured = not inferred.plan_states_the_mix(plan)
+    if captured:
+        # A captured plan holds only what the desk had in use,
+        # and states no mix. The reset to initialized and the unpatching of
+        # every strip it does not build would undo the desk it came from, so
+        # it writes its own targets only, and says so.
+        full_apply = initialize = False
     targets, warnings = _build_write_targets(plan, set_fader_levels)
+    if captured:
+        warnings.append(
+            "this plan was captured from a desk: it states no faders, mutes or send levels, "
+            "so they are left as the desk has them, and the desk is not reset to initialized "
+            "nor are the strips the plan does not hold unpatched -- only the plan's own patch, "
+            "routing, membership and widths are written")
     if full_apply:
         # Re-sorted by stage (stable, so the plan's own order within a
         # stage is kept): the unpatches belong with the other patches.
@@ -4099,9 +4630,17 @@ def apply_plan(
     # What a preview must not ask the desk for: plan values under a selector (an FX
     # slot's model) that the desk holds at another value, which do not exist yet.
     resends_at_start = getattr(console, "resends", None)
-    preview_reads = bool(dry_run and targets and getattr(console, "window", 1) > 1)
-    absent = _absent_governed_values(console, targets) if preview_reads else AbsentGoverned()
-    governed_by = _governing_selectors(targets) if preview_reads else {}
+    # A console that takes several requests at once has every
+    # baseline read up front, in one pass -- a preview and a real run alike.
+    # A real run used to read each just before its write, one round trip per
+    # setting, which on the church desk was 2,423 requests in 50 s where the
+    # preview took 5. The reset never writes an address the plan writes
+    # (`initialize.plan_reset`), so a baseline read before the reset is still
+    # the value the plan's write replaces; a value governed by a selector this
+    # run changes is forced and read under its old selector, as before; and every write is still read back.
+    batched_reads = bool(targets and getattr(console, "window", 1) > 1)
+    absent = _absent_governed_values(console, targets) if batched_reads else AbsentGoverned()
+    governed_by = _governing_selectors(targets) if batched_reads else {}
     if initialize is False and full_apply:
         from atoo import initialize as init
 
@@ -4113,11 +4652,10 @@ def apply_plan(
         if capture is None:
             warnings = warnings + [init.no_capture_warning(init_model, init_token)]
         else:
-            # A preview that can read several at once asks for the plan's own
-            # baselines in the reset's read, one pass under one phase. A real
-            # run reads each one just before its write, as it always has.
+            # A console that reads several at once is asked for the plan's own
+            # baselines in the reset's read, one pass under one phase.
             also_read = (_plan_read_pairs(targets, absent.selector_of)
-                         if dry_run and targets and getattr(console, "window", 1) > 1 else None)
+                         if batched_reads else None)
             reset = init.plan_reset(console, capture, targets, phases=phases,
                                     also_read=also_read, also_governed_by=governed_by)
             combined_read = also_read is not None
@@ -4131,7 +4669,7 @@ def apply_plan(
             targets, reset_phase = init.combine(reset, targets)
             known = reset.known
     plan_read = reset.read if combined_read else None
-    if reset is None and dry_run and targets and getattr(console, "window", 1) > 1:
+    if reset is None and batched_reads:
         # No reset (it is off, or this console has no capture): the plan's own
         # baselines are read by the same pass the reset's read is -- node
         # dumps where a dump is trusted, a cut-off for a family the desk does
@@ -4192,8 +4730,7 @@ def apply_plan(
 
     # A preview writes nothing, so every baseline it reads can
     # be read up front, several requests in flight -- and the loop below
-    # takes each from here instead of asking. A real run reads each one
-    # just before its write, as it always has.
+    # takes each from here instead of asking. A real run does the same, and still reads each of its writes back.
     prefetched = None
     # What a node dump gave for the plan's own addresses, in the same pass.
     dumped = plan_read.plan_values if combined_read else {}
@@ -4207,7 +4744,8 @@ def apply_plan(
         # The dump values whose rounding could change a verdict are read again
         # now, all together with the window of requests in flight, not one at
         # a time as the loop below reaches them (each a round trip).
-        again = _dump_values_to_reread(targets, dumped, plan_read.plan_texts)
+        again = _dump_values_to_reread(targets, dumped, plan_read.plan_texts,
+                                       writes=not dry_run)
         if again:
             from atoo import console as osc
 
@@ -4250,7 +4788,7 @@ def apply_plan(
 
     for index, target in enumerate(targets):
         step_done()
-        if (index == 0 and prefetched is None) or (
+        if (index == 0 and (prefetched is None or not dry_run)) or (
                 not dry_run and reset is not None and index == reset_phase):
             finish_phase()
             phase_first = len(records)
@@ -4262,14 +4800,16 @@ def apply_plan(
             else:
                 phase = phases.start(WRITE_PHASE, len(targets) - index, writes=True)
                 phase_checks_more = True
-        if prefetched is not None and target.address in prefetched:
+        if dry_run and prefetched is not None and target.address in prefetched:
             # Counted by the phase as its reply came in.
             in_flight = False
-        elif combined_read and (target.address in known or target.address in dumped
-                                or target.address in absent):
+        elif dry_run and combined_read and (target.address in known or target.address in dumped
+                                            or target.address in absent):
             # Decided on the reset's read: nothing is asked.
             in_flight = False
         else:
+            # A real run's phase counts every setting it checks, its baseline
+            # read up front or not.
             if phase is None:
                 phase = phases.start(PREVIEW_PHASE, len(targets))
             phase.start_address(target.address)
@@ -4390,14 +4930,22 @@ def apply_plan(
         from atoo import preset_expand as _pe
         is_model_selector = (_pe.write_order(target.address) == _pe.SELECTOR
                              and target.address.endswith("/mdl"))
+        read_up_front = (set(known) | set(dumped) | set(absent.selector_of)
+                         | (set(prefetched) if prefetched is not None else set()))
         present = (_leaves_present(console, target.address)
-                   if (any(g.address not in known for g in governed_values)
+                   if (any(g.address not in read_up_front for g in governed_values)
                        or is_model_selector) else None)
         for governed in governed_values:
             if governed.address in forced_by:
                 continue
-            if governed.address in known:
+            if (governed.address in known or governed.address in dumped
+                    or governed.address in absent):
                 # Its baseline was read before anything was written.
+                forced_by[governed.address] = target.address
+                continue
+            if prefetched is not None and governed.address in prefetched:
+                # Read up front, under the selector it was set under.
+                pre_read[governed.address] = prefetched[governed.address]
                 forced_by[governed.address] = target.address
                 continue
             if present is not None and governed.address not in present:
@@ -4450,86 +4998,27 @@ def apply_plan(
         if abort_reason is not None:
             break
 
-        # The mark goes here, before the write: any datagram the client
-        # receives from now on is a candidate answer to THIS write, and
-        # anything it already had is not (see `_late_confirmation`).
-        mark = _reply_mark(console)
-        try:
-            method, ack = _write_target(console, target, intended_value)
-        except OSError as exc:
-            abort_reason = str(exc)
+        record, check, abort_reason = _write_and_read_back(
+            console, target, intended_value, prior_value, timestamp, forced)
+        if abort_reason is not None:
             break
-        # Read back -- and when the readback disagrees, do NOT conclude
-        # anything yet. This is a race, confirmed twice on hardware.
-        # `set_param` is fire-and-forget: the protocol gives it no ack, so
-        # there is nothing to wait on before reading, and the console
-        # answers the read from the value it held BEFORE the write, then
-        # pushes the new one as its own datagram a moment later:
-        #
-        #   SET (no-ack) /bus/10/name = 'VOX Delay'
-        #   GET /bus/10/name -> ''            <- the reply we believed
-        #   GET /bus/11/name -> '' for /bus/10/name    (stale, discarded)
-        #   GET /bus/11/name -> 'VOX Delay' for /bus/10/name  (stale, discarded)
-        #
-        # (from the A1 raw log of 2026-09-21.
-        # `/ch/7/tags` on the 21:00 run of the same night does it one
-        # worse: the readback AND an immediate re-read both answered '',
-        # and the value arrives in two datagrams drained during
-        # `/ch/8/tags`.)
-        #
-        # The write had landed both times; the journal called both a
-        # MISMATCH. Those are the only writes in the run that took the
-        # unacked path, because `_UNSAFE_NODE_COMMAND_CHARS` sends any
-        # value containing a space, comma or equals through `set_param` --
-        # 'VOX Delay' has a space, '#D7,#M1' has a comma.
-        #
-        # A false mismatch is not harmless here. It is the tool crying
-        # wolf about its own central claim, and the exit code is non-zero,
-        # so a script cannot tell one from the real thing.
-        #
-        # So: consult the datagrams the client drained (free), and if they do not settle it, hold the address back for
-        # `_recheck_disagreements` after the loop rather than spending a
-        # round trip and a sleep here, in the middle of the race.
-        readback_reply = console.get(target.address)
-        readback_value, readback_error = _extract_reply_value(
-            readback_reply, target.value_type, target.address)
-        readback_source = None
-        disagrees = readback_error is not None or not _values_equal(
-            target.value_type, readback_value, intended_value, target.address)
-        if disagrees and not (readback_reply is not None and readback_reply.is_socket_error):
-            late = _late_confirmation(console, target, intended_value, mark)
-            if late is not None:
-                readback_reply = late
-                readback_value, readback_error = _extract_reply_value(
-                    late, target.value_type, target.address)
-                readback_source = "late_reply"
-
-        if readback_reply is not None and readback_reply.is_socket_error:
-            abort_reason = (
-                f"{readback_reply.args[0] if readback_reply.args else 'socket error'} "
-                f"(the write to {target.address} was sent -- whether it landed is unknown)"
-            )
-            break
-        if readback_error is not None:
-            status = "unreadable"
-        elif _values_equal(target.value_type, readback_value, intended_value, target.address):
-            status = "match"
-        else:
-            status = "mismatch"
-        record = WriteRecord(
-            address=target.address, description=target.description, value_type=target.value_type,
-            method=method, ack=ack,
-            prior_value=prior_value, intended_value=intended_value, readback_value=readback_value,
-            status=status, timestamp=timestamp, readback_source=readback_source,
-            forced_by=forced,
-        )
         records.append(record)
-        if status in ("mismatch", "unreadable"):
-            pending.append(_PendingCheck(
-                record=record, target=target, intended_value=intended_value, mark=mark))
+        if check is not None:
+            pending.append(check)
 
     step_done()
     finish_phase()
+
+    if (not dry_run and batched_reads and abort_reason is None
+            and any(r.method is not None for r in records)):
+        abort_reason, moved = _recheck_skipped(console, targets, records, pending, phases,
+                                               governed_by)
+        if moved:
+            shown = "; ".join(moved[:10]) + (f"; and {len(moved) - 10} more"
+                                             if len(moved) > 10 else "")
+            warnings = warnings + [
+                f"INFO {len(moved)} setting(s) the run had found already set changed on the desk "
+                f"while it wrote, and were written and read back: {shown}"]
 
     if pending and abort_reason is None:
         recheck_warning = _recheck_disagreements(console, pending, phases=phases)
@@ -4547,7 +5036,7 @@ def apply_plan(
 
         warnings = warnings + init.run_notes(reset, records, dry_run=dry_run,
                                              write_seconds=reset_seconds)
-    if dry_run and (stats.dumps or stats.singles):
+    if stats.dumps or stats.singles:
         window = getattr(console, "window", 1)
         if not isinstance(window, int) or window <= 1:
             path = "one request at a time (console window 1)"
@@ -4565,7 +5054,8 @@ def apply_plan(
                 if isinstance(window, int) and window > 1 and stats.seconds > SLOW_READ_SECONDS
                 else None)
         warnings = warnings + [stats.line(
-            path, window=window if isinstance(window, int) else 1, lone_request=lone)]
+            path, window=window if isinstance(window, int) else 1, lone_request=lone,
+            who="the preview" if dry_run else "the run, before its writes,")]
     warnings = warnings + absent.notes()
     if dump_rereads:
         warnings = warnings + [
@@ -4879,6 +5369,10 @@ def _write_journal(path: str, result: ApplyResult) -> None:
                 # absent (not null) when none did, so a journal of a run
                 # with no selector change is byte-for-byte the old shape.
                 **({"forced_by": w.forced_by} if w.forced_by is not None else {}),
+                # A preview's stereo-pair partner, which the write sets with
+                # its first socket: absent when none, as `forced_by` is, so
+                # the page's count (`webui._write_records`) is the command's.
+                **({"mirrored_by": w.mirrored_by} if w.mirrored_by is not None else {}),
             }
             for w in result.writes
         ],

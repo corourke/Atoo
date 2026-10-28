@@ -113,3 +113,41 @@ def output_patches(entry) -> list:
         return [p for p in many if isinstance(p, dict)]
     one = entry.get("patch")
     return [one] if isinstance(one, dict) else []
+
+
+def matrix_feeds(plan) -> dict:
+    """Every Matrix's feeds, by its `outputs` key: `[(kind, key, mode), ...]`
+    with `kind` `channel`, `bus` or `main`, `key` the source's plan key (a
+    channel's `name`, a bus's or a Main's `busses`/`outputs` key), and `mode`
+    the send's stated tap or None. Its `fed_by` (one Main or bus, as a build
+    writes it) and every `matrix_sends` that names it,
+    in plan order. A Matrix nothing feeds has an empty list; a send naming a
+    Matrix the plan does not have is left out (verify reports it)."""
+    outputs = plan.get("outputs") or {}
+    matrices = {name for name, entry in outputs.items()
+                if isinstance(entry, dict) and entry.get("kind") == "matrix"}
+    mains = {entry.get("index"): name for name, entry in outputs.items()
+             if isinstance(entry, dict) and entry.get("kind") == "main"}
+    feeds: dict = {name: [] for name in matrices}
+    for name in matrices:
+        fed_by = outputs[name].get("fed_by")
+        if isinstance(fed_by, dict):
+            if fed_by.get("type") == "main":
+                feeds[name].append(("main", mains.get(fed_by.get("index"), f"Main {fed_by.get('index', 1)}"), None))
+            elif fed_by.get("type") == "bus" and fed_by.get("name"):
+                feeds[name].append(("bus", fed_by["name"], None))
+
+    def add(kind, key, entry):
+        for send in (entry.get("matrix_sends") or []) if isinstance(entry, dict) else []:
+            if isinstance(send, dict) and send.get("matrix") in feeds:
+                feeds[send["matrix"]].append((kind, key, send.get("mode")))
+
+    for channel in plan.get("channels") or []:
+        if isinstance(channel, dict):
+            add("channel", channel.get("name"), channel)
+    for key, bus in (plan.get("busses") or {}).items():
+        add("bus", key, bus)
+    for key, out in outputs.items():
+        if isinstance(out, dict) and out.get("kind") == "main":
+            add("main", key, out)
+    return feeds

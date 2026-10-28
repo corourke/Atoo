@@ -109,6 +109,47 @@ def inserts(entry: dict) -> list[dict]:
     return [i for i in out if isinstance(i, dict)] if isinstance(out, list) else []
 
 
+#: A strip's own inserts, on a channel, a bus, a Main or a Matrix.
+OWN_INSERTS_KEY = "inserts"
+_POINT_ORDER = {"preins": 0, "postins": 1}
+
+
+def own_inserts(entry: dict) -> list[dict]:
+    out = entry.get(OWN_INSERTS_KEY) if isinstance(entry, dict) else None
+    return [i for i in out if isinstance(i, dict)] if isinstance(out, list) else []
+
+
+def strip_inserts(entry: dict) -> list[dict]:
+    """Every insert the plan puts on a strip, one per point, pre before
+    post: the strip's own `inserts` (a capture's, or the bus
+    sheet's fx cell), and a bus preset's at a point those do not name. An
+    entry whose `model` is None takes the insert at its point off."""
+    own = own_inserts(entry)
+    named = {i.get("point") for i in own}
+    merged = [i for i in inserts(entry) if i.get("point") not in named] + own
+    return sorted(merged, key=lambda i: _POINT_ORDER.get(i.get("point"), 2))
+
+
+def plan_strips(plan: dict):
+    """`(bank, index, label, entry)` for every channel, bus, Main and Matrix
+    of `plan` with an index: what `strip_inserts` is read on. `bank` is the
+    desk's (`ch`, `aux`, `bus`, `main`, `mtx`), so `/{bank}/{index}` is the
+    strip."""
+    for ch in plan.get("channels") or []:
+        if isinstance(ch, dict) and isinstance(ch.get("channel"), int):
+            bank = ch.get("bank") or "ch"
+            yield bank, ch["channel"], f"{bank} {ch['channel']} ({ch.get('name')!r})", ch
+    for name, entry in (plan.get("busses") or {}).items():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int):
+            yield "bus", entry["index"], bus_label(name, entry), entry
+    for name, entry in (plan.get("outputs") or {}).items():
+        if isinstance(entry, dict) and isinstance(entry.get("index"), int) \
+                and entry.get("kind") in ("main", "matrix"):
+            bank = "main" if entry["kind"] == "main" else "mtx"
+            word = "Main" if bank == "main" else "Matrix"
+            yield bank, entry["index"], f"{word} {entry['index']} ({name!r})", entry
+
+
 def expansion_matches_name(entry: dict) -> bool:
     values = preset_values(entry)
     name = entry.get(PRESET_KEY)
@@ -210,15 +251,30 @@ def insert_owner(name: str, entry: dict, point: str) -> str:
 
 
 def claimed_engines(plan: dict, skip=()) -> dict[int, str]:
-    """Engines the plan's busses already insert (engine -> who), leaving
-    out the busses named in `skip`."""
+    """Engines the plan already inserts (engine -> who), on any strip,
+    leaving out the busses named in `skip`. An insert taken off claims
+    nothing."""
     out: dict[int, str] = {}
-    for name, entry in (plan.get("busses") or {}).items():
-        if name in skip or not isinstance(entry, dict):
+    skipped = [e for name, e in (plan.get("busses") or {}).items() if name in skip]
+    for _bank, _index, label, entry in plan_strips(plan):
+        if any(entry is e for e in skipped):
             continue
-        for ins in inserts(entry):
-            if isinstance(ins.get("engine"), int):
-                out.setdefault(ins["engine"], insert_owner(name, entry, ins.get("point")))
+        for ins in strip_inserts(entry):
+            if isinstance(ins.get("engine"), int) and ins.get("model") is not None:
+                out.setdefault(ins["engine"],
+                               f"{label}'s {INSERT_POINT_NAMES.get(ins.get('point'), ins.get('point'))}")
+    return out
+
+
+def own_claimed_engines(plan: dict) -> dict[int, str]:
+    """Engines a strip's own `inserts` hold: what a bus
+    preset's effect must not be given."""
+    out: dict[int, str] = {}
+    for _bank, _index, label, entry in plan_strips(plan):
+        for ins in own_inserts(entry):
+            if isinstance(ins.get("engine"), int) and ins.get("model") is not None:
+                out.setdefault(ins["engine"],
+                               f"{label}'s {INSERT_POINT_NAMES.get(ins.get('point'), ins.get('point'))}")
     return out
 
 
@@ -273,6 +329,8 @@ def expand_busses(plan: dict, library, only=None,
     for name, entry in (plan.get("busses") or {}).items():
         if isinstance(entry, dict) and (only is None or name in only):
             findings.extend(expand_bus(name, entry, library))
+    if taken is None:
+        taken = own_claimed_engines(plan)
     findings.extend(allocate_engines(plan, only, taken))
     for name, entry in (plan.get("busses") or {}).items():
         if not isinstance(entry, dict) or (only is not None and name not in only):

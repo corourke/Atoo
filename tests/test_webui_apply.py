@@ -484,14 +484,20 @@ def test_the_journal_goes_where_the_command_would_have_put_it(apply_client):
     assert entry.path.parent == show.journals
 
 
-def test_a_preview_leaves_no_journal_anywhere(apply_client, tmp_path):
+def test_a_preview_leaves_no_journal_anywhere(apply_client, tmp_path, tmp_path_factory,
+                                             monkeypatch):
     """`atoo undo` refuses a dry-run journal outright, so a preview
     that left one behind would leave a file that looks reversible and is
     not. The scratch copy the server reads is deleted, and the payload
-    names no path."""
+    names no path.
+
+    The scratch copy is made in a temporary directory of this test's own,
+    so another test's preview, running beside it in another worker,
+    cannot add or remove one between the two looks."""
     import tempfile
 
-    scratch_root = Path(tempfile.gettempdir())
+    scratch_root = tmp_path_factory.mktemp("preview-scratch")
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch_root))
     before_bundle = {p.name for p in tmp_path.rglob("*")}
     before_scratch = set(scratch_root.glob("atoo-preview-*"))
 
@@ -664,28 +670,32 @@ def test_mismatches_are_expanded_and_the_boring_rows_are_counted(apply_client, d
     assert mismatch_findings[0]["severity"] == "error"
 
 
-def test_a_preview_splits_would_change_from_already_correct(apply_client):
+def test_a_preview_puts_every_row_in_a_tile_and_lists_none(apply_client):
+    """A preview's rows are in its drawing's tiles, each in
+    exactly one, and the result lists none of its own (the page has no
+    "All N changes" list any more)."""
     apply_client.post("/api/apply/run", json={"confirm": False, "arm": False})
     result = _wait(apply_client)["result"]
-
-    groups = {g["key"]: g for g in result["groups"]}
-    assert set(groups) == {"would_change", "unchanged"}
-    assert groups["would_change"]["count"] == result["counts"]["would_change"]
-    assert groups["unchanged"]["count"] > 0
+    assert result["groups"] == []
+    tiles = result["drawing"]["tiles"]
+    rows = [r for t in tiles.values() for r in t["rows"]]
+    assert len(rows) == result["counts"]["total"]
+    assert len({r["address"] for r in rows}) == len(rows)
     assert result["summary"].startswith("DRY RUN: ")
     assert f"{result['counts']['would_change']} would change" in result["summary"]
 
 
 def test_would_change_is_the_engines_answer_not_a_recomputed_one(apply_client):
     """`would_change` is `_values_equal`, type-aware and
-    tolerant for floats. It travels per record so the browser never has to
-    ask the question with a `!==` of its own."""
+    tolerant for floats. Each tile row carries the engine's answer, so the
+    browser never has to ask the question with a `!==` of its own, and the
+    tiles' changes add up to the preview's count."""
     apply_client.post("/api/apply/run", json={"confirm": False, "arm": False})
     result = _wait(apply_client)["result"]
-    records = [r for g in result["groups"] for r in g["records"]]
-    assert records and all("would_change" in r for r in records)
-    counted = {g["key"]: g["count"] for g in result["groups"]}
-    assert counted["would_change"] == result["counts"]["would_change"]
+    tiles = result["drawing"]["tiles"]
+    assert sum(t["changes"] for t in tiles.values()) == result["counts"]["would_change"]
+    assert sum(1 for t in tiles.values() for r in t["rows"] if r["changes"]) \
+        == result["counts"]["would_change"]
 
 
 def test_the_summary_is_apply_results_own_words(apply_client):
@@ -984,17 +994,17 @@ def test_box_1_counts_the_preflights_notes_by_the_docks_folds(assets):
 
 def test_a_previews_sample_does_not_point_at_a_journal(assets):
     """A collapsed group's sample line said "all of them are in
-    the journal file" after a preview, which writes none (journal_path is
-    null). The journal is named only when the result has one."""
+    the journal file" after a preview, which writes none. Since an earlier change
+    a preview shows no groups at all (its rows are in its tiles), and the
+    journal is named only when the result has one."""
     js = assets.get("/static/apply.js").text
     start = js.index("function sampleNote(")
     body = js[start:js.index("function groupElement(", start)]
-    gate = body.index("if (result && result.journal_path)")
-    claim = body.index("all of them are in the journal file")
-    assert gate < claim < body.index("if (result && result.dry_run)")
-    assert "A preview writes no journal" in body
+    assert body.index("if (result && result.journal_path)") < body.index(
+        "all of them are in the journal file")
     assert js.count("in the journal file") == 1
     assert "groupElement(g, result)" in js
+    assert "const shown = !!result && mine && !result.dry_run;" in js
 
 
 def test_the_journals_warnings_reach_the_dock():
@@ -1059,7 +1069,8 @@ def test_apply_js_never_recomputes_would_change(assets):
     js = assets.get("/static/apply.js").text
     for comparison in ("prior_value !=", "prior_value ===", "prior_value =="):
         assert comparison not in js, f"apply.js compares values itself: {comparison!r}"
-    assert "record.would_change" in js, "apply.js must read the server's answer"
+    # The tiles' rows carry the server's answer.
+    assert "d.rows.filter((r) => r.changes)" in js, "apply.js must read the server's answer"
 
 
 def test_the_journal_view_says_the_run_is_reversible_and_names_the_file(assets):

@@ -63,7 +63,7 @@ def test_a_hand_tuned_condition_is_never_overwritten():
     """The property the whole merge exists for. A rebuild must not undo a
     severity someone raised at 18:00 because the draft still says
     'warning'."""
-    existing = {"watch_conditions": [cond("Kick", severity="error")]}
+    existing = {"version": 2, "watch_conditions": [cond("Kick", severity="error")]}
     document, report = merge_drafted_conditions(existing, [cond("Kick", severity="warning")])
     assert len(document["watch_conditions"]) == 1
     assert document["watch_conditions"][0]["severity"] == "error"
@@ -75,7 +75,7 @@ def test_a_hand_tuned_condition_is_never_overwritten():
 def test_a_condition_the_draft_no_longer_proposes_is_kept():
     """A rule written about something the model didn't think to watch is
     exactly the rule worth keeping."""
-    existing = {"watch_conditions": [cond("mine", "Talkback")]}
+    existing = {"version": 2, "watch_conditions": [cond("mine", "Talkback")]}
     document, report = merge_drafted_conditions(existing, [cond("Kick")])
     assert [c["id"] for c in document["watch_conditions"]] == ["mine", "Kick"]
     assert report.added == ("Kick",)
@@ -89,7 +89,7 @@ def test_a_drafted_condition_you_deleted_does_not_come_back():
     assert first["drafted"] == ["Kick"]
 
     # the operator deletes the condition but leaves the bookkeeping alone
-    after_delete = {"watch_conditions": [], "drafted": first["drafted"]}
+    after_delete = {"version": 2, "watch_conditions": [], "drafted": first["drafted"]}
 
     second, report = merge_drafted_conditions(after_delete, [cond("Kick")])
     assert second["watch_conditions"] == []
@@ -100,7 +100,7 @@ def test_a_drafted_condition_you_deleted_does_not_come_back():
 def test_the_drafted_record_is_a_union_not_a_replacement():
     """An id drafted by an older build and since deleted has to stay
     recorded, or its deletion silently stops sticking two builds later."""
-    existing = {"watch_conditions": [], "drafted": ["Old"]}
+    existing = {"version": 2, "watch_conditions": [], "drafted": ["Old"]}
     document, _ = merge_drafted_conditions(existing, [cond("New")])
     assert document["drafted"] == ["New", "Old"]
 
@@ -108,7 +108,7 @@ def test_the_drafted_record_is_a_union_not_a_replacement():
 def test_two_conditions_on_the_same_target_are_both_kept_but_reported():
     """Ids are the identity, so both run. They can contradict each other,
     which is worth a word rather than a silent resolution."""
-    existing = {"watch_conditions": [cond("mine", "Kick", value=True)]}
+    existing = {"version": 2, "watch_conditions": [cond("mine", "Kick", value=True)]}
     document, report = merge_drafted_conditions(existing, [cond("theirs", "Kick", value=False)])
     assert [c["id"] for c in document["watch_conditions"]] == ["mine", "theirs"]
     assert report.overlaps == (("theirs", "mine"),)
@@ -117,13 +117,13 @@ def test_two_conditions_on_the_same_target_are_both_kept_but_reported():
 def test_overlap_detection_matches_channel_names_case_insensitively():
     """Channel names resolve case-insensitively at evaluation time
     (_resolve_channel_base), so "kick" and "Kick" are one target."""
-    existing = {"watch_conditions": [cond("mine", "kick")]}
+    existing = {"version": 2, "watch_conditions": [cond("mine", "kick")]}
     _, report = merge_drafted_conditions(existing, [cond("theirs", "KICK", value=False)])
     assert report.overlaps == (("theirs", "mine"),)
 
 
 def test_the_merge_does_not_mutate_its_input():
-    existing = {"watch_conditions": [cond("mine", "Talkback")]}
+    existing = {"version": 2, "watch_conditions": [cond("mine", "Talkback")]}
     before = json.dumps(existing, sort_keys=True)
     merge_drafted_conditions(existing, [cond("Kick")])
     assert json.dumps(existing, sort_keys=True) == before
@@ -133,7 +133,7 @@ def test_a_merged_document_still_validates():
     """Whatever comes out of here has to be loadable by the same function
     that guards a hand-written file -- including its extra `drafted` key."""
     document, _ = merge_drafted_conditions(
-        {"watch_conditions": [cond("mine", "Talkback")]},
+        {"version": 2, "watch_conditions": [cond("mine", "Talkback")]},
         [cond("Kick"), cond("Crowd", "Crowd L", field="fader_db", value=-90.0)],
     )
     assert len(parse_watch_conditions(json.dumps(document))) == 3
@@ -142,10 +142,10 @@ def test_a_merged_document_still_validates():
 def test_source_is_optional_and_validated():
     """Absent means hand-written; a value outside the vocabulary is an
     error, the same stance every other key in this schema takes."""
-    assert parse_watch_conditions(json.dumps({"watch_conditions": [cond("a")]}))
-    assert parse_watch_conditions(json.dumps({"watch_conditions": [cond("a", source="drafted")]}))
+    assert parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [cond("a")]}))
+    assert parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [cond("a", source="drafted")]}))
     with pytest.raises(WatchConditionsError, match="unknown source"):
-        parse_watch_conditions(json.dumps({"watch_conditions": [cond("a", source="robot")]}))
+        parse_watch_conditions(json.dumps({"version": 2, "watch_conditions": [cond("a", source="robot")]}))
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ class FakeProvider:
 
 
 def test_a_valid_draft_comes_back_parsed():
-    provider = FakeProvider(json.dumps({"watch_conditions": [cond("Kick")]}))
+    provider = FakeProvider(json.dumps({"version": 2, "watch_conditions": [cond("Kick")]}))
     out = generate.draft_watch_conditions({"channels": []}, "conventions", provider=provider)
     assert [c["id"] for c in out] == ["Kick"]
     assert provider.labels == ["watchlist"]
@@ -174,9 +174,9 @@ def test_a_valid_draft_comes_back_parsed():
 
 @pytest.mark.parametrize("reply, why", [
     ("not json at all", "unparseable reply"),
-    (json.dumps({"watch_conditions": [{"id": "x"}]}), "missing required keys"),
-    (json.dumps({"watch_conditions": [cond("x", field="gain")]}), "field outside the vocabulary"),
-    (json.dumps({"watch_conditions": [cond("x", severity="urgent")]}), "invented severity"),
+    (json.dumps({"version": 2, "watch_conditions": [{"id": "x"}]}), "missing required keys"),
+    (json.dumps({"version": 2, "watch_conditions": [cond("x", field="gain")]}), "field outside the vocabulary"),
+    (json.dumps({"version": 2, "watch_conditions": [cond("x", severity="urgent")]}), "invented severity"),
     (json.dumps({"nope": []}), "wrong top-level shape"),
 ])
 def test_an_unusable_draft_returns_none_rather_than_raising(reply, why, capsys):
@@ -207,7 +207,7 @@ def test_an_unknown_key_is_dropped_and_a_bad_condition_refused_alone(capsys):
 
 
 def test_a_repeated_id_in_a_draft_keeps_the_first():
-    reply = json.dumps({"watch_conditions": [cond("Kick"), cond("Kick", "Snare")]})
+    reply = json.dumps({"version": 2, "watch_conditions": [cond("Kick"), cond("Kick", "Snare")]})
     out = generate.draft_watch_conditions(
         {"channels": []}, "conventions", provider=FakeProvider(reply))
     assert [c["channel"] for c in out] == ["Kick"]
@@ -217,7 +217,7 @@ def test_a_draft_with_an_extra_key_still_reaches_watch_json(
         stub_build, bundle_dir, monkeypatch, capsys):
     """End to end through `build`: the draft is not stubbed, the model is."""
     stub_build("touringband")
-    reply = json.dumps({"watch_conditions": [cond("Kick", index=1)]})
+    reply = json.dumps({"version": 2, "watch_conditions": [cond("Kick", index=1)]})
     real = generate.draft_watch_conditions
     monkeypatch.setattr("atoo.generate.draft_watch_conditions",
                         lambda plan, conventions, **kw: real(
@@ -241,7 +241,7 @@ def test_none_and_empty_list_are_different_answers():
     read as "never ran" -- the same distinction critique_plan makes."""
     empty = generate.draft_watch_conditions(
         {"channels": []}, "conventions",
-        provider=FakeProvider(json.dumps({"watch_conditions": []})))
+        provider=FakeProvider(json.dumps({"version": 2, "watch_conditions": []})))
     assert empty == []
     assert empty is not None
 
@@ -289,7 +289,7 @@ def test_build_writes_the_drafted_watchlist_into_the_bundle(
 def test_build_merges_rather_than_replacing_a_hand_tuned_watchlist(
         stub_build, bundle_dir, monkeypatch, capsys):
     (bundle_dir / "watch.json").write_text(json.dumps(
-        {"watch_conditions": [cond("Kick", severity="error"), cond("mine", "Talkback")]}))
+        {"version": 2, "watch_conditions": [cond("Kick", severity="error"), cond("mine", "Talkback")]}))
     stub_build("touringband")
     _stub_watchlist(monkeypatch, [cond("Kick"), cond("Crowd", "Crowd L")])
     _build(bundle_dir)
@@ -304,7 +304,7 @@ def test_build_merges_rather_than_replacing_a_hand_tuned_watchlist(
 
 def test_an_unusable_draft_leaves_an_existing_watchlist_untouched(
         stub_build, bundle_dir, monkeypatch):
-    original = json.dumps({"watch_conditions": [cond("mine", "Talkback")]})
+    original = json.dumps({"version": 2, "watch_conditions": [cond("mine", "Talkback")]})
     (bundle_dir / "watch.json").write_text(original)
     stub_build("touringband")
     _stub_watchlist(monkeypatch, None)          # draft_watch_conditions failed
@@ -366,7 +366,7 @@ def test_saving_from_the_ui_preserves_the_drafted_bookkeeping(tmp_path):
 
     path = tmp_path / "watch.json"
     path.write_text(json.dumps({
-        "watch_conditions": [cond("mine", "Talkback")],
+        "version": 2, "watch_conditions": [cond("mine", "Talkback")],
         "drafted": ["Kick", "Crowd"],
     }))
 

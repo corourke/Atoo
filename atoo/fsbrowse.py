@@ -68,6 +68,8 @@ KINDS: dict[str, "tuple[str, ...] | None"] = {
     "md": (".md",),
     "csv": (".csv",),
     "json": (".json",),
+    # A WING show file (New show > From a desk reads one).
+    "snap": (".snap",),
     "any": None,
 }
 

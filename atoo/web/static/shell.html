@@ -63,7 +63,7 @@
     <button type="button" class="page-nav-link" id="nav-apply" data-mode="apply">Apply</button>
     <button type="button" class="page-nav-link" id="nav-watch" data-mode="watch">Watch</button>
     <div class="seg is-sm" id="theme-seg" role="radiogroup" aria-label="Theme"
-         title="Colour theme: Dark by default; Auto follows your system">
+         title="Color theme: Dark by default; Auto follows your system">
       <button type="button" class="seg-opt" role="radio" aria-checked="false" tabindex="-1" data-value="auto">Auto</button>
       <button type="button" class="seg-opt" role="radio" aria-checked="false" tabindex="-1" data-value="light">Light</button>
       <button type="button" class="seg-opt" role="radio" aria-checked="true" tabindex="0" data-value="dark">Dark</button>
@@ -173,10 +173,90 @@
     <span class="bundle-bar-hint" id="console-demo-hint" hidden>Opens the demo show, read-only, on a built-in WING Compact rig: no console needed. Build, Apply and Watch can all be looked at; nothing can be saved, built or written.</span>
   </div>
 
-  <p id="bundle-message" class="panel-message" hidden></p>
+  <!-- What the last bundle action did: a note, or an error in red. The ×
+       dismisses it, and changing step clears it. -->
+  <div id="bundle-message" class="panel-message bundle-message" role="status" hidden>
+    <span id="bundle-message-text"></span>
+    <button type="button" class="bundle-message-close" id="bundle-message-close" aria-label="Dismiss this message">&times;</button>
+  </div>
   <p id="console-message" class="panel-message panel-message-error" hidden></p>
 
 </div>
+
+<!-- Build plan on a captured show: the plan was
+     read from the desk, and a build replaces it, so it asks
+     first. Cancel or Esc does nothing; focus starts on Cancel. Outside
+     every step panel, so it shows from any of them. -->
+<dialog class="note-dialog" id="captured-build-dialog" aria-labelledby="captured-build-title">
+  <form method="dialog" class="note-dialog-form">
+    <h2 class="note-dialog-title" id="captured-build-title">Build a new plan?</h2>
+    <p class="note-dialog-hint" id="captured-build-text">This plan was read from the desk. Build plan replaces it with a new plan from your conventions, using a model; your sheet edits still win.</p>
+    <div class="note-dialog-buttons">
+      <button type="button" class="btn btn-secondary btn-sm" id="captured-build-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" id="captured-build-continue">Continue</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Outside the bundle chrome, which Watch hides while it runs: Watch's
+     Make a show from this desk opens this same dialog. -->
+<!-- New show... asks first how the show starts: Empty, as
+     before, or From a desk -- the console in the bar or a .snap file,
+     captured to a new show folder with `atoo capture`'s own code. -->
+<dialog class="note-dialog new-show-dialog" id="new-show-dialog" aria-labelledby="new-show-title">
+  <form method="dialog" class="note-dialog-form" id="new-show-form">
+    <h2 class="note-dialog-title" id="new-show-title">New show</h2>
+    <div class="ns-row">
+      <span class="ns-label" id="ns-start-label">Start</span>
+      <div class="ns-cards" id="ns-start" role="radiogroup" aria-labelledby="ns-start-label">
+        <button type="button" class="ns-card" role="radio" aria-checked="true" tabindex="0" data-value="empty">
+          <span class="ns-card-title">Empty</span>
+          <span class="ns-card-desc">A new folder with no files yet.</span>
+        </button>
+        <button type="button" class="ns-card" role="radio" aria-checked="false" tabindex="-1" data-value="desk">
+          <span class="ns-card-title">From a desk</span>
+          <span class="ns-card-desc">Capture a console or a .snap file into input.csv and busses.csv.</span>
+        </button>
+      </div>
+    </div>
+    <div class="ns-row ns-desk" hidden>
+      <span class="ns-label" id="ns-read-label">Read</span>
+      <div class="seg" id="ns-read" role="radiogroup" aria-labelledby="ns-read-label">
+        <button type="button" class="seg-opt" role="radio" aria-checked="false" tabindex="-1" data-value="console">The console</button>
+        <button type="button" class="seg-opt" role="radio" aria-checked="true" tabindex="0" data-value="snap">A .snap file</button>
+      </div>
+    </div>
+    <div class="ns-row ns-desk ns-snap" hidden>
+      <span class="ns-label">File</span>
+      <div class="ns-value"><code id="ns-snap-path">none chosen</code>
+        <button type="button" class="link-btn" id="ns-snap-change">Change file</button></div>
+    </div>
+    <div class="ns-row ns-desk ns-snap" hidden>
+      <label class="ns-label" for="ns-model">Model</label>
+      <div class="ns-value"><select id="ns-model">
+        <option value="">which WING saved it?</option>
+        <option value="wing-full">WING (full-size)</option>
+        <option value="wing-compact">WING Compact</option>
+        <option value="wing-rack">WING Rack</option>
+      </select></div>
+    </div>
+    <div class="ns-row ns-desk ns-console" hidden>
+      <span class="ns-label">Console</span>
+      <div class="ns-value" id="ns-console-desc">the console in the bar</div>
+    </div>
+    <div class="ns-row ns-desk" hidden>
+      <label class="ns-label" for="ns-folder">Folder</label>
+      <div class="ns-value"><input type="text" id="ns-folder" spellcheck="false"></div>
+    </div>
+    <p class="note-dialog-hint ns-desk" hidden>Captures the desk to input.csv and busses.csv which you can edit.</p>
+    <p class="note-dialog-hint ns-empty-hint">Choose where the show's folder goes and name it. It starts empty.</p>
+    <p class="ns-error" id="ns-error" role="alert" hidden></p>
+    <div class="note-dialog-buttons">
+      <button type="button" class="btn btn-secondary btn-sm" id="ns-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" id="ns-go">Choose folder&hellip;</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="app-shell">
   <div class="shell-body">
@@ -353,8 +433,8 @@
           <!-- Every Build step draws blocks by one rule (2026-10-13; the
                UI style guide, "Blocks and
                sections"): a block's header sits OUTSIDE and above its box
-               (.block-head: white title, grey caps notation); a section inside
-               the box has a grey caps heading (.section-head); nothing is titled
+               (.block-head: white title, gray caps notation); a section inside
+               the box has a gray caps heading (.section-head); nothing is titled
                inside a border. The selected tile already names the step, so
                the first block's header does that job. -->
           <section id="panel-conventions" class="step-panel is-active" role="tabpanel" aria-labelledby="tab-conventions">
@@ -469,10 +549,13 @@
                             aria-expanded="false" aria-controls="help-input-list">?</button>
                     <span class="help-popover" id="help-input-list" role="note" hidden>
                       One row per <strong>physical input</strong>, which is why a name lives here and
-                      not on a strip: <code>apply</code> writes the name, colour and icon to the
+                      not on a strip: <code>apply</code> writes the name, color and icon to the
                       <em>socket</em>, and the strip inherits them. Editable rows only &mdash; no
                       plan columns. Save writes the bundle's <code>input.csv</code>, changing only
-                      the rows you changed; the plan then reads Stale until it is rebuilt.
+                      the rows you changed, and updates the plan with them: a name, a patch, a
+                      <strong>Channel</strong>, DCAs and mute groups go straight into it; a
+                      category, a note or a preset only a rebuild reads, so the plan reads Stale
+                      for those.
                       Step 04 shows these same rows beside the plan: an edit made there is
                       an edit made here, unsaved until Save.
                       <strong>Order</strong> is the band's own number for each input; it does
@@ -506,11 +589,14 @@
                       <tr>
                         <th class="col-move"><span class="visually-hidden">Move</span></th>
                         <th class="col-order" title="The band's own input number (their IEM split or stage-box order) -- it does not set the desk channel. Skip leaves the row out of the next build; it stays in input.csv.">Order</th>
+                        <th class="col-channel" title="The desk channel: 1-40 or Aux 1-8. Empty, the conventions place it.">Channel</th>
                         <th>Name</th>
                         <th>Category</th>
                         <th>Type</th>
                         <th>Model</th>
                         <th class="col-phantom">Phantom</th>
+                        <th>DCA</th>
+                        <th>Mute group</th>
                         <th class="col-preset" title="A preset from Atoo's preset library. It wins over the conventions and instructions, as a stated patch does.">Preset</th>
                         <th class="col-notes">Notes</th>
                         <th class="col-sock">Patch</th>
@@ -577,7 +663,7 @@
                   <button type="button" class="help-btn" aria-label="Help: how the two layers are combined"
                           aria-expanded="false" aria-controls="help-conv-stack">?</button>
                   <span class="help-popover" id="help-conv-stack" role="note" hidden>
-                    Both layers reach the model, labelled, with the precedence rule stated between
+                    Both layers reach the model, labeled, with the precedence rule stated between
                     them &mdash; nothing merges the two texts in code. The same list is written into
                     the plan at <code>meta.conventions_stack</code>.
                   </span>
@@ -658,10 +744,14 @@
                dock, each with a jump back to the section that caused it.
                One Plan block with three sections, in
                this order -- Options (folds), Build output, Changed
-               since the last build -- then Channels, Busses and Outputs
+               since the last build -- then Channels, Busses and Mains and Matrix
                as blocks of their own (setup.js draws those). -->
           <section id="panel-plan" class="step-panel" role="tabpanel" aria-labelledby="tab-plan" hidden>
             <div class="step-scroll">
+              <!-- The page came here from Watch's Edit sheets. -->
+              <p class="from-watch" id="plan-from-watch" hidden><span class="state is-live">Watching</span>
+                Watch is still running. It reads the sheets on its next pass after Save; go back to Watch to see it.
+                <button type="button" class="link-btn" id="plan-back-to-watch">Back to Watch</button></p>
               <div class="block-head">
                 <h2>Plan</h2>
                 <span class="notation">Output &middot; JSON &middot; in the bundle &middot; compiled by <code>atoo build</code></span>
@@ -829,8 +919,9 @@
                     <div class="panel-toolbar-spacer"></div>
                     <span class="state is-warn" id="plan-input-dirty-badge" hidden>Unsaved changes</span>
                     <button type="button" class="btn btn-secondary btn-sm" id="plan-input-discard-btn" disabled hidden>Discard changes</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="plan-input-save-btn" disabled hidden>Save input list</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="plan-input-save-btn" disabled hidden>Save input.csv</button>
                   </div>
+                  <div class="sheet-refusals" id="plan-input-refusals" role="alert" hidden></div>
                   <div class="save-note" id="plan-input-save-note" role="status" hidden>
                     <span id="plan-input-save-text"></span>
                     <button type="button" class="btn btn-secondary btn-sm" id="plan-input-save-reload" hidden>Reload</button>
@@ -1213,12 +1304,13 @@
             <pre id="apply-run-log" class="conv-source-pre"></pre>
           </details>
 
-          <!-- The journal view. Mismatch and unreadable rows are expanded and
-               coloured; match and skipped-no-change are collapsed into counted
-               groups. The summary line is apply.ApplyResult.summary(), the
+          <!-- The journal view, after a write (a preview's rows are in its
+               tiles' Detail). Mismatch and unreadable rows are
+               expanded and colored; match and skipped-no-change are
+               collapsed into counted groups. The summary line is apply.ApplyResult.summary(), the
                string the command itself prints, sent down by the server. -->
           <details class="apply-journal" id="apply-result-panel" hidden>
-            <summary class="btn btn-quiet" id="apply-result-summary">All changes, address by address</summary>
+            <summary class="btn btn-quiet" id="apply-result-summary">The journal</summary>
             <p class="apply-summary-line" id="apply-summary-line"></p>
             <div class="apply-chips" id="apply-chips"></div>
             <!-- The journal's warnings and notes are in the dock, as `apply.journal-warning` / `apply.journal-note`. -->
@@ -1293,7 +1385,7 @@
                runs, the alert table is first, right under the header, and
                everything else folds to its header below it. The desk's
                state is read from how the screen LOOKS -- the verdict word
-               and the rows' colour -- not from a sentence.
+               and the rows' color -- not from a sentence.
 
                Following the UI style guide,
                the header is a block
@@ -1305,6 +1397,13 @@
           <div id="panel" class="block-head watch-head">
             <h2>Watch</h2>
             <span class="notation" id="watch-notation">No console</span>
+            <!-- The show's sheets are edited in Build's step 04, in
+                 this page; the watch keeps running on the server meanwhile. -->
+            <button type="button" class="btn btn-secondary btn-sm" id="watch-edit-sheets" hidden
+               title="Go to Build's step 04 to edit this show's input.csv and busses.csv. Watch keeps running, and reads the sheets on its next pass after Save.">Edit sheets</button>
+            <!-- With no show open: capture the desk Watch is reading into one. -->
+            <button type="button" class="btn btn-secondary btn-sm" id="watch-make-show" hidden
+               title="New show from the console in the bar: captures the desk to input.csv and busses.csv. Nothing is written to the desk, and Watch keeps running.">Make a show from this desk</button>
             <span class="meta" id="last-updated"></span>
             <span class="push watch-controls">
               <span id="conn-pill" class="state">Not connected</span>
@@ -1329,10 +1428,14 @@
               <button type="button" id="watch-virtual" class="switch" role="switch" aria-checked="false" aria-label="Virtual soundcheck"
                       title="Say a virtual soundcheck is under way: a channel on its alternate input (C004) and the global alternate switch (C005) are then shown as info, not warnings, and still named. Turn it off when soundcheck ends and any that is still on its alternate becomes a warning at once. Off at every Start."><span class="track" aria-hidden="true"></span><span>Virtual soundcheck</span><span class="word" aria-hidden="true">Off</span></button>
               <button type="button" id="watch-flash-on" class="switch watch-flash-toggle" role="switch" aria-checked="false" aria-label="Flash on new"
-                      title="A brief full-screen flash, in the finding's colour, the moment a new warning or error appears. Once per finding, never repeating while it stands; never for an info. With reduced motion: a steady edge glow instead."><span class="track" aria-hidden="true"></span><span>Flash on new</span><span class="word" aria-hidden="true">Off</span></button>
+                      title="A brief full-screen flash, in the finding's color, the moment a new warning or error appears. Once per finding, never repeating while it stands; never for an info. With reduced motion: a steady edge glow instead."><span class="track" aria-hidden="true"></span><span>Flash on new</span><span class="word" aria-hidden="true">Off</span></button>
             </span>
           </div>
 
+          <!-- When Watch read the sheets after a Save in Build's
+               step 04, and what waits for Apply. One line, not a panel. -->
+          <p class="watch-sheet-read" id="watch-sheet-read" hidden></p>
+          <p class="watch-sheet-read" id="watch-made-show" role="status" hidden></p>
           <!-- The verdict bar is the box's head but not inside it,
                so it can pin under the Watch header for the whole page, not
                just while the table is on screen. -->
@@ -1464,7 +1567,7 @@
                       <th>ID</th>
                       <th>Description</th>
                       <th title="A channel or aux name, or a position: CH 10, AUX 3, BUS 3, MAIN 1, MTX 3, DCA 14; a range: DCA 10-16; every strip of a kind: ALL AUX; one strip of a kind by its name, found once at Start: BUS Drums">Channel</th>
-                      <th>Field</th>
+                      <th title="A condition alerts while it is true: the field, compared with the value, as the desk reads it">Alert when</th>
                       <th>Operator</th>
                       <th>Value</th>
                       <th>Severity</th>
@@ -1512,6 +1615,13 @@
         </div>
         <div class="dock-body">
           <div class="dock-verdict" id="dock-verdict" hidden></div>
+          <!-- While Apply's Detail shows a tile, the sections
+               below fold away under the verdict and this one line opens
+               them again (apply.js). -->
+          <p class="dock-folded-line" id="dock-folded-line" hidden>
+            <button type="button" class="btn btn-quiet" id="dock-unfold"></button>
+            <span class="meta">folded while Detail is open</span>
+          </p>
           <section class="dock-section" id="dock-check" hidden>
             <h3 class="dock-head">To check <span class="dock-count" id="dock-check-count">0</span></h3>
             <ul class="dock-list" id="dock-active-list"></ul>
@@ -1548,6 +1658,12 @@
             </p>
           </details>
         </div>
+        <!-- Detail: Apply's Preview, one tile at a time --
+             what this write changes on it, now and after, then what it
+             leaves as it is. Drawn by apply.js, shown only on Apply while a
+             full build's preview is on screen. On a phone it opens in place,
+             under the tapped tile's bank, instead. -->
+        <section class="dock-detail" id="dock-detail" aria-label="Detail" hidden></section>
       </aside>
     </div>
 

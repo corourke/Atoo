@@ -17,6 +17,8 @@ manifest**. Convention over configuration: there is no manifest file to author o
       instructions.md      per-show instructions           (hand-authored)
       plan.json            the plan the last build made    (atoo build, and nothing else)
       watch.json           the watchlist                   (hand today; drafted)
+      busses.csv           the bus sheet                   (atoo capture, or by hand)
+      outputs.csv          the output sockets' sources     (atoo capture, or by hand)
       plan.previous.json   the plan a rebuild replaced     (kept, one generation; the next rebuild
                                                            compares against it, FR-1.4)
       plan.partial.json    a failed build's partial reply  (removed by the next good build)
@@ -25,6 +27,7 @@ manifest**. Convention over configuration: there is no manifest file to author o
       builds/              each build's own log (`build_log.py`) -- the newest 5
       logs/                text transcripts of a rebuild script's runs -- the newest 5
       backups/             the file a copy into a slot replaced, `<name>.bak`
+      captures/            the snapshot `atoo capture` made the show from
 
 Only plan files and the hand-authored inputs sit at the top level;
 everything else Atoo writes goes in a folder.
@@ -107,6 +110,24 @@ JOURNALS = "journals"
 BUILDS = "builds"
 LOGS = "logs"
 BACKUPS = "backups"
+
+# The desk sheets: `busses.csv`, one row per bus, Main and
+# Matrix, and `captures/`, the snapshot or reading `atoo capture` made the
+# show from. `atoo capture` writes both, Build's step 04 edits the bus sheet
+# in place (`atoo/sheets.py`), and a build lays it onto the plan it makes. It is read where it is, not chosen like an input, so
+# neither is a slot.
+BUSSES = "busses.csv"
+CAPTURES = "captures"
+# `outputs.csv`: one row per output socket fed straight from a
+# source -- a split or a recording feed -- and that source, in the desk's own
+# words (`atoo/outputs_sheet.py`). Written by `atoo capture`, laid on by a
+# build like the bus sheet, and read where it is, so not a slot either.
+OUTPUTS = "outputs.csv"
+# `user.csv` (built): one row per USR slot the show
+# uses -- a user signal's strip, tap and leg, or a user patch's input socket
+# -- in the desk's own words (`atoo/user_sheet.py`). Written by `atoo
+# capture`, laid on by a build, read where it is: not a slot.
+USER = "user.csv"
 
 # Everything a bundle can hold, in the order a show moves through them:
 # what you write, then what Atoo produces.

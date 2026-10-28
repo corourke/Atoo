@@ -71,7 +71,16 @@ def test_the_page_says_when_watch_has_no_plan(home, demo_copy, tmp_path):
     shots = Path(os.environ.get("ATOO_SHOT_DIR") or tmp_path)
 
     def start_with(page, show):
+        # The show is swapped on the server, so the page is drawn again to
+        # match it. A page left showing the old one finds the server holding
+        # another at its next status poll, as if another tab had opened it,
+        # and turns every button off (shell.js `markStale`): a Start then
+        # never lands, whenever that poll falls before the click.
         app.state.bundle = bundle.load(show) if show else None
+        page.reload()
+        page.wait_for_selector("#mode-watch:not([hidden])")
+        page.fill("#interval", "0.5")
+        page.wait_for_selector("#start-btn:not([disabled])")
         page.click("#start-btn")
         page.wait_for_selector("#alert-body tr, #watch-about-line:has-text('Reading')", timeout=30000)
 
@@ -99,7 +108,6 @@ def test_the_page_says_when_watch_has_no_plan(home, demo_copy, tmp_path):
                 assert page.request.post(url + "api/console", data={"demo": True}).ok
                 page.reload()
                 page.wait_for_function("document.body.classList.contains('is-demo-show')")
-                page.fill("#interval", "0.5")
 
                 # A readable plan: no Plan group.
                 start_with(page, good)
@@ -115,8 +123,8 @@ def test_the_page_says_when_watch_has_no_plan(home, demo_copy, tmp_path):
                                        ".includes('Plan: no plan, plan checks off')", timeout=30000)
                 open_details(page)
                 detail = page.locator("#watch-notes li", has_text="W005").text_content()
-                assert "Watching without a plan" in detail
-                assert "R012 Signal Splits And Recombines" in detail and "CV016" in detail
+                assert "No show's plan was given" in detail
+                assert "checks that compare the desk with the plan are off" in detail
                 page.locator("#watch-about").screenshot(path=str(shots / "watch-no-plan-dark.png"))
                 stop(page)
 

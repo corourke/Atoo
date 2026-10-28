@@ -109,7 +109,7 @@ def test_ping_says_so_when_the_model_is_not_one_we_know(monkeypatch, capsys):
 
     code = main(["ping", "--console", "192.0.2.16"])
     assert code == 0
-    assert "Detected model: not recognised" in capsys.readouterr().out
+    assert "Detected model: not recognized" in capsys.readouterr().out
 
 
 def test_ping_reports_no_reply_on_stderr_and_exits_one(monkeypatch, capsys):

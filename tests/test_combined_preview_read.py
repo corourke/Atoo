@@ -5,8 +5,8 @@ The reset's read and the preview's baseline read used to run one after the
 other, as two phases ("reading the desk for the reset", then "for the
 preview"). With a window of requests in flight, the plan's baselines ride in
 the reset's read: each address is asked once, the progress line is one
-phase, and the preview says what the two reads said before. A real run, a
-run with the reset off and a console with no capture read as they did.
+phase, and the preview says what the two reads said before. A real run reads
+the same way, before its writes.
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ def test_with_the_reset_off_it_is_one_read_under_the_preview_phase(model):
 
 
 @pytest.mark.parametrize("model", CAPTURED)
-def test_a_real_run_keeps_its_reset_read_and_asks_no_combined_phase(model):
+def test_a_real_run_reads_the_desk_once_too_before_its_writes(model):
     stream = io.StringIO()
     phases = Phases(stream=stream, isatty=False, timeout=0.5, window=8)
     with _wired(_desk_for(model), window=8) as (console, udp):
@@ -143,8 +143,8 @@ def test_a_real_run_keeps_its_reset_read_and_asks_no_combined_phase(model):
                             initialize=True, init_model=model, phases=phases)
     assert not result.aborted
     text = stream.getvalue()
-    assert len(_phase_lines(text, init.READ_PHASE)) == 1
-    assert _phase_lines(text, init.COMBINED_READ_PHASE) == []
+    assert len(_phase_lines(text, init.COMBINED_READ_PHASE)) == 1
+    assert _phase_lines(text, init.READ_PHASE) == []
 
 
 # -- the dump's value is the single read's value, for every address it covers --
@@ -276,8 +276,9 @@ def test_the_band_covers_the_rounding_the_desk_was_seen_to_do(exact, printed):
 
 @pytest.mark.parametrize("model", CAPTURED)
 def test_a_real_run_and_its_journal_never_use_a_dump_baseline(model, tmp_path):
-    """Each baseline is read singly just before its write: the journal's prior
-    values are the desk's exact ones, so Undo puts back what was there."""
+    """Every float a dump printed rounded is read again exactly before the run's
+    writes: the journal's prior values are the desk's exact ones, so Undo puts
+    back what was there."""
     plan, targets = _float_targets(model)
     desk = _edge_desk(model, targets)
     exact = dict(desk.values)

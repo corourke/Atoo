@@ -74,14 +74,16 @@ def test_with_plan_rules_and_the_list_cannot_disagree(tmp_path):
 # --------------------------------------------------------------------------
 
 
-def test_no_plan_names_the_checks_that_are_off_and_how_to_start_with_one():
+def test_no_plan_counts_the_checks_that_are_off_and_says_how_to_start_with_one():
+    """Two sentences, counts not lists: the Rules reference names the rules."""
     note = no_plan_note()
     assert (note.rule_id, note.severity) == (NO_PLAN_RULE_ID, Severity.INFO)
     judged, absent = audit.rules_needing_a_plan()
-    for rid, title in judged + absent:
-        assert f"{rid} {title}" in note.message
-    assert "R012 Signal Splits And Recombines" in note.message
-    assert "--show DIR" in note.message and "open the show first" in note.message
+    assert f"the {len(absent)} checks that compare the desk with the plan are off" in note.message
+    assert f"{len(judged)} others" in note.message
+    assert "--show DIR" in note.message and "open the show on the Watch page" in note.message
+    assert not any(rid in note.message for rid, _ in judged + absent)
+    assert len(note.message) < 300
 
 
 def test_an_unreadable_plan_names_the_file_and_the_reason(tmp_path):
@@ -131,7 +133,7 @@ def test_watch_without_a_show_says_so_once_at_start(state_file, capsys):
     assert main(["watch", "--state-sequence", str(state_file), "--count", "2"]) == 0
     out = capsys.readouterr().out
     assert out.count("[INFO] W005 Watching without a plan") == 1
-    assert "Signal Splits And Recombines" in out
+    assert "checks that compare the desk with the plan are off" in out
 
 
 def test_watch_with_a_show_whose_plan_is_broken_says_which_file_and_why(
@@ -205,7 +207,7 @@ def _page_notes(client):
 def test_the_watch_page_with_no_show_open_carries_the_note():
     [note] = _page_notes(_page_watch(None))
     assert note["group"] == "Plan" and note["severity"] == "info"
-    assert "open the show first" in note["detail"]
+    assert "open the show on the Watch page" in note["detail"]
 
 
 def test_the_watch_page_with_an_unreadable_plan_names_the_file(tmp_path):

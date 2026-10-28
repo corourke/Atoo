@@ -20,7 +20,7 @@ from atoo.console import OscReply
 # -- the plan is counted, not remembered -----------------------------------
 
 
-def test_a_compact_reading_its_own_panel_asks_for_6195_addresses():
+def test_a_compact_reading_its_own_panel_asks_for_6197_addresses():
     # Counted, not pinned to a constant: this is the number
     # `cli.read_addresses` prints and `progress` divides by, and the
     # hand-maintained constant it replaced (5,928) had been stale for
@@ -55,10 +55,14 @@ def test_a_compact_reading_its_own_panel_asks_for_6195_addresses():
     #
     # 6,195 since the width of each bus, Main and Matrix (`busmono`: 16 + 4
     # + 8, R011 and CV020), inside the object nodes already dumped.
+    #
+    # 6,197: what is fitted in each expansion bay
+    # (`/cards/$type`, `/$syscfg/opt_mod`), so the second pass can follow
+    # a fitted module's or card's outputs.
     inputs, outputs = socket_groups_to_read("wing-compact")
     plan = console_read_plan(input_sockets=inputs, output_sockets=outputs)
-    assert len(plan) == 6195
-    assert len(set(a for a, _ in plan)) == 6195, "no address is read twice"
+    assert len(plan) == 6197
+    assert len(set(a for a, _ in plan)) == 6197, "no address is read twice"
 
 
 def test_the_320_addresses_the_desk_never_answers_are_no_longer_asked_for():
@@ -111,7 +115,7 @@ def test_the_plan_contacts_nothing():
                              dcas=0, mute_groups=0)[0] == ("/ch/1/name", "s")
 
 
-def test_node_dumps_take_6195_addresses_down_to_323_requests():
+def test_node_dumps_take_6197_addresses_down_to_325_requests():
     inputs, outputs = socket_groups_to_read("wing-compact")
     plan = console_read_plan(input_sockets=inputs, output_sockets=outputs)
     by_node, alone = group_plan_by_node(plan)
@@ -123,20 +127,24 @@ def test_node_dumps_take_6195_addresses_down_to_323_requests():
     # The 288 insert leaves an earlier change added ride inside nodes already fetched.
     # 159 since an earlier change added the three AES50 ports' link status
     # and the two monitor sources, none of which has a node either.
-    assert len(alone) == 159
+    # 161 since an earlier change added the two bays' fitted readings, neither
+    # with a node.
+    assert len(alone) == 161
     assert len([a for a, _ in alone if a.startswith("/fx/")]) == 16
     assert [a for a, _ in alone if a.startswith("/cfg/")] == [
         "/cfg/talk/assign", "/cfg/mon/1/src", "/cfg/mon/2/src"]
     assert [a for a, _ in alone if a.startswith("/$stat/")] == [
         "/$stat/A/stat", "/$stat/B/stat", "/$stat/C/stat"]
-    assert len(by_node) + len(alone) == 323
-    # 323 is now a watch's FIRST pass and every refresh pass.
-    # 88 of the 159 left over are names (40 ch, 8 aux, 16 bus, 16 DCA,
+    assert [a for a, _ in alone if a in ("/cards/$type", "/$syscfg/opt_mod")] == [
+        "/cards/$type", "/$syscfg/opt_mod"]
+    assert len(by_node) + len(alone) == 325
+    # 325 is now a watch's FIRST pass and every refresh pass.
+    # 88 of the 161 left over are names (40 ch, 8 aux, 16 bus, 16 DCA,
     # 8 mute groups), which a pass between refreshes takes from the last
-    # refresh -- so that pass is 235. `tests/test_watch_name_refresh.py`
+    # refresh -- so that pass is 237. `tests/test_watch_name_refresh.py`
     # counts both at a desk.
     assert len([a for a, _ in alone if a.endswith("/name")]) == 88
-    assert len(by_node) + len(alone) - 88 == 235
+    assert len(by_node) + len(alone) - 88 == 237
 
 
 def test_a_name_or_a_tag_is_never_covered_by_a_dump():
