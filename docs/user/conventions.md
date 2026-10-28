@@ -6,7 +6,7 @@ The [input list](input-lists.md) says what is plugged in tonight. The convention
 
 ## Start from the starter
 
-`atoo init` puts a starter conventions file in your Atoo folder (`~/Documents/Atoo/conventions.md`; in a checkout, `starter/conventions.md`). It is one engineer's band/club house style, a page long, with a comment on the lines worth explaining, and it states the choices a build would otherwise have to make for you: which inputs pair into stereo, wedge mixes mono and in-ears stereo, a colour per category, a channel preset per source, which DCA and mute group each kind of source joins. The [Demo show](demo.md) is built from it, so open the Demo to see what it produces. Make it yours: keep the lines you share, change the rest, and rename its presets to the ones in your own library.
+`atoo init` puts a starter conventions file in your Atoo folder (`~/Documents/Atoo/conventions.md`; in a checkout, `starter/conventions.md`). It is one engineer's band/club house style, a page long, with a comment on the lines worth explaining, and it states the choices a build would otherwise have to make for you: which inputs pair into stereo, wedge mixes mono and in-ears stereo, a color per category, a channel preset per source, which DCA and mute group each kind of source joins. The [Demo show](demo.md) is built from it, so open the Demo to see what it produces. Make it yours: keep the lines you share, change the rest, and rename its presets to the ones in your own library.
 
 ## It is prose, not a format
 
@@ -28,7 +28,7 @@ Headings are for you and for whoever reads the file next, not for the parser. Th
 
 | Section | What you put in it |
 |---|---|
-| Sources / Inputs | patch order, colour coding, what counts as a category |
+| Sources / Inputs | patch order, color coding, what counts as a category |
 | Channel assignments | which strip things land on, what becomes a stereo pair, what goes on an aux |
 | Channel processing | high-pass by category, presets by name, starting fader and mute |
 | Busses | monitors, mixes, FX — membership, send mode, send level, width, where each one goes |
@@ -77,11 +77,11 @@ The same warning appears in the browser's Findings panel. A stray `-->` with no 
 
 **Why not parentheses?** They often carry real rules: *"(but not drums)"* leaves channels out of a reverb. The model acts on a parenthesis that states a setting and treats one that gives a reason as background, but if a line must never be read at all, a comment is the only sure way.
 
-## The one rule worth internalising: state it, or it is decided and said
+## The one rule worth internalizing: state it, or it is decided and said
 
 A value your conventions never mention goes one of two ways, and which way depends on whether the desk can work without it.
 
-- **Most values are left alone.** A high-pass, an EQ band, a fader, a colour, a preset: unstated means the plan leaves the field empty and the desk keeps whatever it had. A board with last week's filter still passes audio, so nothing is filled in with something plausible.
+- **Most values are left alone.** A high-pass, an EQ band, a fader, a color, a preset: unstated means the plan leaves the field empty and the desk keeps whatever it had. A board with last week's filter still passes audio, so nothing is filled in with something plausible.
 - **Four values are decided, and every decision is announced.** A bus's mono/stereo width, a send's pre/post, a mix or FX bus's route to the Main, and whether two sources become a stereo pair all decide how the show is *patched*, and a patch left to whatever the desk had may not work. So the build makes the reasonable choice — from your conventions first, then from what the bus is for and what things are called — and tells you in an [INFO note](reading-findings.md#info-a-choice-made-and-said) naming what it chose and why.
 
 A **physical socket** is never decided that way: a socket is where a cable is, not a preference, so it is never guessed. An output whose patch nobody stated is still set up -- its feed, level and processing -- but routed to no socket, at WARNING (`output.no-patch`). That is right for a Matrix used inside the desk, as the phones or monitor source; if the output should reach a jack, state its patch.
@@ -223,7 +223,7 @@ When your conventions name presets by kind -- one for alto sax, one for baritone
 
 Those are the starter's own lines. Naming the bus preset is all the conventions do; saving one, and what the build and `apply` do with it, is on [Bus presets: mix and FX busses](bus-presets.md). Say "the bus preset" (or "bus preset Vox Verb"), so it is not read as a channel preset; the two may share a name. Do not describe the reverb in words: Atoo cannot set an effect from a description.
 
-For colours, including the names the desk does not have, see the [conventions reference](conventions-reference.md#the-desks-eighteen-colours).
+For colors, including the names the desk does not have, see the [conventions reference](conventions-reference.md#the-desks-eighteen-colors).
 
 ## A channel that is not on the input list
 
@@ -274,10 +274,10 @@ The default is consulted **last**: an explicit `--conventions`, or a conventions
 
 ## See also
 
-- [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colours, and the resolved file
+- [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colors, and the resolved file
 - [Writing an input list](input-lists.md) — the other half
 - [Channels that are not on the input list](extra-strips.md) — talkback, playback and the strips you add at every show
 - [The command line](quickstart.md) — both files through to a proven desk
 - [Show bundles](show-bundles.md) — where `instructions.md` lives
 - `starter/conventions.md` — the complete starter, which builds the Demo show
-- [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colours, and the rules Atoo writes beside yours
+- [Conventions reference](conventions-reference.md) — the levels vocabulary, the desk's colors, and the rules Atoo writes beside yours

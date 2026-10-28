@@ -31,7 +31,7 @@ Stage 0 runs inside `build` whenever its file is missing or out of date, and cos
 
 *An experiment.* Many questions about your conventions have the same answer in every show: which high-pass the drums get, which DCA the bass joins, whether "gain on each channel" includes a USB track. So before the first build, one model call restates your conventions, together with Atoo's audio domain knowledge, as explicit rules, and writes them beside your file: `house.md` gives `house.resolved.md`. Every later build reads that file in place of the two. Your show's `instructions.md` is still read as written, on top, and still wins.
 
-From the rules, code writes each category's settings (colour, high-pass, DCA, gain and so on) on every channel the model left them off, and builds the strips your conventions ask for that are on no input list, such as "Setup TALKBACK on Aux 8". Code also checks that every quote in the file really is in your text, and that every line of your conventions is used or listed as having no effect. A quote that is not in your text is a WARNING; a line no rule cites is a note, and the generator is given that line as you wrote it.
+From the rules, code writes each category's settings (color, high-pass, DCA, gain and so on) on every channel the model left them off, and builds the strips your conventions ask for that are on no input list, such as "Setup TALKBACK on Aux 8". Code also checks that every quote in the file really is in your text, and that every line of your conventions is used or listed as having no effect. A quote that is not in your text is a WARNING; a line no rule cites is a note, and the generator is given that line as you wrote it.
 
 The file is made again when your conventions, the domain knowledge or the prompt change, and `atoo resolve --conventions house.md` makes it again on purpose. `atoo build --no-resolve` builds without it. **Read it**: [The resolved conventions](conventions-reference.md#the-resolved-conventions) says how, and what to do when a rule in it is not what you meant.
 
@@ -41,7 +41,7 @@ The file is made again when your conventions, the domain knowledge or the prompt
 
 It needs to know which desk the plan is for (`--console-model wing-compact`; a rebuild of a show that has a plan takes it from that plan), and a model provider ([Setting up an AI provider](ai-provider.md)). This is the one stage that uses a language model. Everything after it is ordinary code and runs with no model at all.
 
-The model writes a short reply, saying what it decided, and code expands it into the plan: it numbers the channels, copies each row's details off the input list, picks the next free socket where a row states none, and applies your colours. Each thing code chose is recorded in the plan as an INFO note (in the browser, under **Build details**), so it is never mistaken for what the model or your conventions did.
+The model writes a short reply, saying what it decided, and code expands it into the plan: it numbers the channels, copies each row's details off the input list, picks the next free socket where a row states none, and applies your colors. Each thing code chose is recorded in the plan as an INFO note (in the browser, under **Build details**), so it is never mistaken for what the model or your conventions did.
 
 **Every input-list row becomes a channel, unless your own words say to leave it out.** The model may leave a row off only by quoting a line from your conventions, your instructions or that row's own notes (*"not patched for this event"*), and code checks the quote is really there, word for word. A row left out without one is built anyway, by code, and said at INFO (`reply.row-built`). A channel that is not built is a dead microphone at soundcheck; one built that nobody wanted is a strip you mute.
 
@@ -90,7 +90,7 @@ Changed since the last build -- 3 strips against plan.previous.json: 1 added, 1 
 
 **Every changed value.** A strip with more than two changed values gets one line ending *"and 3 more values"*. The plan keeps the whole comparison at `meta.changes_since_previous`: each strip with its grade, its reason, and every value old and new. `--all-changes` on a build prints all of it instead of the short lines, with why each change is graded as it is. It is a `build` flag, so it shows the next rebuild in full, not the last one.
 
-In the browser, Build step 04's Plan box has the same list as its **Changed since the last build** part, worst first. Each strip is a link to its row, and the part is open when a change was not asked for. In the tables, each changed strip carries **ADDED**, **CHANGED** or **MOVED** by its number, yellow and with a yellow edge when it was not asked for, grey when it was. Each change nobody asked for is also a WARNING in the **Findings** panel, under **To check** (`rebuild.unasked-change`), so the verdict reads **Ready to apply · 1 to check**. It does not block Apply.
+In the browser, Build step 04's Plan box has the same list as its **Changed since the last build** part, worst first. Each strip is a link to its row, and the part is open when a change was not asked for. In the tables, each changed strip carries **ADDED**, **CHANGED** or **MOVED** by its number, yellow and with a yellow edge when it was not asked for, gray when it was. Each change nobody asked for is also a WARNING in the **Findings** panel, under **To check** (`rebuild.unasked-change`), so the verdict reads **Ready to apply · 1 to check**. It does not block Apply.
 
 Worked example: [The command line](quickstart.md).
 
@@ -189,7 +189,7 @@ There is no `CRITICAL`: `ERROR` already refuses everything.
 | 3 Verify | the plan checks against the console model | `atoo/verify_plan.py` |
 | 5 Audit / watch | the structural rules (`C001`, `R005`, …), the plan-diff checks (`CV001`, …), and your own watch conditions | each finding names its rule; [Reading findings](reading-findings.md#codes) |
 
-Both catalogues grow as rules are added, so this page does not count them; the linked source is the list.
+Both catalogs grow as rules are added, so this page does not count them; the linked source is the list.
 
 ## See also
 

@@ -82,7 +82,7 @@ The Apply screen's **History** step (the journal stack) has a **Desk** column. A
 
 The two desks need not be the same model: a WING Compact at front of house and a WING Rack as the backup, say, with similar I/O, and the plan built once, for the Compact.
 
-`apply` compares the model the desk states on `/?` with the plan's `meta.console_model` before anything is written, and what it does about a difference depends on whether the plan **can be patched** on this desk. That is the line between a judgement call and a physical impossibility: a different model is not in itself a reason to stop, but a patch to a jack that is not there is.
+`apply` compares the model the desk states on `/?` with the plan's `meta.console_model` before anything is written, and what it does about a difference depends on whether the plan **can be patched** on this desk. That is the line between a judgment call and a physical impossibility: a different model is not in itself a reason to stop, but a patch to a jack that is not there is.
 
 **Every socket the plan uses exists on this desk: it is applied.** The Compact and the Rack have the same local and aux I/O — 24 LCL in, 8 out, no AUX — so every socket a Compact plan can name is on a Rack. The run notes this and carries on:
 
@@ -122,7 +122,7 @@ Refusing to apply: LCL 20 does not exist on the WING (full-size console) at 198.
 
 Exit `2`, nothing written. Every missing socket is listed, inputs and outputs both. `--skip-verify` does not get past it: that flag is about the plan's findings, and this is about the hardware.
 
-**A desk whose model Atoo has never seen: it is applied, with a warning.** A desk names its model on `/?` in its own spelling — a full-size WING says `wing-fullsize` — and only spellings read off a real desk are recognised. Nobody has captured a WING Rack's yet. If yours says something Atoo does not know:
+**A desk whose model Atoo has never seen: it is applied, with a warning.** A desk names its model on `/?` in its own spelling — a full-size WING says `wing-fullsize` — and only spellings read off a real desk are recognized. Nobody has captured a WING Rack's yet. If yours says something Atoo does not know:
 
 ```
 Console: WING,198.51.100.8,MON-RACK,wing-racksize,S2301R7,3.1-0-g9f314617:release

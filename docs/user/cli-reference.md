@@ -56,7 +56,7 @@ It is a deliberate split, not an oversight.
 
 The commands on `2` all hold a plan: they compile one, check one, compare a desk against one, or write one. For those, "the plan and the desk disagree" is a genuinely separate outcome from "I could not do the job at all", and it is worth a code of its own.
 
-`audit` and `watch` hold no plan. They are read-only readings of whatever a desk currently is, against a fixed rule catalogue, and reporting something is the ordinary result rather than the exceptional one. They are a different kind of command, and they keep the code they have always returned.
+`audit` and `watch` hold no plan. They are read-only readings of whatever a desk currently is, against a fixed rule catalog, and reporting something is the ordinary result rather than the exceptional one. They are a different kind of command, and they keep the code they have always returned.
 
 ### Telling the two meanings of `1` apart
 
@@ -176,7 +176,7 @@ Most configure the AI provider that `atoo build` uses to generate a plan, and th
 
 **`ATOO_OSC_REPLY_MATCH=off` is an escape hatch, not a tuning knob.** UDP does not pair a reply with its request, so the client checks that a reply carries the address it asked for and drains anything else. Without that check, one duplicated datagram from the console makes every subsequent read return the *previous* read's value, silently and for the rest of the session. On one real run, 880 of 1142 reads were answered by the wrong leaf and the journal recorded 188 mismatches that had not happened.
 
-Setting it to `off` restores the old take-the-next-datagram behaviour. The only reason to do that is a console that answers on an address this client does not predict, leaving reads timing out where they used to work. If you ever need it, that is worth reporting -- and a run made with it off cannot prove anything landed.
+Setting it to `off` restores the old take-the-next-datagram behavior. The only reason to do that is a console that answers on an address this client does not predict, leaving reads timing out where they used to work. If you ever need it, that is worth reporting -- and a run made with it off cannot prove anything landed.
 <!-- preamble:end -->
 
 
@@ -206,7 +206,7 @@ reload rather than the rest of your setup time.
 The same operation covers a vocalist who has left and a set of delay speakers
 dropped from the rider. A channel the rebuild DROPPED is RETURNED TO FREE --
 unpatched (OFF, as a full apply leaves a strip the plan does not use, with an
-INFO), left unmuted, its fader at -inf, and its name, colour and icon cleared on the strip
+INFO), left unmuted, its fader at -inf, and its name, color and icon cleared on the strip
 and on the source socket -- only where the desk still reads as the strip your
 plan built: a strip somebody has renamed, repatched or named on its SOURCE
 socket since is reported and left exactly as it is, and so is one that did not
@@ -284,7 +284,7 @@ change (unless the console moved in between); each is journalled with its prior
 value so it can be reversed.
 
 Every address written is read back afterwards -- remote console writes can fail
-silently, so an acknowledgement is not proof. Anything that didn't land is
+silently, so an acknowledgment is not proof. Anything that didn't land is
 reported by address, and the command exits 2 -- the code build, verify, compare
 and apply use for "it ran and found problems", as against 1 when the command
 could not run at all. audit and watch report their own findings
@@ -506,7 +506,7 @@ it first -- one extra model call, role `resolve` -- and notes it. The critic sti
 your raw conventions. --no-resolve (or ATOO_RESOLVE=0) turns this off; the plan
 records which it was at meta.resolved_conventions.
 
-CATEGORY TABLE. The resolved file ends with a Category table: each category's colour,
+CATEGORY TABLE. The resolved file ends with a Category table: each category's color,
 HPF, DCA, mute group, gain, trim, fader and Main routing, restating its prose. Code
 writes those values on every channel built from an input-list row of that category,
 wherever the generator's reply leaves them out -- a value the reply writes wins -- and
@@ -529,7 +529,7 @@ statements that disagree with nothing settling them, something declared that thi
 show never uses -- and reports them, quoting the lines; a quote that is not really in
 your files is marked untrusted (meta.build_findings).
 
-What it tells you goes to stderr, severity-labelled, worst first:
+What it tells you goes to stderr, severity-labeled, worst first:
   ERROR    something you asked for will NOT happen -- read this before applying
   WARNING  a default was applied, or a rule matched nothing
   NOTE     a choice made where your conventions were silent, or nothing to do;
@@ -550,7 +550,7 @@ stable across rewordings; quote it in a bug report.
 | `--no-constrain` | Don't constrain decoding to the reply schema (the shorter form the model writes, which build expands into the plan). Constrained decoding makes a malformed or off-schema reply impossible on the providers that support it (claude, ollama, api), but a grammar can degrade the content it shapes and slows local generation -- this exists so that trade-off can be measured rather than argued about. The api provider (OpenAI-compatible) sends it as `response_format`, and stops with this. |
 | `--prompt-dir` | Read the generator and critic prompts from here instead of the packaged atoo/prompts. Copy that directory, edit the copy, point this at it -- prompt variants without a branch. Equivalent to ATOO_PROMPT_DIR. |
 | `--no-resolve` | Give the generator the raw conventions and the domain knowledge instead of the resolved conventions (<conventions-stem>.resolved.md beside your conventions file; see `atoo resolve`). Equivalent to ATOO_RESOLVE=0. For comparing builds with and without it. |
-| `--no-category-rules` | Ignore the resolved conventions' Category table: code writes no per-category channel setting (colour, HPF, DCA, mute group, gain, trim, fader, Main routing) and the generator writes every one. Equivalent to ATOO_CATEGORY_RULES=0. For comparing builds with and without it; the plan records which at meta.resolved_conventions.category_table. |
+| `--no-category-rules` | Ignore the resolved conventions' Category table: code writes no per-category channel setting (color, HPF, DCA, mute group, gain, trim, fader, Main routing) and the generator writes every one. Equivalent to ATOO_CATEGORY_RULES=0. For comparing builds with and without it; the plan records which at meta.resolved_conventions.category_table. |
 | `--presets` `DIR` | Atoo's own preset library: a directory of .chn channel-preset exports, looked up by the name inside the file. These are NOT the console's own presets or scenes -- those cannot be recalled remotely at all -- they are parameter values Atoo writes like any other. `build` expands each named preset INTO the plan (its processing values, the plan's own processing winning where both set one), and `apply` writes what the plan carries; verify and apply use the library only to say whether it changed since. A plan naming a preset this library hasn't got is a warning, never a block. Defaults to [presets] default in ~/.atoo.config. |
 | `--all-changes` | In the "Changed since the last build" section a rebuild ends with, print every changed value of every strip, and why each change is graded as it is, instead of one short line per strip. The section compares the new plan with the show bundle's plan.previous.json, strip by strip: a change to a strip whose input-list rows or conventions lines changed is INFO; one to a strip nothing about changed is a WARNING, never an error. A first build has none. |
 | `--skip-verify` | Don't run the deterministic verifier over the finished plan. Verification checks the plan against the console's real limits, the input list it claims to cover, and equipment-safety rules. Skipping it is almost never what you want. |
@@ -678,7 +678,7 @@ notes, critic findings, conventions-audit entries, inferred markers, plan notes
 and verify warnings -- grouped by topic, most-recurring first. It opens with
 where each build's thinking went: every role's share of time spent on
 mechanical work, conventions questions, the plan format itself, writing the
-reply, and judgement. Read-only, no model call.
+reply, and judgment. Read-only, no model call.
 
   atoo lessons --show my-show
   atoo lessons --show my-show --last 2  # only the 2 newest
@@ -739,7 +739,7 @@ conventions and the bundle's instructions.md. It returns a change set -- what to
 add, what to drop, which named fields to set on things already on the desk,
 and a short name -- never a whole plan. Code merges it and
 refuses a reference to anything that does not exist (a send to a bus that is
-neither on the desk nor added). Sockets the change names are honoured; others
+neither on the desk nor added). Sockets the change names are honored; others
 are chosen, and each choice is said at INFO.
 
 Everything after that is amend's: new channels are placed on genuinely free
@@ -835,7 +835,7 @@ Detected model: WING Compact (wing-compact)
 
 It reads nothing else -- one request, no strip sweep, no writes -- so it is safe during a show, and it is instant even on a full-size desk.
 
-The second line matters before an apply: `atoo apply` compares the plan's model with the desk's, and refuses a plan that patches a socket the desk's model does not have. This is how you see which model the desk says it is without running an apply to find out. A model it does not recognise is printed as the desk spelled it -- the string to report.
+The second line matters before an apply: `atoo apply` compares the plan's model with the desk's, and refuses a plan that patches a socket the desk's model does not have. This is how you see which model the desk says it is without running an apply to find out. A model it does not recognize is printed as the desk spelled it -- the string to report.
 
 A failure names which of the two things went wrong:
 
@@ -859,7 +859,7 @@ does not.
 
 It also prints the model the desk states for itself, which is what `atoo
 apply` cross-checks a plan against before writing anything -- worth seeing
-before an apply rather than during one. A model it does not recognise is
+before an apply rather than during one. A model it does not recognize is
 printed as the desk spelled it: that is the string to report.
 ```
 
@@ -895,7 +895,7 @@ same `info_text` name.
 
 It also reports two things that are otherwise invisible until some plan happens
 to name the preset carrying them: a preset with a field this tool does not
-recognise or a sidechain keyed off another channel, and two files claiming the
+recognize or a sidechain keyed off another channel, and two files claiming the
 same name. Neither stops a build -- the newest of two duplicates wins -- so this
 exits 0 either way. Nothing is read from a console and nothing is written.
 
@@ -929,7 +929,7 @@ Resolve your house conventions (an experiment).
 
 One model call (role `resolve`) reads your conventions file and Atoo's domain
 knowledge and writes <conventions-stem>.resolved.md beside the conventions file:
-plain Markdown that states, per category, the HPF, colour, DCA, mute group, monitor
+plain Markdown that states, per category, the HPF, color, DCA, mute group, monitor
 and bus sends, Main routing, gain, trim and phantom; the busses, outputs, groups,
 head-amp scope, faders and channel order; every open question settled once as a
 "Decided:" line with its reason; and every conventions line that yields no rule,
@@ -949,7 +949,7 @@ still used with warnings, and refused only when
 it is empty or none of its citations is found.
 
 The file ends with a Category table: one JSON object per category restating its
-colour, HPF, DCA, mute group, gain, trim, fader and Main routing, which the build
+color, HPF, DCA, mute group, gain, trim, fader and Main routing, which the build
 writes on every channel of that category the generator leaves them out of. Code
 checks its shape; an invalid table is a WARNING and is not applied. --check says
 whether it is valid.

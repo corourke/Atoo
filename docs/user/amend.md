@@ -146,7 +146,7 @@ A verify **error** refuses the amend with `Refusing to amend: the amended plan d
 
 ## A channel the rebuild dropped
 
-Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip to free**: unpatched (`OFF`), and its name, colour, icon, DCA/mute-group tags, bus sends and **the processing your plan set** all cleared, and its direct Main routing back to the factory's (Main 1 on, the others off) — on the input socket as well as the strip, because with `clink` on that is where the name the desk shows actually lives. The end state is the reading an untouched strip gives, so the next person allocating a strip finds this one genuinely free rather than nearly free.
+Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip to free**: unpatched (`OFF`), and its name, color, icon, DCA/mute-group tags, bus sends and **the processing your plan set** all cleared, and its direct Main routing back to the factory's (Main 1 on, the others off) — on the input socket as well as the strip, because with `clink` on that is where the name the desk shows actually lives. The end state is the reading an untouched strip gives, so the next person allocating a strip finds this one genuinely free rather than nearly free.
 
 **The patch goes `OFF`, exactly as a full apply leaves a strip your plan does not use.** A freed strip reads the same whichever way it was freed, so a change followed by a full apply ends with the same desk, and an INFO line says what was done. A strip an earlier run left blank on its factory socket still counts as free, so a clear that got partway is finished rather than refused.
 
@@ -204,7 +204,7 @@ and the same command again finds nothing to do:
 Nothing to add and nothing to return to free. The console was not written to.
 ```
 
-**Placement is remembered.** A rebuild still numbers the horns 20–22, because `build` knows nothing of the desk; the amend placed them on 21–23 because 20 was somebody's. The desk's journal entry records that, so the next amend recognises Trumpet on 21 as the rebuild's ch:20 rather than refusing it as a renumber.
+**Placement is remembered.** A rebuild still numbers the horns 20–22, because `build` knows nothing of the desk; the amend placed them on 21–23 because 20 was somebody's. The desk's journal entry records that, so the next amend recognizes Trumpet on 21 as the rebuild's ch:20 rather than refusing it as a renumber.
 
 **`verify` and `watch --show` read `plan.json`**, so after a change they describe the last build, not the desk. A full `apply` of the bundle puts the last build back on the desk and [warns first](patch.md#the-rules) that it replaces the changes standing there.
 

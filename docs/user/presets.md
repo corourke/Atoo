@@ -63,7 +63,7 @@ The `.bus` files are covered on [Bus presets: mix and FX busses](bus-presets.md)
 
 This catches everybody once. The name Atoo matches on is the preset's own label, saved when it was exported. The filename is only a fallback for a file that has none. In the starter set every file is named for its preset, but that is a habit and not the rule: rename `Kick In.chn` to `Kick.chn` and it still holds the preset **Kick In**, so a plan asks for `Kick In`, and asking for "Kick" would not find it.
 
-**The preset's name and the channel's name are separate, too.** A channel called `Snare` can use a preset called `Drums Snare`; the strip keeps the plan's name. A preset never sets a channel's name, colour or icon (see [What a preset may carry](#what-a-preset-may-carry)). Name your presets however you like on the desk, and the same way in your conventions.
+**The preset's name and the channel's name are separate, too.** A channel called `Snare` can use a preset called `Drums Snare`; the strip keeps the plan's name. A preset never sets a channel's name, color or icon (see [What a preset may carry](#what-a-preset-may-carry)). Name your presets however you like on the desk, and the same way in your conventions.
 
 ### Ask the library what it is called
 
@@ -107,7 +107,7 @@ Vox Verb    V-REV (pre-insert, saved on FX5, saved bypassed)  FX Vox Verb.bus
 
 `params` is how many parameter leaves that preset carries: most of a strip's processing, which is why they all read 80 or 83. The bus presets follow, each with the effect it inserts, the engine it was saved from, and whether it was saved bypassed. With `[presets] default` configured, plain `atoo presets` is enough.
 
-**It also reports two things nothing else tells you until a show does.** A preset carrying a field this tool does not recognise, or a sidechain keyed off another channel, otherwise warns only when a plan names it, on the day you use it. (This block comes from a deliberately broken library; the starter set has none.)
+**It also reports two things nothing else tells you until a show does.** A preset carrying a field this tool does not recognize, or a sidechain keyed off another channel, otherwise warns only when a plan names it, on the day you use it. (This block comes from a deliberately broken library; the starter set has none.)
 
 ```
 warning: Keyed Kick (keyed.chn) --
@@ -174,7 +174,7 @@ atoo verify --plan tests/fixtures/preset-test.plan.json --presets starter/preset
 APPLICABLE: warnings only.
 ```
 
-(Each `preset.unknown` line names up to five closest names in the library: `Kick (In)` finds `Kick In`. The `[info]` note is not about presets: this fixture plan leaves its bus widths unstated, so verify reports the width it will write, one line for all eight. See [Writing conventions](conventions.md#the-one-rule-worth-internalising-state-it-or-it-is-decided-and-said).)
+(Each `preset.unknown` line names up to five closest names in the library: `Kick (In)` finds `Kick In`. The `[info]` note is not about presets: this fixture plan leaves its bus widths unstated, so verify reports the width it will write, one line for all eight. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).)
 
 Read the six presets as a table:
 
@@ -241,7 +241,7 @@ A preset saved with its sends or main routing switched on cannot reroute your sh
 
 ## What a preset may carry
 
-A `.chn` file holds far more than a sound: the physical patch, fader, mute, pan, bus routing, DCA and mute-group membership, and the channel's own name, colour and icon are all in there. Applying all of it would repatch inputs, wreck routing and rename channels from a file that was only ever meant to carry a drum sound.
+A `.chn` file holds far more than a sound: the physical patch, fader, mute, pan, bus routing, DCA and mute-group membership, and the channel's own name, color and icon are all in there. Applying all of it would repatch inputs, wreck routing and rename channels from a file that was only ever meant to carry a drum sound.
 
 So Atoo applies **processing only**, from an explicit allow-list:
 
@@ -251,7 +251,7 @@ So Atoo applies **processing only**, from an explicit allow-list:
 | gate, and its sidechain settings | fader, mute, pan |
 | dynamics, and its sidechain settings | bus sends and main routing |
 | channel EQ and PreSend EQ | DCA and mute-group membership |
-| input delay (delay, mode, on/off) | name, colour, icon |
+| input delay (delay, mode, on/off) | name, color, icon |
 
 The allow-list is checked three times -- when `build` expands a preset, when `verify` reads the plan, and when `apply` writes it -- so a plan edited by hand cannot slip a send or a fader into `preset_values`: `apply` refuses it by name and `verify` warns first (`preset.leaf-not-written`).
 

@@ -24,7 +24,7 @@ On a WING, "patch" already means routing a socket to a channel, and Atoo's findi
 
 1. **The plan on the desk.** The desk's own newest journal entry records the plan it left there (each desk keeps its own — [One plan, two desks](two-desks.md#one-plan-two-desks)). A desk this bundle has never written falls back to `plan.json`, with an INFO; a desk with neither starts from an **empty board**, with an INFO. The review says which, in its first line.
 2. **One model call.** The model sees only your change, that plan (as read-only context), and your house conventions with the bundle's `instructions.md` layered on top. It answers with a **change set**: what to add, drop or edit, and a short name for the change, never a whole plan, because a model asked to restate the show re-decides things nobody asked about.
-3. **The merge**, in code. New channels, and any bus, DCA, mute group or output the change needs, are added to a copy of the plan on the desk, with console indices the plan leaves free. Dropped channels are taken out. **A reference to anything that does not exist is refused**, and the whole change with it: a send to a bus that is neither on the desk nor added by the change cannot be set, so nothing is written half-connected. **Sockets the change names are honoured**; one it did not name is checked against every socket in use and chosen afresh if it is taken — and either way an INFO says what was chosen.
+3. **The merge**, in code. New channels, and any bus, DCA, mute group or output the change needs, are added to a copy of the plan on the desk, with console indices the plan leaves free. Dropped channels are taken out. **A reference to anything that does not exist is refused**, and the whole change with it: a send to a bus that is neither on the desk nor added by the change cannot be set, so nothing is written half-connected. **Sockets the change names are honored**; one it did not name is checked against every socket in use and chosen afresh if it is taken — and either way an INFO says what was chosen.
 4. **Everything after that is amend's**, unchanged: placement on genuinely free strips (skipping occupied ones, never renumbering a running one), [the pre-flight](amend.md#the-pre-flight-the-same-checks-as-apply), the review, the one `--confirm`, the write, the proof that nothing else moved, the journal and undo.
 
 ## Try it with no console, and no model
@@ -138,7 +138,7 @@ Nothing already on the desk is written: the 1625 addresses that belong to the De
 
 *"Clear bus 5 and 6, we are not using them. Add a stereo IEM bus (reuse bus 5) and output to LCL 3-4."* is one change, and it is carried out as said: a bus you drop is **returned to free**, and the new bus can take its place.
 
-- **What a freed bus is** is the same on every WING (Compact, Full and Rack): every setting on it reads as an initialized desk has it — name, colour, icon, mono/stereo and width, fader and mute, EQ, dynamics, inserts, DCA and mute-group tags, and its routes to the Mains and matrices. The output socket it fed is unpatched. Its fader goes to −∞ first, so it is silent while the rest is cleared.
+- **What a freed bus is** is the same on every WING (Compact, Full and Rack): every setting on it reads as an initialized desk has it — name, color, icon, mono/stereo and width, fader and mute, EQ, dynamics, inserts, DCA and mute-group tags, and its routes to the Mains and matrices. The output socket it fed is unpatched. Its fader goes to −∞ first, so it is silent while the rest is cleared.
 - **Every send into it is switched off**, on every channel that had one, and the send's level and mode go back to what an initialized desk reads. The channels are otherwise left exactly as they are.
 - **A bus keeps its number for the new bus if you say so.** *"Reuse bus 5"* puts the new bus on bus 5, the bus the same change returns to free; a new bus with no number named takes the lowest free one. Either way an INFO says which and why. A bus is mono or stereo on its own on a WING, so a stereo IEM on bus 5 takes bus 5 alone — bus 6 is simply free — and its output on `LCL 3-4` carries its left on socket 3 and its right on 4.
 - **A refusal is for a setting the desk cannot hold**: a bus number past the desk's last bus, or a new channel whose send names a bus the same change drops (a send to nothing). Each says which.
@@ -163,8 +163,8 @@ Change: Clear 5 and 6, add stereo IEM
 The review's lines for the buses (the summary's first lines, then the INFOs that say what was chosen):
 
 ```
-  RETURNED TO FREE bus 'Drums' -> bus:5: dropped by the change: bus 5 is returned to free -- every setting on it reads as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
-  RETURNED TO FREE bus 'Vocals' -> bus:6: dropped by the change: bus 6 is returned to free -- every setting on it reads as an initialized bus (name, colour, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
+  RETURNED TO FREE bus 'Drums' -> bus:5: dropped by the change: bus 5 is returned to free -- every setting on it reads as an initialized bus (name, color, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
+  RETURNED TO FREE bus 'Vocals' -> bus:6: dropped by the change: bus 6 is returned to free -- every setting on it reads as an initialized bus (name, color, icon, width, fader, mute, EQ, dynamics, inserts, tags, routes to the Mains and matrices), the output it fed is unpatched, and the channels' sends into it are switched off
   ADDED            bus 'IEM' -> bus:5: new bus
   ...
   INFO the change drops bus 'Drums' (bus 5): carried out -- the bus is returned to free, and every channel's send into it is switched off
@@ -178,7 +178,7 @@ Below what is shown, eight `EDITED` lines name the channels whose send into bus 
 
 *"Get rid of the FX DCA and the FX mute group. Make a Horns DCA on DCA 5."* Dropping any of these is carried out the way dropping a bus is: the object is **returned to free**, the same on every WING (Compact, Full and Rack), from the initialized capture of your console model.
 
-- **A DCA or a mute group** reads as an initialized one — name, colour, icon, fader and mute — and **every strip that was a member is taken off it** (channels and buses alike; a strip's other DCAs and mute groups are kept, and its tag is rebuilt without the dropped one). A DCA's fader goes to −∞ first.
+- **A DCA or a mute group** reads as an initialized one — name, color, icon, fader and mute — and **every strip that was a member is taken off it** (channels and buses alike; a strip's other DCAs and mute groups are kept, and its tag is rebuilt without the dropped one). A DCA's fader goes to −∞ first.
 - **An output** (a Main or a Matrix, and the socket it fed) reads as an initialized Main or Matrix, and its socket reads as an initialized desk's; a Matrix is also taken off the Main or bus that fed it. Channels and buses that still route to a dropped Main are left as they are, and the review lists them: that is a routing you did not ask to change.
 - **The number is free for a new one in the same change.** *"Make a Horns DCA on DCA 5"* puts it on DCA 5, the DCA the same change returns to free; a new DCA or mute group with no number named takes the lowest free one, and a new output takes the lowest free Main or Matrix and may take the socket the dropped one fed. An INFO says which and why.
 - **A refusal is for a setting the desk cannot hold**: a number past the desk's last DCA or mute group, or a drop naming something not on the desk.
@@ -199,7 +199,7 @@ Change: Drop FX groups, add Horns DCA
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
 
 1 added, 2 returned to free, 14 unchanged, 1 edited
-  RETURNED TO FREE dca 'FX' -> dca:5: dropped by the change: returned to free -- its fader, mute, name, colour and icon read as an initialized DCA's and its members are taken off it
+  RETURNED TO FREE dca 'FX' -> dca:5: dropped by the change: returned to free -- its fader, mute, name, color and icon read as an initialized DCA's and its members are taken off it
   RETURNED TO FREE mute group 'FX' -> mgrp:3: dropped by the change: returned to free -- its name and mute read as an initialized mute group's and its members are taken off it
   ADDED            dca 'Horns' -> dca:5: new dca
   EDITED           bus 'Vox Verb': only the field(s) the change names are written (dca, mute_group); nothing else on this bus is touched, and the rest of it is in the untouched proof
@@ -215,7 +215,7 @@ Below what is shown, the `EDITED` line names the Vox Verb bus, the one member of
 
 Something was missed on the input list, and the desk has to line up with the real one on site: the hi-hat is a channel of its own, and it belongs after the snare. **What you type decides whether the strips after it move.**
 
-- **To renumber, say so**: *insert*, *renumber*, or *move the rest down*. *"Insert HiHat after Snare and renumber the channels after it"* puts HiHat on the strip below Snare's, and every strip from there to the first free one moves down by one. Each of them is rewritten whole on its new number (its patch, name, colour, processing, bus sends, DCA and mute-group membership go with it), and **the review lists every strip that moves**.
+- **To renumber, say so**: *insert*, *renumber*, or *move the rest down*. *"Insert HiHat after Snare and renumber the channels after it"* puts HiHat on the strip below Snare's, and every strip from there to the first free one moves down by one. Each of them is rewritten whole on its new number (its patch, name, color, processing, bus sends, DCA and mute-group membership go with it), and **the review lists every strip that moves**.
 - **Otherwise, nothing moves.** *"Add HiHat after Snare"* is the ambiguous case: the channel goes on the next free strip, and an INFO says that it was not renumbered and gives the words that would.
 
 The Demo show has the snare on ch 2 and the rack tom on ch 3. The same change set, compiled once, run both ways. This is the insert:
@@ -286,7 +286,7 @@ A change may also change something **already on the desk** — *"move the sax to
   !!   MOVES AUDIO LIVE -- channel 'BassDI' on ch:7: patch A 6 -> A 30
   ```
 
-  The new socket's own name, colour, phantom and gain are written with it — unless another strip on the desk uses that socket, when they are that strip's and are left alone, with a note. The old socket keeps its name.
+  The new socket's own name, color, phantom and gain are written with it — unless another strip on the desk uses that socket, when they are that strip's and are left alone, with a note. The old socket keeps its name.
 - **Taking something away is written as off**: a send the change removes is switched off, a high-pass it removes is switched off, and a strip that leaves every DCA and mute group has those tags cleared (other tags kept).
 - **An edit that would rewrite another object is refused.** Patching a running strip onto a socket another running strip uses turns that other strip's source link off too — and that strip is not named, so the change is refused.
 - **Undo puts every edited field back**: the journal records each address's value before the write, as it does for every write.

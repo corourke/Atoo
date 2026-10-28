@@ -70,7 +70,7 @@ Three things to check, in order:
 2. **Is the plan naming the right bay?** `CRD` and `MOD` are two different slots and Dante is sold as both, so a plan built from an input list that said "Dante" may well name the wrong one. `CRD` is the rear-panel expansion card; `MOD` is the internal module. Fix it on the input list (`CRD 1`, not `Dante 1`) and rebuild.
 3. **Is this the desk the plan was built for?** A plan written for a rig with a Dante card is correct, and correct nowhere else. Repatch to a group this console has — `LCL`, `A`/`B`/`C`, `SC`.
 
-**There is no flag that overrides this**, and `--skip-verify` does not. That flag means "this plan has findings, write it anyway", which is a judgement about the plan; this is the console's own read-only report of what is plugged into it, and there is no second opinion to state. If you genuinely want the patch written into an empty bay, change the plan.
+**There is no flag that overrides this**, and `--skip-verify` does not. That flag means "this plan has findings, write it anyway", which is a judgment about the plan; this is the console's own read-only report of what is plugged into it, and there is no second opinion to state. If you genuinely want the patch written into an empty bay, change the plan.
 
 **If the console did not answer** the two addresses at all — old firmware, a dropped datagram — `apply` carries on rather than refusing. Silence is not the same claim as `NONE`.
 
@@ -109,7 +109,7 @@ A typed change (`atoo patch`) is refused the same way, in its own words — `Thi
 WARNING: 198.51.100.8 calls itself 'wing-racksize', a model name Atoo has never measured on a real desk, so it cannot tell which WING this is. Sockets were checked against the plan's own model only, the WING Compact; a confirmed apply still reads every write back from the desk and proves it landed. The desk's own token is recorded in the journal (desk.model_token) -- once the model is known it is one line in console_facts.IDENTITY_MODEL_ALIASES.
 ```
 
-Not a failure: the apply carries on. Atoo recognises a desk's model only from spellings read off a real console, and this one has not been seen yet. The plan was verified against the model it was built for, so a socket that model lacks has already been refused; what could not be checked is whether *this desk* has the same panel. Every write is still read back, so a patch that did not take shows as a mismatch rather than passing silently.
+Not a failure: the apply carries on. Atoo recognizes a desk's model only from spellings read off a real console, and this one has not been seen yet. The plan was verified against the model it was built for, so a socket that model lacks has already been refused; what could not be checked is whether *this desk* has the same panel. Every write is still read back, so a patch that did not take shows as a mismatch rather than passing silently.
 
 Please report the token (it is in the warning, in `atoo ping`'s output, and in the journal under `desk.model_token`), so it can become one line in `console_facts.IDENTITY_MODEL_ALIASES`.
 

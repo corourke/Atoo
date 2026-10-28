@@ -116,11 +116,11 @@ It exits `2` and nothing is written; `--skip-verify` does not turn it off. A box
 
 ## Names go on the source socket
 
-The desk's **Link Customization to Source** switch is on by default, and while it is on a strip shows the name, colour and icon of the socket it is patched to, not its own. So apply writes the name, colour and icon to the **source socket**, which is where your input list put them. Where one socket feeds more than one strip, those strips are unlinked and carry their own names.
+The desk's **Link Customization to Source** switch is on by default, and while it is on a strip shows the name, color and icon of the socket it is patched to, not its own. So apply writes the name, color and icon to the **source socket**, which is where your input list put them. Where one socket feeds more than one strip, those strips are unlinked and carry their own names.
 
 ## A selector is written before the values it governs
 
-Some settings change what other settings mean. A delay is in metres or feet depending on the strip's delay mode; a compressor's threshold means something different under each model. So on each strip apply writes the **selectors first**, then the **values**, then the **on-switches**.
+Some settings change what other settings mean. A delay is in meters or feet depending on the strip's delay mode; a compressor's threshold means something different under each model. So on each strip apply writes the **selectors first**, then the **values**, then the **on-switches**.
 
 When the run changes a selector, every value it governs is written and read back after it, even if the desk already held the plan's number: under the old selector that number meant something else. The report says how many at INFO, and the preview counts them the same way.
 

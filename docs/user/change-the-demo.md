@@ -78,7 +78,7 @@ A build takes a few minutes. When it is done, the tile reads **PLAN CURRENT**. T
 3. Click **Apply**, then **Preview**. Atoo reads the desk and shows how many settings **will change** and how many already match. Nothing is written yet.
 4. Tick **Arm**, then press **Write to console**.
 
-Every value written is read back, and anything that didn't land is named. Look at the desk: the channels are named, coloured and patched as the plan says. [Apply a plan to the desk](apply-to-desk.md) has each step in full.
+Every value written is read back, and anything that didn't land is named. Look at the desk: the channels are named, colored and patched as the plan says. [Apply a plan to the desk](apply-to-desk.md) has each step in full.
 
 ## 6. Watch it
 

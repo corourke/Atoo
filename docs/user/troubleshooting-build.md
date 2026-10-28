@@ -75,7 +75,7 @@ The exit code is 130. A stop during the watch-conditions draft, after the plan w
 $ atoo build --console-model wing-compact --input touringband/input.csv --conventions conventions.md --out plan.json
 INFO resolved conventions: conventions.resolved.md is fresh (the conventions, the domain knowledge and the resolve prompt are unchanged) -- the generator reads it in place of the conventions and the domain knowledge
 resolve: checked conventions.resolved.md: 169 of 169 citation(s) found; 58 of 58 conventions line(s) covered
-INFO category table: 10 categories in conventions.resolved.md -- code writes their colour, DCA, mute group, gain, trim, fader and Main routing on every channel of the category whose reply leaves them out
+INFO category table: 10 categories in conventions.resolved.md -- code writes their color, DCA, mute group, gain, trim, fader and Main routing on every channel of the category whose reply leaves them out
 claude-sonnet-5-5 (generator, effort medium): sending, waiting for the first reply... (a progress line every 10-60s -- stderr is not a terminal)
   claude-sonnet-5-5 (generator, effort medium): 21,480 in, 128,000 out (~122,929 of it thinking, not returned) -- $1.32
 generation failed: Claude's reply hit max_tokens (128000) and is truncated. Check the usage line above before raising ATOO_AI_MAX_TOKENS: if most of the spend was thinking, a lower ATOO_AI_EFFORT buys the room more cheaply than a bigger ceiling does

@@ -24,11 +24,11 @@ You can tell at a glance whether anything needs you. One word heads the table, i
 - **WARNING**, in yellow, with warnings and no error;
 - **ALL OK**, in green, with neither. An info is a note, not trouble.
 
-Beside the word is the first thing that is wrong, as the strip, a colon and the claim (*CH 10 "Lead Vox": is muted*), and on the right the three counts: errors, warnings and info. A count lights in its colour only when it is not zero. Before you press Start the word is a grey **NOT WATCHING**; until the first reading arrives, **STARTING**.
+Beside the word is the first thing that is wrong, as the strip, a colon and the claim (*CH 10 "Lead Vox": is muted*), and on the right the three counts: errors, warnings and info. A count lights in its color only when it is not zero. Before you press Start the word is a gray **NOT WATCHING**; until the first reading arrives, **STARTING**.
 
 While a watch runs, the page is kept clean for the service. The Atoo header (the tabs and the theme switch) and the **Show bundle / Console** bar are hidden, and the **Watch** header (with **Stop**) and the verdict stay pinned at the top of the window, however far you scroll; the table's column headings stick just below them. **Stop** (or a lost console, or an error) brings the header and the bar back, so leave Watch with Stop first. On a phone-width window the pinned header is cut to the title, the state, **Stop** and the two switches, and the rest scrolls away with the page.
 
-A warning row is filled amber, an error row red, each with a thick bar of the same colour down its left edge and its severity in a solid tag. The rows are sorted errors first, then warnings, then info, with the newest at the top of each. Here on the [Demo show](demo.md):
+A warning row is filled amber, an error row red, each with a thick bar of the same color down its left edge and its severity in a solid tag. The rows are sorted errors first, then warnings, then info, with the newest at the top of each. Here on the [Demo show](demo.md):
 
 ![The Watch table on the Demo rig: a Clipped row for BUS 6 "Vocals", an error row and a warning row each with a built-in rule folded under it, then a second warning row](img/watch-table.png)
 
@@ -39,7 +39,7 @@ A warning row is filled amber, an error row red, each with a thick bar of the sa
 - Watch reads the output sockets the plan patches and the outputs of any AES50 stage box on the desk, so monitor busses patched to a stage box are not called unrouted. A Matrix the phones listen to is not "unpatched".
 - **One fault, one row.** When one of your conditions and a built-in rule catch the same thing (your `DCA Band` fader condition and CH002 both see the Band DCA at the floor), the row is yours, at your severity, with the built-in named under it: *Also CH002 DCA fader low with active members*.
 - **A row clears itself** when the fault is fixed on the desk: the table is the desk as it is now, not a log. To hide one you have already seen, [suppress it](#suppress-what-you-have-seen).
-- **Updated 12s ago**, in the header beside the console's name, is the time of the last reading. If readings stop arriving while you watch, it turns to a yellow **No reading for 45s**, the word over the table turns a grey **NO READING**, and the table greys out. The table then shows how the desk was at that last reading, not how it is now. Check the desk's network, or Stop and Start again.
+- **Updated 12s ago**, in the header beside the console's name, is the time of the last reading. If readings stop arriving while you watch, it turns to a yellow **No reading for 45s**, the word over the table turns a gray **NO READING**, and the table grays out. The table then shows how the desk was at that last reading, not how it is now. Check the desk's network, or Stop and Start again.
 - A **Coverage** line under the verdict names any rule the reading could not check, so a short table is not mistaken for a healthy desk.
 
 ### A clip
@@ -76,7 +76,7 @@ Turn it off when soundcheck ends and any channel still on its alternate is a war
 
 ### Flash on new
 
-The **Flash on new** switch in the header is off until you turn it on, and this browser remembers your choice. When it is on, a new warning or error flashes the whole screen once, in its colour, for less than half a second. It does not repeat while the fault stands, and an info never flashes. If your computer is set to reduce motion, the screen's edges glow in that colour for a few seconds instead.
+The **Flash on new** switch in the header is off until you turn it on, and this browser remembers your choice. When it is on, a new warning or error flashes the whole screen once, in its color, for less than half a second. It does not repeat while the fault stands, and an info never flashes. If your computer is set to reduce motion, the screen's edges glow in that color for a few seconds instead.
 
 ### Suppress what you have seen
 
@@ -85,7 +85,7 @@ A warning you know about and cannot fix tonight should not take the eye from the
 - **One finding:** tick the box at the far left of its row, under the **Hide** heading (Space, from the keyboard). The row moves to **Suppressed**, folded under the table with its count beside the title. Press **Open the hidden list** to open it, then clear the box on the row to bring that finding back.
 - **Every warning, or every info:** click its count at the head of the table. The count is struck through and reads, for example, *0 Warning (4 hidden)*. Click it again to show them. Errors cannot be hidden this way, only one at a time: an error is a setting that cannot work.
 
-A hidden finding is left out of the counts (they show what is in the table, with the hidden number beside them), does not change the word over the table, and does not set off **Flash on new**. The Error and Warning counts take their colour only for rows still in the table; the Info count stays blue while any info is hidden by its **Hide** box (*0 Info (3 hidden)*), as it is in **Suppressed**.
+A hidden finding is left out of the counts (they show what is in the table, with the hidden number beside them), does not change the word over the table, and does not set off **Flash on new**. The Error and Warning counts take their color only for rows still in the table; the Info count stays blue while any info is hidden by its **Hide** box (*0 Info (3 hidden)*), as it is in **Suppressed**.
 
 A suppression lasts while the same fault stands. If the fault clears and later comes back, it is shown again as a new finding, and flashes if **Flash on new** is on: a fault that returns may be a new problem. **Start** clears every suppression; this browser does not keep them.
 

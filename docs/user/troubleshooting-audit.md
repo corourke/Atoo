@@ -476,7 +476,7 @@ That is `watch`'s one-line form; `audit` says the same in a sentence after its `
 
 Nothing is broken. The output rules are all about the **output patch** — which bus, Main or Matrix feeds which physical jack — and `C008`, `C009` and `C010` read each stage box's link along with it. This run never read it, so they declined to answer rather than guess.
 
-That happens when both of the sources that know what jacks the desk has come up empty: no `--plan` naming the sockets it patches, and a console whose model string Atoo does not recognise, so it cannot look up the panel. It is the normal case for `--state` captures taken before those sockets were being read at all.
+That happens when both of the sources that know what jacks the desk has come up empty: no `--plan` naming the sockets it patches, and a console whose model string Atoo does not recognize, so it cannot look up the panel. It is the normal case for `--state` captures taken before those sockets were being read at all.
 
 **Give it the sockets and the rules come back.**
 

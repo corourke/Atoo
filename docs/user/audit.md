@@ -113,7 +113,7 @@ Either flag replaces the derived list for its own direction rather than adding t
 Physical sockets read: in LCL 1-24, A 1-20; out LCL 1-8.
 ```
 
-and, if it read none — no plan, and a desk whose model it does not recognise — it names the rules that therefore did not run rather than leaving you to read their silence as an all-clear:
+and, if it read none — no plan, and a desk whose model it does not recognize — it names the rules that therefore did not run rather than leaving you to read their silence as an all-clear:
 
 ```
 Physical sockets read: none. R002 (Bus No Output), R003 (Matrix Orphan), R004 (Main Patched But Unfed), R005 (Main Not Patched), R006 (Matrix Fed But Not Patched), R011 (Stereo Output Patched On One Side), CV009 (Undeclared Physical Output Patch), C008 (Stage Box Not Connected Or In Error), C009 (AES50 Stage Box Link Not OK), C010 (AES50 Stage Box Firmware Needs Updating), C001 (Phantom Power On Unpatched Socket) and C007 (Strip's Input Socket Muted) could not be checked -- with no output patch in hand, "reaches no physical output" is a question nobody asked rather than an answer.

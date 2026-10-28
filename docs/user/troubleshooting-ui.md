@@ -74,7 +74,7 @@ A red **This page is out of date** banner across every mode means the `atoo ui` 
 
 ### Write to console or Undo newest write stays locked
 
-A locked button has no colour and a dashed edge. **Locked:** beside it says why, and it is one of these:
+A locked button has no color and a dashed edge. **Locked:** beside it says why, and it is one of these:
 
 - **Writing is switched off in the Demo show.** The Demo is read-only, on a simulated desk: Preview works, writing and Undo never do. Choosing a console address in the bar (**Change…**, then **Address**) leaves the Demo; then open or create a show of your own.
 - **No console address**, or **No show bundle open**: set the one it names in the bar.

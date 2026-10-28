@@ -20,11 +20,11 @@ Patch shares Apply's four numbered steps: **What will be written**, **Preview**,
 
 ![Apply in Patch mode: the change box in step 1, Preview in step 2](img/patch-screen.png)
 
-It reads which strips on the desk are free, and each strip's name and colour (a few seconds), sends your words, the plan on the desk and your conventions to the model, and shows progress while it works. It writes nothing.
+It reads which strips on the desk are free, and each strip's name and color (a few seconds), sends your words, the plan on the desk and your conventions to the model, and shows progress while it works. It writes nothing.
 
 ## 2. Review it
 
-Step 2 draws the desk as its scribble strips: every channel, aux, bus, main, matrix, DCA and mute group, in its colour, with its name and number. Strips in use are drawn solid, free strips dashed, the strips this change adds have a green outline, the ones it edits a blue one, and the ones an insert moves a dashed blue one. A strip that never answered the read is hatched: it is treated as in use, never as free.
+Step 2 draws the desk as its scribble strips: every channel, aux, bus, main, matrix, DCA and mute group, in its color, with its name and number. Strips in use are drawn solid, free strips dashed, the strips this change adds have a green outline, the ones it edits a blue one, and the ones an insert moves a dashed blue one. A strip that never answered the read is hatched: it is treated as in use, never as free.
 
 Under the drawing, **Will be written** lists every change in groups:
 

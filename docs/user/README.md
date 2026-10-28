@@ -36,7 +36,7 @@ In this order, the first time:
 | [Writing an input list](input-lists.md) | what is plugged in: columns, sockets, stereo pairs |
 | [Writing conventions](conventions.md) | how you set up a desk, in your own words, and how it is read |
 | [Channels that are not on the input list](extra-strips.md) | talkback, playback and the strips you want at every show, asked for in a sentence |
-| [Conventions reference](conventions-reference.md) | the levels vocabulary, the desk's eighteen colours, and the resolved file Atoo writes beside yours |
+| [Conventions reference](conventions-reference.md) | the levels vocabulary, the desk's eighteen colors, and the resolved file Atoo writes beside yours |
 | [Using channel presets](presets.md) | your own `.chn` presets, and what they are called |
 | [Bus presets: mix and FX busses](bus-presets.md) | a mix bus's compressor, or an FX bus's reverb or delay, from your own `.bus` export |
 | [Show bundles](show-bundles.md) | one show's folder, and what each file in it is |

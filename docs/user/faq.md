@@ -43,7 +43,7 @@ Every write is recorded with the values it replaced. Undo puts back the newest o
 
 ## What are you selling?
 
-Nothing to engineers. It is free and open source, to use on any show, paid gigs included, with no account to open with us (a build uses your own AI provider's key). A company that wants to build it into a closed or commercial product can get a commercial licence by agreement. It was written by a working live-sound engineer and consultant for real shows.
+Nothing to engineers. It is free and open source, to use on any show, paid gigs included, with no account to open with us (a build uses your own AI provider's key). A company that wants to build it into a closed or commercial product can get a commercial license by agreement. It was written by a working live-sound engineer and consultant for real shows.
 
 ## Who maintains it in six months?
 

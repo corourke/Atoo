@@ -21,7 +21,7 @@ There are existing tools out there that do some (or all) of what we are trying t
 
 **Show-file checkers** -- These check your show file offline against a list of common mistakes. Atoo checks read the desk itself, not a saved file, and doesn't have to guess channel intent as it has your input list. It can watch your desk right up until show time and even while the show is running for problems.
 
-**Plain-language remotes** -- These allow quick edits by typing, such as names, colours and routes. With Atoo, a typed change goes through the same checks as a full build. It is previewed, written, read back, and can be undone on its own, and nothing else on the desk moves.
+**Plain-language remotes** -- These allow quick edits by typing, such as names, colors and routes. With Atoo, a typed change goes through the same checks as a full build. It is previewed, written, read back, and can be undone on its own, and nothing else on the desk moves.
 
 ## What Atoo does differently
 

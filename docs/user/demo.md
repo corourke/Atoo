@@ -41,7 +41,7 @@ Twelve channels carry a preset from the starter library: Kick takes **Kick In**,
 
 Expand: 
 - **Choices** -- **AUX 1 Music is not on the input list** -- then click on it to see the underlying rationale (a strip built from the instructions is always reported). Further down you can see notes about the skipped guest vocal, the two choices made for the Vox Verb bus's reverb, and what a full apply does beyond the plan's own strips.
-- **Build details** holds nine more notes about how the build read the draft and what it carried into the plan: the preset values the channels and busses carry, the reverb loaded and read back, the Music strip, channel numbers, colours, sends, and what a full apply's reset does.
+- **Build details** holds nine more notes about how the build read the draft and what it carried into the plan: the preset values the channels and busses carry, the reverb loaded and read back, the Music strip, channel numbers, colors, sends, and what a full apply's reset does.
 
 ## Apply: a preview on the simulated desk
 

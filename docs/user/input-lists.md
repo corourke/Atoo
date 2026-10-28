@@ -135,7 +135,7 @@ channel,patch,name,category,type,model,phantom,dca,mute_group,notes
 - **Two rows naming one strip** are refused, naming them, unless they are a stereo source's two rows (one strip). Where a stereo source's rows name different strips, the first row's wins, and the report names both.
 - A blank cell leaves it to the conventions.
 
-[`atoo capture`](capture.md) writes them when it reads a desk you didn't build, and that show's plan agrees with them. Edit them in Build's step 04 and its **Save** carries them into the plan as well ([Editing the sheets](capture.md#editing-the-sheets)). A cell changed anywhere else (a spreadsheet, a text editor) reaches the plan at the next build, or the next Save in step 04. Until then the plan does not follow it, and `atoo verify` warns, rather than let a cell that had no effect look honoured. On the show [capture](capture.md) made, with Kick moved to channel 3 in the sheet outside step 04:
+[`atoo capture`](capture.md) writes them when it reads a desk you didn't build, and that show's plan agrees with them. Edit them in Build's step 04 and its **Save** carries them into the plan as well ([Editing the sheets](capture.md#editing-the-sheets)). A cell changed anywhere else (a spreadsheet, a text editor) reaches the plan at the next build, or the next Save in step 04. Until then the plan does not follow it, and `atoo verify` warns, rather than let a cell that had no effect look honored. On the show [capture](capture.md) made, with Kick moved to channel 3 in the sheet outside step 04:
 
 ```bash
 sed -i 's/^9,AES50-A 19,Kick,/3,AES50-A 19,Kick,/' /tmp/shows/church-full-2026-10-24/input.csv
@@ -171,7 +171,7 @@ couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must no
 
 **A column headed `socket` is read as `patch`**, so a list headed either way loads the same. A new list Atoo writes is headed `patch`; saving an existing file keeps whichever header it already has.
 
-A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognises:
+A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognizes:
 
 | Written | What it is |
 |---|---|
@@ -193,7 +193,7 @@ Two spellings that look reasonable and are refused on purpose:
 - **"SD card" is not `CRD`.** `CRD` is the expansion card bay. The SD card is WING LIVE's storage, which is not an input group at all. What a WING LIVE card *plays back* does arrive on `CRD`, but only when WING LIVE is the card fitted — which is exactly what the words "SD card" do not say.
 - **"Dante" is not a group.** Dante is sold both as an expansion card (`CRD`) and as an internal module (`MOD`), so the word does not say which bay it means. Write `CRD n` or `MOD n`.
 
-Anything unrecognised is reported, never guessed at:
+Anything unrecognized is reported, never guessed at:
 
 ```bash
 sed 's/^AES50-A 8,TRAX/Dante 3,TRAX/' docs/user/demo/touringband/input.csv > /tmp/dante.csv

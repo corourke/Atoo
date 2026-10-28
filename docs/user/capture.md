@@ -81,9 +81,9 @@ The desk does not state everything a sheet has a column for. What it leaves open
 - **`role`** is left for you, except `fx`: a bus whose effects are all reverbs, delays, modulation or pitch effects, set fully wet, is an effect return. A bus with a doubler or a compressor on it (a vocal bus) carries the dry signal too, so it stays blank.
 - **`tap`** is the pre or post most of a row's sources use; a source that differs is marked in `sources` (`Crowd (pre)`).
 
-### The desk's colours
+### The desk's colors
 
-The capture keeps each colour as the desk shows it, so Build's step 04 draws it: a channel's, a bus's, a Main's and a Matrix's number, a channel's patch, and each Outputs row's source. A strip linked to its source (the WING's factory setting) shows its socket's colour, not its own, so that is the one drawn, and the plan states none of its own for it. Applied back, the plan writes each strip's own colour where the desk showed it, and leaves every socket's as it was. Navy, the desk's default, is drawn as Navy.
+The capture keeps each color as the desk shows it, so Build's step 04 draws it: a channel's, a bus's, a Main's and a Matrix's number, a channel's patch, and each Outputs row's source. A strip linked to its source (the WING's factory setting) shows its socket's color, not its own, so that is the one drawn, and the plan states none of its own for it. Applied back, the plan writes each strip's own color where the desk showed it, and leaves every socket's as it was. Navy, the desk's default, is drawn as Navy.
 
 ## Effects
 
@@ -225,7 +225,7 @@ Build's step 04 shows the sheets as its tables, every cell editable:
 - **Outputs** is `outputs.csv`: every output socket the desk patches and what feeds it ([The Outputs table](#the-outputs-table)).
 - **User signals and patches** is `user.csv`: slot, source, tap, leg and name. With no slot in use it says so, and **Add a slot** starts one ([User signals and patches](#user-signals-and-patches-usercsv)).
 
-A cell left empty shows, in grey, what the plan has there. Type in a cell and the table marks it; **Save** writes the file and updates the plan, with no model. Under the Channels table it says *Save writes the input.csv file and updates the build plan.*, and under Busses and Mains and Matrix *Save writes the busses.csv file and updates the build plan.* Renaming an input or a bus renames it in every row's sources too.
+A cell left empty shows, in gray, what the plan has there. Type in a cell and the table marks it; **Save** writes the file and updates the plan, with no model. Under the Channels table it says *Save writes the input.csv file and updates the build plan.*, and under Busses and Mains and Matrix *Save writes the busses.csv file and updates the build plan.* Renaming an input or a bus renames it in every row's sources too.
 
 `sources` is the list of what feeds a row, separated by `;`: channel names, bus names, an input-list category, `*` for every channel, and on a Matrix, Main names. `Kick (pre)` sets that one source's tap. Take a name out and its send comes out of the plan; add one and it goes in, post-fader if nothing says pre, and the Save's message tells you which.
 
@@ -237,7 +237,7 @@ Nothing goes to the desk until you apply the plan. A role, a label or a note cha
 
 One row per output socket: the socket, what feeds it in the desk's words (`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up together, fed by sources that go up together, fold into one line of read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a bus's two sides. Press **▸** to open the run and edit its rows. A run holding an edited or refused row stays open.
 
-The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double grey for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted grey for a send, the monitor or the oscillator. The square beside the source is the desk's own colour for it, as [the desk shows it](#the-desks-colours).
+The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double gray for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted gray for a send, the monitor or the oscillator. The square beside the source is the desk's own color for it, as [the desk shows it](#the-desks-colors).
 
 To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket** adds a row. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. **Save outputs.csv** writes the file and updates the plan, with no model: the file is written in the desk's output order and words, with your notes, and a socket you took `OFF` has no row. Moving a bus, a Main or a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
 
@@ -253,6 +253,6 @@ Its sends and its DCAs and mute groups are the whole list of them: a full apply 
 
 ## The `channel`, `dca` and `mute_group` columns
 
-They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s own optional columns, so you can also write them by hand. A Save in step 04 carries them into the plan, and a build places channels by them, so a filled cell wins over the conventions. Where a filled cell and the plan disagree (the sheet changed in a spreadsheet since), `atoo verify` warns (`input-list.column-not-followed`), so a cell that had no effect never looks honoured. A captured show's plan agrees with its sheets.
+They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s own optional columns, so you can also write them by hand. A Save in step 04 carries them into the plan, and a build places channels by them, so a filled cell wins over the conventions. Where a filled cell and the plan disagree (the sheet changed in a spreadsheet since), `atoo verify` warns (`input-list.column-not-followed`), so a cell that had no effect never looks honored. A captured show's plan agrees with its sheets.
 
 A build reads `busses.csv` too. On a captured show, **Build plan** asks first: *This plan was read from the desk. Build plan replaces it with a new plan from your conventions, using a model; your sheet edits still win.* **Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a captured show from your conventions and the bus sheet still wins wherever it has a filled cell: the names, roles, widths, sources, outputs and effects it gives are laid onto the new plan, each change a note in the build's report (in **Findings**, under **Choices**), with the engine each added effect was given. A cell that cannot work on the desk stops the build, naming the cell, as Save does in step 04: *busses.csv cannot be laid onto this plan, so nothing was written: busses.csv, Bus 4, outputs: LCL output 99 does not exist …*

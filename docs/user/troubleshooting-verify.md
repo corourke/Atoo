@@ -11,7 +11,7 @@ $ atoo verify --show demo-show
   [error] outputs[Matrix 1]: LCL output 9 does not exist -- LCL outputs are 1..8 on a WING Compact (note LCL has 24 INPUTS but only 8 outputs)  (output.socket-out-of-range)
   [error] outputs[Matrix 1]: LCL output 10 does not exist -- LCL outputs are 1..8 on a WING Compact (note LCL has 24 INPUTS but only 8 outputs)  (output.socket-out-of-range)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
@@ -33,7 +33,7 @@ $ atoo verify --show unpatched-show
   [warning] outputs[Main]: nothing is patched from this output to a physical socket -- apply sets it up (its feed, level and processing) but routes it to no output socket  (output.no-patch)
   [warning] outputs[Matrix 1]: nothing is patched from this output to a physical socket -- apply sets it up (its feed, level and processing) but routes it to no output socket -- right when the Matrix is used inside the desk, for example as the phones or monitor source  (output.no-patch)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
@@ -42,7 +42,7 @@ APPLICABLE: warnings only.
 
 Apply sets each of them up -- the Matrix's feed from Main 1, both faders and any processing -- and routes neither to an output socket. The socket is never guessed. Main has a warning too, because Matrix 1 was its only way out. If the Matrix should reach a jack, state a `patch` for it in the conventions.
 
-**Notes (`[info]`) are choices, not problems.** Where the conventions were silent about something the desk cannot be left without — a bus's width, a send's pre/post — the plan decides it and says what it decided and why. The last line above is that: the plan never said which Main or which Matrix slot its outputs take, so each is decided from the name and said -- once, naming both, because it is the same note twice. The other two are things worth knowing rather than choices: a colour the desk calls by another word, and a mute group nothing joins. A note that says the same thing about several busses (or channels, or outputs) is printed once, naming them all; a built `plan.json` still holds one finding per object in its `meta`. If a choice is wrong for your show, say so in your conventions and rebuild. See [Writing conventions](conventions.md#the-one-rule-worth-internalising-state-it-or-it-is-decided-and-said).
+**Notes (`[info]`) are choices, not problems.** Where the conventions were silent about something the desk cannot be left without — a bus's width, a send's pre/post — the plan decides it and says what it decided and why. The last line above is that: the plan never said which Main or which Matrix slot its outputs take, so each is decided from the name and said -- once, naming both, because it is the same note twice. The other two are things worth knowing rather than choices: a color the desk calls by another word, and a mute group nothing joins. A note that says the same thing about several busses (or channels, or outputs) is printed once, naming them all; a built `plan.json` still holds one finding per object in its `meta`. If a choice is wrong for your show, say so in your conventions and rebuild. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).
 
 **Read the findings, not the verdict.** Each one has four parts and they are worth telling apart (the example is the second run above):
 
@@ -67,7 +67,7 @@ Both exit `2`.
 
 **The fix is almost always in the plan, and sometimes in the conventions.** A plan is a file you can read and edit, so a one-line correction is legitimate. But a finding like the one above is the plan faithfully recording what your conventions said -- a jack the desk does not have -- so editing the plan fixes this show, and editing the conventions fixes every show you build after it. See [Writing conventions](conventions.md).
 
-**`--skip-verify` is not the answer to a `BLOCKED`.** It does not make the plan correct; it removes the only check that can refuse a plan for free, before a console is touched. Use it when you know precisely which finding you are overriding and why — and note that it does not turn off `apply`'s expansion-bay check, which is the desk's own report rather than a judgement about the plan.
+**`--skip-verify` is not the answer to a `BLOCKED`.** It does not make the plan correct; it removes the only check that can refuse a plan for free, before a console is touched. Use it when you know precisely which finding you are overriding and why — and note that it does not turn off `apply`'s expansion-bay check, which is the desk's own report rather than a judgment about the plan.
 
 ## `verify` says two objects are on the same physical output
 
@@ -77,7 +77,7 @@ $ atoo verify --show demo-show
 
   [error] busses[MON6]: LCL outputs 7 and 8 are claimed by 2 sources at once -- busses[MON6] and outputs[Matrix 1] -- and one physical socket carries one signal. Whichever of them apply writes last wins; the other is silently dead at the jack. LCL has 8 outputs on a WING Compact and all 8 are claimed, so there is no free LCL socket to move one of them to -- the AES50 groups (A, B, C) have 48 outputs each, which is where IEM and monitor sends usually live  (output.socket-collision)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
