@@ -17,10 +17,11 @@ Lastly, I wanted to be able to type in a change (my favorite example is when an 
 ## How Atoo works
 
 1. **You write three files.** Your conventions (how you always set up a desk, in plain English), an input list, and any show-specific instructions (again, in English).
-3. **A model drafts the whole setup** as a plan you can read: every channel, patch, color, bus, send and DCA, each with its reason.
-4. **Code checks the plan** against the desk's real limits and various rules before anything can be written. A stereo pair that starts on an even socket, or a patch to a socket the desk does not have, stops it. Anything the model chose that you did not state is announced.
-6. **It writes the plan to the desk and validates every value**, anything that did not land is named, not discovered at soundcheck. First, a preview reads the desk and draws it as the plan will leave it, strip by strip, with every change outlined. Every write is journalled and can be undone.
-8. **During the show, it watches the desk** against the input list, the built-in rules, and your own rules. It doesn't mix and never touches the desk unless you specifically arm a write step.
+2. **A model drafts the whole setup** as a plan you can read: every channel, patch, color, bus, send and DCA, each with its reason.
+3. **Code checks the plan** against the desk's real limits and various rules before anything can be written. A stereo pair that starts on an even socket, or a patch to a socket the desk does not have, stops it. Anything the model chose that you did not state is announced.
+4. **It writes the plan to the desk and validates every value**, anything that did not land is named, not discovered at soundcheck. First, a preview reads the desk and draws it as the plan will leave it, strip by strip, with every change outlined. Every write is journalled and can be undone.
+5. **During the show, it watches the desk** against the input list, the built-in rules, and your own rules. It doesn't mix and never touches the desk unless you specifically arm a write step.
+6. **Capture.** (Alternative workflow.) It reads your desk as it is now and turns it into a show bundle, with your inputs, busses and outputs as sheets you can read, edit and watch against.
 
 It runs in a browser or from the command line on your laptop. **A build needs an AI provider and your own AI API key**. Atoo is built and tested on Claude, and we are investigating local models and other providers.
 
@@ -56,6 +57,26 @@ Press **Try the Demo show**. A five-piece band with backing tracks opens on a si
 ## Consoles
 
 The Behringer **WING Compact**, the full-size **WING** and the **WING Rack**. No other console is supported.
+
+## For Beta testers
+
+### Who I'm looking for
+
+Because Atoo can (optionally) write to your desk, I'd like to start with a few people who:
+
+- can save a snapshot of their desk before testing and load it again after;
+- are comfortable typing a few setup commands into a terminal;
+- are on a Mac. Linux should work. Windows folks are welcome, but I haven't tested it, so tell me what breaks;
+- can zip up a show folder (Compress, on a Mac) and upload it with a short form;
+- don't mind giving short, honest feedback.
+
+### How to get started
+
+1. Check the preliminary website: https://atoo-site.cameron-048.workers.dev/ 
+2. Check the preliminary docs: https://atoo-docs.cameron-048.workers.dev/
+3. Go through the 'Getting Started' section in the docs, which includes the install. 
+4. Log any issues at https://github.com/corourke/Atoo/issues
+5. Include your show folder: Zip it up with a reading of the desk inside ([how](https://atoo-docs.cameron-048.workers.dev/reference/reporting/)). 
 
 ## Read next
 
