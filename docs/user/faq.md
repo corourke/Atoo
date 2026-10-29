@@ -24,11 +24,11 @@ A setting the desk cannot physically have is refused before anything is written.
 
 ## Why does it need a model at all?
 
-The main idea behind one of the two workflows is for domain knowledge, including an engineers preferences around how a desk should be set up, can be expressed in natural language, and then applied to many shows. So the repetitive work would be eliminated while allowing setups to be perfectly tailored to each band, and also to allow for quick changes that are guaranteed to be correct.
+The main idea behind one of the two workflows is for domain knowledge, including an engineer's preferences around how a desk should be set up, can be expressed in natural language, and then applied to many shows. So the repetitive work would be eliminated while allowing setups to be perfectly tailored to each band, and also to allow for quick changes that are guaranteed to be correct.
 
 ## Does my show go to the cloud?
 
-Your input list and conventions are sent to the model you specify. Atoo was build and tested on Claude Sonnet 5.5, and you supply your own API key. Various local models through Ollama are being tested, but none have been sufficient so far. (See: [Setting up an AI provider](ai-provider.md)). There is no Atoo account, and nothing is sent anywhere else.
+Your input list and conventions are sent to the model you specify. Atoo was built and tested on Claude Sonnet 5.5, and you supply your own API key. Various local models through Ollama are being tested, but none have been sufficient so far. (See: [Setting up an AI provider](ai-provider.md)). There is no Atoo account, and nothing is sent anywhere else.
 
 ## What does a build cost?
 
@@ -44,7 +44,7 @@ Every write is recorded with the values it replaced. Undo restores the prior set
 
 ## What are you selling?
 
-Too is free and open source, to use on any show, paid gigs included, with no account to open with us (a build uses your own AI provider's key). A company that wants to build it into a closed or commercial product can get a commercial license by agreement.
+Atoo is free and open source, to use on any show, paid gigs included, with no account to open with us (a build uses your own AI provider's key). A company that wants to build it into a closed or commercial product can get a commercial license by agreement.
 
 ## Who maintains it in six months?
 
