@@ -221,7 +221,7 @@ A captured plan's routing counts as asked for, so a deliberate split such as a r
 Build's step 04 shows the sheets as its tables, every cell editable:
 
 - **Channels** is `input.csv`: channel, patch, name, category, type, 48V, DCA and mute group. Press **▸** on a row for its model, preset and notes.
-- **Busses** and **Mains and Matrix** are `busses.csv`: name, role and width, with the sockets it feeds as read-only badges (`LCL 3-4`), which you change in Outputs. **▸** opens its sources and their tap, its effects, preset, DCAs, mute groups, label and notes, and **Feeds**: where the row goes, worked out from the other rows' sources.
+- **Busses** and **Mains and Matrix** are `busses.csv`: name, role and width, with the sockets it feeds as read-only badges (`LCL 3-4`), which you change in Outputs. **▸** opens its sources and their tap, its effects, preset, DCAs, mute groups, label and notes, and **Feeds**: where the row goes, worked out from the other rows' sources. **Add a bus** starts a new one ([Adding a bus](#adding-a-bus)).
 - **Outputs** is `outputs.csv`: every output socket the desk patches and what feeds it ([The Outputs table](#the-outputs-table)).
 - **User signals and patches** is `user.csv`: slot, source, tap, leg and name. With no slot in use it says so, and **Add a slot** starts one ([User signals and patches](#user-signals-and-patches-usercsv)).
 
@@ -232,6 +232,26 @@ A cell left empty shows, in gray, what the plan has there. Type in a cell and th
 A cell that cannot work on the desk turns red, with the reason under its row, before you press Save: a socket the desk does not have (`LCL output 9 does not exist -- LCL outputs are 1..8 on a WING (full-size console)`), a Main feeding a bus, a source nothing is called, two inputs on one channel. **Save** stays locked until it is fixed.
 
 Nothing goes to the desk until you apply the plan. A role, a label or a note changes nothing on the desk.
+
+### Adding a bus
+
+**Add a bus**, in the Busses heading beside Save, adds a row on the lowest bus number no row and no bus of the plan has. The row comes up with the cursor in its **Name**, and reads *not in this plan: Save adds it* until you save. Give it a name, a width, its sources in **▸**, or nothing; **✕** drops it again, and so does **Discard**. A show with no bus yet still shows the Busses heading, so you can start one.
+
+**Save** adds it to `busses.csv` and the plan, with no model, and says what it chose:
+
+- with no width, it is **stereo**, the WING's factory width: set Width to mono to change it;
+- with no color, Apply leaves the desk's;
+- a bus nothing sends to and that goes nowhere yet is said, naming it, but not refused, since you asked for it. Give it sources and outputs before you apply: until then `verify` counts it as an error.
+
+On the church show, open it with `atoo ui --show /tmp/shows/church-full-2026-10-24`, press **Add a bus**, type *Stream*, and press **Save busses.csv**. Bus 7 is the first free one, and Save says:
+
+*Saved church-full-2026-10-24/busses.csv: 1 added. The plan is updated: Bus 7 added.*
+
+and in the notes:
+
+*Bus 7 Stream is a row of busses.csv the plan did not have, so it is added to the plan; no width is stated, so it is stereo, the WING's factory width (set Width to mono to change it); no color is stated, so Apply leaves the desk's.*
+
+*Bus 7, with what busses.csv adds or takes out: bus feeds nothing -- every channel sent to it would be inaudible (bus.no-destination). Not refused: it was asked for.*
 
 ### Removing a row
 
