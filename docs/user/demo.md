@@ -35,7 +35,7 @@ The four components of a show:
 - **03 Instructions**: additions and exceptions for this show only. Can include bus routing, extra channels, and anything specific to this show. **2 layers** means the conventions file is read first, then these instructions layer on top.
 - **04 Plan**: what will be built on the desk. One row per channel with its number, input source, phantom power, DCAs and mute groups. Press **▸** on a row to open up its preset, sends, color and where each value came from. **PLAN CURRENT** on the tile means the plan was built from the files as they are now.
 
-The **Findings** panel down the right holds everything the checks said about the plan. It starts with the verdict: **Ready to apply**, with 0 to check, 0 advice from the critic and 6 notes on choices the build made.
+The **Findings** panel down the right holds everything the checks said about the plan. It starts with the verdict: **Ready to apply**, with 0 to check, 0 advice from the critic and 7 notes on choices the build made.
 
 Twelve channels carry a preset from the starter library: Kick takes **Kick In**, the toms **H Tom** and **Fl Tom**, the three singers **Vocal**, and so on, and the plan holds each preset's values (▸ on a row in **04 Plan** shows `Kick In (83 values)`).
 
@@ -51,7 +51,7 @@ When connected to a real desk this is the only screen that writes.
 
 Its first step, **What will be written**, names the plan, its contents, and its **Pre-flight verify results**: **0 errors · 0 warnings**, showing that the plan can be written as it stands. Beside it are listed the notes added by the pre-flight, click on `show in Findings` to have them highlighted in the Findings panel.
 
-Press **Preview**. It reads the Demo's simulated WING, a WING Compact with the show already on it, exactly as it would read a real desk, and draws the desk as the plan will leave it: **1667 addresses read**, **444 will change**, **1223 already match**, **0 didn't answer**. In this example the 444 are mostly channel and bus processing which the simulated desk doesn't have yet.
+Press **Preview**. It reads the Demo's simulated WING, a WING Compact with the show already on it, exactly as it would read a real desk, and draws the desk as the plan will leave it: **1677 addresses read**, **537 will change**, **1140 already match**, **0 didn't answer**. In this example the 537 are mostly channel and bus processing which the simulated desk doesn't have yet.
 
 ![Apply on the Demo show: the desk drawn as scribble strips after a preview](img/apply-demo-preview.png)
 

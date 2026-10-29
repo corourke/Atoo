@@ -46,6 +46,7 @@ If you built with no desk connected, skip this step.
 
 - **Mac:** in Finder, Control-click (or right-click) the show folder and choose **Compress "demo-show"**. `demo-show.zip` appears next to it.
 - **Windows:** in File Explorer, right-click the show folder and choose **Send to** > **Compressed (zipped) folder**. On Windows 11 it is under **Show more options**, or choose **Compress to** > **ZIP File**. `demo-show.zip` appears next to it.
+- **Linux:** in your file manager, right-click the show folder and choose **Compress**, or in a terminal, from the folder that holds it, run `zip -r demo-show.zip demo-show`. `demo-show.zip` appears next to it.
 
 Attach the zip to your report: to the issue (drag it onto the comment box), to your email, or to the tester form if you were sent one.
 

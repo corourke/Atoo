@@ -1,6 +1,6 @@
 # Why Atoo?
 
-When building show files, I noticed myself doing much the same thing for every new act, either patching from scratch or copying an existing showfile, following my same patterns, and it was both tedious and error prone. Festival patches were always a compromise, and when things got exciting close to doors, it was all too easy to making a routing mistake or forget something simple.
+When building show files, I noticed myself doing much the same thing for every new act, either patching from scratch or copying an existing showfile, following my same patterns, and it was both tedious and error prone. Festival patches were always a compromise, and when things got exciting close to doors, it was all too easy to make a routing mistake or forget something simple.
 
 I found some prior work in this area, in terms of generating and auditing show files, but I wanted to take a different approach and start with written audio engineering knowledge, along with my own preferences and conventions that could be applied to any show. I also wanted to be able to verify the board against the input list, and logically trace the signal path for every channel from input to final output.
 

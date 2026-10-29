@@ -29,7 +29,7 @@ It creates `~/Documents/Atoo` and sets up your config file, `~/.atoo.config`, to
 | File | What it is |
 |---|---|
 | `conventions.md` | Example house conventions, to rewrite as your own house style |
-| `presets/` | Nineteen starter channel presets (`.chn`), one per common source, and three bus presets (`.bus`). Add your own, exported from the desk or WING Edit. |
+| `presets/` | Twenty starter channel presets (`.chn`), one per common source, and three bus presets (`.bus`). Add your own, exported from the desk or WING Edit. |
 | `audit-demo/` | Three small saved readings of a desk, for trying [`atoo audit`](audit.md) and [`atoo watch`](watch.md) with no desk |
 | `README.md` | What each file is, and what to do next |
 
