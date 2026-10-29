@@ -45,11 +45,12 @@ Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/c
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
-What the desk does not state, decided or left out (12):
+What the desk does not state, decided or left out (7):
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
-  [INFO] role 'fx' for BUS 11 'Reverb': BPLATE and VSS3 inserted, 100% wet, so it is read as an effect return.
+  [INFO] role 'fx' for BUS 11 'Reverb' (BPLATE and VSS3, 100% wet), BUS 12 'CHORUS' (DIMCRS, 100% wet), ...
+  [INFO] CH 17, CH 18, CH 24 and CH 28 to BUS 10 'Speakers': sent in the desk's GRP mode (the bus fed as a subgroup, after the channel's fader), which is kept: written 'group' in the plan and the sheets, so Apply writes GRP back, and read as post-fader wherever a check asks pre or post.
   ...
 
 Nothing was written to the desk. Watch it with this show:
@@ -79,7 +80,7 @@ The desk does not state everything a sheet has a column for. What it leaves open
 - **`category`** is the channel's first DCA's name, or `other`.
 - **`type`** is `Line` for a source on a Dante or SoundGrid module, USB, a card, the USB player or AES/EBU, and `Mic` for everything else.
 - **`role`** is left for you, except `fx`: a bus whose effects are all reverbs, delays, modulation or pitch effects, set fully wet, is an effect return. A bus with a doubler or a compressor on it (a vocal bus) carries the dry signal too, so it stays blank.
-- **`tap`** is the pre or post most of a row's sources use; a source that differs is marked in `sources` (`Crowd (pre)`).
+- **`tap`** is the pre or post most of a row's sources use; a source that differs is marked in `sources` (`Crowd (pre)`). A send in the desk's **GRP** mode (the bus fed as a subgroup, after the channel's fader) says `group`, as Bus 10 does here: it is kept, so Apply writes GRP back, and a check that asks pre or post reads it as post.
 
 ### The desk's colors
 
@@ -200,7 +201,6 @@ A slot assigned on the desk that nothing reads gets no row; the capture says so 
 
 Nothing is dropped silently. Each of these is one INFO line, naming what it is about, and the snapshot in `captures/` keeps the whole desk:
 
-- **A send in the desk's GRP mode** has its tap left undecided.
 - **A channel on the oscillator** is left out.
 - **A bus nothing feeds that reaches only a Main** is left out, and no `sources` cell names it. A desk initialized at the factory routes its unused buses to Main 1, so capturing one says, for example, *Left out of the sheets: Bus 9, Bus 10, Bus 11, Bus 12, Bus 13, Bus 14, Bus 15 and Bus 16, which nothing feeds and which reach only a Main, so no row has them and no sources cell names them.*
 
