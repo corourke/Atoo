@@ -72,11 +72,11 @@ Because Atoo can (optionally) write to your desk, I'd like to start with a few p
 
 ### How to get started
 
-1. Check the preliminary website: https://atoo-site.cameron-048.workers.dev/ 
-2. Check the preliminary docs: https://atoo-docs.cameron-048.workers.dev/
+1. Check the preliminary website: https://atoo.app/ 
+2. Check the preliminary docs: https://docs.atoo.app/
 3. Go through the 'Getting Started' section in the docs, which includes the install. 
 4. Log any issues at https://github.com/corourke/Atoo/issues
-5. Include your show folder: Zip it up with a reading of the desk inside ([how](https://atoo-docs.cameron-048.workers.dev/reference/reporting/)). 
+5. Include your show folder: Zip it up with a reading of the desk inside ([how](https://docs.atoo.app/reference/reporting/)). 
 
 ## Read next
 
