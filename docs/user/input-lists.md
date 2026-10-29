@@ -371,6 +371,8 @@ The two halves land on `LCL 4` and `LCL 5`, or on different stage boxes, or on t
 
 *'Keys L' (LCL 4) and 'Keys R' (LCL 5) can't be one stereo pair as cabled -- the pair starts on 4, an even socket (a pair always starts on an odd one) -- so 'Keys' is patched through user patch USR 25-26, which take LCL 4 and LCL 5*
 
+- **Two rows named as one pair are one pair**, `Keys L` and `Keys R` (or `Left` and `Right`), even when the model built them as two mono channels because of their sockets. The build joins them into one stereo channel named `Keys` and says so at INFO: *'Keys L' and 'Keys R' are one L/R pair by their names, so they are one stereo channel 'Keys': the reply left them as two mono channels, though only their sockets kept them apart, and code pairs those through user patch slots.* Two such rows on sockets the desk can pair directly are left as the model built them.
+- **`atoo build` prints these notes** under *Stereo pairs*, as well as keeping them in the plan.
 - **The build summary** shows the patch as `USR 25-26 (LCL 4 + LCL 5)`.
 - **Phantom power and gain** are set on the two sockets, `LCL 4` and `LCL 5`, not on the slots.
 - **The slots your `user.csv` names** are left alone ([User signals and patches](capture.md#user-signals-and-patches-usercsv)).

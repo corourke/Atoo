@@ -146,7 +146,7 @@ A verify **error** refuses the amend with `Refusing to amend: the amended plan d
 
 ## A channel the rebuild dropped
 
-Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip to free**: unpatched (`OFF`), and its name, color, icon, DCA/mute-group tags, bus sends and **the processing your plan set** all cleared, and its direct Main routing back to the factory's (Main 1 on, the others off) — on the input socket as well as the strip, because with `clink` on that is where the name the desk shows actually lives. The end state is the reading an untouched strip gives, so the next person allocating a strip finds this one genuinely free rather than nearly free.
+Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip to free**: unpatched (`OFF`), and its name, color, icon, DCA/mute-group tags, bus sends (switched off, and each level back to -oo, as an initialized strip reads) and **the processing your plan set** all cleared, and its direct Main routing back to the factory's (Main 1 on, the others off) — on the input socket as well as the strip, because with `clink` on that is where the name the desk shows actually lives. The end state is the reading an untouched strip gives, so the next person allocating a strip finds this one genuinely free rather than nearly free.
 
 **The patch goes `OFF`, exactly as a full apply leaves a strip your plan does not use.** A freed strip reads the same whichever way it was freed, so a change followed by a full apply ends with the same desk, and an INFO line says what was done. A strip an earlier run left blank on its factory socket still counts as free, so a clear that got partway is finished rather than refused.
 

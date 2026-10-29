@@ -308,12 +308,12 @@ Audit findings: 3 warning.
 
 [WARNING] CV008 Processing Contradicts Plan (3)
   CH 2 "Vox": plan says the high-pass is on at 120Hz; live console has it off. (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
-  CH 2 "Vox": EQ band 2: plan says frequency 2500Hz but 1800Hz live (tolerance 2%). (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
-  CH 3 "Bass": plan says the high-pass is 40Hz, live console reads 80.2Hz (tolerance 2%). (plan provenance: Processing: 'Bass gets a high-pass at 40Hz')
+  CH 2 "Vox": EQ band 2: plan says frequency 2500Hz but 1800Hz live (more than a step apart). (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
+  CH 3 "Bass": plan says the high-pass is 40Hz, live console reads 80.2Hz (more than a step apart). (plan provenance: Processing: 'Bass gets a high-pass at 40Hz')
 ...
 ```
 
-In that capture the Kick's high-pass reads 59.7Hz against a plan of 60Hz, and says nothing. A frequency or a Q is a stepped control: the desk holds the nearest step of what was written, so Atoo allows **2%** (and 0.02 for a value at or near zero, such as a tilt of 0dB), the same tolerance `apply` uses when it reads a write back. A hi-cut written as 4000Hz that reads 4012Hz is the next step, and a Q of 1.4 that reads 0.998 is ten steps away and is reported. The tilt moves in coarse steps (a desk reads 1.25dB and -0.25dB), so a plan that asks for 1.1dB is reported, with the numbers on both sides.
+In that capture the Kick's high-pass reads 59.7Hz against a plan of 60Hz, and says nothing. A frequency, a gain, a Q or a tilt is a stepped control: the desk holds the nearest step of what was written, so Atoo compares each on its own grid (a high-pass or hi-cut moves about 0.7% a step, an EQ gain 0.1dB, a tilt 0.25dB). Within three quarters of a step is the nearest step of what the plan says; a step or more away is a different setting, however small the difference is in percent. It is the comparison `apply` uses to decide that the desk already holds a value and to read a write back. A hi-cut written as 4000Hz that reads 4012Hz is the nearest step and says nothing; a Q of 1.4 that reads 0.998 is many steps away and is reported. A tilt the plan asks for at 1.1dB, which the desk holds as 1.0dB or 1.25dB, says nothing; one that reads 1.5dB is reported, with the numbers on both sides.
 
 The trim and the balance are compared within 0.5dB. The head-amp gain is a coarser control (as few as 20 steps on a local input, about 2.4dB each), so it is compared within 3dB, and it is read at the socket the strip is patched to, since the gain belongs to the input, not the strip:
 
@@ -336,9 +336,9 @@ $ atoo audit --state eq.state.json --plan eq.plan.json
 Audit findings: 3 warning.
 
 [WARNING] CV008 Processing Contradicts Plan (3)
-  CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (tolerance 2%).
-  BUS 1 "Drums": EQ band 2: plan says frequency 2500Hz but 1800Hz live (tolerance 2%).
-  MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (tolerance 2%).
+  CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (more than a step apart).
+  BUS 1 "Drums": EQ band 2: plan says frequency 2500Hz but 1800Hz live (more than a step apart).
+  MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (more than a step apart).
 ...
 ```
 

@@ -134,6 +134,8 @@ Nothing already on the desk is written: the 1625 addresses that belong to the De
 
   Such an object can be edited as well as dropped. An edit of a bus writes only what it names (*"tilt +2 on the Drums bus"*); sending the bus to a socket reads which Mains it is routed to first, so the route it leaves is switched off. Renumbering a Main or Matrix (*"make Room EQ Matrix 3"*) reads all of it off the desk, with every send or route into it, and writes them on the new number; the old number is cleared. The output sockets it feeds are not read, so they still take the old number: name them in the change to move them too. A number the desk already holds under another name is refused.
 
+  A change that **adds** a Main or Matrix by a name the desk already holds is about that one, not a second: it is carried out as moving it to the number the change gives, or, when it is already there, as nothing. An `INFO` says so (*"the change adds output 'Delay', which the desk already holds as Matrix 2: carried out as moving it to Matrix 4, as the change asks, not as a second one"*). The name is matched, never the number.
+
 ## Clearing a bus
 
 *"Clear bus 5 and 6, we are not using them. Add a stereo IEM bus (reuse bus 5) and output to LCL 3-4."* is one change, and it is carried out as said: a bus you drop is **returned to free**, and the new bus can take its place.
@@ -180,7 +182,7 @@ Below what is shown, eight `EDITED` lines name the channels whose send into bus 
 
 - **A DCA or a mute group** reads as an initialized one — name, color, icon, fader and mute — and **every strip that was a member is taken off it** (channels and buses alike; a strip's other DCAs and mute groups are kept, and its tag is rebuilt without the dropped one). A DCA's fader goes to −∞ first.
 - **An output** (a Main or a Matrix, and the socket it fed) reads as an initialized Main or Matrix, and its socket reads as an initialized desk's; a Matrix is also taken off the Main or bus that fed it. Channels and buses that still route to a dropped Main are left as they are, and the review lists them: that is a routing you did not ask to change.
-- **The number is free for a new one in the same change.** *"Make a Horns DCA on DCA 5"* puts it on DCA 5, the DCA the same change returns to free; a new DCA or mute group with no number named takes the lowest free one, and a new output takes the lowest free Main or Matrix and may take the socket the dropped one fed. An INFO says which and why.
+- **The number is free for a new one in the same change.** *"Make a Horns DCA on DCA 5"* puts it on DCA 5, the DCA the same change returns to free; a new DCA or mute group with no number named takes the lowest free one, and a new output takes the Main or Matrix the change names (*"add a Matrix 'Delay' on Matrix 4"*), or the lowest free one when it names none or names one that is taken, and may take the socket the dropped one fed. An INFO says which and why. A number past the desk's range is refused (*"this console has Matrices 1 to 8 -- there is no matrix 9"*).
 - **A refusal is for a setting the desk cannot hold**: a number past the desk's last DCA or mute group, or a drop naming something not on the desk.
 - **Undo puts every address back.**
 
