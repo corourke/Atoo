@@ -2,7 +2,7 @@
 
 When building show files, I noticed myself doing much the same thing for every new act, either patching from scratch or copying an existing showfile, following my same patterns, and it was both tedious and error prone. Festival patches were always a compromise, and when things got exciting close to doors, it was all too easy to make a routing mistake or forget something simple.
 
-I found some prior work in this area, in terms of generating and auditing show files, but I wanted to take a different approach and start with written audio engineering knowledge, along with my own preferences and conventions that could be applied to any show. I also wanted to be able to verify the board against the input list, and logically trace the signal path for every channel from input to final output.
+I found some [prior work](#prior-work) in this area, in terms of generating and auditing show files, but I wanted to take a different approach and start with written audio engineering knowledge, along with my own preferences and conventions that could be applied to any show. I also wanted to be able to verify the board against the input list, and logically trace the signal path for every channel from input to final output.
 
 Lastly, I wanted to be able to type in a change (my favorite example is when an unannounced horn section showed up 30 minutes before doors) and have the program just figure it out, including busses, DCAs, presets, all of it and verify the correctness of the new layout. And if I managed to do something dumb, like mute the drum bus, or double patch the last minute backup vocalist to both the main and vocal busses, I wanted something that would alert me before the show started.
 
@@ -13,15 +13,34 @@ Lastly, I wanted to be able to type in a change (my favorite example is when an 
 - **Channel presets** make quick work of channel and bus setup, but not the routing.  Atoo uses your own presets, AND sets up the patching, busses, sends, DCAs and mains around them.
 - **A spreadsheet input list** is great for coordinating with the band, but things can change (usually at the last minute). Atoo makes last minute changes easy, and checks the desk against your input list.
 
-## Other tools
+## Prior work
 
-There are existing tools out there that do some (or all) of what we are trying to do with Atoo.
+Other tools do some (or all) of what Atoo does, and several came first. They are worth knowing about.
 
-**Show-file generators** -- These turn a channel list into a show file, quickly. They generally start from an existing show file template. Atoo starts from your written conventions and an input list, and can set up new and complex routing. Atoo also writes changes to the desk itself rather than handing you a file to load over the show.
+<!-- credit:start -->
+**Wing Tools** ([wingtools.theta-tontechnik.de](https://wingtools.theta-tontechnik.de)) by Theta Tontechnik is a browser-based toolset for the WING, available since 2025: routing documentation, a Snapshot Linter with a large rule catalog and one-click fixes, a snapshot generator, signal-flow views, and a live desk connection. It runs in the browser with nothing to install, and works from snapshot files or a connected desk. Atoo's fixed audit rules are inspired by its linter catalog. If you want to document, lint and fix existing snapshots, look at Wing Tools.
 
-**Show-file checkers** -- These check your show file offline against a list of common mistakes. Atoo checks read the desk itself, not a saved file, and doesn't have to guess channel intent as it has your input list. It can watch your desk right up until show time and even while the show is running for problems.
+**Show-file generators** turn a channel list into a show file, quickly, generally starting from a template:
 
-**Plain-language remotes** -- These allow quick edits by typing, such as names, colors and routes. With Atoo, a typed change goes through the same checks as a full build. It is previewed, written, read back, and can be undone on its own, and nothing else on the desk moves.
+- the snapshot generator in **Wing Tools**, above;
+- **ShowBuilder** ([showbuilder.crazyamazingdesigns.com](https://showbuilder.crazyamazingdesigns.com/)) by Crazy Amazing Designs builds a routed, labeled scene file from a questionnaire about your gear, for the X32 and M32;
+- **StageOn Connect** ([stageon.app/connect](https://stageon.app/connect)) sends channel names and routing from a StageOn stage plot to the console over the network.
+
+Atoo starts from your written conventions and an input list, can set up new and complex routing, and writes each setting to the desk and reads it back.
+
+**Show-file checkers** check a show against a list of common mistakes:
+
+- the Snapshot Linter in **Wing Tools**, above.
+
+Atoo checks the desk against your input list and conventions, and keeps watching it right up to show time and while the show is running.
+
+**Plain-language remotes** allow quick edits by typing, such as names, colors and routes:
+
+- **Console Whisperer** by Nathan Lively sets channel names, colors and routes through Mixing Station;
+- MCP servers such as **ConsoleMCP** ([github.com/bulyaki/ConsoleMCP](https://github.com/bulyaki/ConsoleMCP)) and **x32-wing-mcp** ([github.com/feimpraim/x32-wing-mcp](https://github.com/feimpraim/x32-wing-mcp)) let an AI assistant read and set desk parameters directly.
+
+With Atoo, a typed change goes through the same checks as a full build. It is previewed, written, read back, and can be undone on its own, and nothing else on the desk moves.
+<!-- credit:end -->
 
 ## What Atoo does differently
 

@@ -24,6 +24,11 @@ With a plan, a finding about a strip the plan never mentions can be left out, an
 **"In use"**, wherever a rule below says it, means **active**: on the open show's sheets, or in use on the desk. A channel, aux or bus is in use on the desk when it is named, patched to a socket other than the factory's, or sending, and a bus also when something sends to it. So a bus the show's sheets have is checked even before anything on the desk uses it. With no show open, only the desk counts. A watch condition can use the same test with the word `ACTIVE` ([Only active strips](watch-conditions.md#only-active-strips)).
 
 This page is generated from the rules themselves, so it lists every one the version you are reading the docs for can report.
+
+<!-- credit:start -->
+> [!NOTE]
+> Atoo's fixed audit rules are inspired by the Snapshot Linter catalog of **Wing Tools** by Theta Tontechnik. See [Prior work](why.md#prior-work).
+<!-- credit:end -->
 <!-- preamble:end -->
 
 ## Routing
