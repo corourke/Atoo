@@ -23,7 +23,7 @@ A show folder in your Atoo folder (`~/Documents/Atoo/`, or `--dir`), named after
 | File | What's in it |
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
-| `busses.csv` | One row per bus, Main and Matrix in use: its `name`, its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
+| `busses.csv` | One row per bus, Main and Matrix in use: its `name` (as the desk spells it, even when two of them share it; Apply writes it back as it was), its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
 | `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`. See [Every output socket](#every-output-socket-outputscsv) |
 | `user.csv` | Only when the desk uses one: one row per USR slot a channel or an output reads, saying what the slot takes. See [User signals and patches](#user-signals-and-patches-usercsv) |
 | `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
@@ -170,7 +170,7 @@ When the show has `outputs.csv`, a build does not read `busses.csv`'s Outputs co
 
 A WING's `USR` slots are how a channel or an output gets a signal the patch alone cannot give it: a **user signal** (USR 1-24) takes a channel, an aux, a bus, a Main or a Matrix before or after its fader, and a **user patch** (USR 25-56) takes an input socket as it is. A post-fader recording feed, or a stereo channel on two sockets that are not side by side, goes through one.
 
-When the desk uses any, the capture writes `user.csv`: one row for every slot a channel or an output reads, in the desk's own words, and the summary says how many. A desk with USR 3 taking CH 10 after its fader, read by USB 29, gets:
+When the desk uses any, the capture writes `user.csv`: one row for every slot a channel or an output reads, in the desk's own words, and the summary says how many. A live capture asks every slot, USR 1 to 56, what it takes; a `.snap` holds them all already. A desk with USR 3 taking CH 10 after its fader, read by USB 29, gets:
 
 ```
 slot,source,tap,leg,name
@@ -202,6 +202,7 @@ A slot assigned on the desk that nothing reads gets no row; the capture says so 
 Nothing is dropped silently. Each of these is one INFO line, naming what it is about, and the snapshot in `captures/` keeps the whole desk:
 
 - **A channel on the oscillator** is left out.
+- **An output socket the console does not have** is left out of `outputs.csv`, `busses.csv`'s Outputs cells and the plan. A WING Compact has no AUX outputs, but its desk can still list a patch for them, and one kept would stop the show's own preview. The church snapshot captured as a Compact, for example, says *Left out of the sheets and the plan: AUX 3; AUX 5-8, which the desk lists a patch for but the WING Compact does not have as output sockets, so nothing can come out of them.*
 - **A bus nothing feeds that reaches only a Main** is left out, and no `sources` cell names it. A desk initialized at the factory routes its unused buses to Main 1, so capturing one says, for example, *Left out of the sheets: Bus 9, Bus 10, Bus 11, Bus 12, Bus 13, Bus 14, Bus 15 and Bus 16, which nothing feeds and which reach only a Main, so no row has them and no sources cell names them.*
 
 ## Watching it
