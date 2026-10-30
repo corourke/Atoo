@@ -14,7 +14,7 @@ atoo capture --snap CCC-20261024.snap --console-model wing-full
 
 A `.snap` does not say which WING saved it, and the three have different sockets, so a `.snap` needs `--console-model` (`wing-full`, `wing-compact` or `wing-rack`). A live desk states its own model.
 
-In the browser, press **New show…** in the bundle bar and choose **From a desk**: **The console** reads the console in the bar, and **A .snap file** asks for the file and which WING saved it. **Folder** is where the show goes, named as below; change it if you like. The dialog says what it does: *Captures the desk to input.csv and busses.csv which you can edit.* Press **Capture this desk**, and the new show opens on Build's step 04, where you edit it ([below](#editing-the-sheets)). On the Watch page with no show open, **Make a show from this desk** opens the same dialog on the console Watch is reading, and Watch keeps running ([Watch the desk](watch-a-show.md#with-no-show-make-a-show-from-this-desk)).
+In the browser, press **New show…** in the bundle bar and choose **From a desk**: **The console** reads the console in the bar, and **A .snap file** asks for the file and which WING saved it. **Folder** is where the show goes, named as below; change it if you like. The dialog says what it does: *Captures the desk to input.csv, busses.csv and outputs.csv, which you can edit.* Press **Capture this desk**, and the new show opens on Build's step 04, where you edit it ([below](#editing-the-sheets)). On the Watch page with no show open, **Make a show from this desk** opens the same dialog on the console Watch is reading, and Watch keeps running ([Watch the desk](watch-a-show.md#with-no-show-make-a-show-from-this-desk)).
 
 ## What it makes
 
@@ -146,7 +146,7 @@ A `source` is written as the desk lists it:
 - an input socket, as the input list spells it: `AES50-A 5`, `LCL 3`, `MOD 12`;
 - a user signal or patch: `USR 3`;
 - the oscillator: `OSC 1`;
-- a bus, a Main or a Matrix by its side: `Bus 9 L`, `Main 1 R`, `Matrix 6 L`;
+- a bus, a Main or a Matrix by its side: `Bus 9 L`, `Main 1 R`, `Matrix 6 L`; a mono bus by its number alone, `Bus 1`, since it has one output;
 - a send or the monitor by the desk's own number: `SEND 19`, `MON 1`;
 - `OFF` for nothing.
 
@@ -251,7 +251,7 @@ and in the notes:
 
 *Bus 7 Stream is a row of busses.csv the plan did not have, so it is added to the plan; no width is stated, so it is stereo, the WING's factory width (set Width to mono to change it); no color is stated, so Apply leaves the desk's.*
 
-*Bus 7, with what busses.csv adds or takes out: bus feeds nothing -- every channel sent to it would be inaudible (bus.no-destination). Not refused: it was asked for.*
+Bus 7 sits between Bus 6 and Bus 8, in the table and in the file. It goes nowhere yet, so **Findings** lists a warning, *BUS 7 Stream bus feeds nothing* (`bus.no-destination`). It is only a warning, and Apply is not held back by it: a bus with no output is a desk in working order, and you asked for it. Give it an output when you are ready.
 
 ### Removing a row
 
@@ -262,7 +262,8 @@ Every row of Busses, Mains and Matrix, Outputs, and User signals and patches has
 - a **bus** or **Matrix**: every send into it comes off, and the sockets it fed are no longer fed;
 - a **Main**: every route to it comes off, a Matrix it fed loses it as a source, and its sockets are no longer fed;
 - other rows' **sources** stop naming it, in the plan and in `busses.csv`;
-- a bus that went only to a removed Main now feeds nothing. That is said, naming the bus, but not refused: route it somewhere before you apply;
+- a bus that went only to a removed Main now feeds nothing. **Findings** lists it as a warning, never a block on Apply: route it when you are ready;
+- a Matrix the removed Main or bus alone fed carries nothing now, and that is said: *Matrix 1 'Main PA', Matrix 4 'Main PFl' carry nothing now: it was their only source.*
 - a **socket** is disconnected;
 - a **slot** comes out, and what still reads it is named: *USR 3 taken out (was CH 10 POST L+R (Lead post)); USB 29 still reads it, so it carries nothing until patched from something else.*
 
@@ -298,4 +299,9 @@ Its sends and its DCAs and mute groups are the whole list of them: a full apply 
 
 They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s own optional columns, so you can also write them by hand. A Save in step 04 carries them into the plan, and a build places channels by them, so a filled cell wins over the conventions. Where a filled cell and the plan disagree (the sheet changed in a spreadsheet since), `atoo verify` warns (`input-list.column-not-followed`), so a cell that had no effect never looks honored. A captured show's plan agrees with its sheets.
 
-A build reads `busses.csv` too. On a captured show, **Build plan** asks first: *This plan was read from the desk. Build plan replaces it with a new plan from your conventions, using a model; your sheet edits still win.* **Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a captured show from your conventions and the bus sheet still wins wherever it has a filled cell: the names, roles, widths, sources, outputs and effects it gives are laid onto the new plan, each change a note in the build's report (in **Findings**, under **Choices**), with the engine each added effect was given. A cell that cannot work on the desk stops the build, naming the cell, as Save does in step 04: *busses.csv cannot be laid onto this plan, so nothing was written: busses.csv, Bus 4, outputs: LCL output 99 does not exist …*
+A build reads `busses.csv` too. On a captured show, **Build plan** asks first: *This plan was read from the desk. Build plan replaces it with a new plan from your conventions, using a model; your sheet edits still win.* **Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a captured show from your conventions and the bus sheet still wins wherever it has a filled cell: the names, roles, widths, sources, outputs and effects it gives are laid onto the new plan, each change a note in the build's report (in **Findings**, under **Choices**), with the engine each added effect was given. The sheet's names are yours, and they win over the model's:
+
+- **A name the build put on another number moves to the sheet's.** A bus or Matrix the build had on that number takes the old one, and the note names it. If the sheet names that old number as something else, the preset, effects and role the build chose for the bus it moved there are taken off, said in a note, so an empty cell on that row is the desk's and not the build's. For example: *busses.csv puts 'Reverb' on Bus 11, where the build had it on Bus 5: the sheet wins.*
+- **A name in a Sources cell is the sheet's bus, Main or Matrix**, even when the model gave a channel the same name.
+
+A cell that can never work on the desk stops the build before the model is asked, so nothing is spent and `plan.json` stays as it was: *build failed: busses.csv, Bus 4, outputs 'LCL 99': this console has no LCL 99 (its LCL outputs are 1-8). Nothing was sent to a model and nothing was changed: plan.json is as it was.* A cell that cannot work on the plan the model made (a source naming something it did not build) stops the build afterwards, naming the cell, as Save does in step 04.
