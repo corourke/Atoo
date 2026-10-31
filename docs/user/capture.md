@@ -115,7 +115,7 @@ On the church show, open **B13** (Delay Long) with **▸**: its FX cell reads `T
 
 ## Every output socket: outputs.csv
 
-`outputs.csv` says what each output socket carries: one row for every socket the desk patches, whatever feeds it. The file has one row per socket, never a range, in the order the desk lists its outputs:
+`outputs.csv` says what each output socket carries: one row for every socket the desk patches, whatever feeds it. The file is written one row per socket, in the order the desk lists its outputs:
 
 ```bash
 head -4 /tmp/shows/church-full-2026-10-24/outputs.csv
@@ -131,6 +131,14 @@ USB 5,AES50-A 5,
 ```
 
 A bus, a Main or a Matrix is written by its side, so its two sockets are two rows. `busses.csv`'s `outputs` cell says the same sockets for each bus, worked out from the plan (`LCL 1-2` for Bus 9).
+
+You can type a run of sockets as one row, in a spreadsheet or in the [Outputs table](#the-outputs-table): `USB 1-16,AES50-A 1-16` is sixteen sockets, USB 1 from AES50-A 1 up to USB 16 from AES50-A 16. Its source can be:
+- a run of the same length: `AES50-A 1-16`;
+- one source, which counts up from there: `USB 1-16,AES50-A 1` is the same sixteen sockets, and a note says what it became;
+- a bus's, a Main's or a Matrix's two sides: `AES50-A 7-8,Bus 4 L-R`;
+- `OFF`, which disconnects every socket of the run.
+
+It is read one row per socket, and a Save writes it that way. A run is refused, naming the row, only when it cannot work: its sockets and sources are not the same length (*source "AES50-A 1-8": is 8 source(s) for 16 socket(s): a run feeds one socket from each source, so the two must be the same length*), or it goes past the last socket or source of its group.
 
 A socket that carries an object's R without its L on the socket before it (Bus 3's R alone on a USB socket, say) is recorded as that socket's own source, as the desk has it, and the capture says so at INFO; `busses.csv`'s cell leaves it out, since a cell's sockets go L then R.
 
@@ -162,7 +170,7 @@ There is no "channel, pre-fader" source, because the desk has none. A split carr
 
 Each change is an INFO (`build.outputs-sheet`), for example *outputs.csv wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).* Where the file takes sockets off a bus, a Main or a Matrix that a line of your instructions or conventions asks for in so many words, the build says so as a WARNING, quoting the line, for example *outputs.csv decides Main 1's sockets (LCL 1-2), so the instructions' 'Video Feed: Send the main mix to USB 18-19' is not carried out: USB 18-19 are not patched from Main 1. Add USB 18-19 to outputs.csv, or edit them in Build 04's Outputs table, to carry it out.*
 
-When the show has `outputs.csv`, a build does not read `busses.csv`'s Outputs column. In Build's step 04 that column is read-only: you move a bus in the [Outputs table](#the-outputs-table), and its Save rewrites the bus's `busses.csv` cell to match. A cell edited in another program that disagrees with `outputs.csv` is not used, and the build says so, for example *busses.csv says Bus 9 goes to AUX 1-2, outputs.csv says LCL 1-2: outputs.csv is where each socket's source is kept, so it wins, and busses.csv's Outputs column follows it.* A row that cannot work stops the build, naming it: a socket the desk does not have, a socket listed twice, a source past its group's end.
+When the show has `outputs.csv`, a build does not read `busses.csv`'s Outputs column. In Build's step 04 that column is read-only: you move a bus in the [Outputs table](#the-outputs-table), and its Save rewrites the bus's `busses.csv` cell to match. A cell edited in another program that disagrees with `outputs.csv` is not used, and the build says so, for example *busses.csv says Bus 9 goes to AUX 1-2, outputs.csv says LCL 1-2: outputs.csv is where each socket's source is kept, so it wins, and busses.csv's Outputs column follows it.* A row that cannot work stops the build, naming it: a socket the desk does not have, a socket two rows both feed, a run whose sockets and sources are not the same length, a source past its group's end. A row that takes a socket `OFF` gives way to a row that feeds it.
 
 **A show built from conventions has no `outputs.csv` at first.** Build's step 04 shows the plan's own outputs in its Outputs table, and says so: *This show has no outputs.csv yet -- these are the plan's outputs. Save writes outputs.csv, which will then take priority over conventions and instructions during a build.* Its first Save writes `outputs.csv` with every socket the plan patches, and from then on the file decides: a rebuild lays it on, so a change to your conventions no longer moves a socket the file lists. Edit the row instead, or delete `outputs.csv` to hand every socket back to the conventions.
 
@@ -284,7 +292,9 @@ One row per output socket: the socket, what feeds it in the desk's words (`Bus 9
 
 The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double gray for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted gray for a send, the monitor or the oscillator. The square beside the source is the desk's own color for it, as [the desk shows it](#the-desks-colors).
 
-To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket** adds a row. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. **Save outputs.csv** writes the file and updates the plan, with no model: the file is written in the desk's output order and words, with your notes, and a socket you took `OFF` keeps its `OFF` row, so a rebuild leaves it disconnected ([Removing a row](#removing-a-row)). Moving a bus, a Main or a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
+To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket** adds a row. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. A run's line says its rows as they are now, so renumbering USB 21-25 to AES50-C 1-5 makes it read `AES50-C 1-5 ← LCL 3-7`.
+
+A row can be a run: type `USB 1-16` with `AES50-A 1-16` (see [above](#every-output-socket-outputscsv) for what a run's source can be). To replace runs with one, remove them with **✕** first, then add the new row: a row that feeds a socket wins over a removed one, so they are not refused as listed twice. Two rows that both feed one socket are still refused. On the church show, removing USB 1-8 and USB 9-16 and adding `USB 1-16` ← `AES50-A 1-16` saves as *Saved church-full-2026-10-24/outputs.csv. The plan is updated: USB 9 from AES50-A 9 (was AES50-A 19); USB 10 from AES50-A 10 (was AES50-A 20); ...*, and the table then shows one run, `USB 1-16 ← AES50-A 1-16`. **Save outputs.csv** writes the file and updates the plan, with no model: the file is written in the desk's output order and words, with your notes, and a socket you took `OFF` keeps its `OFF` row, so a rebuild leaves it disconnected ([Removing a row](#removing-a-row)). Moving a bus, a Main or a Matrix rewrites its `busses.csv` Outputs cell too, and the Save says so: *busses.csv's Outputs column follows: Bus 9 AUX 1-2.*
 
 ### While Watch runs
 
