@@ -28,7 +28,7 @@ The main idea behind one of the two workflows is for domain knowledge, including
 
 ## Does my show go to the cloud?
 
-Your input list and conventions are sent to the model you specify. Atoo was built and tested on Claude Sonnet 5.5, and you supply your own API key. Various local models through Ollama are being tested, but none have been sufficient so far. (See: [Setting up an AI provider](ai-provider.md)). There is no Atoo account, and nothing is sent anywhere else.
+Your input list and conventions are sent to the model you specify. Atoo was built and tested on Claude Sonnet 5.5, and you supply your own API key. Local models through Ollama are available too, with no key and nothing leaving your laptop, but every local model is experimental: Claude is the one we recommend. (See: [Setting up an AI provider](ai-provider.md).) There is no Atoo account, and nothing is sent anywhere else.
 
 ## What does a build cost?
 
