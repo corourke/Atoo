@@ -1,0 +1,7 @@
+{
+  "name": "Add a tambourine mic on A 49",
+  "ops": [
+    {"op": "add_channel", "name": "Tamb", "kind": "mic", "patch": {"group": "A", "first": 49}}
+  ],
+  "notes": []
+}

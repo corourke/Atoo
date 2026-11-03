@@ -86,6 +86,97 @@ With none of them, a change that names presets gives a warning first, before the
 
 Nothing already on the desk is written: the 1625 addresses that belong to the Demo's own strips are left alone, and on a real desk they are read before and after the write, as the proof that nothing else moved. A change can also edit what is running; see [Editing what is already running](#editing-what-is-already-running).
 
+## Let the model say less: `--intent`
+
+By default the model answers with a **change set**: the new channels written
+out in full, with their sockets and sends. A small or local model often gets
+that wrong. With `--intent` it answers with an **intent** instead: a short
+list of what you asked for, in a small vocabulary, and Atoo's own code works
+out the rest.
+
+```bash
+atoo patch --show touringband --console 192.0.2.16 --intent \
+    "trumpet, sax and trombone on LCL 21-23, Band DCA"
+```
+
+The result is reviewed, and written with `--confirm`, exactly like any other
+change. What differs is who decides what:
+
+| The model says | Atoo works out |
+|---|---|
+| which things to add, drop, move, rename or set, and the sockets you typed | the strip each new channel goes on, the socket for a channel you gave none, the bus, DCA and mute-group numbers, the stereo pair (the first socket odd, the second the next), every setting's range |
+| a name only when you gave one | the name of a new bus, DCA, mute group or output you did not name, from your own words ("a stereo IEM bus" is called `IEM`), at INFO, `IEM 2` if `IEM` is taken |
+
+**What it refuses.** A change the console cannot be left in is refused, with
+the reason, and nothing is written: a socket the desk or the stage box does
+not have, a strip past the desk's range, a stereo pair that starts on an even
+socket, a value out of range, a channel that is not on the desk. So is
+anything the model made up: a channel name with words nobody said, a
+microphone model nobody named, a preset that is not in the library, a colour
+the console does not have. A socket **you** typed that does not exist is final:
+the model is not asked to put it somewhere else. Anything the model made up is
+sent back to it once, with the reason.
+
+**What it chooses**, it says, at INFO: the strip, the socket (once, as
+*"the first free A socket"*, not as the model's pick), the width of a bus you
+did not state, the name of a new bus.
+
+**Naming a group.** "HPF 100 on the vocals" names the Vocals DCA, not a
+channel; the setting is made on the DCA's channels and an INFO lists them.
+
+### Try it with no console, and no model
+
+`--intent-file FILE` compiles an intent you already have, as `--change-set`
+uses a change set. In an Atoo checkout, the Demo show has one for its 6pm
+change, and an `--state` capture for the desk:
+
+```
+atoo patch --show starter/demo-show --conventions starter/conventions.md --intent-file docs/user/demo/demo-show/horns.intent.json --state atoo/web/demo_states/before.json "trumpet, sax and trombone on LCL 21-23, Band DCA"
+```
+
+```
+  INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
+  INFO conventions: starter/conventions.md (--conventions)
+  INFO instructions: starter/demo-show/instructions.md (layered on top, as for a build)
+
+Compiling the change: trumpet, sax and trombone on LCL 21-23, Band DCA
+  INFO channel 'Trumpet': no strip was named, so it goes on ch 14, the next strip past the last one in use (ch 13)
+  INFO channel 'Sax': no strip was named, so it goes on ch 15, the next strip past the last one in use (ch 14)
+  INFO channel 'Trombone': no strip was named, so it goes on ch 16, the next strip past the last one in use (ch 15)
+
+Change: Add Trumpet, Sax and Trombone on LCL 21-23
+  INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+...
+```
+
+An intent that asks for something the desk does not have is refused, and says
+which:
+
+```
+atoo patch --show starter/demo-show --conventions starter/conventions.md --intent-file docs/user/demo/demo-show/tamb-a49.intent.json --state atoo/web/demo_states/before.json "add a tambourine mic Tamb on A 49"
+```
+
+```
+  INFO no desk was contacted (--state), so the applied plan is plan.json -- the bundle's last build. A run against the desk compares against the plan that desk's own newest write left on it, which may differ.
+  INFO conventions: starter/conventions.md (--conventions)
+  INFO instructions: starter/demo-show/instructions.md (layered on top, as for a build)
+
+Compiling the change: add a tambourine mic Tamb on A 49
+  REFUSED          op 1 (add_channel 'Tamb'): this console has A inputs 1 to 48, so A 49 does not exist
+Refusing to patch: nothing was written. The change asks for something the console cannot do, or the model made up something the desk does not have (each reason above says which).
+  ...
+```
+
+(The terminal also prints a warning that this saved state names no stage boxes,
+so a socket past a box's size cannot be checked here; the limit shown is the
+console's own.)
+
+**Which models.** Three local models made all fifteen of our test changes
+with `--intent`: [Which model](ai-provider.md#which-model) names them. The
+change-set form stays the default until `--intent` does as well on a hosted
+model. A local model should be run with `ATOO_AI_NUM_PREDICT` set (for
+example `800`) so a reply that never stops is cut off.
+
 ## The rules
 
 - **`plan.json` is never touched.** Only a build writes it. What a change put on a desk is recorded in that desk's journal entry, which the next change (or amend) of the same desk reads as its starting point — so typing the same change twice finds the horns already there and writes nothing.

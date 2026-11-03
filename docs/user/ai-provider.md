@@ -19,24 +19,74 @@ Claude caches the start of each call, so later calls cost less; the [AI provider
 
 ## A local model with Ollama
 
-Claude is the default. With `ATOO_AI_PROVIDER=ollama`, `build` asks an Ollama server on this machine (`http://localhost:11434`) for `llama3.1` instead. This is the only setup that works with no network at all. Plans from small local models have not been shown to be good enough for a real show, so check them hard. To choose the model:
+Claude is the default. With `ATOO_AI_PROVIDER=ollama`, Atoo asks an Ollama server on this machine (`http://localhost:11434`) instead. This is the only setup that works with no network at all: your show never leaves the laptop, there is no key or account, and a build costs nothing.
 
-```bash
-export ATOO_AI_PROVIDER=ollama
-export ATOO_AI_MODEL=qwen2.5-coder:7b
-```
+A local model works best with `--intent` (`atoo build --intent`, `atoo patch --intent`), where the model says only what your files leave open and Atoo's own code writes the rest ([Let the model say less](build-a-show.md#let-the-model-say-less---intent)).
 
-Two more settings are worth making for a local model:
+### Which model
 
-```bash
-export ATOO_AI_NUM_CTX=24576
-export ATOO_AI_TIMEOUT=1800
-```
+**Every local model is experimental: Claude is the one we recommend.**
 
-- **`ATOO_AI_NUM_CTX`** is how much of the conversation the model holds at once, in tokens. Unset, Atoo sizes it to each request. Fixing it at `24576` keeps the model's memory use the same from one build to the next, and saves Ollama reloading the model when the size changes.
-- **`ATOO_AI_TIMEOUT`** is how many seconds Atoo waits for the model to say anything before giving up: `120` by default on Ollama. A large local model reading a big show can be silent for longer than that, so give it `1800`.
+We test each model on twenty shows, from an acoustic duo to a festival changeover, and count how much of each show comes out as asked.
 
-**Memory.** A model of 14 to 30 billion parameters needs a machine with 32 GB of memory. An Apple Silicon Mac with 32 GB runs one entirely on its GPU at the context size above; a larger model spills onto the CPU and slows right down. With less memory, or no GPU, expect a build to take far longer.
+| Model | Memory it uses | How it did |
+|---|---|---|
+| `qwen2.5-coder:14b` | about 9 GB | The best of these. It passed on all twenty of our test shows, with 99% of what we check right; on five shows held back from all our tuning, it built one fully, with 88% of what we check right. On a show it hasn't seen, it most often puts a bus's output or an input on a different socket from the one your conventions ask for, so check the sockets in the plan first. |
+| `devstral-small-2:24b` | about 18 GB | Builds our three everyday shows and makes our fifteen test changes, but measured lower on the twenty. |
+| `granite4.1:30b` | about 24 GB | Builds our three everyday shows and makes our fifteen test changes, but measured lower on the twenty. Near the limit of a 32 GB machine. |
+
+`qwen3-coder:30b` made our fifteen test changes and came close on the three everyday shows; we have not tested it on the twenty.
+
+These results are a snapshot: `qwen2.5-coder:14b` was measured in early November 2026, the other two on October 28, before the latest fixes. Each fix to Atoo's own code can move them.
+
+Whichever model you use, read the findings and the plan before you apply it, and expect more to check than with Claude.
+
+The memory figures are on an Apple Silicon Mac with 32 GB, running fully on its GPU, with the settings below. A larger model spills onto the CPU and slows right down; with less memory, or no GPU, expect a build to take far longer.
+
+### Setting it up
+
+1. Install [Ollama](https://ollama.com), start it, and pull the model:
+
+   ```bash
+   ollama pull qwen2.5-coder:14b
+   ```
+
+2. Point Atoo at it:
+
+   ```bash
+   export ATOO_AI_PROVIDER=ollama
+   export ATOO_AI_MODEL=qwen2.5-coder:14b
+   export ATOO_AI_NUM_CTX=24576
+   export ATOO_AI_TIMEOUT=1800
+   ```
+
+3. Build with `--intent`:
+
+   ```bash
+   atoo build --show touringband --intent
+   ```
+
+| Variable | What it does |
+|---|---|
+| `ATOO_AI_MODEL` | The Ollama model. Without it, Atoo asks for `llama3.1`, which we have not tested. |
+| `ATOO_AI_NUM_CTX` | How much of the conversation the model holds at once, in tokens. `24576` is the size the models above were tested at; fixing it keeps memory use steady and saves Ollama reloading the model. |
+| `ATOO_AI_TIMEOUT` | How many seconds Atoo waits for the model to say anything: `120` by default. A local model reading a big show can be silent for longer, so give it `1800`. |
+| `ATOO_AI_NUM_PREDICT` | A limit on how long a reply can be. Leave it unset for a build. |
+| `ATOO_AI_BASE_URL` | Where Ollama is, if not on this machine (`http://localhost:11434`). |
+
+### Ollama's cloud models
+
+Ollama also runs larger open-weight models on its own servers, named with `:cloud` (for example `gemma4:cloud`). Atoo talks to them the same way, through the Ollama on your machine, but they are not free and not local:
+
+- You need an [ollama.com](https://ollama.com) account: run `ollama signin` once, and your local Ollama passes cloud requests on for you.
+- Use is paid for in usage credits; see [Ollama's pricing](https://ollama.com/pricing).
+- Your show's text goes to Ollama's servers.
+
+Then set `ATOO_AI_MODEL` to the cloud model's name. **We have not tested any cloud model yet**, so treat one as untested.
+
+### Want a model that isn't listed?
+
+Open a [Discussion](https://github.com/corourke/Atoo/discussions) or an Issue on corourke/Atoo ([Reporting a problem](reporting.md)) naming the model, its size and its quant, and we'll put it through the same tests before saying whether it works.
 
 ## Any OpenAI-compatible host
 
@@ -57,10 +107,10 @@ A build names the model before it sends anything. On a Claude build the plan's c
 claude-sonnet-5-5 (generator, effort medium): sending, waiting for the first reply...
 ```
 
-and with `ATOO_AI_PROVIDER=ollama` like this:
+and with `ATOO_AI_PROVIDER=ollama` and `--intent` like this:
 
 ```
-llama3.1 (generator): sending, waiting for the first reply...
+qwen2.5-coder:14b (intent): sending, waiting for the first reply...
 ```
 
 The first build after your conventions change makes one call before that, to resolve them. It is named the same way, as `(resolve, effort medium)` on Claude, and the line above it says why.

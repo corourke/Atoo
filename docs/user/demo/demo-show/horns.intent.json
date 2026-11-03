@@ -1,0 +1,9 @@
+{
+  "name": "Add Trumpet, Sax and Trombone on LCL 21-23",
+  "ops": [
+    {"op": "add_channel", "name": "Trumpet", "kind": "mic", "patch": {"group": "LCL", "first": 21}, "dca": ["Band"]},
+    {"op": "add_channel", "name": "Sax", "kind": "mic", "patch": {"group": "LCL", "first": 22}, "dca": ["Band"]},
+    {"op": "add_channel", "name": "Trombone", "kind": "mic", "patch": {"group": "LCL", "first": 23}, "dca": ["Band"]}
+  ],
+  "notes": []
+}

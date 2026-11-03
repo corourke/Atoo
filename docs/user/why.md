@@ -55,7 +55,7 @@ With Atoo, a typed change goes through the same checks as a full build. It is pr
 ## What it costs you
 
 - **Writing your conventions down is work.** A starter file is included, but the plan is only as good as what you state. If you always copy last week's show and that works, keep doing it.
-- **(Today) a build needs your own AI API key**, which you pay for. Atoo is built and tested on Claude; local models are being tested but have not worked as well so far. A build takes a couple of minutes, not seconds.
+- **A build needs a model:** your own AI API key, which you pay for, or a local model on your own machine. Atoo is built on Claude, and Claude is the one we recommend; [local models](ai-provider.md#which-model) are experimental. A build takes a couple of minutes, not seconds.
 - **WING only.** The Compact, the full-size WING and the Rack.
 
 Next: [try the Demo show](../../README.md#try-it-in-two-minutes-with-no-desk), or [install it](install.md).

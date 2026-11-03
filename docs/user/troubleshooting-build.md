@@ -30,12 +30,12 @@ Keep the desk on Ethernet and the internet on Wi-Fi or a phone hotspot. `atoo pi
 **A local model that is not running.** With `ATOO_AI_PROVIDER=ollama`, the build asks an Ollama server on this laptop, and fails if it is not there:
 
 ```
-llama3.1 (generator): sending, waiting for the first reply... (a progress line every 10-60s -- stderr is not a terminal)
+qwen2.5-coder:14b (intent): sending, waiting for the first reply... (a progress line every 10-60s -- stderr is not a terminal)
 generation failed: The AI isn't responding.
   Reason: the call to http://localhost:11434 failed after 0 characters: <urlopen error [Errno 111] Connection refused>
 ```
 
-Start Ollama (`ATOO_AI_BASE_URL` moves the address), or `unset ATOO_AI_PROVIDER` to build on Claude. Local models have not worked well so far.
+Start Ollama (`ATOO_AI_BASE_URL` moves the address), or `unset ATOO_AI_PROVIDER` to build on Claude. [Which model](ai-provider.md#which-model) says which local model to use.
 
 A misspelt provider is named too:
 
