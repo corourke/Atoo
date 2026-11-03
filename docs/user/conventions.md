@@ -28,7 +28,7 @@ Headings are for you and for whoever reads the file next, not for the parser. Th
 
 | Section | What you put in it |
 |---|---|
-| Sources / Inputs | patch order, color coding, what counts as a category |
+| Sources / Inputs | patch order (by category, and within one if it matters: "Within drums: kick, snare, hats"), color coding, what counts as a category |
 | Channel assignments | which strip things land on, what becomes a stereo pair, what goes on an aux |
 | Channel processing | high-pass by category, presets by name, starting fader and mute |
 | Busses | monitors, mixes, FX — membership, send mode, send level, width, where each one goes |
