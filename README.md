@@ -4,11 +4,11 @@
 
 _Atoo is said "A-two": your A2, the second engineer at the desk._
 
-Takes an input list and a set of written conventions (instructions) that state your personal preferences, along with general audio engineering knowledge, and plans out a complete show on a Behringer WING, audits it for correctness, and applies it to your console incorporating your own saved channel and bus presets. It allows you to make last minute patch updates, again using plain English, validating the changes and allowing full undo at any point. It also watches your desk pre-show or during the show for routing problems and other errors.
+Builds a complete show on a Behringer WING from your natural language preferences and input list, validates the show plan and audits every setting on the desk, and watches the desk before and during the show for what is quietly wrong.
 
 ## The problem
 
-When building show files, I noticed myself doing much the same thing for every new act, either patching from scratch or copying an existing showfile, following my same patterns, and it was both tedious and error prone. Festival patches were always a compromise, and when things got exciting close to doors, it was all too easy to making a routing mistake or forget something simple.
+When building show files, I noticed myself doing much the same thing for every new act, either patching from scratch or copying an existing showfile, following my same patterns, and it was both tedious and error prone. Festival patches were always a compromise, and when things got exciting close to doors, it was all too easy to make a routing mistake or forget something simple.
 
 I found some prior work in this area, in terms of generating and auditing show files, but I wanted to take a different approach and start with written audio engineering knowledge, along with my own preferences and conventions that could be applied to any show. I also wanted to be able to verify the board against the input list, and logically trace the signal path for every channel from input to final output.
 
@@ -23,7 +23,7 @@ Lastly, I wanted to be able to type in a change (my favorite example is when an 
 5. **During the show, it watches the desk** against the input list, the built-in rules, and your own rules. It doesn't mix and never touches the desk unless you specifically arm a write step.
 6. **Capture.** (Alternative workflow.) It reads your desk as it is now and turns it into a show bundle, with your inputs, busses and outputs as sheets you can read, edit and watch against.
 
-It runs in a browser or from the command line on your laptop. **A build needs an AI provider and your own AI API key**. Atoo is built and tested on Claude, and we are investigating local models and other providers.
+It runs in a browser or from the command line on your laptop. **A build needs an AI provider and your own AI API key**. Atoo is built and tested on Claude, the one we recommend. Local models through Ollama also work, with no key, but every local model is experimental ([Setting up an AI provider](https://github.com/corourke/Atoo/blob/main/docs/user/ai-provider.md)); we are still investigating them and other providers.
 
 [Why Atoo?](https://github.com/corourke/Atoo/blob/main/docs/user/why.md) goes into the reasons for creating Atoo, why use it instead of alternatives, and how it is different.
 
@@ -48,7 +48,8 @@ Then:
 atoo ui
 ```
 
-> [!NOTE] [Installing Atoo](https://github.com/corourke/Atoo/blob/main/docs/user/install.md) has each step, along with alternative instructions for Homebrew and pipx users. To run it from a GitHub clone instead, see [Installing from a checkout](https://github.com/corourke/Atoo/blob/main/docs/user/install-from-checkout.md). A real build also needs your own AI API key ([Setting up an AI provider](https://github.com/corourke/Atoo/blob/main/docs/user/ai-provider.md)).
+> [!NOTE]
+> [Installing Atoo](https://github.com/corourke/Atoo/blob/main/docs/user/install.md) has each step, along with alternative instructions for Homebrew and pipx users. To run it from a GitHub clone instead, see [Installing from a checkout](https://github.com/corourke/Atoo/blob/main/docs/user/install-from-checkout.md). A real build also needs your own AI API key ([Setting up an AI provider](https://github.com/corourke/Atoo/blob/main/docs/user/ai-provider.md)).
 
 `a2` is the same command as `atoo`, shorter to type (`a2 ui`).
 

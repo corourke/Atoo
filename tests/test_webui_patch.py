@@ -390,48 +390,43 @@ def test_a_status_poll_never_races_the_preview_finishing(client, monkeypatch):
     while a `GET /api/apply/status` in flight was serializing that same
     dict. Seen once in a full-suite run.
 
-    The window is widened here rather than waited for: the review is made
-    big (a long `withheld_groups`, which `finish` adds before anything
-    else), so serializing it takes a few tenths of a second, and
-    `_apply_payload` -- which ran between publishing the review and
-    finishing it -- is made slower than one poll, so a poll is always
-    mid-serialization when the review changed. A second thread polls status the whole time. A review must be
-    complete before anything can read it, and what a status poll returns
-    must be its own copy."""
-    import threading
-    import time
+    Two guarantees close it, and each is checked as a fact rather than
+    by racing threads for it: a review is complete when it is published
+    and is never changed afterwards, and what a status read returns is its
+    own copy. An earlier form of this test widened the window instead (a
+    60,000-entry review, a slowed `finish`, a thread polling without
+    pause) and was itself a flake: every poll deep-copies the review
+    under the runner's lock, so the polls starved `publish` of that lock
+    and a loaded machine ran the preview past `_wait`'s deadline."""
+    import copy
 
-    big = [{"base": f"/ch/{n}", "count": 1} for n in range(60000)]
-    monkeypatch.setattr(webui, "_withheld_groups", lambda addresses: list(big))
-    apply_payload = webui._apply_payload
+    published: list[tuple[dict, dict]] = []
+    publish = webui.ApplyRun.publish
 
-    def slow_apply_payload(*args, **kwargs):
-        time.sleep(0.6)
-        return apply_payload(*args, **kwargs)
+    def recording_publish(self, **fields):
+        review = fields.get("review")
+        if isinstance(review, dict):
+            # The dict as published, and a copy of it as it was then.
+            published.append((review, copy.deepcopy(review)))
+        return publish(self, **fields)
 
-    monkeypatch.setattr(webui, "_apply_payload", slow_apply_payload)
-    errors: list[BaseException] = []
+    monkeypatch.setattr(webui.ApplyRun, "publish", recording_publish)
+    status = _preview(client)
+    assert status["review"]["review_id"], "the preview must arm a review"
+    assert published, "the preview must publish its review"
+    for review, as_published in published:
+        assert review == as_published, "a review changed after it was published"
+    assert status["review"] == published[-1][1]
 
-    for _ in range(2):
-        done = threading.Event()
-
-        def poll():
-            while not done.is_set():
-                try:
-                    client.get("/api/apply/status")
-                except BaseException as exc:  # noqa: BLE001 -- what the test is about
-                    errors.append(exc)
-                    return
-
-        poller = threading.Thread(target=poll, daemon=True)
-        poller.start()
-        try:
-            status = _preview(client)
-        finally:
-            done.set()
-            poller.join(timeout=60)
-        assert status["review"]["review_id"], "the preview must arm a review"
-    assert not errors, f"a status poll failed while the run finished: {errors[0]!r}"
+    run = webui.ApplyRun()
+    review = {"withheld_groups": [{"base": "/ch/1", "count": 1}], "review_id": "x"}
+    run.publish(review=review, result={"rows": []})
+    read = run.status()
+    assert read["review"] == review and read["review"] is not review
+    assert read["result"] == {"rows": []}
+    read["review"]["withheld_groups"].append({"base": "/ch/2", "count": 1})
+    assert run.status()["review"] == review == {
+        "withheld_groups": [{"base": "/ch/1", "count": 1}], "review_id": "x"}
 
 
 def test_a_preview_takes_presets_from_the_library_the_ui_was_given(tmp_path, desk, model):

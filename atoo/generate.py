@@ -212,7 +212,9 @@ There is no such thing as a stereo input, which is why the input list has
 no stereo column: pairing is decided from the conventions and the source
 names, not read off the sheet.
 
-{facts.STEREO_PAIR_RULE}"""
+{facts.STEREO_PAIR_RULE}
+Two rows of one pair whose stated sockets break that rule are still one pair:
+name both rows. Code patches such a pair through the desk's user patches."""
 
 
 def _domain_knowledge() -> str:
@@ -627,6 +629,7 @@ def generate_plan(
     resolved_name: str | None = None,
     category_table=None,
     instructed_strips=None,
+    reserved_user_slots=(),
 ) -> dict:
     """Conventions + input list + domain knowledge -> a plan.
 
@@ -685,7 +688,8 @@ def generate_plan(
                            instructions_name=instructions_name,
                            resolved=resolved, resolved_name=resolved_name,
                            category_table=category_table,
-                           instructed_strips=instructed_strips)
+                           instructed_strips=instructed_strips,
+                           reserved_user_slots=reserved_user_slots)
 
 
 def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = None,
@@ -693,7 +697,7 @@ def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = Non
                     conventions_name: str | None = None, instructions: str | None = None,
                     instructions_name: str | None = None, resolved: str | None = None,
                     resolved_name: str | None = None, category_table=None,
-                    instructed_strips=None) -> dict:
+                    instructed_strips=None, reserved_user_slots=()) -> dict:
     """One model reply -> a plan: parse (and end-of-document repair),
     repair and expand the reply, normalise, validate against the plan
     format, allocate, decide the unstated. Raises `GenerationError`, with
@@ -735,7 +739,8 @@ def plan_from_reply(raw: str, *, input_csv: str, console_model: str | None = Non
         repairs.extend(reply_expand.expand(
             plan, input_csv=input_csv, findings=findings, console_model=console_model,
             layers=layers, category_table=category_table if resolved else None,
-            strips=instructed_strips if resolved else None))
+            strips=instructed_strips if resolved else None,
+            reserved_user_slots=reserved_user_slots))
     except reply_expand.ReplyError as exc:
         raise GenerationError(str(exc), partial_text=json.dumps(plan, indent=2),
                               reply=raw) from exc
@@ -857,11 +862,13 @@ def verify_error_lines(verdict) -> list[str]:
 # Verify WARNINGS that go back to the fix-up with its errors. Not
 # judgement calls: a strip whose audio reaches no output is a strip nobody
 # hears, and on Haiku (smallband, 2026-09-29: the Playback aux sent
-# nowhere) it is a routing slip the model mends when it is shown it. A
-# plan with only this warning spends the round too. Anything else a
+# nowhere) it is a routing slip the model mends when it is shown it. So is
+# a bus that feeds nothing (a WARNING: a model
+# that forgot a mix bus's destination is still shown it). A plan with only
+# these warnings spends the round too. Anything else a
 # warning says stays out: the model would only trade one judgement for
 # another.
-FIXUP_WARNING_CODES = ("routing.channel-reaches-nothing",)
+FIXUP_WARNING_CODES = ("routing.channel-reaches-nothing", "bus.no-destination")
 
 
 def fixup_warning_lines(verdict) -> list[str]:
@@ -971,6 +978,7 @@ def fixup_plan(
     resolved_name: str | None = None,
     category_table=None,
     instructed_strips=None,
+    reserved_user_slots=(),
 ) -> dict:
     """One fix-up round: `reply` and the `errors` `checker` found in it go
     back to the generator's model, as its own role `fixup` (so the build
@@ -1005,7 +1013,8 @@ def fixup_plan(
                            instructions_name=instructions_name,
                            resolved=resolved, resolved_name=resolved_name,
                            category_table=category_table,
-                           instructed_strips=instructed_strips)
+                           instructed_strips=instructed_strips,
+                           reserved_user_slots=reserved_user_slots)
 
 
 def critique_plan(

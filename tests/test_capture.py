@@ -107,8 +107,12 @@ def test_the_effect_buses_take_the_fx_role_at_info(church):
     roles = {r["bus"]: r["role"] for r in _rows(church.busses_csv())}
     assert [b for b, role in roles.items() if role == "fx"] == [
         "Bus 11", "Bus 12", "Bus 13", "Bus 14", "Bus 15", "Bus 16"]
-    assert any(note.startswith("role 'fx' for BUS 11 'Reverb': BPLATE and VSS3 inserted, "
-                               "100% wet") for note in church.notes)
+    # One line for the six.
+    fx = [note for note in church.notes if note.startswith("role 'fx' for ")]
+    assert len(fx) == 1
+    assert fx[0].startswith("role 'fx' for BUS 11 'Reverb' (BPLATE and VSS3, 100% wet), BUS 12 ")
+    assert fx[0].endswith("BUS 16 'InstReverb' (VSS3, 100% wet): each has its effects inserted, "
+                          "so each is read as an effect return.")
 
 
 def test_the_vocal_bus_with_a_doubler_has_no_role(church):

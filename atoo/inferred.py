@@ -50,11 +50,14 @@ wrong choice displeases rather than breaks):
     choice makes a monitor mix follow the FOH fader, which displeases.
     Fallback: see `send_mode_fallback`.
   * bus `destination`, for a mix or FX bus the conventions route nowhere
-    -- null BLOCKS the plan (`bus.no-destination`), and "a mix bus goes to
+    -- null is warned of (`bus.no-destination`), and "a mix bus goes to
     Main" is the domain knowledge's own statement. Generator-side only:
     **no deterministic fallback**, because code cannot tell a mix bus from
     a monitor bus by name, and routing a musician's monitor mix into the
-    PA breaks rather than displeases. `bus.no-destination` stays an ERROR.
+    PA breaks rather than displeases. `bus.no-destination` is a WARNING
+    (a bus with no output is a working desk, and one the
+    engineer asked for is his instruction), and the fix-up round still
+    shows it to the model.
   * a bus send's `level_db` -- apply writes no `/send/{b}/lvl` for null,
     so the send keeps the desk's own level, and a fresh desk's is -144:
     the send is switched ON and passes nothing, and a mix or FX bus fed
@@ -581,6 +584,40 @@ def socket_phantom(channel: dict) -> list[tuple[int, bool]]:
         return stated
     pair_on = any(on for _socket, on in stated)
     return [(socket, pair_on) for socket, _on in stated]
+
+
+def user_patch_jacks(plan: dict) -> dict[int, tuple[str, int]]:
+    """`{USR slot: (group, socket)}` for every USER PATCH slot (USR 25-56) the
+    plan defines in `user_sources`: the physical jack the slot
+    takes. A USER SIGNAL slot takes a channel, not a jack, and is left out."""
+    from atoo import console_facts as facts
+    jacks: dict[int, tuple[str, int]] = {}
+    for entry in plan.get("user_sources") or []:
+        if not isinstance(entry, dict) or not isinstance(entry.get("source"), dict):
+            continue
+        slot = entry.get("slot")
+        group, index = entry["source"].get("group"), entry["source"].get("index")
+        if (facts.user_slot_kind(slot) == facts.USER_PATCH and isinstance(group, str)
+                and isinstance(index, int) and not isinstance(index, bool)):
+            jacks[slot] = (group, index)
+    return jacks
+
+
+def channel_jacks(channel: dict, user_jacks: dict[int, tuple[str, int]]) -> list[tuple[str, int]]:
+    """`(group, socket)` for each socket of `channel`'s patch, in patch order:
+    the jack the channel actually hears. A socket in group `USR` is the jack
+    its user patch takes (`user_patch_jacks`), so 48V, head-amp gain and the
+    input list's stated socket are about LCL 4, not USR 25; a USR
+    slot the plan does not define as a user patch stays as it is."""
+    patch = channel.get("patch") or {}
+    group = patch.get("group")
+    out = []
+    for socket in patch.get("sockets") or []:
+        if group == "USR" and socket in user_jacks:
+            out.append(user_jacks[socket])
+        else:
+            out.append((group, socket))
+    return out
 
 
 def pair_phantom_differs(channel: dict) -> bool:

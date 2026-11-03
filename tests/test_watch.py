@@ -125,3 +125,21 @@ def test_max_iterations_none_is_bounded_by_provider_exhaustion():
     provider = _sequence_provider(states)
     events = list(watch(provider, interval=1, sleep=lambda s: None, clock=lambda: "t"))
     assert len(events) == 2
+
+
+def test_render_event_names_a_finding_under_the_host_that_already_says_it():
+    """The CLI printed E003 as its own NEW line beside CV015, which
+    the Watch page folds it under (one fault, one entry)."""
+    from atoo.diagnostics import Diagnostic, Severity
+    from atoo.watch import WatchEvent
+
+    cv015 = Diagnostic(severity=Severity.WARNING, code="CV015", title="Effect Insert Contradicts Plan",
+                       message='BUS 11 "Reverb": its pre-insert is switched off',
+                       addresses=("/bus/11/preins/on", "/bus/11/preins/ins", "/fx/4/mdl"))
+    e003 = Diagnostic(severity=Severity.WARNING, code="E003", title="Effect Bus Insert Off",
+                      message="BUS 11 names FX4, but its insert is switched off",
+                      addresses=("/bus/11/preins/on", "/bus/11/preins/ins"))
+    text = render_event(WatchEvent(1, "t", [cv015, e003], [cv015, e003], []))
+    assert "NEW     [WARNING] CV015" in text
+    assert "NEW     [WARNING] E003" not in text
+    assert "with E003 Effect Bus Insert Off, about the same:" in text

@@ -2933,3 +2933,86 @@ def test_the_audit_reads_a_stepped_gain_as_the_planned_one():
     state = ConsoleState({"/io/in/A/1/g": 20.5, "/io/in/A/2/g": 23.0})
     assert _differs(state, "/io/in/A/1/g", "f", 20.0) is None
     assert _differs(state, "/io/in/A/2/g", "f", 20.0) == 23.0
+
+
+def test_a_stepped_value_two_steps_away_is_not_already_correct():
+    """The Compact read 393.35Hz where the plan wanted
+    387.73Hz, and the relative tolerance called it equal, so Apply skipped
+    it. On the frequency's own step grid (20Hz..20kHz in 961 log steps)
+    that is two steps, and a readback that lands on the nearest step is
+    still one."""
+    assert not _values_equal("f", 387.73, 393.35, "/ch/3/eq/2f")
+    assert _values_equal("f", 5000.0, 4980.4, "/ch/3/eq/2f")
+    assert _values_equal("f", 5000.0, 4987.75341796875, "/bus/5/eq/5f")
+    # An address with no step grid keeps the plain tolerance.
+    assert _values_equal("f", 387.73, 393.35)
+
+
+def test_a_sockets_width_is_written_before_its_name(plan):
+    """Switching a pair from ST to M copies the pair's
+    name onto both sockets. The name was written first, read back as right,
+    and then overwritten by the width write, so LCL 1, LCL 7 and USB 1 on a
+    Compact took a neighbour's name until a second Apply. Every socket's
+    width is now written, in the stage order Apply sorts by, before any
+    socket's name."""
+    from atoo.apply import STAGE_SOURCE_LABEL, STAGE_SOURCE_WIDTH
+
+    targets, _ = _build_write_targets(plan, True)
+    ordered = sorted(targets, key=lambda t: t.stage)
+    widths = [i for i, t in enumerate(ordered)
+              if t.address.startswith("/io/in/") and t.address.endswith("/mode")]
+    names = [i for i, t in enumerate(ordered)
+             if t.address.startswith("/io/in/") and t.address.endswith("/name")]
+    assert widths and names
+    assert max(widths) < min(names)
+    assert STAGE_SOURCE_WIDTH < STAGE_SOURCE_LABEL
+
+
+@pytest.mark.parametrize("value, expected", [
+    (1.5e-07, "0.00000015"), (-2.5e-05, "-0.000025"), (1e-15, "0"), (-1e-15, "0"),
+    (0.0, "0.0"), (12.5, "12.5"), (20000.0, "20000.0"), (-144.0, "-144.0"),
+])
+def test_a_float_goes_to_the_desk_in_plain_decimal(value, expected):
+    """The desk read "1.5e-07" as 1.5, so a C5-CMB gain of about
+    1.5e-07 from a .snap was written as 1.5 and mismatched on every Apply."""
+    assert _format_for_node_command("f", value) == expected
+
+
+def test_an_effects_unreadable_parameters_are_said_once_per_engine():
+    """A GEQ's and a DEQ3's bands do not answer a read, and each
+    printed its own UNREADABLE line -- 31 for one graphic EQ."""
+    def unreadable(address):
+        return WriteRecord(address=address, description="", value_type="f", method=None,
+                           ack=None, prior_value=None, intended_value=0.0, readback_value=None,
+                           status="unreadable", timestamp="t")
+
+    bands = ["1k", "1k25", "1k6", "2k", "6k3"]
+    result = ApplyResult(dry_run=True, writes=[unreadable(f"/fx/9/{b}") for b in bands]
+                         + [unreadable("/fx/11/g1"), unreadable("/ch/3/flt/lcf")])
+    summary = result.summary()
+    assert ("UNREADABLE FX9: 5 parameter(s) the desk does not answer for (1k, 1k25, 1k6, ...), "
+            "so they are not written or checked; the desk keeps its own") in summary
+    assert "UNREADABLE FX11: 1 parameter(s) the desk does not answer for (g1)" in summary
+    assert "UNREADABLE /ch/3/flt/lcf: could not establish a baseline value, skipped" in summary
+    assert "/fx/9/6k3" not in summary
+
+
+def test_a_direct_outputs_two_leaves_say_the_whole_socket_it_was_and_will_be():
+    """The preview read "direct output USB 1: source A 'LCL' -> 'A'".
+    Once both leaves are read, each names the whole socket."""
+    from atoo.apply import _describe_direct_outputs
+
+    def record(leaf, prior, intended):
+        return WriteRecord(address=f"/io/out/USB/1/{leaf}", description="direct output USB 1: x",
+                           value_type="s" if leaf == "grp" else "i", method=None, ack=None,
+                           prior_value=prior, intended_value=intended, readback_value=None,
+                           status="dry_run", timestamp="t")
+
+    records = [record("grp", "LCL", "A"), record("in", 8, 1)]
+    _describe_direct_outputs(records)
+    assert [r.description for r in records] == [
+        "direct output USB 1: LCL 8 -> AES50-A 1 (its source group)",
+        "direct output USB 1: LCL 8 -> AES50-A 1 (its source number)"]
+    off = [record("grp", "OFF", "A"), record("in", 1, 5)]
+    _describe_direct_outputs(off)
+    assert off[0].description == "direct output USB 1: nothing -> AES50-A 5 (its source group)"

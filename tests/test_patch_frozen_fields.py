@@ -390,3 +390,13 @@ def test_apply_then_undo_of_a_main_renumber(model, tmp_path, monkeypatch, capsys
         "Make the main mix Main 2.")
     assert after["/main/2/name"][0] == "Main 1"
     assert after["/bus/5/main/2/on"][0] == 1 and after["/bus/5/main/1/on"][0] == 0
+
+
+def test_a_send_the_channel_landing_on_a_strip_does_not_have_is_off_at_minus_infinity():
+    """After a swap the Rack Tom's strip kept the Snare's
+    switched-off send at -18. The Snare sends to bus 11 and the Kick does not,
+    so on the Kick's new strip that send is switched off and back to -oo."""
+    _a, _m, targets = _review(_modify("Kick", {"channel": 2}), _modify("Snare", {"channel": 1}))
+    values = {t.address: t.compute_value("") for t in targets.to_write}
+    assert values["/ch/2/send/11/on"] == 0
+    assert values["/ch/2/send/11/lvl"] == -144.0

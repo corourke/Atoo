@@ -61,7 +61,7 @@ BUS_DETAIL_COLUMNS = ("fx", "preset", "dca", "mute_group", "label", "notes")
 
 _LABEL = re.compile(r"^\s*(?P<kind>bus|main|matrix|mtx|mx)\s*(?P<n>\d+)?\s*$", re.IGNORECASE)
 _KIND = {"bus": "bus", "main": "main", "matrix": "matrix", "mtx": "matrix", "mx": "matrix"}
-_TAP_SUFFIX = re.compile(r"^(?P<name>.*?)\s*\((?P<tap>pre|post)\)\s*$", re.IGNORECASE)
+_TAP_SUFFIX = re.compile(r"^(?P<name>.*?)\s*\((?P<tap>pre|post|group)\)\s*$", re.IGNORECASE)
 _RUN = re.compile(r"^(?P<head>.*?)\s*(?P<a>\d+)\s*(?:-\s*(?P<b>\d+))?\s*$")
 _CAPACITY = {"bus": "bus", "main": "main", "matrix": "mtx"}
 #: DCAs and mute groups a desk has: an index past these is no DCA at all.
@@ -112,6 +112,15 @@ class Result:
     #: How a renamed object is written in the sheet's `sources` cells, when
     #: its new name alone would read as a channel (`Bus 4`).
     spelled: dict[str, str] = field(default_factory=dict)
+    #: The names (folded) of the objects a row took OFF, which other rows'
+    #: `sources` cells no longer name (`drop_from_sources`).
+    dropped: set[str] = field(default_factory=set)
+    #: The plan just after the rows that take an object out (OFF) or add one
+    #: were carried out, before any other cell was laid on: an ERROR it has
+    #: that the plan did not is the consequence of that instruction (a bus
+    #: that went only to a removed Main, a new bus that feeds nothing yet),
+    #: said at INFO and not refused.
+    asked_plan: "dict | None" = None
 
     def sources_spelling(self) -> dict[str, str]:
         """Old name -> what the bus sheet's `sources` cells should now say."""
@@ -303,7 +312,7 @@ def bus_rows_from_plan(plan: dict) -> list[dict]:
         inserts = [i for i in bus_presets.strip_inserts(entry) if i.get("model")]
         rows.append({
             "bus": label_of(kind, index),
-            "name": "" if entry.get("name_on") == "none" else key,
+            "name": "" if entry.get("name_on") == "none" else (entry.get("desk_name") or key),
             "key": key,
             "kind": kind,
             "role": entry.get("role") or "",
@@ -331,6 +340,9 @@ def _rekey(mapping: dict, old: str, new: str) -> dict:
 
 def _rename_bus(plan: dict, old: str, new: str) -> None:
     plan["busses"] = _rekey(plan.get("busses") or {}, old, new)
+    # The new name is the desk's name now.
+    if isinstance(plan["busses"].get(new), dict):
+        plan["busses"][new].pop("desk_name", None)
     for ch in plan.get("channels") or []:
         for send in ch.get("bus_sends") or []:
             if send.get("bus") == old:
@@ -350,12 +362,25 @@ def _rename_bus(plan: dict, old: str, new: str) -> None:
 
 def _rename_output(plan: dict, old: str, new: str) -> None:
     plan["outputs"] = _rekey(plan.get("outputs") or {}, old, new)
+    if isinstance(plan["outputs"].get(new), dict):
+        plan["outputs"][new].pop("desk_name", None)
     holders = [*(plan.get("channels") or []), *(plan.get("busses") or {}).values(),
                *(plan.get("outputs") or {}).values()]
     for holder in holders:
         for send in holder.get("matrix_sends") or []:
             if send.get("matrix") == old:
                 send["matrix"] = new
+
+
+def drop_from_sources(text: str, dropped: set[str]) -> str:
+    """A `sources` cell without the names in `dropped` (folded): the objects a
+    row took OFF. Every other part, and its `(pre)`, is kept."""
+    if not dropped or not text:
+        return text
+    parts = [(name, tap) for name, tap in parse_sources(text)]
+    kept = [f"{name} ({tap})" if tap else name for name, tap in parts
+            if _norm(name) not in dropped]
+    return ";".join(kept) if len(kept) != len(parts) else text
 
 
 def rename_in_sources(text: str, renamed: dict[str, str]) -> str:
@@ -381,21 +406,31 @@ def rename_in_sources(text: str, renamed: dict[str, str]) -> str:
 class _Names:
     """What a `sources` cell may name, resolved to `(kind, key)`."""
 
-    def __init__(self, plan: dict, categories: dict[str, str], renamed: dict[str, str]):
+    def __init__(self, plan: dict, categories: dict[str, str], renamed: dict[str, str],
+                 sheet_names: "set[str] | None" = None):
         self.plan = plan
         self.renamed = {_norm(k): v for k, v in renamed.items()}
         self.channels = [ch for ch in plan.get("channels") or [] if isinstance(ch, dict)]
         self.categories = categories
+        #: In a build, the names the sheet's own rows give (folded): such a
+        #: name is the sheet's bus, Main or Matrix, never a channel the model
+        #: happened to give the same name. None in a
+        #: Save, where the sheet and the channels were read together.
+        self.sheet_names = sheet_names
 
     def resolve(self, name: str, notes: "list[str] | None" = None) -> "list[tuple[str, str]] | None":
         if name.strip() == "*":
             return [("channel", ch.get("name")) for ch in self.channels]
-        renamed = self.renamed.get(_norm(name))
+        # In a build the old names are the model's, which the sheet never
+        # knew: a cell naming one means the channel or category of that name.
+        renamed = None if self.sheet_names is not None else self.renamed.get(_norm(name))
         wanted = _norm(renamed or name)
         objects = [(kind, key) for kind, index, key, _entry in _objects(self.plan)
                    if wanted in (_norm(key), _norm(label_of(kind, index)))]
         if renamed is not None and objects:
             # The old name of a bus, Main or Matrix this Save renamed.
+            return objects[:1]
+        if objects and self.sheet_names is not None and wanted in self.sheet_names:
             return objects[:1]
         channel = next((ch for ch in self.channels if _norm(ch.get("name")) == wanted), None) \
             or next((ch for ch in self.channels
@@ -579,13 +614,18 @@ def _set_send(holder: dict, field_name: str, target_key: str, target: str, wante
 
 
 def overlay_busses(plan: dict, rows: list[dict], *, categories: "dict[str, str] | None" = None,
-                   before: "list[dict] | None" = None, result: "Result | None" = None) -> Result:
+                   before: "list[dict] | None" = None, result: "Result | None" = None,
+                   build: bool = False) -> Result:
     """`plan` with every filled cell of the bus sheet's `rows` carried out
     (`rows` are the sheet's rows as `{column: text}`). `before` is the sheet
     as it was, when the caller has it: a column the plan does not hold is
     said at INFO only when its cell changed. `categories` is each channel's
     input-list category, by channel name, for a `sources` cell that names
-    one. Never raises; a cell that cannot work is a refusal."""
+    one. Never raises; a cell that cannot work is a refusal.
+
+    `build` is a build laying the sheet onto the model's plan (`cli`): the
+    sheet's names are then the engineer's and win over the model's
+    (`_claim_names`, and `_Names.sheet_names`)."""
     if result is None:
         result = Result(plan=copy.deepcopy(plan))
     plan = result.plan
@@ -640,9 +680,24 @@ def overlay_busses(plan: dict, rows: list[dict], *, categories: "dict[str, str] 
         seen[(kind, index)] = sheet_row
         resolved.append((row, kind, index, label_of(kind, index)))
 
+    if build:
+        _claim_names(plan, resolved, result)
+
+    # A row whose name is OFF takes its object out (the Remove row button):
+    # the engineer's own instruction, carried out with everything that
+    # pointed at it, each said at INFO.
+    for row, kind, index, label in resolved:
+        if (row.get("name") or "").strip().upper() == REMOVED:
+            found = _find(plan, kind, index)
+            if found is not None:
+                result.dropped.update({_norm(found[0]), _norm(label)})
+                _remove_object(plan, kind, index, found[0], label, result)
+
     # Names first, so a `sources` cell can say a new name.
     for row, kind, index, label in resolved:
         name = (row.get("name") or "").strip()
+        if name.upper() == REMOVED:
+            continue
         found = _find(plan, kind, index)
         if found is None:
             if name and any(_norm(name) == _norm(k) for _k, _i, k, _e in _objects(plan)):
@@ -650,13 +705,22 @@ def overlay_busses(plan: dict, rows: list[dict], *, categories: "dict[str, str] 
                                                "another bus, Main or Matrix already has this "
                                                "name, and the plan names each one once"))
                 continue
-            _new_object(plan, kind, index, name, label)
+            key = _new_object(plan, kind, index, name, label)
             result.changes.append(f"{label} added")
-            result.notes.append(f"{label} {name or ''} is a row of {BUS_SHEET} the plan did not "
-                                "have, so it is added to the plan.".replace("  ", " "))
+            said = f"{label} {name or ''} is a row of {BUS_SHEET} the plan did not have, so it " \
+                "is added to the plan".replace("  ", " ")
+            if kind == "bus":
+                # A bus's width is always decided (`plan_schema`); a colour
+                # is stated or left to the desk.
+                if not (row.get("width") or "").strip():
+                    plan["busses"][key]["mono"] = False
+                    said += ("; no width is stated, so it is stereo, the WING's factory width "
+                             "(set Width to mono to change it)")
+                said += "; no color is stated, so Apply leaves the desk's"
+            result.notes.append(said + ".")
             continue
         key, entry = found
-        if not name or name == key:
+        if not name or name == key or name == entry.get("desk_name"):
             if name and entry.get("name_on") == "none":
                 entry["name_on"] = "strip"
             continue
@@ -679,7 +743,15 @@ def overlay_busses(plan: dict, rows: list[dict], *, categories: "dict[str, str] 
             result.spelled[key] = label
         result.changes.append(f"{label} renamed {name!r}")
 
-    names = _Names(plan, categories or {}, result.renamed)
+    if result.dropped or any(c.endswith(" added") for c in result.changes):
+        result.asked_plan = copy.deepcopy(plan)
+
+    sheet_names = None
+    if build:
+        sheet_names = {_norm(row.get("name")) for row, _k, _i, _l in resolved
+                       if (row.get("name") or "").strip()
+                       and (row.get("name") or "").strip().upper() != REMOVED}
+    names = _Names(plan, categories or {}, result.renamed, sheet_names)
     for row, kind, index, label in resolved:
         found = _find(plan, kind, index)
         if found is None:
@@ -767,12 +839,157 @@ def overlay_busses(plan: dict, rows: list[dict], *, categories: "dict[str, str] 
             _overlay_fx(plan, kind, label, entry, fx, result)
 
         sources = (row.get("sources") or "").strip()
+        if sources and result.dropped:
+            # A source the sheet took OFF is out of every row that named it.
+            kept = drop_from_sources(sources, result.dropped)
+            if kept != sources:
+                gone = [n for n, _t in parse_sources(sources) if _norm(n) in result.dropped]
+                result.notes.append(f"{label}'s sources no longer name {', '.join(gone)}, "
+                                    f"which {BUS_SHEET} takes out (OFF).")
+                row, sources = {**row, "sources": kept}, kept.strip()
         if sources:
             _overlay_sources(plan, kind, index, key, label, row, now, names, result)
     return result
 
 
 _BANK = {"bus": "bus", "main": "main", "matrix": "mtx"}
+
+
+def _claim_names(plan: dict, resolved: list, result: Result) -> None:
+    """In a build: each name a sheet row gives is that row's number, as the
+    input list's channel column is. A captured
+    `busses.csv` names the desk's busses; the model, building from the
+    conventions, may have put one of those names on another number. A bus or
+    Matrix of that name moves to the row's number, and whatever the build had
+    there takes its old one; a Main, which routes name by number, or an
+    object of another kind keeps its number and gives the name up. Each is
+    said at INFO.
+
+    What a move displaces is the model's object on a number the sheet may
+    name as something else: the build's preset, effects and role for it
+    were chosen for the model's object, so they do not stay on the sheet's
+    (`_drop_build_identity`), and an empty cell of that row then leaves the
+    bus as the sheet's capture has it, not as the model had that number."""
+    displaced: list[dict] = []
+    for row, kind, index, label in resolved:
+        name = (row.get("name") or "").strip()
+        if not name or name.upper() == REMOVED:
+            continue
+        holder = next(((k, i, key, e) for k, i, key, e in _objects(plan)
+                       if _norm(key) == _norm(name)), None)
+        if holder is None or (holder[0], holder[1]) == (kind, index):
+            continue
+        h_kind, h_index, h_key, h_entry = holder
+        was = label_of(h_kind, h_index)
+        if h_kind == kind and kind != "main":
+            occupant = _find(plan, kind, index)
+            h_entry["index"] = index
+            said = (f"{BUS_SHEET} puts {h_key!r} on {label}, where the build had it on {was}: "
+                    "the sheet wins")
+            if occupant is not None:
+                occupant[1]["index"] = h_index
+                displaced.append(occupant[1])
+                said += f", and {occupant[0]!r}, which was there, takes {was}"
+            result.notes.append(said + ".")
+            continue
+        new = was
+        if any(_norm(new) == _norm(k) for _k, _i, k, _e in _objects(plan)):
+            continue
+        (_rename_bus if h_kind == "bus" else _rename_output)(plan, h_key, new)
+        result.notes.append(f"{BUS_SHEET} names {label} {name!r}, a name the build gave {was}: "
+                            f"the sheet wins, and {was} is named {new!r}.")
+    named_rows = {(k, i): (r.get("name") or "").strip() for r, k, i, _l in resolved}
+    for k, i, key, entry in _objects(plan):
+        if not any(entry is d for d in displaced):
+            continue
+        named = named_rows.get((k, i), "")
+        if not named or named.upper() == REMOVED or _norm(named) == _norm(key):
+            continue
+        dropped = _drop_build_identity(entry)
+        if dropped:
+            result.notes.append(
+                f"{label_of(k, i)} is {named!r} on {BUS_SHEET}, not the build's {key!r}, which "
+                f"was moved onto it: the {', '.join(dropped)} the build chose for {key!r} "
+                "are taken off, and what the sheet leaves empty is the desk's.")
+
+
+def _drop_build_identity(entry: dict) -> list[str]:
+    """Take the build's preset, effects and role off a bus or Matrix the
+    sheet names as something else, and say which."""
+    from atoo import bus_presets
+
+    dropped = []
+    if entry.get("preset"):
+        dropped.append(f"preset {entry['preset']!r}")
+    effects = [i.get("model") for i in bus_presets.strip_inserts(entry) if i.get("model")]
+    if effects:
+        dropped.append(f"effect{'s' if len(effects) > 1 else ''} {', '.join(effects)}")
+    if entry.get("role"):
+        dropped.append(f"role {entry['role']!r}")
+    for field in ("preset", "preset_values", "inserts", "role"):
+        entry.pop(field, None)
+    return dropped
+
+#: A bus sheet's `name` cell that takes its row's object out of the plan, as
+#: `OFF` takes a socket or a slot out in `outputs.csv` and `user.csv`. Kept
+#: in the file, so a rebuild leaves the object out too, over the conventions.
+REMOVED = "OFF"
+
+
+def _remove_object(plan: dict, kind: str, index: int, key: str, label: str,
+                   result: Result) -> None:
+    """Take one bus, Main or Matrix out of `plan`, with what pointed at it:
+    every send or route into it, a Matrix's `fed_by` naming it, and the
+    output sockets it fed (freed). Each is said at INFO. Never refuses: a
+    removed row is the engineer's explicit instruction."""
+    from atoo.outputs_sheet import format_output
+
+    entry = (plan.get("busses") if kind == "bus" else plan.get("outputs"))[key]
+    name = f"{label} {key!r}" if key != label else label
+    feeds = _feeds(plan, kind, key, index)
+    sockets = [format_output(p.get("group"), n) for p in _outputs_of(kind, entry)
+               for n in p.get("sockets") or [] if isinstance(n, int)]
+    _set_feeds(plan, kind, key, index, {})
+    cleared = []
+    for out_key, out in (plan.get("outputs") or {}).items():
+        fed = out.get("fed_by") if isinstance(out, dict) else None
+        if isinstance(fed, dict) and (
+                (kind == "bus" and fed.get("type") == "bus" and fed.get("name") == key)
+                or (kind == "main" and fed.get("type") == "main" and fed.get("index", 1) == index)):
+            out["fed_by"] = None
+            cleared.append(out_key)
+    users = [e.get("slot") for e in plan.get("user_sources") or []
+             if isinstance(e, dict) and isinstance(e.get("source"), dict)
+             and e["source"].get("group") == {"bus": "BUS", "main": "MAIN", "matrix": "MTX"}[kind]
+             and e["source"].get("index") == index]
+    # The Matrices it fed, by its own send or a Matrix's `fed_by`: one with
+    # nothing else feeding it carries nothing now, which is said, not left to be found at the desk.
+    fed_matrices = [k for _k, i, k, _e in _objects(plan) if _k == "matrix"
+                    and any(f[0] == kind and f[1] == key
+                            for f in _feeds(plan, "matrix", k, i))] if kind != "matrix" else []
+    del (plan["busses"] if kind == "bus" else plan["outputs"])[key]
+    silent = [f"{label_of('matrix', plan['outputs'][k]['index'])} {k!r}" for k in fed_matrices
+              if not _feeds(plan, "matrix", k, plan["outputs"][k]["index"])]
+    result.changes.append(f"{label} removed")
+    said = f"{name} is removed, as {BUS_SHEET} says ({REMOVED}): it is returned to free"
+    if feeds:
+        one = len(feeds) == 1
+        said += "; " + ", ".join(str(n) for _k, n, _t in feeds) + (
+            (" no longer sends to it" if one else " no longer send to it") if kind != "main"
+            else (" is no longer routed to it" if one else " are no longer routed to it"))
+    if cleared:
+        said += "; " + ", ".join(map(str, cleared)) + \
+            (" no longer takes it" if len(cleared) == 1 else " no longer take it") + " as a source"
+    if sockets:
+        said += "; " + ", ".join(sockets) + (" are" if len(sockets) > 1 else " is") + \
+            " no longer fed from it"
+    if users:
+        said += "; " + ", ".join(f"USR {n}" for n in users) + \
+            " still take it, so they carry nothing until they take something else"
+    if silent:
+        said += "; " + ", ".join(silent) + (" carries" if len(silent) == 1 else " carry") + \
+            " nothing now: it was " + ("its" if len(silent) == 1 else "their") + " only source"
+    result.notes.append(said + ".")
 
 
 def _overlay_fx(plan: dict, kind: str, label: str, entry: dict, cell: str,
@@ -853,9 +1070,9 @@ def _overlay_fx(plan: dict, kind: str, label: str, entry: dict, cell: str,
 def _overlay_sources(plan, kind, index, key, label, row, now, names: _Names,
                      result: Result) -> None:
     tap_cell = (row.get("tap") or "").strip().lower()
-    if tap_cell and tap_cell not in ("pre", "post"):
+    if tap_cell and tap_cell not in facts.PLAN_STORED_SEND_MODES:
         result.refusals.append(Refusal(BUS_SHEET, label, "tap", row.get("tap", ""),
-                                       "tap is pre or post"))
+                                       "tap is pre, post or group (the desk's GRP)"))
         return
     current = {(k, n): t for k, n, t in _feeds(plan, kind, key, index)}
     wanted: dict[tuple[str, str], "str | None"] = {}
@@ -1228,6 +1445,21 @@ def refuse_new_errors(before: dict, result: Result, *, console_model: "str | Non
             rows[("channels", ch.get("name"))] = (
                 INPUT_SHEET, f"{_chan_label(ch.get('bank') or 'ch', ch.get('channel'))} "
                              f"({(ch.get('source') or {}).get('input') or ch.get('name')})")
+    # What a removed or an added object leaves (a bus that went only to the
+    # Main taken out, or a new bus, now feeds nothing) is the engineer's own
+    # instruction carried out: said at INFO, naming the row, so it can be put
+    # right, and never a refusal.
+    if result.asked_plan is not None:
+        for finding in errors(result.asked_plan):
+            key = (finding.code, finding.where, finding.message)
+            if key in old:
+                continue
+            old.add(key)
+            m = _WHERE.match(finding.where or "")
+            row = rows.get((m.group("section"), m.group("name")), (None, None))[1] if m else None
+            result.notes.append(f"{row or finding.where}, with what {BUS_SHEET} adds or takes "
+                                f"out: {_as_sheet_says(finding.message, rows)} ({finding.code}). "
+                                "Not refused: it was asked for.")
     for finding in errors(result.plan):
         if (finding.code, finding.where, finding.message) in old:
             continue

@@ -87,7 +87,7 @@ class InstallInfo:
         return f"{head} ({where}; {ref}, {self.commit}, {state})"
 
     def short(self) -> str:
-        """The line `atoo ui` starts with: ``atoo 0.2.6 (running from ~/x/atoo)``,
+        """The line `atoo ui` starts with: ``atoo 0.3.0 (running from ~/x/atoo)``,
         the version and where it runs from. The branch, commit and state are
         `atoo --version`'s and the page's (`summary`)."""
         head = f"atoo {self.version}"

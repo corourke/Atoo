@@ -263,6 +263,7 @@ from enum import Enum
 from atoo import apply as apply_module
 from atoo import console_facts as facts
 from atoo import audit
+from atoo import inferred
 from atoo import plan_compat
 from atoo.audit import ConsoleState, is_in_use, source_is_named
 from atoo.verify_plan import resolve_console_model
@@ -2748,7 +2749,8 @@ def release_targets(amendment: Amendment, *, warnings: list[str] | None = None) 
         keep_sockets=amendment.keep_sockets,
         shared_sockets=apply_module._shared_source_sockets(applied),
         console_model=amendment.console_model,
-        warnings=warnings)
+        warnings=warnings,
+        user_jacks=inferred.user_patch_jacks(applied))
 
 
 def shift_clear_targets(amendment: Amendment, built: list, warnings: list[str]) -> list:

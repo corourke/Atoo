@@ -1008,11 +1008,16 @@ def eq_band_ids(strip: str) -> tuple[str, ...]:
 
 NAME_MAX_CHARS = 16
 
-# The console's own send modes. The plan schema currently models only two
-# of these three; "GRP" has no plan representation today (noted rather than
-# silently accepted, because schema loss must not go unnoticed).
+# The console's own send modes. A conventions file, a model's reply and the
+# bus sheet's own choice speak of two of them, pre and post (`PLAN_SEND_MODES`).
+# The third, GRP, feeds the bus as a subgroup, after the channel's fader; a
+# plan holds it as "group" (`PLAN_STORED_SEND_MODES`) only because a capture
+# found it on the desk, so Apply writes GRP back rather than
+# changing the mix. Where a check asks pre or post, "group" reads as post.
 SEND_MODES = ("PRE", "POST", "GRP")
 PLAN_SEND_MODES = ("pre", "post")
+CAPTURED_SEND_MODE = "group"
+PLAN_STORED_SEND_MODES = (*PLAN_SEND_MODES, CAPTURED_SEND_MODE)
 
 
 # --------------------------------------------------------------------------
@@ -1053,7 +1058,9 @@ def stereo_pair_problem(sockets: list) -> str | None:
     (the finding) and `generate.console_section` (via `STEREO_PAIR_RULE`,
     the prompt the model reads) -- deliberately the same module, so the
     numbers the model is told cannot drift from the ones the verifier
-    enforces.
+    enforces. Build's `reply_expand._pair_problem` asks it of two input-list
+    rows' stated sockets, and a pair it refuses is patched through two USER
+    PATCH slots instead (below).
 
     Says nothing about a list that is not exactly two sockets, or one
     holding something that is not an int: those are already
@@ -1138,9 +1145,15 @@ def stereo_pair_problem(sockets: list) -> str | None:
 # of ST-mode USR slots with disjoint sources then *sounds* like the intended
 # L/R at the strip is the PDF's claim, not ours: nobody has set one up at
 # the desk and listened. Per the rule that a walk of the address tree is not a
-# measurement of the hardware, that distinction is kept out loud -- it is
-# why `verify_plan` checks these definitions but `apply` does not yet write
-# them.
+# measurement of the hardware, that distinction is kept out loud.
+#
+# Build uses the USER PATCH half on its own: an input list whose
+# two rows of an L/R pair state sockets `stereo_pair_problem` refuses (LCL 4
+# and 5, B 2 and 3, A 16 and 17) or two groups gets one stereo channel
+# patched to the first free odd slot pair from 25, each slot taking one
+# socket (`reply_expand._route_through_user_patch`), at INFO. `apply` writes
+# the slots, and the phantom and head-amp gain follow each
+# slot to its jack (`inferred.channel_jacks`).
 USER_SIGNAL_SLOTS = (1, 24)
 USER_PATCH_SLOTS = (25, 56)
 

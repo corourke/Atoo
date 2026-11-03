@@ -513,7 +513,8 @@ def test_findings_badges_count_the_docks_findings_by_its_own_jump_targets(client
     js = client.get("/static/setup.js").text
     # One Findings cell per row of every table, filled from the dock: the
     # sheet tables', and the Outputs table's per socket.
-    assert js.count("findingsCell(cardId(") == 2 and "html += findingsCell(id) + \"</tr>\";" in js
+    # (A bus row's Remove row cell comes before it, as the Channels table's does.)
+    assert js.count("findingsCell(cardId(") == 2 and "+ findingsCell(id) + \"</tr>\";" in js
     assert 'findingsCell(cardId("socket", label))' in js
     assert js.count("FINDINGS_TH") >= 3
     # A finding is a row's when one of its jump links lands on that row,

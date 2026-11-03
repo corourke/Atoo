@@ -79,7 +79,7 @@ def test_a_high_pass_at_another_frequency_is_a_warning_naming_both():
     [f] = _cv008(_desk(**{"flt/lc": 1, "flt/lcf": 80.19641876}), _plan(_entry(hpf_hz=120)))
     assert (f.rule_id, f.severity) == ("CV008", Severity.WARNING)
     assert f.message == ('CH 1 "Kick": plan says the high-pass is 120Hz, live console reads '
-                         "80.2Hz (tolerance 2%).")
+                         "80.2Hz (more than a step apart).")
     assert f.addresses == ("/ch/1/flt/lcf",)
 
 
@@ -99,25 +99,28 @@ def test_hi_cut_and_tilt_are_filters_with_their_own_switch_and_value():
     state = _desk(**{"flt/hc": 1, "flt/hcf": 8000.0, "flt/tf": 0, "flt/tilt": 3.0})
     findings = _cv008(state, plan)
     assert [f.message for f in findings] == [
-        'CH 1 "Kick": plan says the hi-cut is 12000Hz, live console reads 8000Hz (tolerance 2%).',
+        'CH 1 "Kick": plan says the hi-cut is 12000Hz, live console reads 8000Hz (more than a step apart).',
         'CH 1 "Kick": plan says the tilt is on at 3dB; live console has it off.',
     ]
     assert [f.addresses for f in findings] == [("/ch/1/flt/hcf",), ("/ch/1/flt/tf",)]
 
 
 @pytest.mark.parametrize("live,flagged", [
-    (100.0, False), (100.72, False), (101.9, False), (98.1, False),
-    (102.5, True), (97.0, True),
+    (100.0, False), (100.3, False), (99.7, False),
+    (100.72, True), (101.9, True), (98.1, True),
 ])
-def test_the_tolerance_is_two_percent_of_the_value(live, flagged):
-    """About three steps of the desk's 0.72% a step either way."""
+def test_the_tolerance_is_under_one_step(live, flagged):
+    """The high-pass steps 0.72% at a time: a reading within three quarters of
+    a step is the nearest step of what was written, and one step away is a
+    different setting."""
     state = _desk(**{"flt/lc": 1, "flt/lcf": live})
     assert bool(_cv008(state, _plan(_entry(hpf_hz=100)))) is flagged
 
 
-@pytest.mark.parametrize("live,flagged", [(0.0, False), (0.015, False), (0.1, True), (-0.1, True)])
-def test_a_value_at_zero_has_an_absolute_floor(live, flagged):
-    """A relative tolerance degenerates at zero; tilt can be stated 0dB."""
+@pytest.mark.parametrize("live,flagged", [(0.0, False), (0.1, False), (0.25, True), (-0.25, True)])
+def test_a_tilt_at_zero_is_compared_on_its_quarter_decibel_step(live, flagged):
+    """A relative tolerance degenerates at zero, and tilt can be stated 0dB:
+    its grid (-6..6dB in 49 steps) has no such trouble."""
     state = _desk(**{"flt/tf": 1, "flt/tilt": live})
     assert bool(_cv008(state, _plan(_entry(tilt_db=0.0)))) is flagged
 
@@ -131,7 +134,7 @@ def test_a_half_decibel_is_not_the_filters_tolerance():
 
 def test_the_comparison_is_applys_own_readback_helper():
     """One function decides whether a value is where it was asked to be, on
-    the write path and here: 2.0% and a bit either way agrees with it."""
+    the write path and here."""
     for planned, live in ((100.0, 101.9), (100.0, 102.1), (0.0, 0.015), (0.0, 0.03), (4000.0, 4012.0)):
         state = _desk(**{"flt/lc": 1, "flt/lcf": live})
         assert bool(_cv008(state, _plan(_entry(hpf_hz=planned)))) is (
@@ -166,7 +169,7 @@ def test_the_plans_provenance_is_cited():
     entry["provenance"] = {"processing": "Processing: 'Drums get a high-pass at 120Hz'"}
     [f] = _cv008(_desk(**{"flt/lc": 1, "flt/lcf": 80.0}), _plan(entry))
     assert f.message.endswith(
-        "(tolerance 2%). (plan provenance: Processing: 'Drums get a high-pass at 120Hz')")
+        "(more than a step apart). (plan provenance: Processing: 'Drums get a high-pass at 120Hz')")
 
 
 def test_a_strip_whose_live_state_was_never_read_is_skipped():
@@ -201,7 +204,7 @@ def test_a_band_is_one_finding_naming_every_leaf_that_differs():
     state = _eq_desk(**{"eq/2f": 1800.0, "eq/2g": 0.0})
     [f] = _cv008(state, _plan(_eq_entry()))
     assert f.message == ('CH 1 "Kick": EQ band 2: plan says frequency 2500Hz but 1800Hz live; '
-                         "gain -3dB but 0dB live (tolerance 2%).")
+                         "gain -3dB but 0dB live (more than a step apart).")
     assert f.addresses == ("/ch/1/eq/2f", "/ch/1/eq/2g")
 
 
@@ -215,7 +218,7 @@ def test_a_q_ten_steps_out_is_caught():
 def test_a_shelf_type_and_a_shelf_band_use_their_own_leaves():
     [f] = _cv008(_eq_desk(**{"eq/heq": "PEQ", "eq/hf": 5000.0}), _plan(_eq_entry()))
     assert f.message == ('CH 1 "Kick": EQ band high: plan says frequency 10000Hz but 5000Hz live; '
-                         "shape SHV but PEQ live (tolerance 2%).")
+                         "shape SHV but PEQ live (more than a step apart).")
     assert f.addresses == ("/ch/1/eq/hf", "/ch/1/eq/heq")
 
 
@@ -243,7 +246,7 @@ def test_an_aux_strips_eq_is_compared_and_its_filters_are_not():
                        "bands": [{"band": "1", "freq_hz": 300.0, "gain_db": None, "q": None}]})
     state = _desk(base="/aux/3", name="Cue", **{"flt/lcf": 40.0, "flt/lc": 0, "eq/on": 1, "eq/1f": 150.0})
     [f] = _cv008(state, _plan(entry))
-    assert f.message == 'AUX 3 "Cue": EQ band 1: plan says frequency 300Hz but 150Hz live (tolerance 2%).'
+    assert f.message == 'AUX 3 "Cue": EQ band 1: plan says frequency 300Hz but 150Hz live (more than a step apart).'
 
 
 def test_the_presend_eq_is_compared_and_an_auxs_is_not():

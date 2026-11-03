@@ -3552,7 +3552,7 @@ def test_step_04_edits_the_desk_sheets_with_the_maintainers_words(client):
     # The maintainer's wording, exactly.
     assert '"Save writes the input.csv file and updates the build plan."' in js
     assert 'const BUS_NOTE = "Save writes the busses.csv file and updates the build plan.";' in js
-    assert "Captures the desk to input.csv and busses.csv which you can edit." in html
+    assert "Captures the desk to input.csv, busses.csv and outputs.csv, which you can edit." in html
     # The bus sheet's own Save path, its check, and the input list's check.
     for text in ('fetch("/api/build/bus-sheet/save"', 'fetch("/api/build/sheets/check"',
                  'checkSheet("input_list", SP.inputEditor.collect())',

@@ -1,0 +1,496 @@
+{
+ "about": "Hand-written intents (oracles) for the corpus cases that cases.json does not carry: id -> intent. Each states what the request asks and nothing a model got wrong, so one may be written for a held-out case. The request is the corpus case's own.",
+ "intents": {
+  "socket-unstated-stereo-pair-fits-s16": {
+   "name": "socket unstated stereo pair fits s16",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Choir",
+     "kind": "mic",
+     "stereo": true
+    }
+   ],
+   "notes": []
+  },
+  "switch-channel-preset": {
+   "name": "switch channel preset",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Kick",
+     "field": "processing.preset",
+     "value": "Snare"
+    }
+   ],
+   "notes": []
+  },
+  "make-channel-stereo-refused": {
+   "name": "make channel stereo refused",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Kick",
+     "stereo": true
+    }
+   ],
+   "notes": []
+  },
+  "make-channel-stereo": {
+   "name": "make channel stereo",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Gtr 2",
+     "stereo": true
+    }
+   ],
+   "notes": []
+  },
+  "add-sax-band-dca": {
+   "name": "add sax band dca",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Sax",
+     "kind": "mic",
+     "patch": {
+      "group": "A",
+      "first": 10
+     },
+     "dca": [
+      "Band"
+     ]
+    }
+   ],
+   "notes": []
+  },
+  "add-two-handhelds": {
+   "name": "add two handhelds",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "HH Vox 1",
+     "kind": "mic"
+    },
+    {
+     "op": "add_channel",
+     "name": "HH Vox 2",
+     "kind": "mic"
+    }
+   ],
+   "notes": []
+  },
+  "add-lead-vox-paraphrase": {
+   "name": "add lead vox paraphrase",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Lead 2",
+     "kind": "mic",
+     "dca": [
+      "Vocals"
+     ]
+    }
+   ],
+   "notes": []
+  },
+  "add-acoustic-gtr-wedge": {
+   "name": "add acoustic gtr wedge",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Ac Gtr",
+     "kind": "mic",
+     "patch": {
+      "group": "A",
+      "first": 10
+     },
+     "sends": [
+      {
+       "bus": "Gtr Wedge"
+      }
+     ]
+    }
+   ],
+   "notes": []
+  },
+  "add-dj-stereo-pair": {
+   "name": "add dj stereo pair",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "DJ",
+     "kind": "line",
+     "stereo": true,
+     "patch": {
+      "group": "LCL",
+      "first": 5,
+      "count": 2
+     }
+    }
+   ],
+   "notes": []
+  },
+  "remove-two-bvs": {
+   "name": "remove two bvs",
+   "ops": [
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "BV Gtr"
+    },
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "BV Keys"
+    }
+   ],
+   "notes": []
+  },
+  "remove-gtr2-paraphrase": {
+   "name": "remove gtr2 paraphrase",
+   "ops": [
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "Gtr 2"
+    }
+   ],
+   "notes": []
+  },
+  "rename-kick": {
+   "name": "rename kick",
+   "ops": [
+    {
+     "op": "rename",
+     "object": "channel",
+     "name": "Kick",
+     "new_name": "Kick In"
+    }
+   ],
+   "notes": []
+  },
+  "snare-hpf-shorthand": {
+   "name": "snare hpf shorthand",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Snare",
+     "field": "processing.hpf_hz",
+     "value": 120
+    }
+   ],
+   "notes": []
+  },
+  "bass-di-phantom-off": {
+   "name": "bass di phantom off",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Bass DI",
+     "field": "source.phantom",
+     "value": false
+    }
+   ],
+   "notes": []
+  },
+  "stereo-to-mono-oh": {
+   "name": "stereo to mono oh",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "OH",
+     "stereo": false
+    }
+   ],
+   "notes": []
+  },
+  "bass-di-stereo-refused": {
+   "name": "bass di stereo refused",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Bass DI",
+     "stereo": true
+    }
+   ],
+   "notes": []
+  },
+  "move-gtr2-ch-20": {
+   "name": "move gtr2 ch 20",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Gtr 2",
+     "place": {
+      "at": 20
+     }
+    }
+   ],
+   "notes": []
+  },
+  "banjo-replaces-gtr2": {
+   "name": "banjo replaces gtr2",
+   "ops": [
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "Gtr 2"
+    },
+    {
+     "op": "add_channel",
+     "name": "Banjo",
+     "kind": "mic",
+     "patch": {
+      "group": "A",
+      "first": 9
+     }
+    }
+   ],
+   "notes": []
+  },
+  "choir-drop-rename": {
+   "name": "choir drop rename",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Choir 1",
+     "kind": "mic",
+     "patch": {
+      "group": "LCL",
+      "first": 5
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Choir 2",
+     "kind": "mic",
+     "patch": {
+      "group": "LCL",
+      "first": 6
+     }
+    },
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "BV Keys"
+    },
+    {
+     "op": "rename",
+     "object": "channel",
+     "name": "Lead Vox",
+     "new_name": "Singer"
+    }
+   ],
+   "notes": []
+  },
+  "socket-shared-named": {
+   "name": "socket shared named",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Flute",
+     "kind": "mic",
+     "patch": {
+      "group": "A",
+      "first": 3
+     }
+    }
+   ],
+   "notes": []
+  },
+  "refuse-bus-number-past-end": {
+   "name": "refuse bus number past end",
+   "ops": [
+    {
+     "op": "add_bus",
+     "name": "Subs",
+     "stereo": true,
+     "index": 40
+    }
+   ],
+   "notes": []
+  },
+  "refuse-missing-preset": {
+   "name": "refuse missing preset",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Bass DI",
+     "field": "processing.preset",
+     "value": "Tuba"
+    }
+   ],
+   "notes": []
+  },
+  "add-second-bass-di": {
+   "name": "add second bass di",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Bass 2",
+     "kind": "di",
+     "patch": {
+      "group": "A",
+      "first": 10
+     }
+    }
+   ],
+   "notes": []
+  },
+  "remove-music-aux": {
+   "name": "remove music aux",
+   "ops": [
+    {
+     "op": "drop",
+     "object": "channel",
+     "name": "Music"
+    }
+   ],
+   "notes": []
+  },
+  "hpf-all-vocals-by-name": {
+   "name": "hpf all vocals by name",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Lead Vox",
+     "field": "processing.hpf_hz",
+     "value": 120
+    },
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "BV Gtr",
+     "field": "processing.hpf_hz",
+     "value": 120
+    },
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "BV Keys",
+     "field": "processing.hpf_hz",
+     "value": 120
+    }
+   ],
+   "notes": []
+  },
+  "snare-trim-down": {
+   "name": "snare trim down",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Snare",
+     "field": "processing.trim_db",
+     "value": -3
+    }
+   ],
+   "notes": []
+  },
+  "mute-playback": {
+   "name": "mute playback",
+   "ops": [
+    {
+     "op": "set",
+     "object": "channel",
+     "name": "Playback",
+     "field": "fader.muted",
+     "value": true
+    }
+   ],
+   "notes": []
+  },
+  "floor-tom-repatch": {
+   "name": "floor tom repatch",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Floor Tom",
+     "patch": {
+      "group": "A",
+      "first": 10
+     }
+    }
+   ],
+   "notes": []
+  },
+  "gtr1-stereo-even-socket-refused": {
+   "name": "gtr1 stereo even socket refused",
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Gtr 1",
+     "stereo": true
+    }
+   ],
+   "notes": []
+  },
+  "refuse-lcl-past-panel": {
+   "name": "refuse lcl past panel",
+   "ops": [
+    {
+     "op": "add_channel",
+     "name": "Click",
+     "kind": "line",
+     "patch": {
+      "group": "LCL",
+      "first": 30
+     }
+    }
+   ],
+   "notes": []
+  },
+  "playback-out-of-dca": {
+   "name": "Playback out of its DCA",
+   "ops": [
+    {
+     "op": "assign",
+     "name": "Playback",
+     "dca_remove": [
+      "Playback"
+     ]
+    }
+   ],
+   "notes": []
+  },
+  "refuse-unknown-bus-send": {
+   "name": "Kick to MON9",
+   "ops": [
+    {
+     "op": "assign",
+     "name": "Kick",
+     "send_add": [
+      {
+       "bus": "MON9"
+      }
+     ]
+    }
+   ],
+   "notes": []
+  },
+  "make-channel-stereo-and-rename": {
+   "name": "Gtr 2 stereo, renamed",
+   "notes": [],
+   "ops": [
+    {
+     "op": "move_channel",
+     "name": "Gtr 2",
+     "stereo": true
+    },
+    {
+     "op": "rename",
+     "object": "channel",
+     "name": "Gtr 2",
+     "new_name": "Gtr 2 ST"
+    }
+   ]
+  }
+ }
+}

@@ -621,8 +621,9 @@ def test_a_bus_sheet_cell_that_cannot_work_stops_the_build_naming_it(tmp_path, s
     assert status["state"] != "done", status
     assert plan is None
     text = json.dumps(status)
-    assert "busses.csv cannot be laid onto this plan, so nothing was written" in text
-    assert "busses.csv, Bus 4, outputs: LCL output 99 does not exist" in text
+    # A socket the desk does not have is found before any model call, so the build spends nothing.
+    assert "busses.csv, Bus 4, outputs 'LCL 99': this console has no LCL 99" in text
+    assert "Nothing was sent to a model and nothing was changed" in text
 
 
 def test_a_build_with_no_bus_sheet_is_as_before(tmp_path, stub_build, monkeypatch):

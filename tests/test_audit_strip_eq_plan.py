@@ -89,7 +89,7 @@ def test_a_bus_band_that_differs_is_one_warning_naming_every_leaf_and_the_bus():
     assert (finding.rule_id, finding.severity) == ("CV008", Severity.WARNING)
     assert finding.message == (
         'BUS 1 "Drums": EQ band 2: plan says frequency 1000Hz but 1800Hz live; gain 3dB but '
-        "-2dB live (tolerance 2%). (plan provenance: Busses: Drums get a low cut)")
+        "-2dB live (more than a step apart). (plan provenance: Busses: Drums get a low cut)")
     assert finding.addresses == ("/bus/1/eq/2f", "/bus/1/eq/2g")
 
 
@@ -103,7 +103,7 @@ def test_a_bus_eq_the_plan_states_that_reads_off_is_reported_on_its_own():
 def test_a_bus_tilt_is_a_leaf_of_its_eq_node_with_no_switch_of_its_own():
     [finding] = _cv008(_desk(**{"/bus/1/eq/tilt": 0.0}), _bus_plan(tilt_db=3.0))
     assert finding.message.startswith('BUS 1 "Drums": plan says the tilt is 3dB, live console '
-                                      "reads 0dB (tolerance 2%).")
+                                      "reads 0dB (more than a step apart).")
     assert finding.addresses == ("/bus/1/eq/tilt",)
     assert _cv008(_desk(**{"/bus/1/eq/tilt": 3.0}), _bus_plan(tilt_db=3.0)) == []
 
@@ -143,9 +143,9 @@ def test_a_main_and_a_matrix_are_compared_on_their_own_nodes_and_named_by_the_pl
                      "/mtx/2/eq/1f": 500.0, "/mtx/2/eq/tilt": 0.0})
     findings = _cv008(state, _outputs_plan())
     assert [f.message for f in findings] == [
-        'MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (tolerance 2%).',
-        'MTX 2 "Fill": EQ band 1: plan says frequency 250Hz but 500Hz live (tolerance 2%).',
-        'MTX 2 "Fill": plan says the tilt is 1dB, live console reads 0dB (tolerance 2%).',
+        'MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (more than a step apart).',
+        'MTX 2 "Fill": EQ band 1: plan says frequency 250Hz but 500Hz live (more than a step apart).',
+        'MTX 2 "Fill": plan says the tilt is 1dB, live console reads 0dB (more than a step apart).',
     ]
     assert [f.addresses for f in findings] == [
         ("/main/1/eq/hg",), ("/mtx/2/eq/1f",), ("/mtx/2/eq/tilt",)]
@@ -178,7 +178,7 @@ def test_the_presend_eq_is_compared_band_by_band_and_by_its_switch():
                      "/ch/1/peq/1q": 1.0, "/ch/1/peq/3f": 5000.0, "/ch/1/peq/on": 0})
     findings = _cv008(state, plan)
     assert [f.message for f in findings] == [
-        'CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (tolerance 2%).',
+        'CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (more than a step apart).',
         'CH 1 "Kick": plan says the PreSend EQ on but it is off live.',
     ]
     assert [f.addresses for f in findings] == [("/ch/1/peq/1g",), ("/ch/1/peq/on",)]

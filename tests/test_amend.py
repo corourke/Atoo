@@ -1,7 +1,7 @@
 """Tests for atoo/amend.py -- the amend/delta engine.
 
 The scenario every fixture here is built on is the one the project brief
-and `mockups/build-page/OPTIONS-H.md` both use, because it is the one
+and `docs/developer/OPTIONS-H.md` both use, because it is the one
 that motivated the feature: the touring-band show is applied and running
 on strips 1-19, strip 20 belongs to somebody else ("Podium"), 21-32 are
 free, 33-40 never answer, and the horn section has turned up late in the
@@ -710,7 +710,9 @@ def test_returned_to_free_means_muted_unpatched_and_blank():
         (f"{MLD_VOX_BASE}/col", _facts.FACTORY_STRIP_COLOUR_INDEX),
         (f"{MLD_VOX_BASE}/clink", 1),
         (f"{MLD_VOX_BASE}/tags", ""),
-        *[(f"{MLD_VOX_BASE}/send/{i}/on", 0) for i in sends],
+        # Each send off and back to an untouched strip's -oo.
+        *[pair for i in sends for pair in ((f"{MLD_VOX_BASE}/send/{i}/on", 0),
+                                           (f"{MLD_VOX_BASE}/send/{i}/lvl", _facts.MINUS_INF_DB))],
         # Back to the factory's direct Main routing (2026-09-27): Main 1
         # ON, 2-4 OFF, whatever the plan routed -- the build writes every
         # Main, so the release puts every Main back.
@@ -1648,7 +1650,7 @@ def test_cli_returns_a_dropped_channel_to_free_offline():
     assert "3 added, 1 returned to free, 10 unchanged" in out
     assert "RETURNED TO FREE channel 'BG Vox 1' -> ch:10" in out
     assert "returns to free: ch:10" in out
-    assert "23 of them RETURN A STRIP TO FREE" in out
+    assert "30 of them RETURN A STRIP TO FREE" in out
     for address in ("/ch/10/mute", "/ch/10/in/conn/grp", "/ch/10/name",
                     "/ch/10/tags", "/io/in/LCL/10/name", "/io/in/LCL/10/vph",
                     # The filter this plan set, and the unmute.

@@ -578,7 +578,8 @@ def test_usage_summary_carries_model_effort_and_cost_and_leaves_unknowns_none():
     progress.finish(ok=True, usage={"input_tokens": 10, "output_tokens": 20})
     usage = progress.usage_summary(cost=0.42)
     assert usage == {
-        "input": 10, "cache_write": None, "cache_read": None, "output": 20, "reasoning_tokens_as_reported": None,
+        "input": 10, "cache_write": None, "cache_read": None, "prompt_eval_ms": None, "output": 20,
+        "reasoning_tokens_as_reported": None,
         "thinking": 20, "thinking_source": "estimated",
         "model": "claude-sonnet-5", "effort": "high", "cost": 0.42,
     }

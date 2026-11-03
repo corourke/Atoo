@@ -54,6 +54,7 @@ instant the caller stops iterating it -- there is no background service.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timezone
@@ -153,7 +154,8 @@ def present_findings(findings: list[Finding]) -> PresentedFindings:
       and the built-in still does, the built-in gets its own row back.
 
     `atoo watch` does not call this: on the command line the notes
-    print at INFO and every finding prints on its own line, as before."""
+    print at INFO, and `render_event` folds a finding under its host the
+    same way, naming it under the host's line."""
     notes = [f for f in findings if isinstance(f, WatchNote)]
     rest = [f for f in findings if not isinstance(f, WatchNote)]
     conditions = [f for f in rest if _is_host(f)]
@@ -188,6 +190,19 @@ class WatchEvent:
     all_findings: list[Finding]
     new_findings: list[Finding]
     cleared_findings: list[Finding]
+    #: A finding still standing whose account changed:
+    #: a clip's count or its longest, not the seconds-ago that move every pass.
+    updated_findings: list[Finding] = field(default_factory=list)
+
+
+#: The parts of a clip finding that move every pass on their own: how long
+#: ago, and when it clears. What is left is what an update is about.
+_CLIP_CLOCK = re.compile(r"(; that was|; the first was| This clears in) .*$")
+
+
+def _account(finding: Finding) -> str:
+    """What a finding says, less the seconds that tick by on their own."""
+    return _CLIP_CLOCK.sub("", finding.detail) if finding.rule_id == "L003" else finding.detail
 
 
 def _default_clock() -> str:
@@ -266,8 +281,12 @@ def watch(
         else:
             new_findings = [f for key, f in current.items() if key not in previous]
             cleared_findings = [f for key, f in previous.items() if key not in current]
+        updated_findings = [f for key, f in current.items() if previous is not None
+                            and key in previous and f.rule_id == "L003"
+                            and _account(f) != _account(previous[key])]
 
-        yield WatchEvent(iteration, clock(), findings, new_findings, cleared_findings)
+        yield WatchEvent(iteration, clock(), findings, new_findings, cleared_findings,
+                         updated_findings)
 
         previous = current
         iteration += 1
@@ -280,12 +299,28 @@ def render_event(event: WatchEvent) -> str | None:
     print nothing rather than repeat the same all-clear every interval.
     Not meant for `iteration == 0` (the baseline) -- render that with
     `atoo.audit.render_findings(event.all_findings)` instead."""
-    if not event.new_findings and not event.cleared_findings:
+    if not event.new_findings and not event.cleared_findings and not event.updated_findings:
         return None
     lines = [f"[{event.at}] change detected:"]
-    for verb, findings in (("NEW", event.new_findings), ("CLEARED", event.cleared_findings)):
-        for group in rule_groups(findings):
+    for verb, findings in (("NEW", event.new_findings), ("UPDATED", event.updated_findings),
+                           ("CLEARED", event.cleared_findings)):
+        # One fault, one entry, as the Watch page shows it: a
+        # finding a host in the same list already says (E003 about the
+        # insert CV015 calls bypassed) is named under the host's lines.
+        hosts = [f for f in findings if _is_host(f)]
+        folded: dict[int, list[Finding]] = {}
+        shown = []
+        for f in findings:
+            host = None if _is_host(f) or not f.addresses else next(
+                (h for h in hosts if set(f.addresses) <= set(h.addresses)), None)
+            if host is None:
+                shown.append(f)
+            else:
+                folded.setdefault(id(host), []).append(f)
+        for group in rule_groups(shown):
             lines += _change_lines(verb, group)
+            for f in (x for h in group for x in folded.get(id(h), [])):
+                lines.append(f"            with {f.rule_id} {f.title}, about the same: {f.detail}")
     return "\n".join(lines)
 
 

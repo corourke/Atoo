@@ -19,9 +19,9 @@ plan on its source, as the desk keeps it: a channel's `bus_sends` and
 `matrix_sends`, a bus's `bus_sends` and `matrix_sends`, a Main's
 `matrix_sends`, each with its tap. Every effect a strip inserts goes in the
 plan on that strip as `inserts`: the model, the engine it is
-in and the engine's parameters, so Apply loads it back. What the plan still
-cannot hold (a GRP-mode tap) is said at INFO and kept in the sheets and the
-snapshot, never dropped silently.
+in and the engine's parameters, so Apply loads it back. A send in the desk's
+GRP mode is kept as `group`, so Apply writes GRP back, and said
+at INFO once per bus.
 
 **What a capture decides, and says.** An inferred value is not
 a defect; one that does not announce itself is. Every value the desk does
@@ -88,7 +88,7 @@ NOT_A_SOCKET = frozenset({"OSC"})
 
 _DCA_TAG = re.compile(r"^#D(\d+)$")
 _MUTE_GROUP_TAG = re.compile(r"^#M(\d+)$")
-_SEND_MODE = {"PRE": "pre", "POST": "post"}
+_SEND_MODE = {"PRE": "pre", "POST": "post", "GRP": "group"}
 #: An insert's wet/dry leaf on an FX slot; read when it is in the reading.
 FX_MIX = "/fx/{n}/fxmix"
 
@@ -188,7 +188,7 @@ def _socket_runs(sockets: list[tuple[str, int]]) -> str:
 class _Desk:
     """The reading, with the lookups every part of a capture shares."""
 
-    def __init__(self, state: ConsoleState):
+    def __init__(self, state: ConsoleState, console_model: "str | None" = None):
         self.state = state
         self.dca_names = {i: (state.name(f"/dca/{i}") or "").strip() or f"DCA {i}"
                           for i in dca_indices(state)}
@@ -197,9 +197,18 @@ class _Desk:
         # (kind, index) -> [(group, socket, side)], side L for an odd slot.
         self.outputs: dict[tuple[str, int], list[tuple[str, int, str]]] = {}
         self.direct_outputs: list[tuple[str, int]] = []
+        # A socket this console model does not have (the Compact has no AUX
+        # outputs) can carry nothing, though the desk still lists a patch
+        # for it: left out, and said. Kept, its
+        # captured show's own preview was refused.
+        self.missing_outputs: list[tuple[str, int]] = []
         for group, socket in output_sockets(state):
             raw = state.output_source(group, socket)
             if raw is None:
+                continue
+            if console_model in console_facts.CONSOLE_MODELS \
+                    and socket > console_facts.output_socket_limit(group, console_model):
+                self.missing_outputs.append((group, socket))
                 continue
             kind, slot = raw
             if kind in ("BUS", "MAIN", "MTX"):
@@ -281,7 +290,7 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
     all three go into the plan's `meta`. `unread_effects` is the FX engines
     whose parameters a live read could not get: their inserts keep the
     model only, and a note says so."""
-    desk = _Desk(state)
+    desk = _Desk(state, console_model)
     unread = set(unread_effects or ())
 
     def with_inserts(entry: dict, base: str) -> dict:
@@ -453,7 +462,7 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
             return _SEND_MODE.get(str(mode_value).upper())
         return "pre" if pre_flag else "post"
 
-    grp_sends: list[str] = []
+    grp_sends: list[tuple[str, str]] = []   # (the sending strip, the bus or Matrix it feeds)
     # The buses the sheets hold, decided before any sources cell is written,
     # so a cell names only a bus that has a row: a factory WING
     # routes its unused buses to Main 1.
@@ -475,7 +484,7 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
             if desk.flag(on):
                 value = state.text(mode) if mode else None
                 if value is not None and value.upper() == "GRP":
-                    grp_sends.append(f"{position_label(base)} to {target.replace(':', ' ')}")
+                    grp_sends.append((position_label(base), target))
                 found.append((ref, tap(value, desk.flag(pre) if pre else False), "channel"))
         for i, key in bus_key.items():
             if kind == "bus" and i == idx:
@@ -545,8 +554,8 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
                 role = "fx"
                 wet = ("100% wet" if all(mix is not None for mix in mixes)
                        else "how wet was not read")
-                roles_fx.append(f"{position_label(base)} '{key}': "
-                                f"{_names([m for _p, _s, m in fx])} inserted, {wet}")
+                roles_fx.append(f"{position_label(base)} '{key}' "
+                                f"({_names([m for _p, _s, m in fx])}, {wet})")
         desk_name = (state.name(base) or "").strip()
         bus_rows.append({
             "bus": f"Bus {i}", "name": desk_name, "role": role, "width": width("bus", i),
@@ -690,8 +699,12 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
     if typed_line:
         notes.append(f"type 'Line' for a source on a module, USB, a card, the player or "
                      f"AES/EBU, 'Mic' for every other: Line on {_names(typed_line)}.")
-    for line in roles_fx:
-        notes.append(f"role 'fx' for {line}, so it is read as an effect return.")
+    if roles_fx:
+        # One line for them all: each says the same thing.
+        notes.append(f"role 'fx' for {_names(roles_fx)}: "
+                     + ("its effect is" if len(roles_fx) == 1 else "each has its effects")
+                     + " inserted, so " + ("it is" if len(roles_fx) == 1 else "each is")
+                     + " read as an effect return.")
     if unread:
         engines = sorted(unread)
         notes.append(f"The parameters of {_names([f'FX{e}' for e in engines])} could not be "
@@ -699,8 +712,22 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
                      f"only: Apply loads the model and leaves the engine's parameters as the "
                      f"desk has them. The other effects are kept whole.")
     if grp_sends:
-        notes.append(f"Sends in the desk's GRP mode have no pre/post in the plan yet, so "
-                     f"their tap is left undecided: {_names(grp_sends)}.")
+        # Never left undecided. GRP is kept as the desk has it, so
+        # Apply writes it back unchanged; a check asking pre or post reads it
+        # as post, since GRP feeds the bus after the channel's fader.
+        by_target: dict[str, list[str]] = {}
+        for strip, target in grp_sends:
+            by_target.setdefault(target, []).append(strip)
+        said = []
+        for target, strips in by_target.items():
+            kind, idx = target.split(":")
+            key = {"bus": bus_key, "mtx": mtx_key}.get(kind, {}).get(int(idx))
+            word = f"{'BUS' if kind == 'bus' else 'MTX'} {idx}" + (f" '{key}'" if key else "")
+            said.append(f"{_names(strips)} to {word}")
+        notes.append(f"{'; '.join(said)}: sent in the desk's GRP mode (the bus fed as a "
+                     f"subgroup, after the channel's fader), which is kept: written 'group' in the "
+                     f"plan and the sheets, so Apply writes GRP back, and read as post-fader "
+                     f"wherever a check asks pre or post.")
     # The USR slots a channel or an output reads, so Apply puts
     # them back; one assigned that nothing reads is left as the desk has it.
     read = {n for ch in channels for n in ((ch.get("patch") or {}).get("sockets") or [])
@@ -743,6 +770,22 @@ def capture_desk(state: ConsoleState, *, console_model: str | None, made_from: s
                      f"sources cell names them.")
     for line in skipped:
         notes.append(f"Left out of the sheets: {line}.")
+    if desk.missing_outputs:
+        label = console_facts.CONSOLE_MODELS[console_model]["label"]
+        notes.append(f"Left out of the sheets and the plan: {_socket_runs(desk.missing_outputs)}, "
+                     f"which the desk lists a patch for but the {label} does not have as "
+                     f"output sockets, so nothing can come out of them.")
+
+    # A name two objects share on the desk is keyed apart in the plan
+    # ("Drums (Bus 5)"), and the desk's own name is kept beside it, which
+    # is what Apply writes back (the key's suffix was
+    # written to the desk, so the capture's own preview changed it).
+    for table, section, kind in ((bus_key, busses, "bus"), (main_key, outputs, "main"),
+                                 (mtx_key, outputs, "mtx")):
+        for i, key in table.items():
+            own = (state.name(f"/{kind}/{i}") or "").strip()
+            if own and own != key and key in section:
+                section[key]["desk_name"] = own
 
     plan = {
         "channels": channels, "dcas": dcas, "mute_groups": mute_groups,
@@ -850,6 +893,14 @@ def capture_extra_addresses() -> list[tuple[str, str]]:
             wanted.append((f"/{kind}/{n}/col", "i"))
     for slot in range(1, console_facts.FX_SLOTS + 1):
         wanted.append((FX_MIX.replace("{n}", str(slot)), "f"))
+    # Every USR slot, as `_user_sources` reads it. The audit's own read asks
+    # only the user patches (25-56) what they take, so a live capture never
+    # saw a user signal (1-24): no user.csv, and Apply could not put one back. A .snap carries them all already.
+    for slot in range(1, console_facts.INPUT_SOCKETS["USR"] + 1):
+        base = f"/io/in/USR/{slot}"
+        wanted += [(f"{base}/user/grp", "s"), (f"{base}/user/in", "i"), (f"{base}/name", "s")]
+        if console_facts.user_slot_kind(slot) == console_facts.USER_SIGNAL:
+            wanted += [(f"{base}/user/tap", "s"), (f"{base}/user/lr", "s")]
     return wanted
 
 

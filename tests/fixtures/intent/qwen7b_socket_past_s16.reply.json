@@ -1,0 +1,26 @@
+{
+  "name": "Add a few words naming the寒冬",
+  "ops": [
+    {
+      "op": "add_channel",
+      "name": "Add a few words",
+      "category": "vocals寒冬",
+      "kind": "mic",
+      "model": "SM500",
+      "phantom": null,
+      "stereo": null,
+      "patch": null,
+      "place": null,
+      "bank": null,
+      "dca": null,
+      "mute_group": null,
+      "sends": null,
+      "fader_db": null,
+      "gain_db": null,
+      "hpf_hz": null,
+      "preset": null,
+      "color": null
+    }
+  ],
+  "notes": []
+}

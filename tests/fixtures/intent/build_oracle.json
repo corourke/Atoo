@@ -1,0 +1,5053 @@
+{
+ "about": "Hand-written intents for every Build case (id -> intent), written from each case's input list and conventions, never from what a model did.",
+ "intents": {
+  "build-mid": {
+   "name": "Build the touring band",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Horns",
+     "aliases": [
+      "horns"
+     ],
+     "hpf_hz": 100
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "horns",
+      "vocals",
+      "tracks"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Bass",
+     "members": {
+      "categories": [
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Inst",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys",
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "All Band",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Horns",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 41
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 3",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 43
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 5",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 45
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Reverb Send",
+     "stereo": false,
+     "mode": "post",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 25
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "name": "Main",
+     "object": "main",
+     "patch": {
+      "group": "USB",
+      "first": 47,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Matrix"
+    }
+   ]
+  },
+  "build-small": {
+   "name": "Build the small band",
+   "notes": [
+    "FX: the conventions make no effects busses, so there is no FX DCA, bus or mute group to fill."
+   ],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Band",
+     "aliases": [
+      "band"
+     ],
+     "hpf_hz": 40
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 100
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "band",
+      "vocals",
+      "misc"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Overheads",
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Lead Vox",
+     "preset": "Lead Vocal"
+    },
+    {
+     "op": "add_channel",
+     "name": "BGV 1",
+     "preset": "BGV"
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "band"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums Compressed",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 3,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "name": "Main",
+     "object": "main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Matrix"
+    }
+   ]
+  },
+  "build-fullband-full": {
+   "name": "Build the full band",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Band",
+     "aliases": [
+      "band"
+     ],
+     "hpf_hz": 40
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "band",
+      "vocals",
+      "misc"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Overheads",
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Kick",
+     "hpf_hz": 50
+    },
+    {
+     "op": "add_channel",
+     "name": "Hi-Hat",
+     "hpf_hz": 300
+    },
+    {
+     "op": "add_channel",
+     "name": "Lead Vox",
+     "preset": "Lead Vocal"
+    },
+    {
+     "op": "add_channel",
+     "name": "BGV 1",
+     "preset": "BGV"
+    },
+    {
+     "op": "add_channel",
+     "name": "BGV 2",
+     "preset": "BGV"
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "band"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "band"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drum Wedge",
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 3,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocal Wedge",
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 5,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Reverb Send",
+     "mode": "post",
+     "level_db": -6,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "name": "Main",
+     "object": "main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-duo-rack": {
+   "name": "Build the duo",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Band",
+     "aliases": [
+      "band"
+     ],
+     "hpf_hz": 60,
+     "color": "Blue"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 100,
+     "color": "Green"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "band",
+      "vocals"
+     ],
+     "channels": [
+      "Cajon",
+      "Gtr Mic",
+      "Gtr DI"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Gtr DI",
+     "rows": [
+      "Gtr DI L",
+      "Gtr DI R"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "band"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals",
+       "band"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 7,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-iem-full": {
+   "name": "Build the IEM band",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 40
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 60
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "vocals",
+      "tracks"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys",
+     "rows": [
+      "Keys L",
+      "Keys R"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drum IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "keys",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Bass IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Gtr IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 5,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Keys IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 7,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vox IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 9,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vox Wedge",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 11
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-keys-playback": {
+   "name": "Build the keys show",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 60,
+     "color": "Cyan"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80,
+     "color": "Pink"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "color": "Green"
+    },
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 40,
+     "color": "Red"
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "color": "Yellow"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "keys",
+      "bass",
+      "guitars",
+      "vocals",
+      "drums"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys 1",
+     "rows": [
+      "Keys 1 L",
+      "Keys 1 R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys 2",
+     "rows": [
+      "Keys 2 L",
+      "Keys 2 R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Synth",
+     "rows": [
+      "Synth L",
+      "Synth R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Piano",
+     "rows": [
+      "Piano L",
+      "Piano R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "E-Kit",
+     "rows": [
+      "E-Kit L",
+      "E-Kit R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Playback A",
+     "rows": [
+      "Playback A L",
+      "Playback A R"
+     ],
+     "bank": "aux"
+    },
+    {
+     "op": "add_channel",
+     "name": "Playback B",
+     "rows": [
+      "Playback B L",
+      "Playback B R"
+     ],
+     "bank": "aux"
+    },
+    {
+     "op": "add_channel",
+     "name": "Click",
+     "bank": "aux"
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Keys",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-sixpiece": {
+   "name": "Build the six-piece",
+   "notes": [
+    "FX: the conventions make no effects busses, so there is no FX DCA, bus or mute group to fill."
+   ],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 40,
+     "color": "Red"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 80,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80,
+     "color": "Magenta"
+    },
+    {
+     "name": "Keyboards",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 80,
+     "color": "Cyan"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "color": "Green"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "vocals",
+      "misc"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys",
+     "rows": [
+      "Keys L",
+      "Keys R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "USL Vox",
+     "rows": [
+      "USL Vox"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 1
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "USC Vox",
+     "rows": [
+      "USC Vox"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 2
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "DSC Vox",
+     "rows": [
+      "DSC Vox"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 3
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Ambient/EKIT",
+     "rows": [
+      "Ambient/EKIT"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 4
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "MUSIC",
+     "bank": "aux",
+     "kind": "line",
+     "stereo": true,
+     "place": {
+      "at": 1
+     },
+     "patch": {
+      "group": "LCL",
+      "first": 23,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "HOST",
+     "bank": "aux",
+     "kind": "mic",
+     "place": {
+      "at": 2
+     },
+     "patch": {
+      "group": "LCL",
+      "first": 20
+     },
+     "preset": "Host CO2"
+    },
+    {
+     "op": "add_channel",
+     "name": "TALKBACK",
+     "bank": "aux",
+     "kind": "mic",
+     "place": {
+      "at": 8
+     },
+     "patch": {
+      "group": "LCL",
+      "first": 22
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "bass",
+       "misc"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Speech",
+     "members": {
+      "channels": [
+       "HOST"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "misc"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Speech",
+     "members": {
+      "channels": [
+       "HOST"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": -144,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "misc"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON2",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": -144,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "misc"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON3",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": -144,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "misc"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 3
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON4",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": -144,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "misc"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 4
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums Comp",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "VOX Reverb",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "VOX Delay",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Snare Verb",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": -10,
+     "members": {
+      "channels": [
+       "Snare"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "INST Reverb",
+     "stereo": true,
+     "mode": "post",
+     "level_db": -144,
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main"
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Matrix 1",
+     "patch": {
+      "group": "LCL",
+      "first": 7,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-changeover-full": {
+   "name": "Build the changeover",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80,
+     "color": "Red"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80,
+     "color": "Pink"
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 60,
+     "color": "Cyan"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "color": "Green"
+    },
+    {
+     "name": "Horns",
+     "aliases": [
+      "horns"
+     ],
+     "hpf_hz": 100,
+     "color": "Orange"
+    },
+    {
+     "name": "Support",
+     "aliases": [
+      "support"
+     ],
+     "hpf_hz": 80,
+     "color": "Purple"
+    },
+    {
+     "name": "Speech",
+     "aliases": [
+      "speech"
+     ],
+     "hpf_hz": 120
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "color": "Yellow"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "vocals",
+      "horns",
+      "support",
+      "speech",
+      "tracks"
+     ],
+     "channels": [
+      "Kick In",
+      "Kick Out",
+      "Snare Top",
+      "Snare Bottom",
+      "Hi-Hat",
+      "Tom 1",
+      "Tom 2",
+      "Floor Tom",
+      "OH L",
+      "OH R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys 1",
+     "rows": [
+      "Keys 1 L",
+      "Keys 1 R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys 2",
+     "rows": [
+      "Keys 2 L",
+      "Keys 2 R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Walk-in",
+     "rows": [
+      "Walk-in L",
+      "Walk-in R"
+     ],
+     "stereo": true,
+     "bank": "aux"
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Bass",
+     "members": {
+      "categories": [
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Horns",
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Support",
+     "members": {
+      "categories": [
+       "support"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Speech",
+     "members": {
+      "categories": [
+       "speech"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Headliner",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Support",
+     "members": {
+      "categories": [
+       "support"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Horns",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Support",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "support"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "horns"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 2",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals",
+       "horns"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Support Wedge",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "support"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "B",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-festival-rack": {
+   "name": "Build the festival",
+   "notes": [
+    "FX: the conventions make no effects busses, so there is no FX DCA, bus or mute group to fill."
+   ],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 65
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 70
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Host",
+     "aliases": [
+      "host"
+     ],
+     "main_direct": true
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "horns",
+      "strings",
+      "vocals",
+      "host",
+      "tracks"
+     ],
+     "channels": [
+      "Kick",
+      "Snare",
+      "HiHat",
+      "Tom1",
+      "Tom2",
+      "Tom3",
+      "Tom4",
+      "OH L",
+      "OH R",
+      "Pads",
+      "PERC 1",
+      "PERC2"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Bass",
+     "members": {
+      "categories": [
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Horns",
+     "members": {
+      "categories": [
+       "horns",
+       "strings"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Inst",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "strings"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "All Band",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "strings",
+       "vocals",
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": -10,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": -6,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON1",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "strings",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 41
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON3",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "strings",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 42
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "MON5",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "strings",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 43
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "USB",
+      "first": 47,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Matrix",
+     "patch": {
+      "group": "LCL",
+      "first": 7
+     }
+    }
+   ]
+  },
+  "build-stagebox-rack": {
+   "name": "Build the stage-box mix",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80,
+     "color": "Red"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 100,
+     "color": "Pink"
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 60,
+     "color": "Cyan"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "color": "Green"
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "color": "Yellow"
+    },
+    {
+     "name": "Speech",
+     "aliases": [
+      "speech"
+     ],
+     "hpf_hz": 120,
+     "color": "Purple"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "vocals",
+      "tracks",
+      "speech"
+     ],
+     "channels": [
+      "Kick In",
+      "Kick Out",
+      "Snare Top",
+      "Snare Bottom",
+      "Hi-Hat",
+      "Rack Tom",
+      "Floor Tom",
+      "OH L",
+      "OH R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys",
+     "rows": [
+      "Keys L",
+      "Keys R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Playback",
+     "rows": [
+      "Playback L",
+      "Playback R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Bass",
+     "members": {
+      "categories": [
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Speech",
+     "members": {
+      "categories": [
+       "speech"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 2",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 3",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "B",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-church": {
+   "name": "Build the service",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Speech",
+     "aliases": [
+      "speech"
+     ],
+     "hpf_hz": 120,
+     "color": "Purple",
+     "main_direct": true
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "color": "Green"
+    },
+    {
+     "name": "Choir",
+     "aliases": [
+      "choir"
+     ],
+     "hpf_hz": 100,
+     "color": "Orange"
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 60,
+     "color": "Cyan"
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "color": "Yellow"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "speech",
+      "vocals",
+      "choir",
+      "keys",
+      "tracks"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Organ",
+     "rows": [
+      "Organ L",
+      "Organ R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Piano",
+     "rows": [
+      "Piano L",
+      "Piano R"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_channel",
+     "name": "Walk-in",
+     "rows": [
+      "Walk-in L",
+      "Walk-in R"
+     ],
+     "stereo": true,
+     "bank": "aux"
+    },
+    {
+     "op": "add_channel",
+     "name": "Video",
+     "rows": [
+      "Video L",
+      "Video R"
+     ],
+     "stereo": true,
+     "bank": "aux"
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Speech",
+     "members": {
+      "categories": [
+       "speech"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Music",
+     "members": {
+      "categories": [
+       "vocals",
+       "choir",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Music",
+     "members": {
+      "categories": [
+       "vocals",
+       "choir",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Choir",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "choir"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-messy": {
+   "name": "Build the show",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 80
+    },
+    {
+     "name": "Band",
+     "aliases": [
+      "band"
+     ],
+     "hpf_hz": 60
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "band",
+      "vocals"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "keys",
+     "rows": [
+      "keys l",
+      "keys r"
+     ],
+     "stereo": true
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "band"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-skahorns-full": {
+   "name": "Build the horn band on in-ears",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 60,
+     "main_direct": false,
+     "color": "Red"
+    },
+    {
+     "name": "Percussion",
+     "aliases": [
+      "percussion"
+     ],
+     "hpf_hz": 100,
+     "main_direct": true,
+     "color": "Orange"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "main_direct": true,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 90,
+     "main_direct": true,
+     "color": "Pink"
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 70,
+     "main_direct": true,
+     "color": "Cyan"
+    },
+    {
+     "name": "Horns",
+     "aliases": [
+      "horns"
+     ],
+     "hpf_hz": 120,
+     "main_direct": false,
+     "color": "Amber"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 100,
+     "main_direct": false,
+     "color": "Green"
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "hpf_hz": null,
+     "main_direct": true,
+     "color": "Yellow"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "percussion",
+      "bass",
+      "guitars",
+      "keys",
+      "horns",
+      "vocals",
+      "tracks"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Kick In",
+     "rows": [
+      "Kick In"
+     ],
+     "hpf_hz": 30
+    },
+    {
+     "op": "add_channel",
+     "name": "Kick Out",
+     "rows": [
+      "Kick Out"
+     ],
+     "hpf_hz": 30
+    },
+    {
+     "op": "add_channel",
+     "name": "Gtr 2",
+     "rows": [
+      "Gtr 2 L",
+      "Gtr 2 R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Keys",
+     "rows": [
+      "Keys L",
+      "Keys R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Organ",
+     "rows": [
+      "Organ L",
+      "Organ R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Tracks",
+     "rows": [
+      "Tracks L",
+      "Tracks R"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Perc",
+     "members": {
+      "categories": [
+       "percussion"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Rhythm",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Horns",
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Lead",
+     "members": {
+      "channels": [
+       "Lead Vox"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "BVs",
+     "members": {
+      "channels": [
+       "BV 1",
+       "BV 2",
+       "BV 3",
+       "BV 4"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "channels": [
+       "Tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "drums",
+       "percussion",
+       "bass",
+       "guitars",
+       "keys",
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Tracks",
+     "members": {
+      "channels": [
+       "Tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Horns",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drum IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "percussion",
+       "bass",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Perc IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "percussion",
+       "keys",
+       "vocals"
+      ],
+      "channels": [
+       "Tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Bass IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars"
+      ],
+      "channels": [
+       "Lead Vox",
+       "Tracks",
+       "Click"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 5,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Gtr IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 7,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Keys IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 9,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Horn IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "keys",
+       "horns"
+      ],
+      "channels": [
+       "Lead Vox"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 11,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Lead IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "horns",
+       "vocals"
+      ],
+      "channels": [
+       "Tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 13,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "BV IEM",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 15,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-folkstrings-compact": {
+   "name": "Build the folk band with strings",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 50,
+     "main_direct": true
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "main_direct": true
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 100,
+     "main_direct": true
+    },
+    {
+     "name": "Strings",
+     "aliases": [
+      "strings"
+     ],
+     "hpf_hz": 150,
+     "main_direct": false
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 100,
+     "main_direct": true
+    },
+    {
+     "name": "Playback",
+     "aliases": [
+      "tracks"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "strings",
+      "vocals"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Cello",
+     "rows": [
+      "Cello"
+     ],
+     "hpf_hz": 60
+    },
+    {
+     "op": "add_channel",
+     "name": "MUSIC",
+     "bank": "aux",
+     "kind": "line",
+     "stereo": true,
+     "category": "tracks",
+     "place": {
+      "at": 1
+     },
+     "patch": {
+      "group": "LCL",
+      "first": 13,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Rhythm",
+     "members": {
+      "categories": [
+       "drums",
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Strings",
+     "members": {
+      "categories": [
+       "strings"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Music",
+     "members": {
+      "channels": [
+       "MUSIC"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Stage",
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "strings",
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Wedge 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "channels": [
+       "Lead Vox",
+       "BV",
+       "Ac Gtr",
+       "Violin"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Wedge 2",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "strings"
+      ],
+      "channels": [
+       "Lead Vox",
+       "Ac Gtr"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Wedge 3",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "guitars"
+      ],
+      "channels": [
+       "Kick",
+       "Snare",
+       "Lead Vox"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 3
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Wedge 4",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass"
+      ],
+      "channels": [
+       "Lead Vox",
+       "BV"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "LCL",
+       "first": 4
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Strings",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "strings"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 7,
+      "count": 2
+     }
+    }
+   ]
+  },
+  "build-salsa-rack": {
+   "name": "Build the salsa band",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 40,
+     "main_direct": true
+    },
+    {
+     "name": "Percussion",
+     "aliases": [
+      "percussion"
+     ],
+     "hpf_hz": 80,
+     "main_direct": false
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 40,
+     "main_direct": true
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80,
+     "main_direct": true
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 50,
+     "main_direct": true
+    },
+    {
+     "name": "Horns",
+     "aliases": [
+      "horns"
+     ],
+     "hpf_hz": 100,
+     "main_direct": false
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 100,
+     "main_direct": false
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "percussion",
+      "bass",
+      "guitars",
+      "keys",
+      "horns",
+      "vocals"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Hi-Hat",
+     "rows": [
+      "Hi-Hat"
+     ],
+     "hpf_hz": 150
+    },
+    {
+     "op": "add_channel",
+     "name": "OH L",
+     "rows": [
+      "OH L"
+     ],
+     "hpf_hz": 150
+    },
+    {
+     "op": "add_channel",
+     "name": "OH R",
+     "rows": [
+      "OH R"
+     ],
+     "hpf_hz": 150
+    },
+    {
+     "op": "add_channel",
+     "name": "Piano",
+     "rows": [
+      "Piano L",
+      "Piano R"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Perc",
+     "members": {
+      "categories": [
+       "percussion"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Rhythm",
+     "members": {
+      "categories": [
+       "bass",
+       "guitars",
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Horns",
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Leads",
+     "members": {
+      "channels": [
+       "Lead Vox 1",
+       "Lead Vox 2"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Coros",
+     "members": {
+      "channels": [
+       "Coro 1",
+       "Coro 2"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Band",
+     "members": {
+      "categories": [
+       "drums",
+       "percussion",
+       "bass",
+       "guitars",
+       "keys",
+       "horns"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 1",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals",
+       "keys",
+       "horns",
+       "percussion"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 2",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals",
+       "keys",
+       "percussion"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 3",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "horns",
+       "keys",
+       "percussion"
+      ],
+      "channels": [
+       "Lead Vox 1",
+       "Lead Vox 2"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 4",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "percussion",
+       "bass",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 4
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 5",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "percussion",
+       "bass",
+       "keys"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 5
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Mon 6",
+     "stereo": false,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "keys",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 6
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Perc",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "percussion"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Horns",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "horns"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Delays",
+     "patch": {
+      "group": "LCL",
+      "first": 3,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Front Fill",
+     "patch": {
+      "group": "LCL",
+      "first": 5
+     }
+    }
+   ]
+  },
+  "build-rockkeys-compact": {
+   "name": "Build the rock band on in-ears",
+   "notes": [],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": 40,
+     "main_direct": false,
+     "color": "Red"
+    },
+    {
+     "name": "Bass",
+     "aliases": [
+      "bass"
+     ],
+     "hpf_hz": 30,
+     "main_direct": true,
+     "color": "Blue"
+    },
+    {
+     "name": "Guitars",
+     "aliases": [
+      "guitars"
+     ],
+     "hpf_hz": 80,
+     "main_direct": false,
+     "color": "Purple"
+    },
+    {
+     "name": "Keys",
+     "aliases": [
+      "keys"
+     ],
+     "hpf_hz": 50,
+     "main_direct": true,
+     "color": "Cyan"
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": 120,
+     "main_direct": false,
+     "color": "Green"
+    },
+    {
+     "name": "Tracks",
+     "aliases": [
+      "tracks"
+     ],
+     "hpf_hz": null,
+     "main_direct": true,
+     "color": "Yellow"
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "bass",
+      "guitars",
+      "keys",
+      "vocals",
+      "tracks"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Gtr 1",
+     "rows": [
+      "Gtr 1 L",
+      "Gtr 1 R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Gtr 2",
+     "rows": [
+      "Gtr 2 L",
+      "Gtr 2 R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Ac Gtr",
+     "rows": [
+      "Ac Gtr"
+     ],
+     "hpf_hz": 120
+    },
+    {
+     "op": "add_channel",
+     "name": "Piano",
+     "rows": [
+      "Piano L",
+      "Piano R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Synth",
+     "rows": [
+      "Synth L",
+      "Synth R"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Lead Vox",
+     "rows": [
+      "Lead Vox"
+     ],
+     "hpf_hz": 90
+    },
+    {
+     "op": "add_channel",
+     "name": "Tracks",
+     "rows": [
+      "Tracks L",
+      "Tracks R"
+     ]
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Bass",
+     "members": {
+      "categories": [
+       "bass"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Guitars",
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Keys",
+     "members": {
+      "categories": [
+       "keys"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Lead",
+     "members": {
+      "channels": [
+       "Lead Vox"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "BVs",
+     "members": {
+      "channels": [
+       "BV 1",
+       "BV 2",
+       "BV 3",
+       "BV 4"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "dca",
+     "name": "Tracks",
+     "members": {
+      "channels": [
+       "Tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Drums",
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Vocals",
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     }
+    },
+    {
+     "op": "add_group",
+     "object": "mute_group",
+     "name": "Tracks",
+     "members": {
+      "categories": [
+       "tracks"
+      ]
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Drums",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "keys",
+       "tracks"
+      ],
+      "channels": [
+       "Lead Vox"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Bass",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "guitars",
+       "tracks"
+      ],
+      "channels": [
+       "Lead Vox"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Gtr 1",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "vocals"
+      ],
+      "channels": [
+       "Gtr 1",
+       "Ac Gtr",
+       "Click"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 5,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Gtr 2",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums",
+       "bass",
+       "vocals"
+      ],
+      "channels": [
+       "Gtr 2",
+       "Click"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 7,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Keys",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "bass",
+       "keys",
+       "vocals",
+       "tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 9,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "IEM Lead",
+     "stereo": true,
+     "mode": "pre",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "guitars",
+       "keys",
+       "vocals"
+      ],
+      "channels": [
+       "Tracks"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 11,
+       "count": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Drums",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "drums"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Gtrs",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "guitars"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Vocals",
+     "stereo": true,
+     "mode": "post",
+     "level_db": 0,
+     "members": {
+      "categories": [
+       "vocals"
+      ]
+     },
+     "to": {
+      "main": true
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "main",
+     "name": "Main",
+     "patch": {
+      "group": "LCL",
+      "first": 1,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Delay 1",
+     "patch": {
+      "group": "LCL",
+      "first": 5
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Delay 2",
+     "patch": {
+      "group": "LCL",
+      "first": 6
+     }
+    }
+   ]
+  },
+  "build-realshow-rack": {
+   "name": "Build the real show",
+   "notes": [
+    "Matrix 4 as the headphone monitor source is a desk setting the build does not write."
+   ],
+   "categories": [
+    {
+     "name": "Drums",
+     "aliases": [
+      "drums"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    },
+    {
+     "name": "Band",
+     "aliases": [
+      "band"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    },
+    {
+     "name": "Vocals",
+     "aliases": [
+      "vocals"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    },
+    {
+     "name": "Speech",
+     "aliases": [
+      "host"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    },
+    {
+     "name": "Playback",
+     "aliases": [
+      "tracks"
+     ],
+     "hpf_hz": null,
+     "main_direct": true
+    }
+   ],
+   "ops": [
+    {
+     "op": "order",
+     "categories": [
+      "drums",
+      "band",
+      "vocals"
+     ]
+    },
+    {
+     "op": "add_channel",
+     "name": "Kick",
+     "rows": [
+      "Kick"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 1
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Snare",
+     "rows": [
+      "Snare"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 2
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Tom 1",
+     "rows": [
+      "Tom 1"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 4
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Tom 2",
+     "rows": [
+      "Tom 2"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 5
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Tom 3",
+     "rows": [
+      "Tom 3"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 6
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "Bass",
+     "rows": [
+      "Bass"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 10
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "EG Rich",
+     "rows": [
+      "EG Rich"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 11
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "EG Dan",
+     "rows": [
+      "EG Dan"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 12
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "AG Rich",
+     "rows": [
+      "AG Rich"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 13
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "AG Dan",
+     "rows": [
+      "AG Dan"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 14
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "VOX Rich",
+     "rows": [
+      "VOX Rich"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 15
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "VOX Tony",
+     "rows": [
+      "VOX Tony"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 16
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "VOX Dan",
+     "rows": [
+      "VOX Dan"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 17
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "VOX Jared",
+     "rows": [
+      "VOX Jared"
+     ],
+     "patch": {
+      "group": "A",
+      "first": 18
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "OH L+R",
+     "rows": [
+      "OH L+R"
+     ],
+     "stereo": true,
+     "patch": {
+      "group": "A",
+      "first": 7,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "MUSIC",
+     "bank": "aux",
+     "kind": "line",
+     "stereo": true,
+     "place": {
+      "at": 1
+     },
+     "category": "tracks",
+     "patch": {
+      "group": "LCL",
+      "first": 23,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_channel",
+     "name": "HOST",
+     "bank": "aux",
+     "kind": "mic",
+     "place": {
+      "at": 2
+     },
+     "category": "host",
+     "patch": {
+      "group": "LCL",
+      "first": 20
+     },
+     "preset": "Speech Handheld"
+    },
+    {
+     "op": "add_channel",
+     "name": "TALKBACK",
+     "bank": "aux",
+     "kind": "mic",
+     "place": {
+      "at": 8
+     },
+     "patch": {
+      "group": "LCL",
+      "first": 22
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 1",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "band",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 1
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 2",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "band",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 2
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 3",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "band",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 3
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 4",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "band",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 4
+      }
+     }
+    },
+    {
+     "op": "add_bus",
+     "name": "Monitor 5",
+     "stereo": false,
+     "mode": "pre",
+     "members": {
+      "categories": [
+       "drums",
+       "band",
+       "vocals"
+      ]
+     },
+     "to": {
+      "output": {
+       "group": "A",
+       "first": 5
+      }
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Mains",
+     "index": 1,
+     "patch": {
+      "group": "A",
+      "first": 7,
+      "count": 2
+     }
+    },
+    {
+     "op": "add_output",
+     "object": "matrix",
+     "name": "Matrix 3",
+     "index": 3,
+     "patch": {
+      "group": "A",
+      "first": 6
+     }
+    }
+   ]
+  }
+ }
+}

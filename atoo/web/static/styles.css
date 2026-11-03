@@ -579,6 +579,13 @@ tr.row-clearing td {
 .ct td.col-notes input[type="text"] { min-width: 120px; }
 .ct td.col-phantom { text-align: center; }
 .ct td.col-remove { width: 32px; text-align: center; }
+/* A sheet row taken out by its Remove row button (it says OFF): dimmed,
+   tagged, still there to type over. */
+.ct tr.row-removed > td { opacity: 0.55; }
+.ct tr.row-removed:focus-within > td { opacity: 1; }
+.ct .row-removed-tag { display: flex; width: fit-content; margin-top: 4px; font-size: 11px; }
+/* A bus row Save will add: the note goes under its name, not over Role. */
+.ct td.col-bus-name .ct-unplanned-note { display: block; margin-top: 4px; font-size: 11px; }
 .ct tr.row-invalid td { background: var(--warning-bg); }
 .ct td.ct-name { font-weight: 700; white-space: nowrap; }
 .ct td.cell-plan { white-space: nowrap; }

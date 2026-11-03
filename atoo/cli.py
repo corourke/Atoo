@@ -170,6 +170,18 @@ def _add_show_argument(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--show", default=None, metavar="DIR", help=SHOW_HELP)
 
 
+def for_show(provider, show):
+    """`provider`, keyed to `show` for a host that caches the prompt prefix:
+    the api provider's `x-grok-conv-id` is the show's (`conv_id_for`), so
+    `build` and `patch` on one show share the cache. Any other
+    provider has no such header and is returned as it is."""
+    from atoo.ai_provider import conv_id_for
+
+    if show is not None and hasattr(provider, "conv_id"):
+        provider.conv_id = conv_id_for(show.directory)
+    return provider
+
+
 def _open_bundle(args: argparse.Namespace):
     """The `--show` directory as a `bundle.Bundle`, or None when not given.
 
@@ -322,7 +334,10 @@ def build(args: argparse.Namespace) -> int:
     # misleading "stopped" log for a build that in fact succeeded.
     ctx: dict = {}
     try:
-        return _build(args, written, ctx)
+        code = _build(args, written, ctx)
+        if code != 0:
+            _say_where_the_plan_went(ctx)
+        return code
     except (KeyboardInterrupt, BuildStopped) as exc:
         how = "" if isinstance(exc, BuildStopped) else " (Ctrl-C)"
         print("", file=sys.stderr)
@@ -331,7 +346,31 @@ def build(args: argparse.Namespace) -> int:
         if not ctx.get("logged"):
             reason = (str(exc) or "stopped by you") if isinstance(exc, BuildStopped) else "Ctrl-C"
             _write_build_log(ctx, status=build_log_module.STOPPED, reason=reason)
+        _say_where_the_plan_went(ctx)
         return 130
+
+
+def _steps_record(trace: dict | None) -> dict | None:
+    """What `--intent-steps` keeps in the build's log: each call's step, attempt, seconds and
+    tokens, and the settings they were sent with (not the replies: `intent_replies` has those)."""
+    if not trace:
+        return None
+    return {"steps": trace.get("steps") or [], "settings": trace.get("settings") or {}}
+
+
+def _say_where_the_plan_went(ctx: dict) -> None:
+    """After a build that started and did not write a plan: where the plan it
+    moved aside is, and how to have it back. A rebuild
+    clears the current plan ("If we rebuild, we
+    need to clear the current plan ... because none of that is still
+    current"), so it stays aside; this line is so it is never lost."""
+    moved = ctx.get("plan_moved_aside")
+    if moved is None or moved[0].exists():
+        return
+    plan, previous = moved
+    print(f"{plan.name} was moved aside to {previous.name} when this build started, because a "
+          f"rebuild clears the current plan. To go back to it, rename {previous.name} to "
+          f"{plan.name} in {plan.parent}.", file=sys.stderr)
 
 
 def _write_build_log(ctx: dict, *, status: str, reason: str | None,
@@ -371,7 +410,9 @@ def _write_build_log(ctx: dict, *, status: str, reason: str | None,
                 "effort": None,
             }
         entry = build_log_module.build_entry(
-            meta=meta, build_log=build_log_data, status=status, reason=reason)
+            meta=meta, build_log=build_log_data, status=status, reason=reason,
+            intent_replies=ctx.get("intent_replies"),
+            intent_steps=_steps_record(ctx.get("intent_steps")))
         path = build_log_module.write(directory, entry)
         ctx["logged"] = True
         ctx["log_dir"] = directory
@@ -560,6 +601,130 @@ class SheetRefused(Exception):
         self.sheet = sheet
 
 
+_PAIR_SIDE = re.compile(r"^(?P<stem>.*?)[\s_-]*(?P<side>L|Left|R|Right)$", re.IGNORECASE)
+
+
+def _one_pair_by_name(a: str, b: str) -> bool:
+    """`Keys L` and `Keys R` (or `Left`/`Right`): two rows one strip may hold."""
+    ma, mb = _PAIR_SIDE.match(a or ""), _PAIR_SIDE.match(b or "")
+    return bool(ma and mb and ma.group("stem").casefold() == mb.group("stem").casefold()
+                and ma.group("side")[0].upper() != mb.group("side")[0].upper())
+
+
+def _precheck_show(rows, show, console_model: "str | None") -> list[str]:
+    """What in the input list and the show's sheets cannot work whatever the
+    model replies: two rows on one strip that are not
+    one L/R pair, a sheet row that names no bus, Main or Matrix the desk has,
+    and an output socket the desk does not have. Found before any model call,
+    so a build that cannot succeed spends nothing and moves nothing. What
+    depends on the plan (a source that names a bus the model will build) is
+    left to the build."""
+    from atoo import outputs_sheet, sheets, source_edit
+
+    problems: list[str] = []
+    claimed: dict = {}
+    for row in rows:
+        spot = getattr(row, "channel", None)
+        if not spot:
+            continue
+        held = claimed.setdefault(spot, [])
+        if any(not _one_pair_by_name(other.name, row.name) for other in held) or len(held) >= 2:
+            first = held[0]
+            problems.append(
+                f"input list: {first.name!r} and {row.name!r} both name "
+                f"{'CH' if spot[0] == 'ch' else spot[0].upper()} {spot[1]} in the channel column, "
+                "and a strip holds one input (or the two rows of one stereo pair). Change one of "
+                "the two cells")
+        held.append(row)
+    if show is None:
+        return problems
+
+    path = show.directory / bundle.BUSSES
+    if path.is_file():
+        records = source_edit.read_records(path.read_text(encoding="utf-8-sig"))[1]
+        seen: set = set()
+        for n, record in enumerate((r.values for r in records), start=2):
+            cell = (record.get("bus") or "").strip()
+            where = f"{bundle.BUSSES}, {cell or f'row {n}'}"
+            parsed = sheets.parse_label(cell)
+            if parsed is None:
+                problems.append(f"{where}: a row is a bus, Main or Matrix: write Bus 1-16, "
+                                "Main 1-4 or Matrix 1-8 (or Bus alone, for Atoo to pick the "
+                                "number)")
+                continue
+            kind, index = parsed
+            if index is not None:
+                if not 1 <= index <= sheets._capacity(kind):
+                    problems.append(f"{where}: the desk has {sheets.label_of(kind, 1)}-"
+                                    f"{sheets._capacity(kind)}, so there is no "
+                                    f"{sheets.label_of(kind, index)}")
+                elif (kind, index) in seen:
+                    problems.append(f"{where}: {sheets.label_of(kind, index)} has two rows; give "
+                                    "each one row")
+                seen.add((kind, index))
+            width = (record.get("width") or "").strip().lower()
+            if width and width not in ("mono", "stereo"):
+                problems.append(f"{where}, width {record.get('width')!r}: width is mono or stereo")
+            tap = (record.get("tap") or "").strip().lower()
+            if tap and tap not in facts.PLAN_STORED_SEND_MODES:
+                problems.append(f"{where}, tap {record.get('tap')!r}: tap is pre, post or group "
+                                "(the desk's GRP)")
+            outputs = (record.get("outputs") or "").strip()
+            if outputs:
+                runs, problem = sheets.parse_outputs(outputs)
+                if problem:
+                    problems.append(f"{where}, outputs {outputs!r}: {problem}")
+                else:
+                    for group, sockets in runs:
+                        limit = facts.output_socket_limit(group, console_model)
+                        past = [s for s in sockets if s > limit]
+                        if past:
+                            problems.append(_no_socket(where + f", outputs {outputs!r}", group,
+                                                       past[0], limit))
+
+    path = show.directory / bundle.OUTPUTS
+    if path.is_file():
+        fed: dict = {}
+        expanded, _notes, refused = outputs_sheet.expand_rows(
+            outputs_sheet.read_rows(path.read_text(encoding="utf-8-sig")))
+        problems.extend(refusal.text() for refusal in refused)
+        for n, row in expanded:
+            out_cell = (row.get("output") or "").strip()
+            src_cell = (row.get("source") or "").strip()
+            if not out_cell and not src_cell:
+                continue
+            where = f"{bundle.OUTPUTS}, {out_cell or f'line {n}'}"
+            socket = outputs_sheet.parse_output(out_cell)
+            if socket is None:
+                problems.append(f"{where}: is not an output socket: write a group and a number, "
+                                "such as USB 5 or AES50-B 3, or a run of them, such as USB 1-16")
+                continue
+            limit = facts.output_socket_limit(socket[0], console_model)
+            if socket[1] > limit:
+                problems.append(_no_socket(where, socket[0], socket[1], limit))
+            source, problem = outputs_sheet.parse_source(src_cell)
+            if problem:
+                problems.append(f"{where}, source: {problem}")
+            elif isinstance(source, tuple):
+                # A row that took the socket OFF gives way to one feeding it.
+                if socket in fed:
+                    problems.append(f"{where}: is listed twice (lines {fed[socket]} and {n}): "
+                                    "one socket carries one source")
+                fed[socket] = n
+    return problems
+
+
+def _no_socket(where: str, group: str, n: int, limit: int) -> str:
+    return (f"{where}: this console has no {group} {n}"
+            + (f" (its {group} outputs are 1-{limit})" if limit else f" (it has no {group} outputs)"))
+
+
+#: The INFO a sheet laid on during a build gives for each cell it carried
+#: out, by code, and the sheet's file name.
+_SHEET_NOTE_CODES = {"build.bus-sheet": bundle.BUSSES, "build.outputs-sheet": bundle.OUTPUTS,
+                     "build.user-sheet": bundle.USER}
+
+
 def _lay_on_bus_sheet(plan: dict, show, input_csv: str,
                       console_model: "str | None", *,
                       outputs_cells: "dict[str, str] | None" = None) -> list:
@@ -586,7 +751,8 @@ def _lay_on_bus_sheet(plan: dict, show, input_csv: str,
                 outputs_cells[(row.get("bus") or "").strip()] = cell
             row["outputs"] = ""
     result = sheets.overlay_busses(plan, rows,
-                                   categories=sheets.categories_by_channel(plan, input_csv))
+                                   categories=sheets.categories_by_channel(plan, input_csv),
+                                   build=True)
     if not result.refusals:
         sheets.refuse_new_errors(plan, result, console_model=console_model)
     if result.refusals:
@@ -645,6 +811,19 @@ def _lay_on_sheets(plan: dict, show, input_csv: str, console_model: "str | None"
                      f"its rows in Build 04's Outputs table, to move a bus."),
             source="build"))
     return findings
+
+
+def _user_sheet_slots(show) -> set[int]:
+    """Every USR slot the show's `user.csv` names. It is laid on after the
+    plan is built, so Build leaves these alone when it routes a stereo pair
+    through a user patch. No show, or no sheet: none."""
+    from atoo import user_sheet
+
+    if show is None or not (show.directory / bundle.USER).is_file():
+        return set()
+    rows = user_sheet.read_rows((show.directory / bundle.USER).read_text(encoding="utf-8-sig"))
+    return {slot for slot in (user_sheet.parse_slot((row.get("slot") or "").strip())
+                              for row in rows) if slot is not None}
 
 
 def _lay_on_user_sheet(plan: dict, show, console_model: "str | None") -> list:
@@ -774,9 +953,47 @@ def _socket_runs_words(sockets: list) -> str:
     return sheets._socket_runs([{"group": g, "sockets": [n]} for g, n in sockets])
 
 
+def _local_host(url: str) -> bool:
+    """Whether `url` names this machine or the local network: `localhost`, a `.local` name, or a
+    loopback, private or link-local address."""
+    import ipaddress
+    from urllib.parse import urlparse
+
+    host = (urlparse(url if "//" in url else f"//{url}").hostname or "").casefold()
+    if host == "localhost" or host.endswith((".localhost", ".local")):
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_loopback or address.is_private or address.is_link_local
+
+
+def _intent_steps_default(provider) -> tuple[bool, str]:
+    """Whether `--intent` asks in three steps when neither `--intent-steps` nor `--no-intent-steps`
+    is given, and the INFO that says so. A local model gets the steps: Ollama, or the `api`
+    provider (OpenAI-compatible) on a host on this machine or network (`_local_host`). On the same
+    model and code they built more of the show than one call (base qwen2.5-coder:14b on Ollama, dev
+    set: 2534 checks and 12 of 20 shows against 2155 and 8), and faster at the long tail. Claude,
+    and the `api` provider on a remote host, keep the single call."""
+    from atoo.ai_provider import ApiKeyProvider, OllamaProvider
+
+    if isinstance(provider, OllamaProvider):
+        return True, ("the intent is asked for in three steps, the default for a local model (Ollama); "
+                      "--no-intent-steps asks for it in one call")
+    if isinstance(provider, ApiKeyProvider) and _local_host(provider.base_url):
+        return True, (f"the intent is asked for in three steps, the default for a local model (the api "
+                      f"provider at {provider.base_url}, on this machine or network); --no-intent-steps "
+                      "asks for it in one call")
+    return False, ("the intent is asked for in one call, the default for this provider; "
+                   "--intent-steps asks for it in three")
+
+
 def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None) -> int:
     if ctx is None:
         ctx = {}
+    if getattr(args, "intent_steps", False):
+        args.intent = True        # the steps are a way of building through the intent
     # --show DIR first, so everything below sees the bundle's paths as if
     # they had been passed as flags. Resolution order end to end:
     #   explicit flag  >  --show  >  _auto_detect  >  ~/.atoo.config
@@ -997,11 +1214,21 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                  if show is not None else ""), file=sys.stderr)
         return 1
 
+    # What cannot work whatever the model replies is found now, before any
+    # spend, and moves nothing.
+    problems = _precheck_show(rows, show, console_model)
+    if problems:
+        message = ("; ".join(problems) + ". Nothing was sent to a model and nothing was changed"
+                   + (f": {bundle.PLAN} is as it was." if show is not None else "."))
+        print(f"build failed: {message}", file=sys.stderr)
+        _write_build_log(ctx, status=build_log_module.FAILED, reason=message)
+        return 1
+
     # A build is a model call: with no model set up it cannot happen, and it
     # says so before anything on disk moves -- plan.json stays as it is, so
     # Apply still has the plan it had.
     try:
-        provider = provider_from_env()
+        provider = for_show(provider_from_env(), show)
     except AIProviderError as exc:
         message = (f"{exc}. See 'Setting up an AI provider' in the user guide. Nothing was "
                    "changed" + (f": {bundle.PLAN} is as it was." if show is not None else "."))
@@ -1017,6 +1244,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             and out_path.is_file():
         previous = out_path.with_name(bundle.PLAN_PREVIOUS)
         out_path.replace(previous)
+        ctx["plan_moved_aside"] = (out_path, previous)
         print(f"INFO {bundle.PLAN} moved aside to {bundle.PLAN_PREVIOUS}: it was built from "
               f"what this build replaces, so it is no longer current", file=sys.stderr)
 
@@ -1025,6 +1253,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     # cited rules, which the generator and the fix-up read in place of
     # both. `--no-resolve` / ATOO_RESOLVE=0 turn it off, for the A/B.
     resolve_off = ("--no-resolve" if getattr(args, "no_resolve", False)
+                   else "--intent: the reply carries its own category table" if getattr(args, "intent", False)
                    else None if conventions_resolve.enabled()
                    else f"{conventions_resolve.RESOLVE_ENV}=0")
     resolve_state = None
@@ -1158,6 +1387,7 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
             resolved_name=resolved.name if resolved is not None else None,
             category_table=category_table,
             instructed_strips=instructed_strips,
+            reserved_user_slots=_user_sheet_slots(show),
         )
         # The fix-up round: a reply refused by the
         # format check, or a plan refused by verify with ERRORS, goes back
@@ -1167,9 +1397,46 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
         fixup: dict | None = None
         replies: list[str] = []
         try:
-            plan = generate.generate_plan(
-                conventions_raw, input_csv, provider=provider,
-                findings=expansion_findings, replies=replies, **gen_kwargs)
+            if getattr(args, "intent", False):
+                # The model writes an intent for the whole show and code compiles it
+                # (`atoo/intent_build.py`); its repair round replaces the fix-up round.
+                fixup_budget = 0
+                from atoo import intent_build
+                # The intent is short, and the only record of what the model decided: the
+                # build's own log keeps it (`build_log.build_entry`), never the plan.
+                ctx["intent_replies"] = replies
+                intent_infos: list[str] = []
+                try:
+                    library = _preset_library_choice(args).library
+                    intent_presets = library.names() if library is not None else None
+                except Exception:  # noqa: BLE001 -- no library: presets are not checked, not a failure
+                    intent_presets = None
+                intent_kwargs = dict(
+                    provider=provider, console_model=console_model,
+                    conventions_name=gen_kwargs["conventions_name"], input_name=gen_kwargs["input_name"],
+                    instructions=instructions_text, instructions_name=gen_kwargs["instructions_name"],
+                    category_table=category_table, known_presets=intent_presets,
+                    infos=intent_infos, replies=replies, reserved_user_slots=_user_sheet_slots(show))
+                steps = getattr(args, "intent_steps", None)
+                if steps is None:
+                    steps, said = _intent_steps_default(provider)
+                    print(f"  INFO {said}", file=sys.stderr)
+                if steps:
+                    # Three scoped calls over one cached prefix (`atoo/intent_steps.py`); what each
+                    # call cost and whether it was repaired goes in the build's own log.
+                    from atoo import intent_steps
+                    steps_trace: dict = {}
+                    ctx["intent_steps"] = steps_trace
+                    plan = intent_steps.generate_plan(conventions_raw, input_csv, trace=steps_trace,
+                                                      **intent_kwargs)
+                else:
+                    plan = intent_build.generate_plan(conventions_raw, input_csv, **intent_kwargs)
+                for line in intent_infos:
+                    print(f"  INFO {line}", file=sys.stderr)
+            else:
+                plan = generate.generate_plan(
+                    conventions_raw, input_csv, provider=provider,
+                    findings=expansion_findings, replies=replies, **gen_kwargs)
         except generate.GenerationError as first:
             if not fixup_budget or not first.reply:
                 raise
@@ -1651,6 +1918,15 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
                         "preset put into the plan):",
             )
 
+    # A pair the desk cannot form as cabled, and what was made of it: in plan.json, and said here too.
+    pair_route_notes = [f for f in build_findings if f.code in (
+        "reply.pair-by-names", "reply.pair-through-user-patch", "reply.pair-split")]
+    if pair_route_notes:
+        _emit_diagnostics(
+            pair_route_notes,
+            heading=f"\nStereo pairs -- {len(pair_route_notes)} note(s) (a pair whose sockets "
+                    "the desk cannot pair as cabled, and how it was built):")
+
     pair_phantom_notes = [f for f in build_findings if f.code == "reply.pair-phantom"]
     if pair_phantom_notes:
         _emit_diagnostics(
@@ -1661,6 +1937,42 @@ def _build(args: argparse.Namespace, written: list[str], ctx: dict | None = None
     fixup_findings = [f for f in build_findings if f.code.startswith("build.fixup")]
     if fixup_findings:
         _emit_diagnostics(fixup_findings, heading="\nFix-up round:")
+
+    # What code chose and carried out while it built the plan, as the Build
+    # page's Findings lists it: the input list's
+    # columns carried out, a split or a feed built, a sheet laid on, and a
+    # feed that could not be. Kept in `meta.build_findings` as before; what
+    # a block above already printed is not printed twice, and the build
+    # details (a count of what was expanded) are counted, not listed.
+    shown = {id(f) for f in (comment_findings + skip_findings + resolve_findings
+                             + audit_findings + preset_findings + fixup_findings)}
+    shown_by_code = {"reply.pair-phantom", "reply.pair-by-names",
+                     "reply.pair-through-user-patch", "reply.pair-split"}
+    built_here = [f for f in build_findings
+                  if id(f) not in shown and f.code not in shown_by_code]
+    build_notes = [f for f in built_here if not finding_groups.is_build_detail(f)]
+    build_details = len(built_here) - len(build_notes)
+    # A sheet laid on says one INFO per cell it carried out -- hundreds on a
+    # captured show -- so the terminal counts them per sheet, and Build's
+    # Findings and plan.json list each one. An ERROR or WARNING is listed.
+    sheet_notes: dict[str, int] = {}
+    for f in build_notes:
+        if f.code in _SHEET_NOTE_CODES and f.severity == diagnostics.Severity.INFO:
+            sheet_notes[_SHEET_NOTE_CODES[f.code]] = sheet_notes.get(_SHEET_NOTE_CODES[f.code], 0) + 1
+    build_notes = [f for f in build_notes if not (
+        f.code in _SHEET_NOTE_CODES and f.severity == diagnostics.Severity.INFO)]
+    if sheet_notes:
+        print("\nSheets laid on -- " + "; ".join(
+            f"{sheet}: {n} change(s) and choice(s)" for sheet, n in sheet_notes.items())
+              + f". Each is listed in Build's Findings and in {bundle.PLAN} "
+                "(meta.build_findings).", file=sys.stderr)
+    if build_notes:
+        _emit_diagnostics(
+            build_notes,
+            heading=f"\nBuild -- {len(build_notes)} note(s) (what the build chose or carried "
+                    "out, and what it could not)"
+                    + (f"; {build_details} build detail(s) more are in "
+                       f"{bundle.PLAN} (meta.build_findings)" if build_details else "") + ":")
 
     if critic_findings:
         _emit_diagnostics(
@@ -4595,6 +4907,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
     from atoo import amend as amend_engine
     from atoo import desk_view, journal_stack
     from atoo import patch as patch_engine
+    from atoo.intent_compile import IntentRefused
 
     if getattr(args, "promote", None):
         return _promote_change(args)
@@ -4637,6 +4950,11 @@ def patch_cmd(args: argparse.Namespace) -> int:
         change_text, error = _change_text(args)
         if error:
             print(error, file=sys.stderr)
+            return 1
+        if getattr(args, "intent_file", None) and (getattr(args, "change_set", None)
+                                                   or getattr(args, "intent", False)):
+            print("--intent-file is an intent already written; --change-set and --intent are "
+                  "the other ways to get a change -- give one", file=sys.stderr)
             return 1
         if getattr(args, "change_set", None):
             try:
@@ -4733,6 +5051,25 @@ def patch_cmd(args: argparse.Namespace) -> int:
     model_s = None
     compiled_by = None
     repair_with = None
+    # The preset library a patch takes its presets from is known before the model is
+    # asked (it depends on the args and the plan on the desk), so an intent can be
+    # shown the names it may choose from; the choice is announced below, as always.
+    library_choice = _preset_library_choice(args, applied) if mode == "patch" else None
+    preset_names = None
+    if library_choice is not None and library_choice.library is not None:
+        try:
+            preset_names = library_choice.library.names()
+        except (OSError, ValueError):
+            preset_names = None
+    intent_given = None
+    if mode == "patch" and change_set is None and getattr(args, "intent_file", None):
+        try:
+            intent_given = json.loads(Path(args.intent_file).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            if console is not None:
+                console.close()
+            print(f"--intent-file {args.intent_file}: {exc}", file=sys.stderr)
+            return 1
     if mode == "patch" and change_set is None:
         conventions, conventions_name, instructions, instructions_name, conv_infos = \
             _change_conventions(args, show, applied)
@@ -4752,17 +5089,53 @@ def patch_cmd(args: argparse.Namespace) -> int:
         print(f"\nCompiling the change: {change_text.strip()}")
         t0 = time.monotonic()
         try:
-            provider = provider_from_env()
-            compiled_by = getattr(provider, "model", None) or type(provider).__name__
-            compile_args = dict(
-                provider=provider, console_model=console_model,
-                conventions=conventions, conventions_name=conventions_name,
-                instructions=instructions, instructions_name=instructions_name,
-                constrain=not args.no_constrain)
-            change_set = patch_engine.compile_change(
-                change_text, applied, infos=compile_infos, **compile_args)
-            if getattr(provider, "repairs_replies", False):
-                repair_with = compile_args
+            if intent_given is not None:
+                from atoo import intent as intent_engine
+                compiled_by = f"--intent-file {args.intent_file}"
+                input_list = None
+                if show is not None and show.input_list.exists():
+                    input_list = show.input_list.read_text(encoding="utf-8", errors="replace")
+                change_set = intent_engine.compile_given(
+                    intent_given, change_text, applied, console_model=console_model,
+                    conventions=conventions, instructions=instructions, input_list_text=input_list,
+                    aes50_devices=_aes50_devices(console, state), known_presets=preset_names,
+                    infos=compile_infos)
+                provider = None
+            else:
+                provider = for_show(provider_from_env(), show)
+                compiled_by = getattr(provider, "model", None) or type(provider).__name__
+            if intent_given is not None:
+                pass
+            elif getattr(args, "intent", False):
+                from atoo import intent as intent_engine
+                input_list = None
+                if show is not None and show.input_list.exists():
+                    input_list = show.input_list.read_text(encoding="utf-8", errors="replace")
+                change_set = intent_engine.compile_change(
+                    change_text, applied, provider=provider, console_model=console_model,
+                    conventions=conventions, conventions_name=conventions_name,
+                    instructions=instructions, instructions_name=instructions_name,
+                    input_list_text=input_list, aes50_devices=_aes50_devices(console, state),
+                    known_presets=preset_names, infos=compile_infos)
+            else:
+                compile_args = dict(
+                    provider=provider, console_model=console_model,
+                    conventions=conventions, conventions_name=conventions_name,
+                    instructions=instructions, instructions_name=instructions_name,
+                    constrain=not args.no_constrain)
+                change_set = patch_engine.compile_change(
+                    change_text, applied, infos=compile_infos, **compile_args)
+                if getattr(provider, "repairs_replies", False):
+                    repair_with = compile_args
+        except IntentRefused as refusal:
+            if console is not None:
+                console.close()
+            for reason in refusal.reasons:
+                print(f"  REFUSED          {reason}")
+            print("Refusing to patch: nothing was written. The change asks for something the "
+                  "console cannot do, or the model made up something the desk does not have "
+                  "(each reason above says which).")
+            return 1
         except (AIProviderError, patch_engine.ChangeError, generate.PromptError) as exc:
             if console is not None:
                 console.close()
@@ -4782,7 +5155,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
                 except OSError:
                     pass
             return 1
-        model_s = time.monotonic() - t0
+        model_s = None if intent_given is not None else time.monotonic() - t0
         for info in compile_infos:
             print(f"  INFO {info}")
     elif mode == "patch":
@@ -4823,7 +5196,7 @@ def patch_cmd(args: argparse.Namespace) -> int:
     # The preset library the change's new strips take their values from: the one the plan on the desk was built with, found
     # without a flag, and said -- with a WARNING up top, before the review,
     # when the change names presets and there is none.
-    library_choice = _preset_library_choice(args, applied)
+    library_choice = library_choice or _preset_library_choice(args, applied)
     preset_library = library_choice.library
     for warning in library_choice.warnings:
         print(warning, file=sys.stderr)
@@ -5336,6 +5709,12 @@ def _add_patch_arguments(ap: argparse.ArgumentParser) -> None:
              "exactly the change set a preview showed, and how a change is reviewed with no "
              "model at all.")
     ap.add_argument(
+        "--intent-file", default=None, metavar="FILE",
+        help="Compile this intent (JSON) instead of calling the model: the intent a model "
+             "wrote for `--intent`, or one written by hand. The change text is still "
+             "needed (it is the request the intent answers). How an intent is tried with no "
+             "model at all.")
+    ap.add_argument(
         "--save-change-set", default=None, metavar="FILE",
         help="Also save the compiled change set (with the change's text) to FILE, for "
              "--change-set to write later.")
@@ -5363,6 +5742,15 @@ def _add_patch_arguments(ap: argparse.ArgumentParser) -> None:
              "says which. With none, a change that names presets warns up front, as a "
              "WARNING, and its new strips are written without those presets' values.")
     _add_console_model_argument(ap)
+    ap.add_argument(
+        "--intent", action="store_true",
+        help="Ask the model for a short INTENT instead of the change set: what to add, drop, "
+             "move, rename or set, in a small vocabulary bounded by the console. Code works "
+             "out the strips, sockets, indices and sends, refuses what the console cannot do "
+             "with the reason, and says every choice it made at INFO; the result is reviewed "
+             "and written exactly like any change. The model is shown a slice of the desk, "
+             "not all of it, so a small or local model can do it. The change-set contract "
+             "stays the default until this one is at parity.")
     ap.add_argument(
         "--no-constrain", action="store_true",
         help="Do not constrain the model's reply to the change-set format (the same escape "
@@ -6815,6 +7203,26 @@ def _add_build_arguments(ap: argparse.ArgumentParser) -> None:
              "your instructions or conventions exactly goes back to the model in that round. "
              "Its other findings are printed, never enforced -- only the deterministic "
              "verifier gates anything.")
+    ap.add_argument(
+        "--intent", action="store_true",
+        help="Ask the model for an intent instead of the plan's compact reply. Atoo's own code "
+             "writes one channel for every input-list row, in the list's order; the model writes "
+             "what the list cannot say -- a stereo pair, the DCAs, mute groups, buses and outputs "
+             "your conventions ask for (with their members by category), the strip order, and the "
+             "settings each category gets -- and code works out the strips, the sockets for rows "
+             "that name none, the numbers and the ranges. Skips the separate rewrite of the "
+             "conventions (resolve). Beside the default form until it does as well.")
+    ap.add_argument(
+        "--intent-steps", action=argparse.BooleanOptionalAction, default=None,
+        help="With --intent (implies it): ask for the intent in three shorter calls instead of one "
+             "-- the categories and the exceptions; the buses and their sends; the DCAs, mute "
+             "groups and outputs -- each with only its own ops, checked against what the earlier "
+             "calls built, and repaired once on its own. Every call starts with the same prompt "
+             "prefix (the rules, the conventions, the input list), so a local model reads it once. "
+             "The default for a local model (Ollama, or the api provider on a host on this machine "
+             "or network), where it builds more of the show than one call; --no-intent-steps asks "
+             "in one call. Claude, and a remote api host, ask in one call unless this is given. "
+             "The build says which at INFO.")
     ap.add_argument(
         "--no-constrain", action="store_true",
         help="Don't constrain decoding to the reply schema (the shorter form the model "

@@ -4353,9 +4353,10 @@ def _shown(value: object, unit: str = "") -> str:
 
 def _differs(state: ConsoleState, address: str, value_type: str, wanted: object) -> object:
     """The live value at `address` when it is not what the plan wants, by
-    `apply`'s own readback comparison (a float within 2% relative or 0.02
-    absolute -- the desk holds the nearest step of a `log` control -- and a
-    switch or list choice exactly); None when it matches or was not read."""
+    `apply`'s own readback comparison (a frequency, gain, Q or tilt within
+    three quarters of one of its own steps -- the desk holds the nearest step
+    -- and a switch or list choice exactly); None when it matches or was not
+    read."""
     live = state.get(address)
     if live is None or _values_equal(value_type, wanted, live, address):
         return None
@@ -4423,7 +4424,7 @@ def _compare_processing_leaves(state: ConsoleState, leaves: list, base: str, eq_
         live = _differs(state, value_address, "f", value)
         if live is not None:
             finding(f"plan says the {name} is {_shown(value, unit)}, live console reads "
-                    f"{_shown(live, unit)} (tolerance 2%).", [value_address])
+                    f"{_shown(live, unit)} (more than a step apart).", [value_address])
 
     for band in console_facts.eq_band_ids(eq_strip):
         freq_leaf, gain_leaf, q_leaf, shape_leaf = eq_band_leaves(band)
@@ -4441,7 +4442,7 @@ def _compare_processing_leaves(state: ConsoleState, leaves: list, base: str, eq_
                 parts.append(f"{word} {_shown(want, unit)} but {_shown(live, unit)} live")
                 addresses.append(address)
         if parts:
-            finding(f"EQ band {band}: plan says {'; '.join(parts)} (tolerance 2%).", addresses)
+            finding(f"EQ band {band}: plan says {'; '.join(parts)} (more than a step apart).", addresses)
 
     tilt_address = f"{base}/eq/tilt"
     if tilt_address in wanted:
@@ -4449,7 +4450,7 @@ def _compare_processing_leaves(state: ConsoleState, leaves: list, base: str, eq_
         live = _differs(state, tilt_address, value_type, want)
         if live is not None:
             finding(f"plan says the tilt is {_shown(want, 'dB')}, live console reads "
-                    f"{_shown(live, 'dB')} (tolerance 2%).", [tilt_address])
+                    f"{_shown(live, 'dB')} (more than a step apart).", [tilt_address])
 
     parts, addresses = [], []
     for leaf, word, unit in (("on", "EQ", ""), ("mdl", "model", ""), ("mix", "mix", "%")):
@@ -4481,7 +4482,7 @@ def _compare_processing_leaves(state: ConsoleState, leaves: list, base: str, eq_
                              f"{_shown(live, _EQ_UNITS[kind])} live")
                 addresses.append(address)
         if parts:
-            finding(f"PreSend EQ band {band}: plan says {'; '.join(parts)} (tolerance 2%).",
+            finding(f"PreSend EQ band {band}: plan says {'; '.join(parts)} (more than a step apart).",
                     addresses)
     peq_on = f"{base}/peq/on"
     if peq_on in wanted:

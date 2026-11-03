@@ -185,3 +185,32 @@ def test_the_processed_feed_case_builds_both_feeds_and_nothing_else(tmp_path, mo
     # Apply writes each slot before the socket that reads it.
     order = [t.address for t in _build_write_targets(plan, True)[0]]
     assert order.index("/io/in/USR/3/user/grp") < order.index("/io/out/USB/15/grp")
+
+
+def test_a_feed_of_the_main_by_its_own_name_is_built(tmp_path, monkeypatch):
+    """The reply named its Main "PA" with no number (a
+    reply leaves that to code), and a feed of "PA" to USB 18-19 found no
+    strip, because the Main had no index yet when the feeds were built."""
+    reply = _case_reply()
+    reply["outputs"] = [{"name": "PA", "kind": "main",
+                         "patch": {"group": "LCL", "sockets": [1, 2], "stated": True}}]
+    reply["processed_feeds"] = [{"to": "USB 18", "strip": "PA", "tap": "post",
+                                 "quote": "- Video Feed: Send the main mix to USB 18-19"}]
+    show = tmp_path / "feeds"
+    show.mkdir()
+    (show / "input.csv").write_text((CASE / "feeds.csv").read_text())
+    monkeypatch.setattr("atoo.cli.provider_from_env",
+                        lambda: _Scripted(script=[json.dumps(reply)]))
+    monkeypatch.setenv("ATOO_AI_FIXUP_ROUNDS", "0")
+    monkeypatch.setattr("atoo.generate.draft_watch_conditions", lambda *a, **k: [])
+    main(["build", "--show", str(show), "--console-model", "wing-compact",
+          "--conventions", str(CASE / "feeds.md")])
+    plan = json.loads((show / "plan.json").read_text())
+    assert plan["outputs"]["PA"]["index"] == 1
+    assert [(u["source"], u["leg"]) for u in plan["user_sources"]] == [
+        ({"group": "MAIN", "index": 1}, "L"), ({"group": "MAIN", "index": 1}, "R")]
+    feeds = sorted(((e["group"], e["socket"]), e["source"]["group"])
+                   for e in plan["direct_outputs"])
+    assert feeds == [(("USB", 18), "USR"), (("USB", 19), "USR")]
+    assert not [f for f in plan["meta"]["build_findings"]
+                if f["code"] == "processed-feed.no-such-strip"]

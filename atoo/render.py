@@ -203,6 +203,9 @@ def render_plan(plan: dict, warnings: list) -> str:
     labels = [f"Aux {ch['channel']}" if ch.get("bank") == "aux" else str(ch["channel"])
               for ch in plan["channels"]]
     width = max([3] + [len(label) for label in labels])
+    from atoo import inferred
+
+    user_jacks = inferred.user_patch_jacks(plan)
     for ch, label in zip(plan["channels"], labels):
         name_field = ch["name"]
         if ch.get("color"):
@@ -210,7 +213,14 @@ def render_plan(plan: dict, warnings: list) -> str:
         lines.append(
             f"  {label:>{width}}  {name_field:<16} {_source_desc(ch['source']):<28} {_processing_desc(ch['processing'])}"
         )
-        lines.append(f"       Patch: {_patch_desc(ch['patch'])}")
+        patch_line = _patch_desc(ch['patch'])
+        # Through user patch slots: the jacks they take.
+        if (ch.get("patch") or {}).get("group") == "USR":
+            jacks = [jack for jack in inferred.channel_jacks(ch, user_jacks)
+                     if jack[0] != "USR"]
+            if jacks:
+                patch_line += " (" + " + ".join(f"{g} {n}" for g, n in jacks) + ")"
+        lines.append(f"       Patch: {patch_line}")
         if ch["dca"]:
             lines.append(f"       DCA: {', '.join(ch['dca'])}")
         if ch["mute_group"]:

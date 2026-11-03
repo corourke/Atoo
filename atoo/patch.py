@@ -442,6 +442,10 @@ def validate_change_set(change_set, *, partial_text: str = "",
         raise ChangeError("a change set is a JSON object", partial_text=partial_text)
     change_set = dict(change_set)
     change_set.pop(TEXT_KEY, None)
+    # What the change asks for, when a front end stated it (`Asked`): not part
+    # of the model's format, so it is set aside while the format is checked.
+    asked = change_set.pop(ASKED_KEY, None)
+    user_sources = change_set.pop(USER_SOURCES_KEY, None)
     filled = _fill_omitted_sections(change_set)
     if filled and infos is not None:
         infos.append(
@@ -474,6 +478,10 @@ def validate_change_set(change_set, *, partial_text: str = "",
         more = f"\n  ...and {len(violations) - 10} more" if len(violations) > 10 else ""
         raise ChangeError(f"the change set does not match the change-set format:\n  {shown}{more}",
                           partial_text=partial_text or json.dumps(change_set, indent=2))
+    if isinstance(asked, dict):
+        change_set[ASKED_KEY] = asked
+    if isinstance(user_sources, list):
+        change_set[USER_SOURCES_KEY] = user_sources
     return change_set
 
 
@@ -869,11 +877,12 @@ def _stated_by_text(patch: dict, sockets: list[int], missing: list[int],
 
 def _settle_socket(channel: dict, used: dict, console_model: str | None,
                    infos: list[str], warnings: list[str], boxes: dict | None = None,
-                   words: str | None = None) -> None:
+                   asked: "Asked | None" = None) -> None:
     """Decision 5: a socket the change named is honoured; one it did not
     name is chosen, and the choice announces itself at INFO. Whether it was
-    named is read from the change's words (`_stated_by_text`), not taken from
-    the model's flag alone."""
+    named is `asked`'s to say (the change's words, or the facts a front end
+    states), not taken from the model's flag alone."""
+    asked = asked or Asked()
     where = repr(channel.get("name"))
     patch = channel.get("patch") or {}
     group = patch.get("group")
@@ -884,7 +893,7 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
     limit = _socket_limit(group, console_model, boxes)
     clash = [used[(group, s)] for s in sockets if (group, s) in used]
     missing = [s for s in sockets if s > limit]
-    patch["stated"] = _stated_by_text(patch, sockets, missing, words)
+    patch["stated"] = asked.socket_stated(channel, patch, sockets, missing)
     if patch["stated"]:
         if clash:
             warnings.append(
@@ -895,10 +904,11 @@ def _settle_socket(channel: dict, used: dict, console_model: str | None,
             infos.append(f"channel {where}: patched to {text}, the socket the change named")
         return
     if not clash and not missing:
+        first = "the first the model picked" if asked.picked_by == "the model" else (
+            f"the first free {group} socket")
         infos.append(
-            f"channel {where}: the change named no socket, so {text} was chosen -- the first "
-            "the model picked, and nothing on the desk uses it. Say the socket in the change "
-            "to choose it yourself.")
+            f"channel {where}: the change named no socket, so {text} was chosen -- {first}, "
+            "and nothing on the desk uses it. Say the socket in the change to choose it yourself.")
         return
     chosen = _choose_sockets(group, len(sockets), used, console_model, boxes)
     if clash:
@@ -963,7 +973,7 @@ _DESK_CAPACITY = {"busses": "bus", "dcas": "dca", "mute_groups": "mgrp"}
 _TAG_OF = {"dcas": "D", "mute_groups": "M"}
 
 
-def unknown_names(base: dict, change_set: dict) -> dict[str, list[str]]:
+def unknown_names(base: dict, change_set: dict, *, adds: bool = True) -> dict[str, list[str]]:
     """The busses, DCAs, mute groups and outputs the change names (drops, edits,
     and the references of the channels it adds or edits) that the plan on the desk
     does not know: `{plan key: [names]}`. A desk Atoo did not set up holds
@@ -979,6 +989,13 @@ def unknown_names(base: dict, change_set: dict) -> dict[str, list[str]]:
     for key in (*_DESK_ROOT, "outputs"):
         for name in (change_set.get("drop") or {}).get(key) or []:
             want(key, name)
+    # An output the change adds may be one the desk already holds by that
+    # name: its name is read, to know. `adds=False`
+    # once that is settled (`_adds_held_on_desk`): an add the desk does not
+    # hold is new, never adopted by a number its name happens to read as.
+    if adds:
+        for name in (change_set.get("add") or {}).get("outputs") or {}:
+            want("outputs", name)
     for channel in (change_set.get("add") or {}).get("channels") or []:
         for key, name in _references(channel):
             want(key, name)
@@ -1015,9 +1032,12 @@ def member_reads(base: dict, change_set: dict, known: dict) -> list[tuple[str, s
     renumbers, every setting of it and every send or route into it. Only
     these objects, never a sweep."""
     reads: list[tuple[str, str]] = []
+    change_set, _said = _adds_held_on_desk(
+        change_set, unknown_names(base, change_set).get("outputs") or [], known)
     dropped = change_set.get("drop") or {}
     strips = [(bank, n) for bank in ("ch", "aux") for n in range(1, facts.CAPACITY[bank] + 1)]
-    for key, names in _found_on_desk(unknown_names(base, change_set), known).items():
+    for key, names in _found_on_desk(unknown_names(base, change_set, adds=False),
+                                     known).items():
         for name, index in names.items():
             if key == "busses" and _edits_destination(change_set, name):
                 reads.extend(pair for pair in _bus_route_reads(index)
@@ -1233,6 +1253,48 @@ def _adopted_bus(name: str, index: int, known: dict, change_set: dict, dropped: 
     return entry, note
 
 
+def _adds_held_on_desk(change_set: dict, names: list[str], known: dict) -> tuple[dict, list[str]]:
+    """An `add` of a Main or Matrix the desk already holds by that name is the
+    renumber the request asks for, never a second object on another number
+    ("Test Matrix", held as Matrix 2, added "as a new
+    Matrix 4", landed on Matrix 1). It becomes a `modify` of the held one to
+    the number the add gives (none when it gives the one it is on), said at
+    INFO; the rest of the road is the renumber's (`_renumber_adopted_output`).
+    Only a name the desk holds counts, never "Matrix 1" read as a number."""
+    added = (change_set.get("add") or {}).get("outputs") or {}
+    infos: list[str] = []
+    held: dict[str, tuple[str, int]] = {}
+    for name in names:
+        if name not in added:
+            continue
+        for root, kind in _OUTPUT_ROOTS.items():
+            spot = next((n for n in range(1, facts.CAPACITY[root] + 1)
+                         if isinstance(known.get(f"/{root}/{n}/name"), str)
+                         and known[f"/{root}/{n}/name"].strip().casefold()
+                         == name.strip().casefold()), None)
+            if spot is not None:
+                held[name] = (kind, spot)
+                break
+    if not held:
+        return change_set, infos
+    change_set = copy.deepcopy(change_set)
+    for name, (kind, index) in held.items():
+        entry = change_set["add"]["outputs"].pop(name) or {}
+        word = "Main" if kind == "main" else "Matrix"
+        wanted = entry.get("index")
+        if isinstance(wanted, int) and not isinstance(wanted, bool) and wanted != index \
+                and entry.get("kind") in (None, kind):
+            change_set.setdefault("modify", []).append(
+                {"object": "output", "name": name, "fields": {"index": wanted}})
+            infos.append(f"the change adds output {name!r}, which the desk already holds as "
+                         f"{word} {index}: carried out as moving it to {word} {wanted}, as the "
+                         "change asks, not as a second one")
+        else:
+            infos.append(f"the change adds output {name!r}, which the desk already holds as "
+                         f"{word} {index}: it is that one, so nothing is added")
+    return change_set, infos
+
+
 def _found_on_desk(unknown: dict[str, list[str]], known: dict) -> dict[str, dict[str, int]]:
     """`{plan key: {name asked for: desk index}}` for each unknown name the desk
     holds under that name (case aside; the lowest index when two hold it)."""
@@ -1295,12 +1357,13 @@ def adopt_desk_objects(base: dict, change_set: dict,
     is in `changes`, the addresses it writes in `read` (the plan's own render
     of it is not written beside them), and `change_set` comes back without
     that renumber."""
-    unknown = unknown_names(base, change_set)
+    change_set, infos = _adds_held_on_desk(
+        change_set, unknown_names(base, change_set).get("outputs") or [], known)
+    unknown = unknown_names(base, change_set, adds=False)
     found = _found_on_desk(unknown, known)
     if not found:
-        return base, change_set, [], [], [], [], set()
+        return base, change_set, infos, [], [], [], set()
     plan = copy.deepcopy(base)
-    infos: list[str] = []
     warnings: list[str] = []
     writes: list = []
     changes: list = []
@@ -1837,8 +1900,17 @@ def _settle_stereo(original: dict, edited: dict, used: dict, console_model: str 
         return None
     if len(sockets) == 2:
         problem = facts.stereo_pair_problem(sockets)
-        return (f"{group} {sockets[0]}+{sockets[1]} cannot be a stereo pair: {problem}"
-                if problem else None)
+        if problem:
+            return f"{group} {sockets[0]}+{sockets[1]} cannot be a stereo pair: {problem}"
+        # The pair is named, but a socket of it that another channel uses cannot be taken into the
+        # pair: the same fact, and the same answer, as when the second socket is left to be chosen.
+        for socket in sockets:
+            holder = used.get((group, socket))
+            if holder and holder != name:
+                part = "the other half of the pair" if socket == sockets[1] else "one socket of the pair"
+                return (f"{group} {socket}, {part}, is used by {holder} -- "
+                        "a stereo pair cannot be formed without it; name a free odd pair to patch to")
+        return None
     first = sockets[0]
     if first % 2 == 0:
         return (f"it is on {group} {first}, and a stereo pair on a WING starts on an odd "
@@ -2206,7 +2278,7 @@ def _channel_moves(merged: dict, change_set: dict, occupancy, changes: list,
     return change_set
 
 
-def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: list,
+def _merge_modify(merged: dict, change_set: dict, wants: "Asked", changes: list,
                   infos: list, warnings: list, occupancy, on_desk: dict,
                   renumbered_ids: frozenset | set = frozenset(), presets=None,
                   console_model: str | None = None, boxes: dict | None = None) -> list:
@@ -2233,7 +2305,15 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
         fields = request.get("fields") if isinstance(request.get("fields"), dict) else {}
         if key in _NAMED_KINDS and {"index", "kind"} & {str(p).strip() for p in fields}:
             renumbering.setdefault(key, set()).add(str(request.get("name") or ""))
-    for request in change_set.get("modify") or []:
+    # A re-patch is settled before a stereo change, whatever order they are written in: a change
+    # that moves the holder of a socket and pairs its neighbour on that socket is carried out, and
+    # the desk's reading of the old socket must not hold it back.
+    vacated: set = set()
+    #: One edited object per channel across the change's entries: after an entry edits a channel
+    #: the edited copy is the one a later entry finds, by its old name or its new one.
+    aliases: dict[str, str] = {}
+    for request in sorted(change_set.get("modify") or [],
+                          key=lambda r: "source.stereo" in (r.get("fields") or {})):
         word = str(request.get("object") or "object")
         key = _KEY_OF.get(word)
         ref = str(request.get("name") or "")
@@ -2247,7 +2327,7 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                 f"{asked} -- not written: the change set says this in words only and names no "
                 "field to set, so nothing can be written without guessing"))
             continue
-        found, slot = _find_object(merged, key, ref, on_desk)
+        found, slot = _find_object(merged, key, aliases.get(_norm(ref), ref) if key == "channels" else ref, on_desk)
         if found is None and _edit_added(merged, key, ref, fields, on_desk, word, asked,
                                          changes, infos):
             continue
@@ -2295,7 +2375,8 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
             others = [c for c in merged["channels"] if c is not original]
             problem = _settle_stereo(
                 original, edited, _occupied_sockets(
-                    {"channels": others}, [s for s in occupancy or () if s.label != slot]),
+                    {"channels": others},
+                    [s for s in occupancy or () if s.label != slot and s.label not in vacated]),
                 console_model, boxes, infos, name)
             if problem:
                 problems.append(problem)
@@ -2379,7 +2460,7 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                 continue
             if path.split(".")[0] == "fader":
                 muted = path.endswith("muted")
-                if not (_MUTE_WORDS if muted else _FADER_WORDS).search(text or ""):
+                if not (wants.mute_named() if muted else wants.fader_named()):
                     amend_engine.set_path(edited, path, old)
                     what = "mute" if muted else "fader"
                     changes.append(Change(
@@ -2407,7 +2488,8 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
         if key == "channels" and any(p.split(".")[0] == "patch" for p, _o, _n in kept):
             others = [c for c in merged["channels"] if c is not original]
             used = _occupied_sockets({"channels": others},
-                                     [s for s in occupancy or () if s.label != slot])
+                                     [s for s in occupancy or ()
+                                      if s.label != slot and s.label not in vacated])
             patch = edited.get("patch") or {}
             clash = [used[(patch.get("group"), n)] for n in patch.get("sockets") or []
                      if (patch.get("group"), n) in used]
@@ -2418,8 +2500,17 @@ def _merge_modify(merged: dict, change_set: dict, text: str | None, changes: lis
                     "uses -- honored as named (one socket can feed two strips on a WING), but "
                     "check that is what was meant")
 
+        if key == "channels" and slot and edited.get("patch") != original.get("patch"):
+            vacated.add(slot)
         if key == "channels":
             merged["channels"] = [edited if c is original else c for c in merged["channels"]]
+            on_desk["channels"].discard(id(original))
+            on_desk["channels"].add(id(edited))
+            if _norm(edited.get("name")) != _norm(original.get("name")):
+                for earlier, current in list(aliases.items()):
+                    if _norm(current) == _norm(original.get("name")):
+                        aliases[earlier] = edited["name"]
+                aliases[_norm(original.get("name"))] = edited["name"]
         else:
             merged[key][name] = edited
         if rides:
@@ -2502,7 +2593,112 @@ def _gain_named(text: str | None, channel: dict, texts=()) -> bool:
     return inferred.gain_stated_for(channel, (text, *texts))
 
 
-def _plan_insert(merged: dict, kept: list[dict], text: str | None,
+#: The key a change set carries its `Asked` under. Not in the model's format:
+#: only a front end that knows these facts (the intent compiler) writes it.
+ASKED_KEY = "asked"
+#: The USER PATCH slots a build's change routes a stereo pair through (`user_patch`):
+#: the plan's `user_sources` entries, which `merge_change` lays on the merged plan. Code writes
+#: it (the intent compile); it is not part of the model's format.
+USER_SOURCES_KEY = "user_sources"
+
+
+@dataclass
+class Asked:
+    """What a change ASKS FOR, where the merge used to guess it from the words.
+
+    Five decisions of the merge turn on what the engineer asked, not on what the
+    model wrote: whether a new channel is an *insert* that renumbers the strips
+    after it, which strip it is *positioned* on, whether its *socket* was named,
+    whether a *fader* or a *mute* may be moved, and whether a *gain* was stated.
+    A typed change states them in a sentence, and `Asked.from_text` reads that
+    sentence the way the merge always has (`atoo patch "..."`, unchanged). A
+    front end that has them as facts (`atoo patch --intent`) states them
+    outright, and nothing is read from a sentence. A field left `None` is read
+    from `words`.
+
+    `positions`, `sockets` and `gain` are keyed by the normalised name of the
+    channel they are about. `picked_by` names who chose a socket the change did
+    not name, for the INFO that announces it: the model proposes one in a
+    change set (the default), and the intent compiler chooses one itself."""
+
+    words: str | None = None
+    gain_words: tuple = ()
+    insert: bool | None = None
+    positions: dict | None = None
+    sockets: set | None = None
+    fader: bool | None = None
+    mute: bool | None = None
+    gain: set | None = None
+    picked_by: str = "the model"
+
+    @classmethod
+    def from_text(cls, text: str | None, gain_words=()) -> "Asked":
+        return cls(words=text, gain_words=tuple(gain_words))
+
+    @classmethod
+    def for_change_set(cls, change_set: dict, text: str | None, gain_words=()) -> "Asked":
+        """The facts a change set carries, else its typed words."""
+        carried = change_set.get(ASKED_KEY) if isinstance(change_set, dict) else None
+        if isinstance(carried, dict):
+            return cls.from_dict(carried, words=text, gain_words=gain_words)
+        return cls.from_text(text, gain_words)
+
+    @classmethod
+    def from_dict(cls, data: dict, *, words: str | None = None, gain_words=()) -> "Asked":
+        names = lambda key: None if data.get(key) is None else {_norm(n) for n in data[key]}  # noqa: E731
+        positions = data.get("positions")
+        return cls(words=words, gain_words=tuple(gain_words), insert=data.get("insert"),
+                   positions=None if positions is None else {_norm(k): v for k, v in positions.items()},
+                   sockets=names("sockets"), fader=data.get("fader"), mute=data.get("mute"),
+                   gain=names("gain"), picked_by=data.get("picked_by") or "the model")
+
+    def to_dict(self) -> dict:
+        out: dict = {"picked_by": self.picked_by}
+        for key in ("insert", "fader", "mute"):
+            if getattr(self, key) is not None:
+                out[key] = getattr(self, key)
+        if self.positions is not None:
+            out["positions"] = dict(self.positions)
+        for key in ("sockets", "gain"):
+            if getattr(self, key) is not None:
+                out[key] = sorted(getattr(self, key))
+        return out
+
+    def wants_insert(self) -> bool:
+        if self.insert is not None:
+            return self.insert
+        return bool(_INSERT_WORDS.search(self.words or ""))
+
+    def position(self, name, channels: list[dict]):
+        """`(strip number, the channel it is beside or None)` for the new channel
+        `name`, or None when nothing says where it goes."""
+        if self.positions is not None:
+            number = self.positions.get(_norm(name))
+            if number is None:
+                return None
+            beside = next((c for c in channels if c.get("channel") == number - 1), None)
+            return number, beside
+        return _spoken_position(self.words or "", channels)
+
+    def socket_stated(self, channel: dict, patch: dict, sockets: list[int], missing: list[int]) -> bool:
+        if self.sockets is not None:
+            return _norm(channel.get("name")) in self.sockets
+        return _stated_by_text(patch, sockets, missing, self.words)
+
+    def fader_named(self) -> bool:
+        return self.fader if self.fader is not None else bool(_FADER_WORDS.search(self.words or ""))
+
+    def mute_named(self) -> bool:
+        return self.mute if self.mute is not None else bool(_MUTE_WORDS.search(self.words or ""))
+
+    def gain_stated(self, channel: dict) -> bool:
+        if self.gain is not None:
+            return _norm(channel.get("name")) in self.gain or inferred.gain_stated_for(
+                channel, self.gain_words)
+        return _gain_named(self.words, channel, self.gain_words)
+
+
+def _plan_insert(merged: dict, kept: list[dict], asked: "Asked",
                  changes: list, infos: list, result: MergeResult) -> set[int]:
     """An explicit insert: the channels after the new one move down.
 
@@ -2527,8 +2723,8 @@ def _plan_insert(merged: dict, kept: list[dict], text: str | None,
            and amend_engine._source_key(c) not in result.moved]
     if not new:
         return set()
-    explicit = bool(_INSERT_WORDS.search(text or ""))
-    spoken = _spoken_position(text or "", base)
+    explicit = asked.wants_insert()
+    spoken = next((p for p in (asked.position(c.get("name"), base) for c in new) if p is not None), None)
     colliding = sorted((c for c in new if c["channel"] in by_number), key=lambda c: c["channel"])
     if not colliding and spoken is not None and spoken[0] in by_number:
         # The model put it elsewhere (the next free strip) though the change
@@ -2607,8 +2803,13 @@ def _plan_insert(merged: dict, kept: list[dict], text: str | None,
 def merge_change(base: dict, change_set: dict, *, occupancy=None,
                  console_model: str | None = None, presets=None,
                  text: str | None = None, aes50_devices: dict | None = None,
-                 gain_texts=()) -> MergeResult:
+                 gain_texts=(), asked: "Asked | None" = None) -> MergeResult:
     """Merge a change set onto the base. Pure: `base` is not modified.
+
+    What the change ASKS FOR (insert, position, a named socket, a fader or
+    mute, a stated gain) is `asked`'s: the facts the change set carries
+    (`ASKED_KEY`), else the ones passed, else the typed `text` read as it
+    always was.
 
     The rules, in the order they are applied:
 
@@ -2652,12 +2853,15 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
        and before the decisions. `text` is the change as typed: a fader or
        mute is edited only when it names one.
     """
+    asked = asked or Asked.for_change_set(change_set, text, gain_texts)
     model = resolve_console_model(base, console_model)
     # A base plan built before the rename to `patch` names its outputs' patches
     # `socket`; the merged plan is written with the current names.
     merged = copy.deepcopy(plan_compat.normalise_plan(base))
     for key in ("channels",):
         merged.setdefault(key, [])
+    if change_set.get(USER_SOURCES_KEY):
+        merged.setdefault("user_sources", []).extend(copy.deepcopy(change_set[USER_SOURCES_KEY]))
     for key in _NAMED_KINDS:
         if not isinstance(merged.get(key), dict):
             merged[key] = {}
@@ -2728,8 +2932,6 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                 continue
             named = entry.pop("index", None)
             if key == "outputs":
-                named = None  # an output's number is its Main or Matrix, decided below
-            if key == "outputs":
                 kind = entry.get("kind")
                 if kind in ("main", "matrix"):
                     taken = {o.get("index") for o in merged["outputs"].values()
@@ -2738,6 +2940,25 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                                     else CONSOLE_MATRIX_CAPACITY, model, 4 if kind == "main"
                                     else 8)
                     index = _free_index(taken, cap)
+                    # The number the change gives it is the one it goes on, as
+                    # for a bus: "Matrix 4" never lands on
+                    # Matrix 1.
+                    if isinstance(named, int) and not isinstance(named, bool):
+                        if not 1 <= named <= cap:
+                            changes.append(Change(
+                                ChangeKind.REFUSED, word, repr(name),
+                                f"the change puts it on {kind} {named}, and this console has "
+                                f"{'Mains' if kind == 'main' else 'Matrices'} 1 to {cap} -- "
+                                f"there is no {kind} {named}"))
+                            continue
+                        if named not in taken:
+                            index = named
+                            infos.append(f"{word} {name!r} is new, put on {kind} {named} as the "
+                                         "change said")
+                        else:
+                            infos.append(f"the change puts {word} {name!r} on {kind} {named}, "
+                                         "which an output the change does not drop already "
+                                         "holds, so it was put on the lowest free one instead")
                     if index is None:
                         changes.append(Change(
                             ChangeKind.REFUSED, word, repr(name),
@@ -2841,7 +3062,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
                     "by this change"))
 
     # 4b. An explicit insert -- the channels after a new one move down.
-    renumbered_ids = _plan_insert(merged, kept, text, changes, infos, result)
+    renumbered_ids = _plan_insert(merged, kept, asked, changes, infos, result)
 
     # 5. Sockets. A socket past the end of a stage box is not one it has: the
     #    desk lists every AES50 port at 48 whatever is on it, so the box's own
@@ -2850,9 +3071,8 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     used = _occupied_sockets(
         merged, occupancy, leaving=frozenset(dropped_keys[key] for key in result.moved))
     for channel in kept:
-        _settle_socket(channel, used, model, infos, warnings, boxes, text)
-        said = inferred.settle_line_gain(
-            channel, stated=_gain_named(text, channel, gain_texts))
+        _settle_socket(channel, used, model, infos, warnings, boxes, asked)
+        said = inferred.settle_line_gain(channel, stated=asked.gain_stated(channel))
         if said:
             infos.append(said)
         patch = channel.get("patch") or {}
@@ -2886,7 +3106,7 @@ def merge_change(base: dict, change_set: dict, *, occupancy=None,
     #    and each edit's new value is read again after them (below), so the
     #    review's old -> new is what is written.
     drop_edits, result.edits = result.edits, []
-    pending = drop_edits + _merge_modify(merged, change_set, text, changes, infos, warnings,
+    pending = drop_edits + _merge_modify(merged, change_set, asked, changes, infos, warnings,
                                          occupancy, on_desk, renumbered_ids, presets,
                                          model, boxes)
 

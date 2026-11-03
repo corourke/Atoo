@@ -76,8 +76,8 @@ def test_the_served_assets_carry_the_three_fixes(url):
     start = html[html.index('id="ns-start"'):html.index('id="ns-read-label"')]
     assert start.count('class="ns-card" role="radio"') == 2
     assert "A new folder with no files yet." in start
-    assert "Capture a console or a .snap file into input.csv and busses.csv." in start
-    assert "Captures the desk to input.csv and busses.csv which you can edit." in html
+    assert "Capture a console or a .snap file into input.csv, busses.csv and outputs.csv." in start
+    assert "Captures the desk to input.csv, busses.csv and outputs.csv, which you can edit." in html
     assert re.search(r"\.ns-card \{[^}]*border: 1px solid var\(--border-strong\)[^}]*cursor: pointer", css)
 
 

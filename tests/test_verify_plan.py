@@ -1252,8 +1252,8 @@ def test_the_stereo_pair_error_now_names_the_way_forward():
     should at least say what the desk itself does about it."""
     result = _patch_result([1, 5])
     hit = next(f for f in result.findings if f.code == PAIR_CODE)
-    assert "USER SIGNAL" in hit.fix and "user_sources" in hit.fix
-    assert "does not write them yet" in hit.fix
+    assert "USER PATCH" in hit.fix and "user_sources" in hit.fix
+    assert "Build does this itself" in hit.fix and "`apply` writes the slots" in hit.fix
     # Not tagged with `issue=`: re-cabling, or setting the USR slots up on
     # the desk, is squarely something the engineer can do -- and that tag
     # prints "not something you can fix in your conventions file".

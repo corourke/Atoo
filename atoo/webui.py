@@ -2042,22 +2042,27 @@ def _new_conventions_suggestion() -> str:
 
 def _outputs_rows_written(rows: list[dict], plan: "dict | None") -> list[dict]:
     """`outputs.csv` as a Save writes it: one row per socket the plan now
-    patches, in the desk's output order and words, each with the notes its
-    row was given. With no plan to say it, the rows as typed."""
+    patches (a run typed as one row is written a row per socket), in the desk's output order and words, each with the notes its
+    row was given, and one for each socket a row took OFF (its Remove row
+    button), which stays, so a rebuild leaves the socket disconnected over the
+    conventions. With no plan to say it, the rows as typed."""
     from atoo import outputs_sheet
 
     if plan is None:
         return rows
-    notes = {}
-    for row in rows:
+    notes, off = {}, set()
+    for _line, row in outputs_sheet.expand_rows(rows)[0]:
         socket = outputs_sheet.parse_output(row.get("output"))
         if socket is not None and row.get("notes"):
             notes[socket] = row["notes"]
+        if socket is not None and (row.get("source") or "").strip().upper() == outputs_sheet.OFF:
+            off.add(socket)
     found = outputs_sheet.output_sources(plan)
     return [{"output": outputs_sheet.format_output(*socket),
-             "source": outputs_sheet.source_words(*found[socket]),
+             "source": (outputs_sheet.source_words(*found[socket]) if socket in found
+                        else outputs_sheet.OFF),
              "notes": notes.get(socket, "")}
-            for socket in sorted(found, key=lambda key: outputs_sheet.socket_order(*key))]
+            for socket in sorted(set(found) | off, key=lambda key: outputs_sheet.socket_order(*key))]
 
 
 def _display_path(path: Path, show: "bundle.Bundle | None") -> str:
@@ -5636,18 +5641,20 @@ def create_app(
                     + ", so it reads Stale until it is rebuilt."]
         return []
 
-    def _rename_sources_in_sheet(show, spelling: dict) -> bool:
+    def _rename_sources_in_sheet(show, spelling: dict, dropped: "set | None" = None) -> bool:
         """The bus sheet's `sources` cells, with renamed channels and buses
-        written by their new names. True when busses.csv changed."""
+        written by their new names, and the objects a row took OFF no longer
+        named. True when busses.csv changed."""
         path = show.directory / bundle.BUSSES
         text = _raw_text(path) if path.is_file() else None
-        if not text or not spelling:
+        if not text or not (spelling or dropped):
             return False
         _header, records, _end = source_edit.read_records(text)
         rows = []
         for i, record in enumerate(records):
             cell = record.values.get("sources") or ""
-            new = sheets_module.rename_in_sources(cell, spelling)
+            new = sheets_module.drop_from_sources(
+                sheets_module.rename_in_sources(cell, spelling), dropped or set())
             rows.append({"line": i, "values": {"sources": new} if new != cell else {}})
         new_text, _summary = source_edit.splice_bus_sheet(text, rows)
         if new_text == text:
@@ -5935,8 +5942,8 @@ def create_app(
             if update is not None and update["result"].refusals:
                 return _refusal_response(update, bundle.OUTPUTS)
             # The file says what the plan now patches, socket by socket, in the
-            # desk's words (`usb 5` is written `USB 5`), with each row's notes:
-            # a socket a row took OFF has no row.
+            # desk's words (`usb 5` is written `USB 5`), with each row's notes;
+            # a socket a row took OFF keeps its OFF row.
             text = outputs_sheet.csv_text(_outputs_rows_written(
                 rows, update["result"].plan if update is not None else None))
             label = _display_path(path, show)
@@ -6011,8 +6018,9 @@ def create_app(
             if update is not None and update["result"].refusals:
                 return _refusal_response(update, bundle.USER)
             # The file says what the plan now holds, slot by slot, in the
-            # desk's words, so a Save also tidies what was typed ("ch 19").
-            text = user_sheet.csv_text(user_sheet.rows_from_plan(update["result"].plan)
+            # desk's words, so a Save also tidies what was typed ("ch 19"); a
+            # slot a row took OFF keeps its OFF row, so a rebuild leaves it out.
+            text = user_sheet.csv_text(user_sheet.rows_written(rows, update["result"].plan)
                                        if update is not None else rows)
             label = _display_path(path, show)
             wrote = text != original
@@ -6108,8 +6116,12 @@ def create_app(
                     return refusal
             said = []
             if update is not None:
-                if _rename_sources_in_sheet(show, update["result"].sources_spelling()):
-                    said.append("Renamed sources are written by their new names in it.")
+                spelling, dropped = update["result"].sources_spelling(), update["result"].dropped
+                if _rename_sources_in_sheet(show, spelling, dropped):
+                    said.append(" ".join(
+                        ([ "Renamed sources are written by their new names in it."] if spelling else [])
+                        + (["What it takes out (OFF) is out of its other rows' sources."]
+                           if dropped else [])))
                 said += _outputs_follow(show, update)
                 said += _write_plan_update(show, update, sheet_path=path, before_sha=sha_now,
                                            slot="bus_sheet")

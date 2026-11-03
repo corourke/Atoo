@@ -505,15 +505,13 @@ def test_cached_input_is_priced_when_a_cached_price_is_set(host, capsys):
 
 
 def test_a_conversation_id_is_sent_and_is_stable_for_the_run(host):
+    """Stable per show: `tests/test_conv_id.py`."""
     h = host(ok(patch.empty_change_set("x")))
     provider = h.provider()
     _compile(provider)
     _compile(provider)
     ids = {hd["x-grok-conv-id"] for hd in h.headers}
     assert len(ids) == 1 and "k" not in next(iter(ids))
-    other = host(ok(patch.empty_change_set("x")))
-    _compile(other.provider())
-    assert other.headers[0]["x-grok-conv-id"] not in ids
 
 
 def test_the_api_provider_waits_longer_than_a_local_one_and_the_timeout_is_a_setting():

@@ -215,7 +215,7 @@
         </button>
         <button type="button" class="ns-card" role="radio" aria-checked="false" tabindex="-1" data-value="desk">
           <span class="ns-card-title">From a desk</span>
-          <span class="ns-card-desc">Capture a console or a .snap file into input.csv and busses.csv.</span>
+          <span class="ns-card-desc">Capture a console or a .snap file into input.csv, busses.csv and outputs.csv.</span>
         </button>
       </div>
     </div>
@@ -248,7 +248,7 @@
       <label class="ns-label" for="ns-folder">Folder</label>
       <div class="ns-value"><input type="text" id="ns-folder" spellcheck="false"></div>
     </div>
-    <p class="note-dialog-hint ns-desk" hidden>Captures the desk to input.csv and busses.csv which you can edit.</p>
+    <p class="note-dialog-hint ns-desk" hidden>Captures the desk to input.csv, busses.csv and outputs.csv, which you can edit.</p>
     <p class="note-dialog-hint ns-empty-hint">Choose where the show's folder goes and name it. It starts empty.</p>
     <p class="ns-error" id="ns-error" role="alert" hidden></p>
     <div class="note-dialog-buttons">
@@ -1400,10 +1400,10 @@
             <!-- The show's sheets are edited in Build's step 04, in
                  this page; the watch keeps running on the server meanwhile. -->
             <button type="button" class="btn btn-secondary btn-sm" id="watch-edit-sheets" hidden
-               title="Go to Build's step 04 to edit this show's input.csv and busses.csv. Watch keeps running, and reads the sheets on its next pass after Save.">Edit sheets</button>
+               title="Go to Build's step 04 to edit this show's sheets. Watch keeps running, and reads the sheets on its next pass after Save.">Edit sheets</button>
             <!-- With no show open: capture the desk Watch is reading into one. -->
             <button type="button" class="btn btn-secondary btn-sm" id="watch-make-show" hidden
-               title="New show from the console in the bar: captures the desk to input.csv and busses.csv. Nothing is written to the desk, and Watch keeps running.">Make a show from this desk</button>
+               title="New show from the console in the bar: captures the desk to input.csv, busses.csv and outputs.csv. Nothing is written to the desk, and Watch keeps running.">Make a show from this desk</button>
             <span class="meta" id="last-updated"></span>
             <span class="push watch-controls">
               <span id="conn-pill" class="state">Not connected</span>

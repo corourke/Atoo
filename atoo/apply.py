@@ -354,21 +354,26 @@ _MUTE_GROUP_TAG_RE = re.compile(r"^#M(\d+)$")
 # built in (channel order, then per-channel field order).
 STAGE_NAMES = 0
 STAGE_PATCH = 1
+# A socket's width (`/io/in/{grp}/{n}/mode`), before its name: switching a
+# pair from ST to M copies the pair's name onto both sockets, so a name
+# written first, and read back as matching, was then overwritten (LCL 1, LCL 7 and USB 1 on a Compact took a neighbour's name
+# until a second Apply).
+STAGE_SOURCE_WIDTH = 2
 # Naming the physical source. After the patch for the same reason phantom
 # is: a name written to a socket the plan has not yet patched to lands on
 # the wrong input, and unlike phantom it looks entirely correct.
-STAGE_SOURCE_LABEL = 2
-STAGE_PHANTOM = 3
-STAGE_PROCESSING = 4
-STAGE_TAGS = 5
-STAGE_SENDS = 6
-STAGE_ROUTING = 7
+STAGE_SOURCE_LABEL = 3
+STAGE_PHANTOM = 4
+STAGE_PROCESSING = 5
+STAGE_TAGS = 6
+STAGE_SENDS = 7
+STAGE_ROUTING = 8
 # Last, deliberately: fader/mute starting state (Job 3) is only meaningful
 # once everything that defines what's actually flowing through the strip --
 # patch, phantom, sends, routing -- has already landed. Bringing a strip
 # out of mute/-inf before that would un-mute a signal path that isn't
 # necessarily the one the plan intends yet.
-STAGE_FADER_MUTE = 8
+STAGE_FADER_MUTE = 9
 
 
 @dataclass(frozen=True)
@@ -566,8 +571,20 @@ class ApplyResult:
         for w in self.mismatches:
             lines.append(f"  MISMATCH {w.address}: expected {w.intended_value!r}, read back {w.readback_value!r}")
         unreadable = [w for w in self.writes if w.status in ("unreadable", "unreadable_skipped")]
+        # An effect's parameters the desk will not answer for (a GEQ's or a
+        # DEQ3's bands) are said once per engine, not once per band: 31 lines for one graphic EQ buried the rest of the summary.
+        by_engine: dict[str, list[str]] = {}
         for w in unreadable:
-            lines.append(f"  UNREADABLE {w.address}: could not establish a baseline value, skipped")
+            m = _FX_PARAMETER.match(w.address)
+            if m:
+                by_engine.setdefault(m.group(1), []).append(m.group(2))
+            else:
+                lines.append(f"  UNREADABLE {w.address}: could not establish a baseline value, skipped")
+        for engine, leaves in by_engine.items():
+            shown = ", ".join(leaves[:3]) + (", ..." if len(leaves) > 3 else "")
+            lines.append(f"  UNREADABLE FX{engine}: {len(leaves)} parameter(s) the desk does not "
+                         f"answer for ({shown}), so they are not written or checked; the desk "
+                         "keeps its own")
         if self.cleaned:
             verb = "would be disconnected" if self.dry_run else "disconnected"
             lines.append(f"  {len(self.cleaned)} undeclared output socket(s) {verb} (--clean-output-sockets):")
@@ -1146,6 +1163,7 @@ def _channel_write_targets(
     shared_sockets: dict[tuple[str, int], list[str]] | None = None,
     states_mix: bool = True,
     matrix_index: dict[str, int] | None = None,
+    user_jacks: dict[int, tuple[str, int]] | None = None,
 ) -> list[WriteTarget]:
     shared_sockets = shared_sockets or {}
     n = channel["channel"]
@@ -1240,7 +1258,7 @@ def _channel_write_targets(
                 targets.append(WriteTarget(
                     f"/io/in/{alt_group}/{socket}/mode", "s",
                     f"{strip_label} {n} ({name}): {alt_mode} width on alternate {alt_group} {socket}",
-                    _const(alt_mode), STAGE_PHANTOM,
+                    _const(alt_mode), STAGE_SOURCE_WIDTH,
                 ))
     # Every strip this plan builds is put back on its MAIN input. A strip
     # left on its alternate after a virtual soundcheck is a strip that does
@@ -1356,23 +1374,33 @@ def _channel_write_targets(
     # sources, each with its own 48V, and writing only the first left the
     # second condenser of every pair silent. Each socket gets its own
     # input-list row's value (`inferred.socket_phantom`).
+    #
+    # Through a user patch, on the JACK the slot takes: a channel
+    # on USR 25+26 hears LCL 4 and LCL 5, and that is where its 48V lives.
     per_socket = inferred.socket_phantom(channel)
+    jacks = inferred.channel_jacks(channel, user_jacks or {})
+    via = {i: f" (through USR {s})" for i, s in enumerate(sockets)
+           if group == "USR" and jacks[i] != (group, s)}
     phantom_wanted = any(on for _socket, on in per_socket)
-    if group in _VPH_CAPABLE_GROUPS:
-        one_value = inferred.pair_phantom_is_inferred(channel)
-        for i, (socket, on) in enumerate(per_socket):
-            why = (" (one phantom value for the pair, read as both sockets')"
-                   if one_value and i else "")
-            targets.append(WriteTarget(
-                f"/io/in/{group}/{socket}/vph", "i",
-                f"{strip_label} {n} ({name}): phantom power on {group} {socket}{why}",
-                _const(1 if on else 0), STAGE_PHANTOM,
-            ))
-    elif phantom_wanted:
+    one_value = inferred.pair_phantom_is_inferred(channel)
+    unwritten = []
+    for i, ((_socket, on), (jack_group, jack)) in enumerate(zip(per_socket, jacks)):
+        if jack_group not in _VPH_CAPABLE_GROUPS:
+            unwritten.append(jack_group)
+            continue
+        why = (" (one phantom value for the pair, read as both sockets')"
+               if one_value and i else "")
+        targets.append(WriteTarget(
+            f"/io/in/{jack_group}/{jack}/vph", "i",
+            f"{strip_label} {n} ({name}): phantom power on {jack_group} {jack}"
+            f"{via.get(i, '')}{why}",
+            _const(1 if on else 0), STAGE_PHANTOM,
+        ))
+    if phantom_wanted and unwritten:
         warnings.append(
-            f"{strip_label} {n} ({name!r}): phantom power requested but patched to group {group!r}, "
-            f"which has no confirmed phantom-power address (.vph only confirmed for "
-            f"{', '.join(sorted(_VPH_CAPABLE_GROUPS))}) -- not written"
+            f"{strip_label} {n} ({name!r}): phantom power requested but patched to group "
+            f"{unwritten[0]!r}, which has no confirmed phantom-power address (.vph only "
+            f"confirmed for {', '.join(sorted(_VPH_CAPABLE_GROUPS))}) -- not written"
         )
 
     # Head-amp gain: same "lives on the physical SOURCE,
@@ -1398,24 +1426,28 @@ def _channel_write_targets(
     # links them.
     gain_db = processing.get("gain_db")
     if gain_db is not None:
-        if group in _VPH_CAPABLE_GROUPS:
-            for i, socket in enumerate(sockets):
-                why = " (the pair's second socket carries the same gain)" if i else ""
-                targets.append(WriteTarget(
-                    f"/io/in/{group}/{socket}/g", "f",
-                    f"{strip_label} {n} ({name}): head-amp gain on {group} {socket}{why}",
-                    _const(float(gain_db)), STAGE_PHANTOM,
-                ))
-        else:
+        no_gain = [g for g, _s in jacks if g not in _VPH_CAPABLE_GROUPS]
+        for i, (jack_group, jack) in enumerate(jacks):
+            if jack_group not in _VPH_CAPABLE_GROUPS:
+                continue
+            why = " (the pair's second socket carries the same gain)" if i else ""
+            targets.append(WriteTarget(
+                f"/io/in/{jack_group}/{jack}/g", "f",
+                f"{strip_label} {n} ({name}): head-amp gain on {jack_group} {jack}"
+                f"{via.get(i, '')}{why}",
+                _const(float(gain_db)), STAGE_PHANTOM,
+            ))
+        if no_gain:
             warnings.append(
-                f"{strip_label} {n} ({name!r}): head-amp gain requested but patched to group {group!r}, "
-                f"which has no confirmed head-amp-gain address (.g only confirmed for "
-                f"{', '.join(sorted(_VPH_CAPABLE_GROUPS))}) -- not written"
+                f"{strip_label} {n} ({name!r}): head-amp gain requested but patched to group "
+                f"{no_gain[0]!r}, which has no confirmed head-amp-gain address (.g only "
+                f"confirmed for {', '.join(sorted(_VPH_CAPABLE_GROUPS))}) -- not written"
             )
 
     # Stereo/mono width, same "lives on the source, not the strip" shape
-    # as phantom -- also depends on the patch already having landed, so
-    # this stays at STAGE_PHANTOM alongside it, not its own earlier stage.
+    # as phantom -- also depends on the patch already having landed. Its own
+    # stage, STAGE_SOURCE_WIDTH: after the patch and before the socket's
+    # name, which a change of width would otherwise overwrite.
     stereo_wanted = bool(channel["source"]["stereo"])
     wing_mode = "ST" if stereo_wanted else "M"
     if group in _MODE_CAPABLE_GROUPS:
@@ -1426,7 +1458,7 @@ def _channel_write_targets(
             targets.append(WriteTarget(
                 f"/io/in/{group}/{socket}/mode", "s",
                 f"{strip_label} {n} ({name}): {wing_mode} width on {group} {socket}",
-                _const(wing_mode), STAGE_PHANTOM,
+                _const(wing_mode), STAGE_SOURCE_WIDTH,
             ))
     else:
         warnings.append(
@@ -1614,8 +1646,9 @@ def _bus_write_targets(
             warnings.append(f"bus {name!r} (index {idx}) exceeds this console's capacity ({facts.CAPACITY['bus']}) -- not applying")
             continue
         if entry.get("name_on") != "none":
+            # The desk's own name when the plan had to key it apart.
             targets.append(WriteTarget(f"/bus/{idx}/name", "s", f"bus {idx} ({name}): name",
-                                       _const(name), STAGE_NAMES))
+                                       _const(entry.get("desk_name") or name), STAGE_NAMES))
         # What this bus sends to other buses and to Matrices.
         label = f"bus {idx} ({name})"
         targets.extend(_pre_flag_send_targets(
@@ -1705,7 +1738,7 @@ def _bus_write_targets(
         # listed Mains left a monitor or FX bus the plan puts on 9-16 on
         # the PA as well. Not a judgement call: the plan says the bus does
         # not route there. Written even when `destinations` is empty
-        # (--skip-verify past bus.no-destination): the plan still lists no
+        # (bus.no-destination, a warning): the plan still lists no
         # Main for it.
         for main_index in facts.main_indices():
             if main_index in listed_mains:
@@ -1716,9 +1749,8 @@ def _bus_write_targets(
                 f"bus {idx} ({name}): NOT routed to Main {main_index} -- the plan lists no route there"
                 + (f" (the desk ships bus {facts.FACTORY_BUS_MAIN_ON_FROM}-{facts.CAPACITY['bus']} on it)" if shipped_on else ""),
                 _const(0), STAGE_ROUTING))
-        # If destinations is empty: verify_plan already refused this plan
-        # (bus.no-destination) unless --skip-verify was passed -- no route
-        # is switched ON either way (the OFF writes above still go out),
+        # If destinations is empty: verify_plan has warned of it
+        # (bus.no-destination) -- no route is switched ON (the OFF writes above still go out),
         # but that's independent of the bus's OWN starting fader/mute
         # below: /bus/{idx}/fdr and /bus/{idx}/mute exist on real hardware
         # regardless of whether this run could resolve where the bus's
@@ -2965,9 +2997,13 @@ def release_write_targets(channels: list[dict], *,
                           keep_sockets: set[tuple[str, int]] | None = None,
                           shared_sockets: dict[tuple[str, int], list[str]] | None = None,
                           console_model: str | None = None,
-                          warnings: list[str] | None = None) -> list[WriteTarget]:
+                          warnings: list[str] | None = None,
+                          user_jacks: dict[int, tuple[str, int]] | None = None,
+                          ) -> list[WriteTarget]:
     """The writes that return each of `channels` -- entries from the plan
-    that BUILT them -- to the reading an untouched strip gives.
+    that BUILT them -- to the reading an untouched strip gives. `user_jacks`
+    is that plan's user patches (`inferred.user_patch_jacks`): a strip patched
+    through one has its 48V switched off on the jack the slot takes.
 
     Ordered within each strip rather than by `stage`, because the order is
     the safety: the fader to -inf before anything else so the strip is silent
@@ -3065,11 +3101,15 @@ def release_write_targets(channels: list[dict], *,
                         "strip the plan keeps -- the socket's own name, color, icon and "
                         "phantom are left exactly as they are")
                     continue
-                # 2. Phantom down while the patch still says where it is.
-                if group in _VPH_CAPABLE_GROUPS:
+                # 2. Phantom down while the patch still says where it is --
+                # on the jack, for a strip patched through a user patch.
+                jack_group, jack = ((user_jacks or {}).get(socket, (group, socket))
+                                    if group == "USR" else (group, socket))
+                if jack_group in _VPH_CAPABLE_GROUPS and (jack_group, jack) not in keep_sockets:
+                    via = f" through USR {socket}" if jack_group != group else ""
                     targets.append(WriteTarget(
-                        f"/io/in/{group}/{socket}/vph", "i",
-                        f"returned to free: phantom power off on {group} {socket} ({was})",
+                        f"/io/in/{jack_group}/{jack}/vph", "i",
+                        f"returned to free: phantom power off on {jack_group} {jack}{via} ({was})",
                         _const(0), STAGE_PHANTOM))
                 # 3. The label the desk actually displays.
                 if group in facts.NAMEABLE_INPUT_GROUPS and not is_shared:
@@ -3144,6 +3184,9 @@ def release_write_targets(channels: list[dict], *,
                             + [f"mute group {i}" for i in mute_idxs]),
                 lambda current, d=dca_idxs, m=mute_idxs: _released_tags(current, d, m),
                 STAGE_TAGS))
+        # A send goes off AND back to an untouched strip's level, -oo: a channel moved onto this strip by a swap or an
+        # insert lists no send there, so a level left behind would be the
+        # old occupant's, kept on a strip that is now somebody else.
         for send in channel.get("bus_sends") or []:
             bidx = bus_index.get(send.get("bus"))
             if bidx is None:
@@ -3152,6 +3195,10 @@ def release_write_targets(channels: list[dict], *,
                 f"{base}/send/{bidx}/on", "i",
                 f"returned to free: {was} no longer sends to bus {bidx}",
                 _const(0), STAGE_SENDS))
+            targets.append(WriteTarget(
+                f"{base}/send/{bidx}/lvl", "f",
+                f"returned to free: {was}'s send to bus {bidx} back to -oo",
+                _const(facts.MINUS_INF_DB), STAGE_SENDS))
         for send in channel.get("matrix_sends") or []:
             midx = (matrix_index or {}).get(send.get("matrix")) if isinstance(send, dict) else None
             if midx is None:
@@ -3160,6 +3207,10 @@ def release_write_targets(channels: list[dict], *,
                 f"{base}/send/MX{midx}/on", "i",
                 f"returned to free: {was} no longer sends to Matrix {midx}",
                 _const(0), STAGE_SENDS))
+            targets.append(WriteTarget(
+                f"{base}/send/MX{midx}/lvl", "f",
+                f"returned to free: {was}'s send to Matrix {midx} back to -oo",
+                _const(facts.MINUS_INF_DB), STAGE_SENDS))
         # The direct Main routes, back to the factory's: Main 1 ON, every
         # other Main OFF (console_facts.FACTORY_STRIP_MAIN_INDEX) --
         # written for every Main whether or not the plan routed it,
@@ -3545,10 +3596,12 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
     targets.extend(_group_name_targets(plan, warnings, set_fader_levels, states_mix=states_mix))
     targets.extend(_bus_write_targets(plan, dca_index, mute_group_index, warnings, set_fader_levels,
                                       states_mix=states_mix))
+    user_jacks = inferred.user_patch_jacks(plan)
     for channel in plan.get("channels", []):
         targets.extend(_channel_write_targets(channel, dca_index, mute_group_index, bus_index, warnings,
                                               set_fader_levels, shared, states_mix=states_mix,
-                                              matrix_index=matrix_indices(plan)))
+                                              matrix_index=matrix_indices(plan),
+                                              user_jacks=user_jacks))
     targets.extend(_shared_source_name_targets(shared, warnings))
 
     for output_name, output_entry in plan.get("outputs", {}).items():
@@ -3631,7 +3684,8 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
         if wing_grp is not None and index is not None and output_entry.get("name_on") != "none":
             targets.append(WriteTarget(
                 f"{'/main' if kind == 'main' else '/mtx'}/{index}/name", "s",
-                f"output {output_name} ({kind} {index}): name", _const(output_name), STAGE_NAMES))
+                f"output {output_name} ({kind} {index}): name",
+                _const(output_entry.get("desk_name") or output_name), STAGE_NAMES))
         # Its own colour, as a bus's, when the plan states one (a
         # capture does); unstated leaves the desk's.
         out_col = bus_col(output_entry)
@@ -3722,6 +3776,12 @@ def _build_write_targets(plan: dict, set_fader_levels: bool) -> tuple[list[Write
 
 def _format_for_node_command(value_type: str, value: object) -> str | None:
     text = str(value)
+    if isinstance(value, float) and "e" in text.lower():
+        # Plain decimal, never exponent notation: the desk reads "1.5e-07"
+        # as 1.5, so a C5-CMB gain of 1.5e-07 from a .snap was written as
+        # 1.5 and mismatched on every Apply.
+        text = f"{value:.12f}".rstrip("0").rstrip(".")
+        return "0" if text in ("", "-0") else text
     if value_type == "s" and any(c in text for c in _UNSAFE_NODE_COMMAND_CHARS):
         return None
     return text
@@ -3797,6 +3857,43 @@ def _gain_step_db(address: str | None) -> float | None:
     return facts.HEAD_AMP_GAIN_STEP_DB.get(match.group(1)) if match else None
 
 
+# A stepped parameter is compared on the desk's own steps (item
+# 1): two values are the same setting when they sit within `_STEP_SLACK` of a
+# step of each other on the parameter's grid, quoted from the parameter map
+# in `console_facts` (scale, low, high, steps). The 2% relative tolerance
+# below is wider than one step of an EQ frequency (0.72%), Q (1.75%) or a
+# gain at high values, so a swap left Snare on Rack Tom's band-2 frequency,
+# two steps away, as "already holds it". 0.75 of a step and not a half: the
+# worst readback seen on hardware lands 0.55 of a step from the value asked
+# (19.6 Hz on a 5 kHz band), while a neighbouring step is a whole step away.
+_STEP_SLACK = 0.75
+_STEPPED = (
+    (re.compile(r"/p?eq/(?:\d+|l|h)f$"), "log", *facts.EQ_FREQ_HZ_RANGE, 961),
+    (re.compile(r"/p?eq/(?:\d+|l|h)g$"), "lin", *facts.EQ_GAIN_DB_RANGE, 301),
+    (re.compile(r"/p?eq/(?:\d+|l|h)q$"), "log", *facts.EQ_Q_RANGE, 181),
+    (re.compile(r"/flt/lcf$"), "log", *facts.HPF_HZ_RANGE, 641),
+    (re.compile(r"/flt/hcf$"), "log", *facts.HI_CUT_HZ_RANGE, 833),
+    (re.compile(r"/(?:flt|eq)/tilt$"), "lin", *facts.TILT_DB_RANGE, 49),
+    (re.compile(r"/in/set/trim$"), "lin", *facts.TRIM_DB_RANGE, 361),
+    (re.compile(r"/in/set/bal$"), "lin", *facts.BALANCE_DB_RANGE, 181),
+)
+
+
+def _step_position(address: str | None, value: float) -> float | None:
+    """Where `value` sits on `address`'s step grid (0 .. steps-1), or None for
+    an address that is not one of `_STEPPED`."""
+    if not address or not ("/eq/" in address or "/peq/" in address or "/flt/" in address
+                           or "/in/set/" in address):
+        return None
+    for pattern, scale, low, high, steps in _STEPPED:
+        if pattern.search(address):
+            v = min(max(value, low), high)
+            if scale == "log":
+                return math.log(v / low) / math.log(high / low) * (steps - 1)
+            return (v - low) / (high - low) * (steps - 1)
+    return None
+
+
 def _keyed(table: dict, address: str | None):
     """`table`'s entry for the address that ends with one of its keys."""
     address = str(address or "")
@@ -3814,6 +3911,9 @@ def _values_equal(value_type: str, a: object, b: object, address: str | None = N
             floor = _keyed(_DESK_FLOOR, address)
             if floor is not None:
                 a, b = max(float(a), floor), max(float(b), floor)
+            here = _step_position(address, float(a))
+            if here is not None:
+                return abs(here - _step_position(address, float(b))) <= _STEP_SLACK
             rel_tol = _keyed(_REL_TOLERANCE, address)
             if rel_tol is not None:
                 return math.isclose(float(a), float(b), rel_tol=rel_tol, abs_tol=0.02)
@@ -5074,9 +5174,44 @@ def apply_plan(
 
 
 def _finish(result: ApplyResult) -> ApplyResult:
+    _describe_direct_outputs(result.writes)
     if result.journal_path is not None:
         _write_journal(result.journal_path, result)
     return result
+
+
+_DIRECT_OUTPUT_LEAF = re.compile(r"^(/io/out/([^/]+)/(\d+))/(grp|in)$")
+
+
+def _describe_direct_outputs(records: list[WriteRecord]) -> None:
+    """A direct output's two leaves (`grp`, `in`) read as two half-changes --
+    "source A 'LCL' -> 'A'" -- so once both were read, each says the whole
+    socket it was and will be: "direct output USB 1: LCL 8 -> AES50-A 1"."""
+    from atoo.outputs_sheet import source_words
+
+    pairs: dict[str, dict[str, WriteRecord]] = {}
+    for record in records:
+        m = _DIRECT_OUTPUT_LEAF.match(record.address)
+        if m and record.description.startswith("direct output "):
+            pairs.setdefault(m.group(1), {})[m.group(4)] = record
+    for base, leaves in pairs.items():
+        grp, num = leaves.get("grp"), leaves.get("in")
+        if grp is None or num is None:
+            continue
+
+        def words(group, index) -> str:
+            if not isinstance(group, str) or group in ("", "OFF"):
+                return "nothing"
+            try:
+                return source_words(group, int(index))
+            except (TypeError, ValueError):
+                return group
+
+        _g, group, sock = _DIRECT_OUTPUT_LEAF.match(grp.address).group(1, 2, 3)
+        said = (f"direct output {group} {sock}: {words(grp.prior_value, num.prior_value)} -> "
+                f"{words(grp.intended_value, num.intended_value)}")
+        grp.description = f"{said} (its source group)"
+        num.description = f"{said} (its source number)"
 
 
 _PAIR_MODE = re.compile(r"^(/io/in/[^/]+/)(\d+)(/mode)$")
@@ -5097,6 +5232,9 @@ def _mirrored_partner(address: str) -> str | None:
 #: run does not write: read and recorded before the selector changes, so Undo
 #: can put it back after it restores the selector (Forge's check).
 ORPHANED_STATUS = "orphaned_prior"
+
+#: An effect engine's parameter (`/fx/9/6k3`): engine, leaf.
+_FX_PARAMETER = re.compile(r"^/fx/(\d+)/(.+)$")
 
 
 def _node_leaves(console, selector: str) -> dict[str, str] | None:

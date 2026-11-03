@@ -7,8 +7,10 @@ $0.46 thinking, to return ~450 tokens of findings. So the critic and the
 watchlist default to `medium` while the generator stays at `high`, each
 with its own setting, announced at INFO. The next measured build's critic
 restated the generator's own note for a quarter of the bill, so both
-reading roles now default to Haiku (docs/developer/build-cost-reduction.md),
-with the same announcement naming the model.
+reading roles defaulted to Haiku from 2026-09-28 to 2026-10-01
+(docs/developer/build-cost-reduction.md). They default to Sonnet 5.5 now,
+as every role does (`ai_provider.ROLE_MODEL_DEFAULTS`); a role set to
+another model is announced at INFO, naming it.
 
 No network: every request goes through a stubbed `urlopen` that records
 the body it was sent and answers by the system prompt, so the effort on

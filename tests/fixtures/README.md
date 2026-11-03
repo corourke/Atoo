@@ -178,3 +178,9 @@ older Demo reads a frozen copy, and a test whose subject is the shipped Demo
   (`input.after.csv`, `instructions.after.md`, `reply.after.json`), so
   `test_plan_diff.py`'s end-to-end build does not depend on the shipped
   Demo's text.
+- `intent/demo_base.plan.json`, `intent/input.csv`, `intent/cases.json`: the Demo
+  show's plan and input list, and the intent tests' cases: a request, the
+  structured intent for it, and the change set a model writes for the same request
+  (written by hand). `intent/qwen7b_socket_past_s16.reply.json`: a degenerate
+  reply from a small local model, valid against the intent schema and nonsense
+  in four places, reconstructed from a description of it. For `test_intent*.py`.

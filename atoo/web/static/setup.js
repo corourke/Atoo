@@ -724,6 +724,36 @@
   const BUS_HEADS = { name: "Name", role: "Role", width: "Width", sources: "Sources", tap: "Tap",
     outputs: "Outputs" };
   const BUS_NOTE = "Save writes the busses.csv file and updates the build plan.";
+  const BUS_CAPACITY = 16;  // a WING's busses (`console_facts.CAPACITY`)
+
+  // A row taken out by its Remove row button says OFF (a bus's Name, a
+  // socket's or a slot's Source), the word each sheet already reads as "take
+  // it out": Save takes the object out of the plan, with what pointed at it
+  // said at INFO, and the line stays in the file so a rebuild leaves it out
+  // too. The row stays on screen, dimmed; typing over OFF brings it back.
+  const REMOVED = "OFF";
+  function isRemoved(value) {
+    return String(value || "").trim().toUpperCase() === REMOVED;
+  }
+
+  // The last cell of a sheet's row: its Remove row button, as the Channels
+  // table has it, or an empty cell when the row cannot be removed (read-only,
+  // or already removed).
+  function removeCell(attr, value, show) {
+    return show
+      ? '<td class="cell-input col-remove"><button type="button" class="btn-icon" ' +
+        `${attr}="${esc(value)}" title="Remove row" aria-label="Remove row">✕</button></td>`
+      : '<td class="col-remove"></td>';
+  }
+
+  function removedTag(file, saved) {
+    const why = saved
+      ? `${file} says OFF: it is out of the plan, and a rebuild leaves it out too. Type over OFF to bring it back.`
+      : "Save takes it out of the plan, with what points at it. Discard brings it back.";
+    return ` <span class="state is-warn row-removed-tag" title="${esc(why)}">removed</span>`;
+  }
+
+  const REMOVE_TH = '<th class="col-remove"><span class="visually-hidden">Remove</span></th>';
   const busSheet = {
     loaded: false, source: null, derived: [], roles: { bus: [], output: [] }, rows: [],
     dirty: false, refusals: [], checking: null, note: "", noteKind: "", editable: false,
@@ -817,7 +847,7 @@
       const d = derivedRow(r.label) || {};
       const text = r.values.sources || d.sources || "";
       return text.split(";").some((part) => {
-        const name = part.replace(/\((pre|post)\)\s*$/i, "").trim().toLowerCase();
+        const name = part.replace(/\((pre|post|group)\)\s*$/i, "").trim().toLowerCase();
         return name && names.indexOf(name) !== -1;
       });
     }).map((r) => {
@@ -853,7 +883,7 @@
     ]) + renderProvenance(entry.provenance);
   }
 
-  const BUS_COLS = 10;  // #, expand, the six sheet columns, the refusal-free Findings, spare
+  const BUS_COLS = 10;  // #, expand, the row's sheet columns, remove, Findings (and room to spare)
 
   // One table's rows: every plan object of `kind` ("bus" / "output"), in the
   // plan's order, then any sheet row the plan does not have yet.
@@ -867,8 +897,10 @@
       drawn[label] = true;
       const bd = (display && key != null && display[key]) || {};
       const id = cardId(cardKind, key != null ? key : label);
+      const removed = isRemoved(row.values.name);
       html += rowOpen(cardKind, key != null ? key : label, (i % 2 ? "alt" : "") +
-        (busRefusals(label).length ? " row-refused" : ""), ` data-bus-label="${esc(label)}"`);
+        (busRefusals(label).length ? " row-refused" : "") + (removed ? " row-removed" : ""),
+      ` data-bus-label="${esc(label)}"`);
       html += `<td class="col-num">${numChip(bd.label || label.replace(/^Bus /, "B").replace(/^Main /, "M")
         .replace(/^Matrix /, "MX"), bd.colour, cardKind === "output"
         ? "Color: none stated — Apply leaves the desk's" : null)}` +
@@ -876,10 +908,11 @@
       html += expandCell(cardKind, key != null ? key : label);
       BUS_ROW_COLS.forEach((col) => {
         html += `<td class="${editable && col !== "outputs" ? "cell-input " : ""}col-bus-${col}">${busCell(row, col, derived, editable)}` +
-          (col === "name" && !entry ? ' <span class="setup-dim ct-unplanned-note">not in this plan: Save ' +
+          (col === "name" && removed ? removedTag("busses.csv", !busCellEdited(row, "name")) : "") +
+          (col === "name" && !entry && !removed ? ' <span class="setup-dim ct-unplanned-note">not in this plan: Save ' +
             "adds it</span>" : "") + "</td>";
       });
-      html += findingsCell(id) + "</tr>";
+      html += removeCell("data-bus-remove", label, editable && !removed) + findingsCell(id) + "</tr>";
       busRefusals(label).forEach((r) => {
         html += `<tr class="row-refusal" data-refusal-for="${esc(label)}"><td colspan="2"></td>` +
           `<td colspan="${BUS_COLS - 2}">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
@@ -888,19 +921,23 @@
       html += detailRow(cardKind, key != null ? key : label, BUS_COLS, busDetail(row, derived, entry, editable));
       i += 1;
     };
-    busSheet.derived.filter((d) => (kind === "bus") === (d.kind === "bus")).forEach((d) => {
-      draw(d.bus, d.key, entries[d.key], d);
-    });
+    const items = busSheet.derived.filter((d) => (kind === "bus") === (d.kind === "bus"))
+      .map((d) => [d.bus, d.key, entries[d.key], d]);
     // Without the bus sheet's payload yet, the plan's own objects.
     if (!busSheet.loaded) {
       Object.keys(entries).forEach((key) => {
         const e = entries[key] || {};
         const label = kind === "bus" ? `Bus ${e.index}` : `${e.kind === "main" ? "Main" : "Matrix"} ${e.index}`;
-        if (!drawn[label]) draw(label, key, e, null);
+        if (!items.some(([l]) => l === label)) items.push([label, key, e, null]);
       });
     }
-    busSheet.rows.filter((r) => !drawn[r.label] && (kind === "bus") === (busKindOf(r.label) === "bus"))
-      .forEach((r) => draw(r.label, null, null, null));
+    // A sheet row the plan does not have yet (an added bus) is drawn in its
+    // place by number, not after the rest.
+    busSheet.rows.filter((r) => !items.some(([l]) => l === r.label)
+      && (kind === "bus") === (busKindOf(r.label) === "bus"))
+      .forEach((r) => items.push([r.label, null, null, null]));
+    items.sort((a, b) => deskOrder(a[0]) - deskOrder(b[0]))
+      .forEach(([label, key, entry, derived]) => { if (!drawn[label]) draw(label, key, entry, derived); });
     return html;
   }
 
@@ -910,7 +947,7 @@
         : "The Main (M) or Matrix (MX) this row is"}">#</th>` +
       '<th class="col-expand"><span class="visually-hidden">Expand</span></th>' +
       BUS_ROW_COLS.map((col) => `<th class="col-bus-${col}">${esc(BUS_HEADS[col])}</th>`).join("") +
-      FINDINGS_TH + "</tr></thead>";
+      REMOVE_TH + FINDINGS_TH + "</tr></thead>";
   }
 
   function busTable(busses, display) {
@@ -926,7 +963,9 @@
   // The Save, Discard and Unsaved badge in a block's header, and the note at
   // the top of its box. Busses and Mains and Matrix write one file, so each carries
   // the same controls, wired to the one editor.
-  function busControls() {
+  // `add`: the Busses block's, which also carries Add a bus, as Outputs and
+  // User signals carry theirs.
+  function busControls(add) {
     if (!busSheet.editable) return "";
     const locked = busSheet.refusals.length
       ? `Save is locked: ${busSheet.refusals.length} cell(s) cannot work on the desk -- see the red rows.`
@@ -937,7 +976,8 @@
       // Channels Save is; locked, with the reason, while a cell is refused.
       `<button type="button" class="btn btn-primary btn-sm" data-bus-save title="${esc(locked || "Save busses.csv")}"` +
       `${busSheet.dirty || busSheet.behind ? "" : " hidden"}` +
-      `${busSheet.refusals.length ? " disabled" : ""}>Save busses.csv</button>`;
+      `${busSheet.refusals.length ? " disabled" : ""}>Save busses.csv</button>` +
+      (add ? '<button type="button" class="btn btn-secondary btn-sm" data-bus-add>Add a bus</button>' : "");
   }
 
   function busNoteBox() {
@@ -1094,22 +1134,25 @@
       };
       const reads = socketSpans(userSheet.readers[String(n)] || []);
       const name = userSourceName(plan, n, row.source);
-      html += `<tr class="row-primary${i % 2 ? " alt" : ""}${refused.length ? " row-refused" : ""} user-row" ` +
+      const removed = isRemoved(row.source);
+      html += `<tr class="row-primary${i % 2 ? " alt" : ""}${refused.length ? " row-refused" : ""}` +
+        `${removed ? " row-removed" : ""} user-row" ` +
         `data-user-label="${esc(label)}">` +
         `<td class="col-user-slot">${editable && userRowEdited(i, "slot") && !(userSheet.original[i] || {}).slot
           ? field("slot", row.slot, ' size="7"') : `<span class="badge-ro user-slot">${esc(label)}</span>`}` +
         (kind ? ` <span class="user-kind">${esc(kind)}</span>` : "") + "</td>" +
         `<td class="cell-input col-user-source">${field("source", row.source)}` +
-        (name ? ` <span class="setup-dim user-src-name">${esc(name)}</span>` : "") + "</td>" +
+        (name ? ` <span class="setup-dim user-src-name">${esc(name)}</span>` : "") +
+        (removed ? removedTag("user.csv", !userRowEdited(i, "source")) : "") + "</td>" +
         `<td class="cell-input col-user-tap">${tapLeg("tap", ["PRE", "POST"])}</td>` +
         `<td class="cell-input col-user-leg">${tapLeg("leg", ["L+R", "L", "R"])}</td>` +
         `<td class="cell-input col-user-name">${field("name", row.name)}</td>` +
         `<td class="col-user-readby">${reads.length
           ? reads.map((r) => `<span class="badge-ro" title="${esc(r)} is fed from ${esc(label)}">${esc(r)}</span>`).join("")
           : `<span class="setup-dim">read by nothing yet${editable ? ": patch an output or a channel to " + esc(label) : ""}</span>`}</td>` +
-        "</tr>";
+        removeCell("data-user-remove", String(i), editable && !removed) + "</tr>";
       refused.forEach((r) => {
-        html += `<tr class="row-refusal"><td></td><td colspan="5">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
+        html += `<tr class="row-refusal"><td></td><td colspan="6">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
           `${esc(r.reason)}</td></tr>`;
       });
     });
@@ -1121,7 +1164,7 @@
       '<th class="col-user-leg" title="Which side of a stereo strip: both summed, left or right">Leg</th>' +
       '<th class="col-user-name">Name</th>' +
       '<th class="col-user-readby" title="The outputs and channels fed from this slot: set those in Outputs or Channels">Read by</th>' +
-      `</tr></thead><tbody>${html}</tbody></table></div>`;
+      REMOVE_TH + `</tr></thead><tbody>${html}</tbody></table></div>`;
   }
 
   function userControls() {
@@ -1162,8 +1205,9 @@
   // source.
   const OUT_COLS = ["output", "source", "notes"];
   const OUT_NOTE = "Every output socket the desk patches, one row each: what feeds it, in the " +
-    "desk's own words. Runs that go up together show as one line; open one to edit its rows. Type " +
-    "OFF as the source to disconnect a socket. Save writes outputs.csv and updates the build plan.";
+    "desk's own words. Runs that go up together show as one line; open one to edit its rows. A row " +
+    "may be typed as a run too (USB 1-16 from AES50-A 1-16), and Save writes it one row per socket. " +
+    "Type OFF as the source to disconnect a socket. Save writes outputs.csv and updates the build plan.";
   const OUT_KINDS = [["split", "straight from an input socket"], ["mix", "a bus, Main or Matrix"],
     ["usr", "a user signal or patch (USR)"], ["other", "a send, the monitor or the oscillator"]];
   const outSheet = {
@@ -1249,16 +1293,25 @@
     return runs;
   }
 
+  // A run's header, from its rows as they are now: a run whose
+  // rows were renumbered says so. A cell that reads as no socket or source
+  // yet, mid-edit, says what the run was read as.
   function outRunWords(run) {
-    const first = outSheet.original[run[0]] || {};
-    const last = outSheet.original[run[run.length - 1]] || {};
-    const a = outParseSocket(first.output);
-    const b = outParseSocket(last.output);
-    const src = outParseSource(first.source);
-    const end = outParseSource(last.source);
-    const output = `${a.group} ${a.n}-${b.n}`;
-    const source = src.kind === "mix" ? `${src.obj} L-R` : `${src.group} ${src.n}-${end.n}`;
-    return [output, source];
+    const words = (rows) => {
+      const first = rows[run[0]] || {};
+      const last = rows[run[run.length - 1]] || {};
+      const a = outParseSocket(first.output);
+      const b = outParseSocket(last.output);
+      const src = outParseSource(first.source);
+      const end = outParseSource(last.source);
+      if (!a || !b || a.group !== b.group || !src || !end || src.group !== end.group) return null;
+      const output = `${a.group} ${a.n}-${b.n}`;
+      const source = src.kind === "mix"
+        ? (src.obj === end.obj ? `${src.obj} L-R` : `${src.obj} ${src.side}-${end.obj} ${end.side}`)
+        : `${src.group} ${src.n}-${end.n}`;
+      return [output, source];
+    };
+    return words(outSheet.rows) || words(outSheet.original);
   }
 
   function outSwatch(src) {
@@ -1284,6 +1337,7 @@
     const editable = outSheet.editable;
     const src = outParseSource(row.source);
     const refused = outRefusals(label);
+    const removed = isRemoved(row.source);
     const mark = (col) => (outRowEdited(i, col) ? " is-edited" : "") +
       (outRefusals(label, col).length ? " is-refused" : "");
     const field = (col, extra) => editable
@@ -1292,15 +1346,18 @@
         ` title="${esc(row[col] || "")}">`
       : `<span class="out-text">${row[col] ? esc(row[col]) : DASH}</span>`;
     let html = `<tr class="row-primary out-row out-kind-${src ? src.kind : "none"}${alt ? " alt" : ""}` +
-      `${member ? " out-run-member" : ""}${refused.length ? " row-refused" : ""}" data-out-label="${esc(label)}">` +
+      `${member ? " out-run-member" : ""}${refused.length ? " row-refused" : ""}` +
+      `${removed ? " row-removed" : ""}" data-out-label="${esc(label)}">` +
       '<td class="col-expand"></td>' +
       `<td class="cell-input col-out-output">${field("output")}</td>` +
       `<td class="cell-input col-out-source"><span class="out-arrow" aria-hidden="true">&larr;</span>` +
-      `${outSwatch(src)}${field("source")}${outObjectName(src)}</td>` +
+      `${outSwatch(src)}${field("source")}${outObjectName(src)}` +
+      `${removed ? removedTag("outputs.csv", !outRowEdited(i, "source")) : ""}</td>` +
       `<td class="cell-input col-out-notes">${field("notes")}</td>` +
+      removeCell("data-out-remove", String(i), editable && !removed) +
       findingsCell(cardId("socket", label)) + "</tr>";
     refused.forEach((r) => {
-      html += `<tr class="row-refusal"><td></td><td colspan="4">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
+      html += `<tr class="row-refusal"><td></td><td colspan="5">${esc(r.column ? `${r.column}${r.value ? " " + JSON.stringify(r.value) : ""}: ` : "")}` +
         `${esc(r.reason)}</td></tr>`;
     });
     return html;
@@ -1321,7 +1378,9 @@
       `<td class="col-out-output">${cell(output)}</td>` +
       `<td class="col-out-source"><span class="out-arrow" aria-hidden="true">&larr;</span>` +
       `${outSwatch(src)}${cell(source)}${outObjectName(src)}</td>` +
-      '<td class="col-out-notes"></td><td class="col-findings"></td></tr>';
+      '<td class="col-out-notes"></td>' + removeCell("data-out-remove-run", key,
+        outSheet.editable && !run.every((i) => isRemoved((outSheet.rows[i] || {}).source))) +
+      '<td class="col-findings"></td></tr>';
   }
 
   function outputsTable() {
@@ -1347,7 +1406,7 @@
       '<th class="col-expand"><span class="visually-hidden">Expand</span></th>' +
       '<th class="col-out-output" title="The output socket, as the desk names it">Output</th>' +
       '<th class="col-out-source" title="What feeds it: one of the desk\'s source groups and a number">Source</th>' +
-      '<th class="col-out-notes">Notes</th>' + FINDINGS_TH +
+      '<th class="col-out-notes">Notes</th>' + REMOVE_TH + FINDINGS_TH +
       `</tr></thead><tbody>${html}</tbody></table></div>`;
   }
 
@@ -1455,6 +1514,15 @@
       if (ev.target.closest("[data-out-save]")) { saveOutputsSheet(); return; }
       if (ev.target.closest("[data-out-discard]")) { discardOutputsSheet(); return; }
       if (ev.target.closest("[data-out-add]")) { addOutSocket(); return; }
+      if (ev.target.closest("[data-bus-add]")) { addBusRow(); return; }
+      const removeBus = ev.target.closest("[data-bus-remove]");
+      if (removeBus) { removeBusRow(removeBus.dataset.busRemove); return; }
+      const removeUser = ev.target.closest("[data-user-remove]");
+      if (removeUser) { removeUserRow(Number(removeUser.dataset.userRemove)); return; }
+      const removeRun = ev.target.closest("[data-out-remove-run]");
+      if (removeRun) { removeOutRun(removeRun.dataset.outRemoveRun); return; }
+      const removeOut = ev.target.closest("[data-out-remove]");
+      if (removeOut) { removeOutRow(Number(removeOut.dataset.outRemove)); return; }
       const note = ev.target.closest("[data-note-key]");
       if (note && SP_ && SP_.inputEditor && SP_.inputEditor.editNote) {
         SP_.inputEditor.editNote(note.dataset.noteKey, note);
@@ -2024,14 +2092,17 @@
     const sheetOutputRows = busSheet.rows.filter((r) => busKindOf(r.label) === "output").length;
     const sheetFile = busSheet.editable ? " · busses.csv" : "";
     let controlsShown = false;
-    if (busNames.length || sheetBusRows) {
+    // An editable show always has the Busses block, so a show with none yet
+    // can add one.
+    if (busNames.length || sheetBusRows || busSheet.editable) {
       const mono = busNames.filter((n) => busses[n] && busses[n].mono === true).length;
       const st = busNames.filter((n) => busses[n] && busses[n].mono === false).length;
       const note = [String(Math.max(busNames.length, sheetBusRows))].concat(mono ? [`${mono} mono`] : [])
         .concat(st ? [`${st} stereo`] : []).join(" · ") + sheetFile;
-      html += blockHead("Busses", note, `<span class="block-head-spacer"></span>${busControls()}`) +
+      html += blockHead("Busses", note, `<span class="block-head-spacer"></span>${busControls(true)}`) +
         '<section class="panel box plan-table-section" id="plan-busses-block">' + busNoteBox() +
-        busTable(busses, busDisplay || {}) + "</section>";
+        (busNames.length || sheetBusRows ? busTable(busses, busDisplay || {})
+          : '<div class="sheet-note setup-dim">No bus yet. Add a bus to start one.</div>') + "</section>";
       controlsShown = true;
     }
     if (outputNames.length || sheetOutputRows) {
@@ -2534,11 +2605,71 @@
     const row = busRow(input.dataset.busRow);
     if (!row) return;
     row.values[input.dataset.busCol] = input.value;
-    busSheet.dirty = busSheet.rows.some((r) => Object.keys(Object.assign({}, r.values, r.original))
-      .some((c) => (r.values[c] || "") !== (r.original[c] || "")));
+    busSheet.dirty = busDirty();
     busSheet.note = "";
     input.classList.toggle("is-edited", busCellEdited(row, input.dataset.busCol));
     paintBusControls();
+    scheduleBusCheck();
+  }
+
+  // Remove row: the row says OFF in its Name and nothing else, which Save
+  // carries out (see REMOVED). A plan object the file has no row for gains
+  // one, as an edited cell gives it.
+  function removeBusRow(label) {
+    let row = busRow(label);
+    // A bus added since the sheet was read just goes.
+    if (row && row.added) {
+      busSheet.rows = busSheet.rows.filter((r) => r !== row);
+      busSheet.dirty = busDirty();
+      busSheet.note = "";
+      redrawTables();
+      scheduleBusCheck();
+      return;
+    }
+    if (!row) {
+      row = { label: label, line: null, values: { bus: label }, original: { bus: label } };
+      busSheet.rows.push(row);
+    }
+    const values = { bus: row.values.bus || label, name: REMOVED };
+    BUS_ROW_COLS.concat(BUS_DETAIL_COLS.map(([col]) => col)).forEach((col) => {
+      if (col !== "name" && col !== "outputs") values[col] = "";
+    });
+    if ("outputs" in row.original) values.outputs = "";
+    row.values = values;
+    busSheet.dirty = true;
+    busSheet.note = "";
+    redrawTables();
+    scheduleBusCheck();
+  }
+
+  function busDirty() {
+    return busSheet.rows.some((r) => r.added || Object.keys(Object.assign({}, r.values, r.original))
+      .some((c) => (r.values[c] || "") !== (r.original[c] || "")));
+  }
+
+  // Add a bus: a new row on the next bus number no row and no plan bus has,
+  // ready for its name. Save adds it to busses.csv and the plan; what code
+  // chooses for it (its width) is said at INFO.
+  function addBusRow() {
+    const taken = new Set(busSheet.rows.map((r) => r.label).concat(busSheet.derived.map((d) => d.bus))
+      .map((label) => { const m = /^Bus (\d+)$/.exec(label); return m ? Number(m[1]) : null; }));
+    let n = 1;
+    while (taken.has(n) && n <= BUS_CAPACITY) n += 1;
+    if (n > BUS_CAPACITY) {
+      busSheet.note = `Every one of the desk's ${BUS_CAPACITY} busses is in use: remove one to add another.`;
+      busSheet.noteKind = "error";
+      redrawTables();
+      return;
+    }
+    const label = `Bus ${n}`;
+    busSheet.rows.push({ label: label, line: null, values: { bus: label }, original: { bus: label },
+      added: true });
+    busSheet.dirty = true;
+    busSheet.note = "";
+    redrawTables();
+    const box = el("plan-render") && el("plan-render").querySelector(
+      `[data-bus-row="${CSS.escape(label)}"][data-bus-col="name"]`);
+    if (box) box.focus();
     scheduleBusCheck();
   }
 
@@ -2552,15 +2683,28 @@
   }
 
   // The sheet as Save sends it: every row the file has, in its order, whole;
-  // then a row for each plan object the file has no row for, when a cell of
-  // it was filled in.
+  // and a row for each plan object the file has no row for, when a cell of
+  // it was filled in, before the first file row that comes after it on the
+  // desk -- so Bus 7 is written between Bus 6 and Bus 8.
   function busSaveRows() {
     const kept = busSheet.rows.filter((r) => r.line != null).sort((a, b) => a.line - b.line)
-      .map((r) => ({ line: r.line, values: Object.assign({}, r.values) }));
-    const added = busSheet.rows.filter((r) => r.line == null && Object.keys(r.values)
-      .some((c) => c !== "bus" && String(r.values[c] || "").trim()))
-      .map((r) => ({ line: null, values: Object.assign({}, r.values, { bus: r.label }) }));
-    return kept.concat(added);
+      .map((r) => ({ line: r.line, values: Object.assign({}, r.values), label: r.label }));
+    busSheet.rows.filter((r) => r.line == null && (r.added || Object.keys(r.values)
+      .some((c) => c !== "bus" && String(r.values[c] || "").trim())))
+      .sort((a, b) => deskOrder(a.label) - deskOrder(b.label))
+      .forEach((r) => {
+        const row = { line: null, values: Object.assign({}, r.values, { bus: r.label }), label: r.label };
+        const at = kept.findIndex((k) => deskOrder(k.label) > deskOrder(r.label));
+        kept.splice(at < 0 ? kept.length : at, 0, row);
+      });
+    return kept.map(({ line, values }) => ({ line: line, values: values }));
+  }
+
+  // Where a bus-sheet label sits on the desk: busses by number, then Mains,
+  // then Matrices; a label that is none of them goes last.
+  function deskOrder(label) {
+    const m = /^(Bus|Main|Matrix) (\d+)$/.exec(label || "");
+    return m ? { Bus: 0, Main: 1, Matrix: 2 }[m[1]] * 1000 + Number(m[2]) : 9000;
   }
 
   async function saveBusSheet() {
@@ -2606,6 +2750,7 @@
   }
 
   function discardBusSheet() {
+    busSheet.rows = busSheet.rows.filter((r) => !r.added);
     busSheet.rows.forEach((r) => { r.values = Object.assign({}, r.original); });
     busSheet.dirty = false;
     busSheet.refusals = [];
@@ -2677,6 +2822,34 @@
   function toggleOutRun(key) {
     outSheet.open[key] = !outSheet.open[key];
     redrawTables();
+  }
+
+  // Remove row: a socket added since the sheet was read is dropped; any other
+  // says OFF, which Save carries out (see REMOVED).
+  function removeOutRow(i) {
+    if (!outSheet.rows[i]) return;
+    if (!outSheet.original[i] || !outSheet.original[i].output) {
+      outSheet.rows.splice(i, 1);
+      outSheet.original.splice(i, 1);
+    } else {
+      outSheet.rows[i].source = REMOVED;
+    }
+    outSheet.dirty = outDirty();
+    outSheet.note = "";
+    redrawTables();
+    scheduleOutCheck();
+  }
+
+  // Remove row on a folded run: every socket in it says OFF. The run opens,
+  // as a run with an edit in it does, showing each row removed.
+  function removeOutRun(key) {
+    const run = outRuns().find((r) => ((outSheet.original[r[0]] || {}).output || "") === key);
+    if (!run) return;
+    run.forEach((i) => { outSheet.rows[i].source = REMOVED; });
+    outSheet.dirty = outDirty();
+    outSheet.note = "";
+    redrawTables();
+    scheduleOutCheck();
   }
 
   // A new row at the end, ready for its socket.
@@ -2810,6 +2983,25 @@
     userSheet.note = "";
     input.classList.toggle("is-edited", userRowEdited(Number(input.dataset.userRow), input.dataset.userCol));
     paintUserControls();
+    scheduleUserCheck();
+  }
+
+  // Remove row: a slot added since the sheet was read is dropped; any other
+  // says OFF, which Save carries out (see REMOVED).
+  function removeUserRow(i) {
+    const row = userSheet.rows[i];
+    if (!row) return;
+    if (!userSheet.original[i] || !userSheet.original[i].slot) {
+      userSheet.rows.splice(i, 1);
+      userSheet.original.splice(i, 1);
+    } else {
+      row.source = REMOVED;
+      row.tap = "";
+      row.leg = "";
+    }
+    userSheet.dirty = userDirty();
+    userSheet.note = "";
+    redrawTables();
     scheduleUserCheck();
   }
 

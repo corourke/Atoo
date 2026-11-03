@@ -42,7 +42,7 @@ def _festival_reply(unassigned: list) -> dict:
     rows = parse_input_list(FESTIVAL_CSV.read_text())
     return {"channels": [{"input": r.name, "patch": {"group": "A"}}
                          for r in rows if r.name not in HAIKU_LEFT_OUT],
-            "busses": [{"name": "MON1", "mono": True,
+            "dcas": [], "mute_groups": [], "busses": [{"name": "MON1", "mono": True,
                         "destination": {"type": "dedicated_output", "label": "MON1",
                                         "patch": {"group": "LCL", "sockets": [1]}},
                         "sends": [{"from": ["*"], "mode": "pre", "level_db": -144.0}]}],
@@ -117,7 +117,7 @@ def test_a_quote_that_is_not_there_is_a_warning_and_the_row_is_built():
 def test_a_rows_notes_do_not_leave_out_another_row():
     csv = ("name,category,type,phantom,notes\nKick,drums,Mic,FALSE,\n"
            "Spare,misc,Mic,FALSE,not patched for this event\nVox,vocals,Mic,FALSE,\n")
-    reply = {"channels": [{"input": "Kick"}], "busses": [], "outputs": [],
+    reply = {"channels": [{"input": "Kick"}], "dcas": [], "mute_groups": [], "busses": [], "outputs": [],
              "unassigned_inputs": [{"input": "Spare", "quote": NOT_PATCHED},
                                    {"input": "Vox", "quote": NOT_PATCHED}],
              "notes": []}
@@ -127,7 +127,7 @@ def test_a_rows_notes_do_not_leave_out_another_row():
 
 def test_the_instructions_can_leave_a_row_out():
     csv = "name,category,type,phantom\nKick,drums,Mic,FALSE\nSpare,misc,Mic,FALSE\n"
-    reply = {"channels": [{"input": "Kick"}], "busses": [], "outputs": [],
+    reply = {"channels": [{"input": "Kick"}], "dcas": [], "mute_groups": [], "busses": [], "outputs": [],
              "unassigned_inputs": [{"input": "Spare", "quote": "Leave the spare mic off."}],
              "notes": []}
     plan = _build(reply, csv, instructions="## Inputs\nLeave the spare mic off.\n")
@@ -140,7 +140,7 @@ def test_a_row_built_by_code_carries_its_own_facts():
            "LCL 5,OH,drums,Mic,SM81,TRUE,\n")
     reply = {"channels": [{"input": "Kick", "patch": {"group": "LCL"}}],
              "category_colors": [{"category": "drums", "color": "Red"}],
-             "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
+             "dcas": [], "mute_groups": [], "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
     plan = _build(reply, csv)
     oh = next(c for c in plan["channels"] if c["name"] == "OH")
     assert oh["channel"] == 2 and oh["color"] == "Red"
@@ -154,7 +154,7 @@ def test_no_free_strip_for_a_left_out_row_is_refused():
     names = [f"In {n}" for n in range(1, 42)]
     csv = "name,category,type,phantom\n" + "".join(f"{n},misc,Mic,FALSE\n" for n in names)
     reply = {"channels": [{"input": n, "patch": {"group": "A"}} for n in names[:40]],
-             "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
+             "dcas": [], "mute_groups": [], "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
     with pytest.raises(generate.GenerationError, match="all 40 channel strips are taken"):
         _build(reply, csv)
 
@@ -210,3 +210,17 @@ def test_the_prompt_says_it_in_one_line():
     prose = " ".join(plan_schema.schema_section().split())
     assert ('unassigned_inputs [{"input", "quote"}]: a row left out ONLY where words quoted '
             "from the conventions, instructions or its notes say so; code builds the rest") in prose
+
+
+def test_a_reply_must_write_dcas_and_mute_groups_even_when_empty():
+    """Issue: a channel naming a DCA the reply never declared dangled (a local model's failure).
+    The arrays are required, so the omission is a format error the fix-up round sees."""
+    csv = "name,category,type,phantom\nKick,drums,Mic,FALSE\n"
+    base = {"channels": [{"input": "Kick", "dca": ["Drums"]}], "dcas": [], "mute_groups": [],
+            "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
+    assert validate(base, plan_schema.REPLY_SCHEMA) == []
+    for missing in ("dcas", "mute_groups"):
+        reply = {k: v for k, v in base.items() if k != missing}
+        assert any(missing in problem for problem in validate(reply, plan_schema.REPLY_SCHEMA))
+        with pytest.raises(generate.GenerationError, match=missing):
+            _build(reply, csv)

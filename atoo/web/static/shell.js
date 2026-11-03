@@ -1472,6 +1472,17 @@
   // share a row; they do only when the code has words of its own or
   // every one makes the same claim -- a row must never hide a value
   // behind a summary nobody wrote.
+  // A claim several strips share takes the plural verb: "5 strips reach no
+  // output", not "reaches". Only a leading verb a
+  // claim is known to start with; any other claim is left as written.
+  const PLURAL_VERBS = { reaches: "reach", is: "are", has: "have", sends: "send", feeds: "feed",
+    does: "do", takes: "take", carries: "carry", goes: "go", needs: "need", uses: "use",
+    joins: "join", reads: "read", says: "say", keeps: "keep" };
+  function plural(claim) {
+    const m = /^(\w+)\b/.exec(claim || "");
+    return m && PLURAL_VERBS[m[1]] ? PLURAL_VERBS[m[1]] + claim.slice(m[1].length) : claim;
+  }
+
   function gather(entries, keyOf) {
     const rows = [];
     const buckets = {};
@@ -1494,7 +1505,7 @@
       const count = row.entries.reduce((n, entry) => n + itemCount(entry.finding), 0);
       const words = CODE_WORDS[code];
       row.where = count + " " + (words ? words[1] : "strips");
-      row.claim = words ? words[2] : [...claims][0];
+      row.claim = words ? words[2] : (count > 1 ? plural([...claims][0]) : [...claims][0]);
       out.push(row);
     });
     return out;

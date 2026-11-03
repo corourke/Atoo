@@ -59,6 +59,10 @@ unless the conventions state one.
 
 ## Rules you are held to
 
+- **Write `dcas` and `mute_groups` every time.** A channel names a DCA or mute group
+  only if that group is in the reply's `dcas` / `mute_groups` array; an empty array
+  (`[]`) says the conventions declare none. A reply without the array is refused.
+
 1. ACCOUNT FOR EVERY INPUT. Every row of the input list must either become
    a channel or be named in "unassigned_inputs". A dropped input is the
    worst failure available to you: a wrong fader shows up in review, but a

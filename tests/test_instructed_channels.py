@@ -157,7 +157,7 @@ def _reply(extra: dict) -> dict:
                          extra],
             "category_colors": [{"category": "drums", "color": "Red"},
                                 {"category": "misc", "color": "White"}],
-            "busses": [],
+            "dcas": [], "mute_groups": [], "busses": [],
             "outputs": [{"name": "Main", "kind": "main",
                          "patch": {"group": "LCL", "sockets": [7, 8]}}],
             "unassigned_inputs": [], "notes": []}

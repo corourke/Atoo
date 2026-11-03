@@ -982,7 +982,8 @@ def test_box_1_counts_the_preflights_notes_by_the_docks_folds(assets):
     shell = assets.get("/static/shell.js").text
     start = js.index("function preflightNotesLine(")
     body = js[start:js.index("function renderPreflight(", start)]
-    assert '" among Choices"' in body and '" among Build details"' in body
+    assert '" under Choices"' in body and '" under Build details"' in body
+    assert '"This pre-flight\'s "' in body
     assert "SP.isBuildDetail" in body
     # One per finding: the dock's unit, not `members` (severityCounts').
     assert "members" not in body

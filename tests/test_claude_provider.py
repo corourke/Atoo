@@ -520,10 +520,10 @@ def test_api_show_is_queried_once_per_provider_not_once_per_request(monkeypatch)
 # required field 'outputs'" and no hint why.
 # ---------------------------------------------------------------------------
 
-def _ollama_stream(*, chunks: list[str], done_reason: str) -> bytes:
+def _ollama_stream(*, chunks: list[str], done_reason: str, eval_count: int | None = None) -> bytes:
     lines = [json.dumps({"message": {"content": c}, "done": False}) for c in chunks]
-    lines.append(json.dumps({"message": {"content": ""}, "done": True,
-                             "done_reason": done_reason}))
+    lines.append(json.dumps({"message": {"content": ""}, "done": True, "done_reason": done_reason,
+                             **({"eval_count": eval_count} if eval_count is not None else {})}))
     return ("\n".join(lines) + "\n").encode()
 
 
@@ -540,6 +540,22 @@ def test_ollama_truncated_reply_is_a_clear_error_not_a_schema_puzzle(monkeypatch
     # The partial reply is kept, same contract as every other truncation
     # path in this module -- it is the only evidence of how far generation got.
     assert excinfo.value.partial_text == "partial plan..."
+
+
+def test_a_cut_off_reply_says_which_limit_it_hit(monkeypatch):
+    """The reply cap (num_predict) and the context window are different fixes; the message used to
+    blame the window for both."""
+    from atoo.ai_provider import OllamaProvider
+
+    monkeypatch.setattr(
+        "atoo.ai_provider.urllib.request.urlopen",
+        lambda req, timeout=None: _Response(
+            _ollama_stream(chunks=["{\"ops\": ["], done_reason="length", eval_count=4000)))
+    with pytest.raises(AIProviderError, match="hit the reply cap \\(num_predict 4,000") as capped:
+        OllamaProvider(model="m", num_ctx=24576, num_predict=4000).complete(system="s", user="u")
+    assert "not the context window (24,576" in str(capped.value)
+    with pytest.raises(AIProviderError, match="ran out of context window \\(8,192"):
+        OllamaProvider(model="m", num_ctx=8192).complete(system="s", user="u")
 
 
 def test_ollama_natural_stop_is_not_treated_as_truncation(monkeypatch):
@@ -810,3 +826,35 @@ def test_the_default_ceiling_is_the_models_own_output_limit():
     assert provider_from_env({**env, "ATOO_AI_MAX_TOKENS": "32000"}).max_tokens == 32000
     assert provider_from_env({**env, "ATOO_AI_MAX_TOKENS": " "}).max_tokens == 128000
     assert ClaudeProvider(api_key="k", model="claude-haiku-4-5").max_tokens == 64000
+
+
+def test_ollama_samples_at_temperature_0_with_a_seed_so_a_rerun_repeats(monkeypatch):
+    from atoo.ai_provider import provider_from_env
+
+    seen = {}
+    monkeypatch.setattr("atoo.ai_provider.urllib.request.urlopen",
+                        lambda req, timeout=None: (
+                            seen.update(body=json.loads(req.data)),
+                            _Response(json.dumps({"message": {"content": "ok"}}).encode()))[1])
+    provider_from_env({"ATOO_AI_PROVIDER": "ollama"}).complete(system="s", user="u")
+    assert (seen["body"]["options"]["temperature"], seen["body"]["options"]["seed"]) == (0, 42)
+    provider_from_env({"ATOO_AI_PROVIDER": "ollama", "ATOO_AI_SEED": "7"}).complete(system="s", user="u")
+    assert seen["body"]["options"]["seed"] == 7
+    with pytest.raises(AIProviderError, match="ATOO_AI_SEED"):
+        provider_from_env({"ATOO_AI_PROVIDER": "ollama", "ATOO_AI_SEED": "x"})
+
+
+def test_a_thinking_model_that_answers_nothing_says_which_limit_and_how_much_was_thinking(monkeypatch):
+    """The whole window spent thinking used to read only "The AI isn't responding"."""
+    from atoo.ai_provider import OllamaProvider
+
+    lines = [json.dumps({"message": {"content": "", "thinking": "x" * 5000}, "done": False}),
+             json.dumps({"message": {"content": ""}, "done": True, "done_reason": "length",
+                         "eval_count": 16000, "prompt_eval_count": 8576})]
+    monkeypatch.setattr("atoo.ai_provider.urllib.request.urlopen",
+                        lambda req, timeout=None: _Response(("\n".join(lines) + "\n").encode()))
+    with pytest.raises(AIProviderError) as raised:
+        OllamaProvider(model="m", num_ctx=24576).complete(system="s", user="u")
+    text = str(raised.value)
+    assert "done_reason 'length'" in text and "16000 tokens" in text and "5,000 characters of it were thinking" in text
+    assert "8,576 of the 24,576-token context window" in text

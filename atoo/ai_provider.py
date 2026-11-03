@@ -29,7 +29,6 @@ import sys
 import time
 import urllib.error
 import urllib.request
-import uuid
 from dataclasses import dataclass, field
 from typing import ClassVar, Mapping, Protocol
 
@@ -386,9 +385,26 @@ USD_PER_TICK = 1e-10
 #: The api provider's read timeout: a reasoning model can think for minutes
 #: before its first token. ATOO_AI_TIMEOUT overrides it.
 API_TIMEOUT = 600.0
-#: Lets xAI cache the prompt prefix across the calls of one run; a host that
-#: does not know it ignores it.
+#: Lets xAI cache the prompt prefix across calls; a host that does not know
+#: it ignores it. Its value is stable per show (`conv_id_for`), so `build`
+#: and `patch` on one show share the cache.
 CONV_ID_HEADER = "x-grok-conv-id"
+
+
+def conv_id_for(show_dir: "str | os.PathLike | None" = None) -> str:
+    """The `x-grok-conv-id` for a show: the same for every command on the same
+    show folder, different for another, so a host that caches the prompt
+    prefix (xAI) can reuse it across `build` and `patch`.
+
+    A one-way hash, truncated, of the show folder's resolved path, so it
+    carries neither the path nor anything in the show (no channel names) and
+    never the API key. With no show, the same hash of the working folder: a
+    stable fallback, not a random one."""
+    import hashlib
+
+    where = os.path.realpath(os.fspath(show_dir) if show_dir is not None else os.getcwd())
+    kind = "show" if show_dir is not None else "folder"
+    return hashlib.sha256(f"atoo-conv:{kind}:{where}".encode()).hexdigest()[:32]
 
 
 class Prompt(str):
@@ -420,8 +436,17 @@ class Prompt(str):
 
     groups: tuple[str, ...]
     tail: str
+    #: An assistant turn to put between the groups and the tail, or None. A provider that sends
+    #: chat messages may then send the groups as one user turn, this as an assistant turn and the
+    #: tail as a second user turn (`chat_messages`): the second turn's start is a point a local
+    #: host can checkpoint its prompt cache at, and it is the same in every call that shares the
+    #: groups. llama.cpp keeps a model with sliding-window attention (gemma3) reusable only from
+    #: such checkpoints -- at the start of a user turn, and near a prompt's end -- so a prefix
+    #: shared inside ONE user turn is read again on every call (`atoo build --intent-steps`).
+    #: The string itself (what the other providers send) is unchanged.
+    turn: str | None
 
-    def __new__(cls, groups, tail: str = ""):
+    def __new__(cls, groups, tail: str = "", turn: str | None = None):
         groups = tuple(groups)
         if len(groups) > MAX_USER_BREAKPOINTS:
             raise ValueError(f"at most {MAX_USER_BREAKPOINTS} cached groups in a prompt, "
@@ -429,13 +454,26 @@ class Prompt(str):
         self = super().__new__(cls, "".join(groups) + tail)
         self.groups = groups
         self.tail = tail
+        self.turn = turn
         return self
 
     def with_tail(self, more: str) -> "Prompt":
         """The same cached groups with `more` after the tail: a repair call
         re-sends the original prompt and adds what was wrong with the
         reply, and must read the original from cache."""
-        return Prompt(self.groups, self.tail + more)
+        return Prompt(self.groups, self.tail + more, self.turn)
+
+
+def chat_messages(system: str, user) -> list[dict]:
+    """The chat messages for `system` and `user`: one user message, or, for a `Prompt` that
+    carries a `turn` and a tail, its groups, the assistant turn and its tail as three messages."""
+    turn = getattr(user, "turn", None)
+    if turn and getattr(user, "tail", ""):
+        return [{"role": "system", "content": system},
+                {"role": "user", "content": "".join(user.groups)},
+                {"role": "assistant", "content": turn},
+                {"role": "user", "content": user.tail}]
+    return [{"role": "system", "content": system}, {"role": "user", "content": str(user)}]
 
 
 #: Prompt caching, from Anthropic's documentation, read 2026-10-22:
@@ -524,6 +562,9 @@ def _usage_line(who: str, usage: dict, text_chars: int,
     hidden = got - int(text_chars / CHARS_PER_TOKEN)
     if got and hidden > got * 0.25:
         line += f" (~{hidden:,} of it thinking, not returned)"
+    if usage.get("prompt_eval_ms") is not None:
+        # Ollama: how long the prompt took to read (a cached prefix is read in a fraction of it).
+        line += f", prompt read in {usage['prompt_eval_ms'] / 1000:.1f} s"
     if cost:
         line += f" -- ${cost[0]:.2f}" + (f" ({cost[1]})" if cost[1] else "")
     elif price:
@@ -569,8 +610,9 @@ class ApiKeyProvider:
     # prices them as ordinary input. Only used with price_in/price_out.
     price_cached: float | None = None
     # Sent as `x-grok-conv-id` so a host that caches the prompt prefix (xAI)
-    # can; one id per provider (a run), random, never derived from the key.
-    conv_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    # can: stable per show (`conv_id_for`, set by `provider_from_env`'s
+    # `show_dir`), never derived from the key.
+    conv_id: str = field(default_factory=conv_id_for)
     # Send the reply schema as `response_format` (ATOO_AI_STRUCTURED=0 turns
     # it off for a host that does something worse than refuse it).
     structured: bool = True
@@ -1484,8 +1526,23 @@ class OllamaProvider:
     # 32768 until 2026-10-04, when the knowledge file's growth pushed
     # every fixture's auto size past it (festival: ~43k wanted).
     num_ctx_ceiling: int = 65536
+    #: The room the reply needs, in tokens, when the context is sized from the prompt. None: a
+    #: whole plan, which is about as long as the prompt that describes the show. A short reply (an
+    #: intent) sets it, so the window is not sized for a plan nobody asked for.
+    reply_tokens: int | None = None
     num_predict: int = -1   # -1: generate until the model stops, not an arbitrary cap
+    #: Sent with temperature 0, so a re-run of the same prompt on the same model and server gives
+    #: the same reply (a screen is repeatable). `ATOO_AI_SEED`.
+    seed: int = 42
     show_progress: bool = True
+    #: Ask a thinking-capable model to think (True), not to (False), or leave it to the server
+    #: (None: a model that can think does). `ATOO_AI_THINK`. Sent only when set.
+    think: bool | None = None
+    #: How long Ollama keeps the model loaded after this request ("30m"), or None to leave it to
+    #: the server (5 minutes). `ATOO_AI_KEEP_ALIVE`; sent only when set. `atoo build --intent
+    #: --intent-steps` sets it when nothing has, so the model and its cached prompt prefix stay
+    #: loaded between the build's calls; the screen sets it for both Build arms alike.
+    keep_alive: str | None = None
 
     # Cache for _model_context_ceiling: queried once per
     # instance, not once per request -- complete() can be called many
@@ -1500,6 +1557,26 @@ class OllamaProvider:
     _ctx_ceiling_checked: bool = field(default=False, init=False, repr=False, compare=False)
     # See ApiKeyProvider.build_log's docstring.
     build_log: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def thinks(self) -> bool:
+        """Whether this model will think before it answers: Ollama reports a `thinking`
+        capability for it, and `think` has not turned it off. A thinking model spends its
+        reply budget on the thinking first, so a cap on the reply (`num_predict`) that is fair
+        for a model that answers at once would cut it off before it answers. False when the
+        server cannot say."""
+        if self.think is False:
+            return False
+        req = urllib.request.Request(
+            f"{self.base_url.rstrip('/')}/api/show",
+            data=json.dumps({"model": self.model}).encode(),
+            headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                data = json.loads(resp.read())
+            return "thinking" in (data.get("capabilities") or [])
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError,
+                AttributeError, TypeError, ValueError):
+            return False
 
     def _model_context_ceiling(self) -> int | None:
         """The model's real, architectural context limit, per Ollama's own
@@ -1568,11 +1645,32 @@ class OllamaProvider:
         deliberately lower than that, so the estimate overshoots.
         """
         prompt_tokens = (len(system) + len(user)) / CHARS_PER_TOKEN
-        # The answer is a plan, and a plan is roughly as long as the prompt
-        # that describes the show -- touringband: 4.7k prompt, 5.9k plan.
-        # Doubling the prompt allowance covers that with margin.
-        wanted = int(prompt_tokens * 2.5) + 2048
-        return max(8192, min(wanted, self.num_ctx_ceiling))
+        if self.reply_tokens is not None:
+            wanted = int(prompt_tokens) + self.reply_tokens + 1024
+        else:
+            # The answer is a plan, and a plan is roughly as long as the prompt
+            # that describes the show -- touringband: 4.7k prompt, 5.9k plan.
+            # Doubling the prompt allowance covers that with margin.
+            wanted = int(prompt_tokens * 2.5) + 2048
+        # Rounded up to a power of two: Ollama reloads the model (and loses the prompt prefix it
+        # had cached) whenever num_ctx changes, so a size that moved with every prompt cost a
+        # reload a request -- a minute or more where the cached prefix answers in seconds. A few
+        # fixed sizes keep one size for every request of the same kind in a run.
+        size = 8192
+        while size < wanted:
+            size *= 2
+        return min(size, self.num_ctx_ceiling)
+
+    def _report_usage(self, usage: dict, text_chars: int, label: str) -> None:
+        """The one-line spend report every provider prints, with Ollama's own
+        counts (`prompt_eval_count`, `eval_count`) in it. A local model charges
+        nothing, so the price is 0 and the line says `$0.00` -- what the
+        `api` provider prints for a host priced at 0 -- and an eval's spend cap
+        counts it like any other call instead of treating it as unpriced."""
+        if not self.show_progress or not usage:
+            return
+        who = f"{self.model} ({label})" if label else self.model
+        print(_usage_line(who, usage, text_chars, (0.0, 0.0)), file=sys.stderr, flush=True)
 
     def complete(self, *, system: str, user: str,
                  response_schema: dict | None = None, label: str = "") -> str:
@@ -1629,14 +1727,19 @@ class OllamaProvider:
 
         payload = {
             "model": self.model,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "messages": chat_messages(system, user),
             "stream": True,
             "options": {
                 "temperature": 0,
+                "seed": self.seed,
                 "num_ctx": num_ctx,
                 "num_predict": self.num_predict,
             },
         }
+        if self.think is not None:
+            payload["think"] = self.think
+        if self.keep_alive is not None:
+            payload["keep_alive"] = self.keep_alive
         if response_schema is not None:
             # llama.cpp compiles this to a grammar and constrains sampling.
             # Note the cost: a large grammar measurably slows generation on
@@ -1651,6 +1754,7 @@ class OllamaProvider:
         chunks: list[str] = []
         done_reason: str | None = None
         usage: dict = {}
+        thinking_chars = 0
         completed = False
         progress = ModelCallProgress(label, self.model, enabled=self.show_progress,
                                      chars_per_token=CHARS_PER_TOKEN)
@@ -1679,14 +1783,12 @@ class OllamaProvider:
                     # the model working, and worth counting as such.
                     thought = message.get("thinking")
                     if isinstance(thought, str) and thought:
+                        thinking_chars += len(thought)
                         progress.add_thinking(len(thought), thought)
                     if event.get("done"):
                         done_reason = event.get("done_reason")
                         # The final event carries Ollama's own counts.
-                        usage = {k: v for k, v in (
-                            ("input_tokens", event.get("prompt_eval_count")),
-                            ("output_tokens", event.get("eval_count")))
-                            if isinstance(v, int)}
+                        usage = ollama_usage(event)
                         break
             completed = True
         except AIProviderError:
@@ -1716,9 +1818,26 @@ class OllamaProvider:
                 self.build_log[label] = progress.build_log_entry()
 
         text = "".join(chunks)
+        self._report_usage(usage, len(text), label)
+        if self.show_progress:
+            # The window this request ran with: a request whose size differs from its neighbours'
+            # made Ollama reload the model, which is what an eval's per-case time needs to show.
+            print(f"  num_ctx {num_ctx:,} for {self.model} ({label or 'call'})", file=sys.stderr, flush=True)
+        out = (usage or {}).get("output_tokens")
+        prompt_tokens = (usage or {}).get("input_tokens", 0) + (usage or {}).get("cache_read_input_tokens", 0)
+        thought = (f"; {thinking_chars:,} characters of it were thinking (ATOO_AI_THINK=off turns "
+                   "thinking off)" if thinking_chars else "")
         if not text.strip():
+            if done_reason == "length":
+                # A thinking model can spend the whole window thinking and answer nothing: say so,
+                # with the numbers, not just that the AI did not respond.
+                raise AIProviderError(not_responding(
+                    f"Ollama returned no answer from model {self.model!r}: it stopped at a limit "
+                    f"(done_reason 'length') after {out if isinstance(out, int) else '?'} tokens"
+                    f"{thought}, with the prompt at {prompt_tokens:,} of the {num_ctx:,}-token context "
+                    "window. Raise ATOO_AI_NUM_CTX, or turn thinking off"))
             raise AIProviderError(not_responding(
-                f"Ollama returned an empty reply from model {self.model!r}"))
+                f"Ollama returned an empty reply from model {self.model!r}" + thought))
         if done_reason == "length":
             # The context window (num_ctx bounds prompt + reply together) or
             # num_predict ran out mid-generation, not the model choosing to
@@ -1728,14 +1847,44 @@ class OllamaProvider:
             # with "missing required field 'outputs'" and no hint that the
             # model never got the chance to write it. Raising here, before
             # that repair, names the actual cause instead.
+            capped = self.num_predict and self.num_predict > 0 and isinstance(out, int) \
+                and out >= self.num_predict - 8
+            which = (f"it hit the reply cap (num_predict {self.num_predict:,} tokens, the "
+                     f"reply's own limit or ATOO_AI_NUM_PREDICT), not the context window "
+                     f"({num_ctx:,} tokens)" if capped else
+                     f"it ran out of context window ({num_ctx:,} tokens, prompt plus reply; "
+                     "raise ATOO_AI_NUM_CTX so both fit)")
             raise AIProviderError(
                 f"Ollama's reply was cut off (done_reason 'length') before {self.model!r} "
-                "finished -- it ran out of context window or hit num_predict, not a "
-                "natural stop. Raise ATOO_AI_NUM_CTX (current window: "
-                f"{num_ctx:,} tokens) so prompt plus reply both fit.",
+                f"finished, after {out if isinstance(out, int) else '?'} tokens{thought}: {which}.",
                 partial_text=text,
             )
         return text
+
+
+def ollama_usage(event: dict) -> dict:
+    """The usage of an Ollama call from its final event, in the keys every provider's usage uses.
+
+    `prompt_eval_count` is the WHOLE prompt whether or not Ollama's prompt cache held some of it
+    (Ollama keeps it as the logical input total, by design). What the cache held is
+    `prompt_eval_cached_count` (Ollama v0.33.3 and later); it is recorded as Claude's cache reads
+    are -- `cache_read_input_tokens`, with `input_tokens` the rest -- so `input_total` is still the
+    whole prompt and the usage line shows the split. `prompt_eval_duration` (nanoseconds) is the
+    time the prompt took to read, `prompt_eval_ms`: on an Ollama that does not report the cached
+    count it is the only sign of the cache, a prompt read from the cache taking a fraction of the
+    time of one read anew."""
+    total, cached = event.get("prompt_eval_count"), event.get("prompt_eval_cached_count")
+    usage: dict = {}
+    if isinstance(total, int):
+        if isinstance(cached, int) and 0 < cached <= total:
+            usage.update(input_tokens=total - cached, cache_read_input_tokens=cached)
+        else:
+            usage["input_tokens"] = total
+    if isinstance(event.get("eval_count"), int):
+        usage["output_tokens"] = event["eval_count"]
+    if isinstance(event.get("prompt_eval_duration"), (int, float)):
+        usage["prompt_eval_ms"] = round(event["prompt_eval_duration"] / 1e6, 1)
+    return usage
 
 
 @dataclass
@@ -1849,7 +1998,8 @@ def _price(env: Mapping[str, str], name: str) -> float | None:
     return value
 
 
-def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
+def provider_from_env(env: Mapping[str, str] | None = None, *,
+                      show_dir: "str | os.PathLike | None" = None) -> AIProvider:
     """Build a provider from environment variables -- the CLI's (and any
     other caller's) default way to configure one, so no call site has to
     know provider-specific setup:
@@ -1866,6 +2016,12 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
                                you want unless RAM is tight. Ollama's own
                                default is 4096 and it truncates silently --
                                see OllamaProvider.num_ctx
+      ATOO_AI_KEEP_ALIVE  "ollama" only: how long the server keeps the
+                               model loaded after a request ("30m"); unset,
+                               the server's own default (5 minutes)
+      ATOO_AI_SEED        "ollama" only: the sampling seed sent with
+                               temperature 0 (default 42), so a re-run is
+                               repeatable
       ATOO_AI_NUM_PREDICT "ollama" only: caps the REPLY length itself,
                                independent of context window size -- catches
                                a model stuck looping with a fast,
@@ -1981,11 +2137,22 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
             raise AIProviderError(
                 f"ATOO_AI_NUM_PREDICT must be an integer, got {raw_num_predict!r}"
             ) from exc
+        raw_seed = env.get("ATOO_AI_SEED")
+        try:
+            seed = int(raw_seed) if raw_seed else 42
+        except ValueError as exc:
+            raise AIProviderError(f"ATOO_AI_SEED must be an integer, got {raw_seed!r}") from exc
+        raw_think = (env.get("ATOO_AI_THINK") or "").strip().lower()
+        if raw_think and raw_think not in ("0", "1", "true", "false", "on", "off", "yes", "no"):
+            raise AIProviderError(f"ATOO_AI_THINK must be on or off, got {raw_think!r}")
         return OllamaProvider(
             model=model or "llama3.1",
             base_url=env.get("ATOO_AI_BASE_URL", "http://localhost:11434"),
             num_ctx=num_ctx,
             num_predict=num_predict,
+            seed=seed,
+            keep_alive=(env.get("ATOO_AI_KEEP_ALIVE") or "").strip() or None,
+            think=None if not raw_think else raw_think in ("1", "true", "on", "yes"),
             timeout=float(env.get("ATOO_AI_TIMEOUT", "120")),
         )
     if backend == "claude":
@@ -2085,4 +2252,5 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider:
         price_out=price_out,
         price_cached=_price(env, PRICE_CACHED_ENV),
         timeout=api_timeout,
+        conv_id=conv_id_for(show_dir),
     )

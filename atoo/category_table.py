@@ -203,6 +203,22 @@ def parse(text: str, *, resolved_name: str = "resolved conventions") -> Parsed:
         return invalid(f"it is not JSON ({exc})")
     if isinstance(data, dict) and isinstance(data.get("categories"), list):
         data = data["categories"]
+    return from_entries(data, resolved_name=resolved_name)
+
+
+def from_entries(data, *, resolved_name: str = "resolved conventions") -> Parsed:
+    """The table from its entries already parsed (the text's JSON, or an intent's
+    `categories`), checked the same way. Never raises."""
+
+    def invalid(reason: str) -> Parsed:
+        return Parsed(None, [Diagnostic(
+            severity=Severity.WARNING, code=CODE_INVALID, where=f"{resolved_name} § {HEADING}",
+            source="build",
+            message=(f"the Category table in {resolved_name} is not used: {reason}. Code "
+                     "applies no per-category setting; the generator writes every channel's "
+                     "settings, as before"),
+            fix="resolve again (`atoo resolve`)")], "invalid", reason)
+
     violations = validate_schema(data, SCHEMA, path="table")
     if violations:
         more = f" (and {len(violations) - 3} more)" if len(violations) > 3 else ""

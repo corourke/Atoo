@@ -90,10 +90,15 @@ this change is the only new source of inputs.
    group or output only when the change needs one that is not on the desk --
    and then every reference to it must use the name you gave it. A
    reference to something that is neither on the desk nor added here is
-   refused, and the whole change with it. So when the change asks for
-   something the desk does not have (a bus, a socket, or a number past its
-   range), write it exactly as asked anyway: the code refuses it and names
-   what is missing. Never answer a change with notes alone.
+   refused, and the whole change with it. So when the change names
+   something the plan does not have (a bus, a socket, or a number past its
+   range), write it exactly as asked anyway, by the name the change uses.
+   The code first reads the desk for it, since someone may have set it up
+   by hand, and carries the change out against what it finds; only what
+   the desk does not hold either is refused, naming what is missing. So
+   never say in a note that the change will be refused. To renumber or
+   edit such an object, `modify` it by that name; never `add` it again.
+   Never answer a change with notes alone.
 
 4. A RUNNING OBJECT CHANGES ONLY IN THE FIELDS THE CHANGE NAMES. A new
    send on a channel already on the desk, a changed filter, moving a channel

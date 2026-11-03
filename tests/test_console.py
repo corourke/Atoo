@@ -545,3 +545,16 @@ def test_the_late_reply_store_is_bounded(server_factory):
     assert len(client._late_replies) == LATE_REPLY_MEMORY
     assert client.late_reply("/ch/0/name") is None, "the oldest should have been evicted"
     assert client.late_reply(f"/ch/{LATE_REPLY_MEMORY + 9}/name") is not None
+
+
+def test_an_effect_parameter_reads_its_own_whole_number_text():
+    """GATED's density answers ['22', 0.4286, 21]; the
+    desk holds 22, and the int is the float rounded down."""
+    assert OscReply("/fx/8/dens", "sfi", ["22", 0.4286, 21]).value("i") == (22, None)
+    assert OscReply("/fx/8/on", "sfi", ["ON", 1.0, 1]).value("i") == (1, None)
+
+
+def test_a_connector_still_reads_its_int():
+    """A connector's text and int differ by its 1-based index, and the int is
+    what `facts.correct_readback_index` corrects."""
+    assert OscReply("/ch/1/in/conn/in", "sfi", ["5", 0.1, 4]).value("i") == (4, None)

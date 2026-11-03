@@ -280,7 +280,7 @@ SPLIT_CONVENTIONS = """# House conventions
 """
 SPLIT_REPLY = {
     "channels": [{"input": f"In {n}", "main_routes": [{"index": 1}]} for n in range(1, 13)],
-    "busses": [],
+    "dcas": [], "mute_groups": [], "busses": [],
     "outputs": [{"name": "Main", "kind": "main", "index": 1,
                  "patch": {"group": "LCL", "sockets": [1, 2]}}],
     "unassigned_inputs": [],
@@ -360,8 +360,9 @@ def test_a_sheet_row_that_cannot_work_stops_the_build_naming_it(tmp_path, monkey
     assert status == 1
     assert not (show / "plan.json").exists()
     err = capsys.readouterr().err
-    assert "outputs.csv cannot be laid onto this plan, so nothing was written" in err
-    assert "outputs.csv, LCL 9, output: LCL output 9 does not exist" in err
+    # Found before any model call: nothing spent.
+    assert ("build failed: outputs.csv, LCL 9: this console has no LCL 9 (its LCL outputs are "
+            "1-8). Nothing was sent to a model and nothing was changed") in err
     assert "(Build's step 04 shows it)" not in err
 
 
@@ -422,6 +423,7 @@ def _forge_reply() -> dict:
     return {
         "channels": channels,
         "dcas": [{"name": "Drums"}, {"name": "Band"}, {"name": "Vocals"}],
+        "mute_groups": [],
         "busses": [{"name": "Wedge 1", "mono": True,
                     "inferred": [{"field": "mono", "basis": "one wedge on one socket"}],
                     "destination": {"type": "dedicated_output",

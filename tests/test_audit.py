@@ -790,7 +790,7 @@ def test_diff_processing_filter_family_is_diffed_with_the_readback_tolerance():
     assert _diff_rule_ids(findings) == {"CV008"}
     assert [f.addresses for f in findings] == [("/ch/1/flt/lcf",), ("/ch/1/flt/hcf",),
                                                 ("/ch/1/flt/tilt",)]
-    near = ConsoleState({"/ch/1/name": "Kick", "/ch/1/flt/lcf": 80.5, "/ch/1/flt/hcf": 12018.0,
+    near = ConsoleState({"/ch/1/name": "Kick", "/ch/1/flt/lcf": 80.3, "/ch/1/flt/hcf": 12018.0,
                          "/ch/1/flt/tilt": 3.0})
     assert diff_against_plan(near, plan) == []
 

@@ -1,0 +1,1046 @@
+{
+ "about": "Cases for the structured-intent exploration (experiments/intent/). `request` is the engineer's words (the live corpus's, evals/live/corpus.json, for the ones with a `source` issue); `intent` is what a front end would be asked to emit, written by hand; `today` is the change set the model writes now, written by hand in compact form (experiments/intent/today.py expands it). `base` is demo_base.plan.json, the Demo show of evals/live/fixtures/show/plan.json, frozen. `aes50` is the rig. Not read from examples/.",
+ "aes50": {
+  "A": "S16"
+ },
+ "cases": [
+  {
+   "id": "1002-verbatim",
+   "source": "#1002/#1010",
+   "request": "Add HiHat channel after Snare channel. Add another vocal mic \"F Lead2\", Move \"Playback\" to channel 16 and input A16 (make it mono).",
+   "intent": {
+    "name": "HiHat, F Lead2, move Playback",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "HiHat",
+      "place": {
+       "after": "Snare"
+      },
+      "dca": [
+       "Drums"
+      ]
+     },
+     {
+      "op": "add_channel",
+      "name": "F Lead2",
+      "kind": "mic",
+      "dca": [
+       "Vocals"
+      ]
+     },
+     {
+      "op": "move_channel",
+      "name": "Playback",
+      "place": {
+       "at": 16
+      },
+      "patch": {
+       "group": "A",
+       "first": 16
+      },
+      "stereo": false
+     }
+    ]
+   },
+   "today": {
+    "name": "HiHat, F Lead2, move Playback",
+    "drop": {
+     "channels": [
+      "Playback"
+     ]
+    },
+    "add_channels": [
+     {
+      "channel": 3,
+      "name": "HiHat",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "stated": false,
+      "dca": [
+       "Drums"
+      ]
+     },
+     {
+      "channel": 14,
+      "name": "F Lead2",
+      "group": "LCL",
+      "sockets": [
+       1
+      ],
+      "stated": false,
+      "dca": [
+       "Vocals"
+      ]
+     },
+     {
+      "channel": 16,
+      "name": "Playback",
+      "type": "Line",
+      "group": "A",
+      "sockets": [
+       16
+      ],
+      "color": "Yellow",
+      "dca": [
+       "Playback"
+      ],
+      "sends": [
+       "Drum IEM"
+      ],
+      "fader_db": -144
+     }
+    ]
+   }
+  },
+  {
+   "id": "f-lead2-add",
+   "source": "#1010",
+   "request": "Add another vocal mic \"F Lead2\"",
+   "intent": {
+    "name": "Add F Lead2",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "F Lead2",
+      "kind": "mic",
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Add F Lead2",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "F Lead2",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "stated": false,
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "socket-unstated-fits-s16",
+   "source": "#1012",
+   "request": "Add two choir mics, \"Choir L\" and \"Choir R\"",
+   "intent": {
+    "name": "Add two choir mics",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Choir L",
+      "dca": [
+       "Vocals"
+      ]
+     },
+     {
+      "op": "add_channel",
+      "name": "Choir R",
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Add two choir mics",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Choir L",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "stated": false,
+      "dca": [
+       "Vocals"
+      ]
+     },
+     {
+      "channel": 15,
+      "name": "Choir R",
+      "group": "A",
+      "sockets": [
+       16
+      ],
+      "stated": false,
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "line-source-gain",
+   "source": "#1017",
+   "request": "Add a line-level click track \"Click\" from the laptop on A 10",
+   "intent": {
+    "name": "Add Click",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Click",
+      "kind": "line",
+      "patch": {
+       "group": "A",
+       "first": 10
+      }
+     }
+    ]
+   },
+   "today": {
+    "name": "Add Click",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Click",
+      "type": "Line",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "gain_db": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "stereo-pair-lcl",
+   "request": "Add a stereo pad \"Pad\" on LCL 5-6",
+   "intent": {
+    "name": "Add Pad",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Pad",
+      "kind": "line",
+      "stereo": true,
+      "patch": {
+       "group": "LCL",
+       "first": 5,
+       "count": 2
+      }
+     }
+    ]
+   },
+   "today": {
+    "name": "Add Pad",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Pad",
+      "type": "Line",
+      "group": "LCL",
+      "sockets": [
+       5,
+       6
+      ],
+      "gain_db": null
+     }
+    ]
+   }
+  },
+  {
+   "id": "remove-frees-strip",
+   "source": "#1016",
+   "request": "Gtr 2 isn't here tonight: remove the \"Gtr 2\" channel",
+   "intent": {
+    "name": "Remove Gtr 2",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "channel",
+      "name": "Gtr 2"
+     }
+    ]
+   },
+   "today": {
+    "name": "Remove Gtr 2",
+    "drop": {
+     "channels": [
+      "Gtr 2"
+     ]
+    }
+   }
+  },
+  {
+   "id": "playback-move-mono",
+   "source": "#1016/#1017",
+   "request": "Move \"Playback\" to channel 16 and input A16 (make it mono).",
+   "intent": {
+    "name": "Move Playback",
+    "notes": [],
+    "ops": [
+     {
+      "op": "move_channel",
+      "name": "Playback",
+      "place": {
+       "at": 16
+      },
+      "patch": {
+       "group": "A",
+       "first": 16
+      },
+      "stereo": false
+     }
+    ]
+   },
+   "today": {
+    "name": "Move Playback",
+    "drop": {
+     "channels": [
+      "Playback"
+     ]
+    },
+    "add_channels": [
+     {
+      "channel": 16,
+      "name": "Playback",
+      "type": "Line",
+      "group": "A",
+      "sockets": [
+       16
+      ],
+      "color": "Yellow",
+      "dca": [
+       "Playback"
+      ],
+      "sends": [
+       "Drum IEM"
+      ],
+      "gain_db": 20,
+      "fader_db": -144
+     }
+    ]
+   }
+  },
+  {
+   "id": "insert-after",
+   "source": "#1004",
+   "request": "Add a HiHat channel after the Snare channel",
+   "intent": {
+    "name": "Add HiHat",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "HiHat",
+      "place": {
+       "after": "Snare"
+      },
+      "dca": [
+       "Drums"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Add HiHat",
+    "add_channels": [
+     {
+      "channel": 3,
+      "name": "HiHat",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "stated": false,
+      "dca": [
+       "Drums"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "insert-renumber",
+   "request": "Insert a HiHat channel after the Snare and renumber the rest",
+   "intent": {
+    "name": "Insert HiHat",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "HiHat",
+      "place": {
+       "after": "Snare",
+       "renumber": true
+      },
+      "dca": [
+       "Drums"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Insert HiHat",
+    "add_channels": [
+     {
+      "channel": 3,
+      "name": "HiHat",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "stated": false,
+      "dca": [
+       "Drums"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "long-rename",
+   "source": "#1009",
+   "request": "Rename \"Keys\" to \"Nord Stage 4 Piano and Organ Split\"",
+   "intent": {
+    "name": "Rename Keys",
+    "notes": [],
+    "ops": [
+     {
+      "op": "rename",
+      "object": "channel",
+      "name": "Keys",
+      "new_name": "Nord Stage 4 Piano and Organ Split"
+     }
+    ]
+   },
+   "today": {
+    "name": "Rename Keys",
+    "modify": [
+     {
+      "object": "channel",
+      "name": "Keys",
+      "change": "rename",
+      "fields": {
+       "name": "Nord Stage 4 Piano and Organ Split"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "edit-hpf-vocals",
+   "source": "patch --help example",
+   "request": "HPF 100 on the vocals",
+   "intent": {
+    "name": "HPF on Lead Vox",
+    "notes": [],
+    "ops": [
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Lead Vox",
+      "field": "processing.hpf_hz",
+      "value": 100
+     }
+    ]
+   },
+   "today": {
+    "name": "HPF on Lead Vox",
+    "modify": [
+     {
+      "object": "channel",
+      "name": "Lead Vox",
+      "change": "HPF 100",
+      "fields": {
+       "processing.hpf_hz": 100
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "clear-bus-reuse-iem",
+   "source": "#1066",
+   "request": "Clear bus 5 and 6 we are not using them. Add a stereo IEM bus (reuse bus 5) and output to LCL 3-4.",
+   "intent": {
+    "name": "Clear 5 and 6, add IEM",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "bus",
+      "index": 5
+     },
+     {
+      "op": "drop",
+      "object": "bus",
+      "index": 6
+     },
+     {
+      "op": "add_bus",
+      "name": "IEM",
+      "stereo": true,
+      "index": 5,
+      "to": {
+       "output": {
+        "group": "LCL",
+        "first": 3,
+        "count": 2
+       }
+      }
+     }
+    ]
+   },
+   "today": {
+    "name": "Clear 5 and 6, add IEM",
+    "drop": {
+     "busses": [
+      "Drums",
+      "Vocals"
+     ]
+    },
+    "add_busses": {
+     "IEM": {
+      "mono": false,
+      "index": 5,
+      "destination": {
+       "type": "dedicated_output",
+       "label": "IEM",
+       "patch": {
+        "group": "LCL",
+        "sockets": [
+         3,
+         4
+        ],
+        "stated": true
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "drop-dca-fx",
+   "source": "#1067",
+   "request": "Get rid of the FX DCA.",
+   "intent": {
+    "name": "Drop FX DCA",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "dca",
+      "name": "FX"
+     }
+    ]
+   },
+   "today": {
+    "name": "Drop FX DCA",
+    "drop": {
+     "dcas": [
+      "FX"
+     ]
+    }
+   }
+  },
+  {
+   "id": "drop-mute-group-fx",
+   "source": "#1068",
+   "request": "Clear mute group 3, we are not using it.",
+   "intent": {
+    "name": "Clear mute group 3",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "mute_group",
+      "index": 3
+     }
+    ]
+   },
+   "today": {
+    "name": "Clear mute group 3",
+    "drop": {
+     "mute_groups": [
+      "FX"
+     ]
+    }
+   }
+  },
+  {
+   "id": "drop-output-pa",
+   "source": "#1069",
+   "request": "Drop the PA output.",
+   "intent": {
+    "name": "Drop PA",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "output",
+      "name": "PA"
+     }
+    ]
+   },
+   "today": {
+    "name": "Drop PA",
+    "drop": {
+     "outputs": [
+      "PA"
+     ]
+    }
+   }
+  },
+  {
+   "id": "demo-horns",
+   "source": "Demo horn change",
+   "request": "trumpet, sax and trombone on A 10, A 16 and LCL 3, in a Horns DCA",
+   "intent": {
+    "name": "Add horns",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_group",
+      "object": "dca",
+      "name": "Horns"
+     },
+     {
+      "op": "add_channel",
+      "name": "Trumpet",
+      "patch": {
+       "group": "A",
+       "first": 10
+      },
+      "dca": [
+       "Horns"
+      ]
+     },
+     {
+      "op": "add_channel",
+      "name": "Sax",
+      "patch": {
+       "group": "A",
+       "first": 16
+      },
+      "dca": [
+       "Horns"
+      ]
+     },
+     {
+      "op": "add_channel",
+      "name": "Trombone",
+      "patch": {
+       "group": "LCL",
+       "first": 3
+      },
+      "dca": [
+       "Horns"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Add horns",
+    "add_dcas": {
+     "Horns": {}
+    },
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Trumpet",
+      "group": "A",
+      "sockets": [
+       10
+      ],
+      "dca": [
+       "Horns"
+      ]
+     },
+     {
+      "channel": 15,
+      "name": "Sax",
+      "group": "A",
+      "sockets": [
+       16
+      ],
+      "dca": [
+       "Horns"
+      ]
+     },
+     {
+      "channel": 16,
+      "name": "Trombone",
+      "group": "LCL",
+      "sockets": [
+       3
+      ],
+      "dca": [
+       "Horns"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "long-channel-name",
+   "source": "#1002",
+   "request": "Add a vocal mic called \"Featured Guest Vocalist From The Opening Act\" on A 16",
+   "intent": {
+    "name": "Add featured guest",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Featured Guest Vocalist From The Opening Act",
+      "patch": {
+       "group": "A",
+       "first": 16
+      },
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   },
+   "today": {
+    "name": "Add featured guest",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Featured Guest V",
+      "group": "A",
+      "sockets": [
+       16
+      ],
+      "dca": [
+       "Vocals"
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "refusals": [
+  {
+   "id": "socket-past-s16",
+   "source": "#1012",
+   "request": "Add a tambourine mic \"Tamb\" on A 17",
+   "models": [
+    "wing-compact",
+    "wing-rack",
+    "wing-full"
+   ],
+   "intent": {
+    "name": "Add Tamb",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Tamb",
+      "patch": {
+       "group": "A",
+       "first": 17
+      }
+     }
+    ]
+   },
+   "reason": "A 17 does not exist on the S16 on AES50-A",
+   "today": {
+    "name": "Add Tamb",
+    "add_channels": [
+     {
+      "channel": 14,
+      "name": "Tamb",
+      "group": "A",
+      "sockets": [
+       17
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "strip-past-range",
+   "request": "Add a mic \"Extra\" as channel 41",
+   "intent": {
+    "name": "Add Extra",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Extra",
+      "place": {
+       "at": 41
+      }
+     }
+    ]
+   },
+   "reason": "ch 41 is past the desk's range"
+  },
+  {
+   "id": "aux-strip-past-range",
+   "request": "Add an aux input \"Extra\" as aux 9",
+   "intent": {
+    "name": "Add Extra",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Extra",
+      "bank": "aux",
+      "place": {
+       "at": 9
+      }
+     }
+    ]
+   },
+   "reason": "aux 9 is past the desk's range"
+  },
+  {
+   "id": "stereo-wrong-parity",
+   "request": "Add a stereo pad on A 6-7",
+   "intent": {
+    "name": "Add Pad",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Pad",
+      "stereo": true,
+      "patch": {
+       "group": "A",
+       "first": 6,
+       "count": 2
+      }
+     }
+    ]
+   },
+   "reason": "the pair starts on 6, an even socket"
+  },
+  {
+   "id": "lcl-past-full",
+   "request": "Add a mic \"Extra\" on LCL 12",
+   "intent": {
+    "name": "Add Extra",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Extra",
+      "patch": {
+       "group": "LCL",
+       "first": 12
+      }
+     }
+    ]
+   },
+   "models": [
+    "wing-full"
+   ],
+   "reason": "LCL inputs 1 to 8"
+  },
+  {
+   "id": "aux-on-rack",
+   "request": "Add a mic \"Extra\" on AUX 3",
+   "intent": {
+    "name": "Add Extra",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Extra",
+      "patch": {
+       "group": "AUX",
+       "first": 3
+      }
+     }
+    ]
+   },
+   "models": [
+    "wing-rack",
+    "wing-compact"
+   ],
+   "reason": "schema"
+  },
+  {
+   "id": "bus-past-count",
+   "request": "Clear bus 17",
+   "intent": {
+    "name": "Clear bus 17",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "bus",
+      "index": 17
+     }
+    ]
+   },
+   "reason": "there is no bus 17"
+  },
+  {
+   "id": "value-out-of-range",
+   "request": "HPF 5000 on the Lead Vox",
+   "intent": {
+    "name": "HPF",
+    "notes": [],
+    "ops": [
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Lead Vox",
+      "field": "processing.hpf_hz",
+      "value": 5000
+     }
+    ]
+   },
+   "reason": "5000 is above the maximum 2000"
+  },
+  {
+   "id": "drop-missing",
+   "request": "Remove the Banjo channel",
+   "intent": {
+    "name": "Remove Banjo",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "channel",
+      "name": "Banjo"
+     }
+    ]
+   },
+   "reason": "no channel of that name is on the desk"
+  }
+ ],
+ "probes": [
+  {
+   "id": "kit-paraphrase",
+   "request": "HPF 120 on the whole kit",
+   "intent": {
+    "name": "HPF on the kit",
+    "notes": [],
+    "ops": [
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Kick",
+      "field": "processing.hpf_hz",
+      "value": 120
+     },
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Snare",
+      "field": "processing.hpf_hz",
+      "value": 120
+     },
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Rack Tom",
+      "field": "processing.hpf_hz",
+      "value": 120
+     },
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "Floor Tom",
+      "field": "processing.hpf_hz",
+      "value": 120
+     },
+     {
+      "op": "set",
+      "object": "channel",
+      "name": "OH",
+      "field": "processing.hpf_hz",
+      "value": 120
+     }
+    ]
+   }
+  },
+  {
+   "id": "guitar-wedge-paraphrase",
+   "request": "Drop the guitar wedge",
+   "intent": {
+    "name": "Drop Gtr Wedge",
+    "notes": [],
+    "ops": [
+     {
+      "op": "drop",
+      "object": "bus",
+      "name": "Gtr Wedge"
+     }
+    ]
+   }
+  },
+  {
+   "id": "shift-down",
+   "request": "Put a new tom after Rack Tom and shift everything else down",
+   "intent": {
+    "name": "Add Tom 3",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Tom 3",
+      "place": {
+       "after": "Rack Tom",
+       "renumber": true
+      },
+      "dca": [
+       "Drums"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "onto-the-kicks-socket",
+   "request": "Put a new sax on the Kick's socket",
+   "intent": {
+    "name": "Add Sax",
+    "notes": [],
+    "ops": [
+     {
+      "op": "add_channel",
+      "name": "Sax",
+      "patch": {
+       "group": "A",
+       "first": 1
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "move-onto-a-strip",
+   "request": "Move Playback to channel 5",
+   "intent": {
+    "name": "Move Playback",
+    "notes": [],
+    "ops": [
+     {
+      "op": "move_channel",
+      "name": "Playback",
+      "place": {
+       "at": 5
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

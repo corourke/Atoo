@@ -573,3 +573,65 @@ def test_two_matrices_the_plan_does_not_know_swap_numbers(model):
     assert writes["/ch/33/send/MX1/lvl"] == -10.0
     outputs = amendment.effective_plan["outputs"]
     assert (outputs["Room EQ"]["index"], outputs["Delay Fill"]["index"]) == (2, 1)
+
+
+# -- An `add` of an output the desk already holds ------------
+
+
+def _add_output(name: str, kind: str, index: int) -> dict:
+    change_set = patch.empty_change_set("add output")
+    change_set["add"]["outputs"][name] = {"kind": kind, "index": index, "patch": None}
+    return change_set
+
+
+@pytest.mark.parametrize("model", MODELS)
+def test_an_add_of_a_matrix_the_desk_holds_is_its_renumber(model):
+    """The Compact sitting's F6: the model returned an `add` of "Test Matrix"
+    as Matrix 4, which the desk held as Matrix 2, and code put a second one
+    on Matrix 1. It is the renumber the request asked for."""
+    from atoo import initialize
+    plan = _without_outputs("Matrix 1")
+    plan["meta"]["console_model"] = model
+    change_set = patch.validate_change_set(_add_output("Room EQ", "matrix", 3))
+    desk = {f"/mtx/{n}/name": "" for n in range(1, 9)}
+    desk.update({f"/main/{n}/name": "" for n in range(1, 5)})
+    desk["/mtx/1/name"] = "Room EQ"
+    assert ("/mtx/1/name", "s") in patch.name_reads(plan, change_set, {})
+    reads = patch.member_reads(plan, change_set, desk)
+    assert ("/mtx/1/fdr", "f") in reads
+    for address, _t in reads:
+        desk[address] = next(x.value for x in initialize.freed_leaves(model, address)
+                             if x.address == address)
+    amendment, _merge = patch.plan_patch(plan, change_set, occupancy(), console_model=model,
+                                         desk_objects=desk)
+    assert not amendment.blocked, [c.reason for c in amendment.blocked]
+    assert not [c for c in amendment.changes if c.kind is ChangeKind.ADDED]
+    [edited] = [c for c in amendment.changes if c.kind is ChangeKind.EDITED]
+    assert edited.reason.startswith("renumbered (Matrix 1 -> 3) from what the desk read")
+    assert ("the change adds output 'Room EQ', which the desk already holds as Matrix 1: "
+            "carried out as moving it to Matrix 3, as the change asks, not as a second one"
+            ) in amendment.infos
+    writes = {t.address: t.compute_value("")
+              for t in amend.amendment_targets(amendment).to_write}
+    assert writes["/mtx/3/name"] == "Room EQ" and writes["/mtx/1/name"] == ""
+
+
+def test_a_new_matrix_goes_on_the_number_the_change_gives_it():
+    plan = applied_plan()
+    change_set = patch.validate_change_set(_add_output("Stream", "matrix", 4))
+    desk = {f"/mtx/{n}/name": "" for n in range(1, 9)}
+    desk.update({f"/main/{n}/name": "" for n in range(1, 5)})
+    amendment, _merge = patch.plan_patch(plan, change_set, occupancy(),
+                                         console_model="wing-compact", desk_objects=desk)
+    assert not amendment.blocked, [c.reason for c in amendment.blocked]
+    assert amendment.effective_plan["outputs"]["Stream"]["index"] == 4
+    assert "output 'Stream' is new, put on matrix 4 as the change said" in amendment.infos
+
+
+def test_a_new_matrix_past_the_desk_is_refused():
+    change_set = patch.validate_change_set(_add_output("Stream", "matrix", 9))
+    amendment, _merge = patch.plan_patch(applied_plan(), change_set, occupancy(),
+                                         console_model="wing-compact", desk_objects={})
+    assert [c.reason for c in amendment.blocked] == [
+        "the change puts it on matrix 9, and this console has Matrices 1 to 8 -- there is "
+        "no matrix 9"]

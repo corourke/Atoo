@@ -90,7 +90,9 @@ def test_a_build_takes_only_the_rows_it_is_given(church):
 def test_a_save_is_the_whole_list(church):
     result = user_sheet.overlay(church.plan, _rows(slot="USR 25", source="LCL 5", name="Mic 3"),
                                 complete=True, console_model="wing-full")
-    assert result.changes == ["USR 3 taken out (was CH 10 POST L+R (Lead post))",
+    # Taken out is carried out; what still reads the slot is named.
+    assert result.changes == ["USR 3 taken out (was CH 10 POST L+R (Lead post)); USB 29 still "
+                              "reads it, so it carries nothing until patched from something else",
                               "USR 25 takes LCL 5 (Mic 3)"]
     assert result.plan["user_sources"] == [
         {"slot": 25, "source": {"group": "LCL", "index": 5}, "name": "Mic 3"}]

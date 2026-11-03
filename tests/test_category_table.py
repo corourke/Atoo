@@ -242,7 +242,7 @@ def test_an_aux_strip_gets_no_hpf_and_a_digital_source_no_gain():
            "LCL 2,Walk-in,drums,Line,,FALSE,\n")
     reply = {"channels": [{"input": "Kick"}, {"input": "Trax"},
                           {"input": "Walk-in", "bank": "aux"}],
-             "busses": [], "outputs": [{"name": "Main", "kind": "main", "index": 1,
+             "dcas": [], "mute_groups": [], "busses": [], "outputs": [{"name": "Main", "kind": "main", "index": 1,
                                         "patch": None}],
              "unassigned_inputs": [], "notes": []}
     findings: list = []
@@ -275,7 +275,7 @@ def test_a_click_is_never_routed_to_main_by_the_table():
            "LCL 1,Trax L,tracks,Line,,FALSE,\n"
            "LCL 2,T Click/Guide,tracks,Line,,FALSE,\n")
     reply = {"channels": [{"input": "Trax L"}, {"input": "T Click/Guide"}],
-             "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
+             "dcas": [], "mute_groups": [], "busses": [], "outputs": [], "unassigned_inputs": [], "notes": []}
     findings: list = []
     plan = generate.plan_from_reply(json.dumps(reply), input_csv=csv,
                                     console_model="wing-compact", findings=findings,
@@ -347,7 +347,7 @@ LEAN_REPLY = {
     "channels": [{"input": "Kick"}, {"input": "BassDI"}, {"input": "VOX 1"}],
     "dcas": [{"name": "Drums"}, {"name": "Bass"}, {"name": "Vocals"}],
     "mute_groups": [{"name": "Vocals"}],
-    "busses": [],
+    "dcas": [], "mute_groups": [], "busses": [],
     "outputs": [{"name": "Main", "kind": "main", "index": 1,
                  "patch": {"group": "LCL", "sockets": [7, 8]}}],
     "unassigned_inputs": [], "notes": [],

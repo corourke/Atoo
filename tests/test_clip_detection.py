@@ -549,6 +549,13 @@ class FakeConsole:
     a UDP port declaration (0xd3), a report id (0xd4) alone, or a report id
     followed by a collection (0xdc ... 0xde).
 
+    - **It undoes the channel framing first** (`_unstuff`): a channel
+      select (0xdf 0xd0-0xdd) is dropped, and an escaped 0xdf (0xdf 0xde)
+      is one 0xdf. A UDP port 57296-57309 (0xdfd0-0xdfdd) is sent with
+      an 0xde inside it, and read without this it was port 57310: the
+      packets went nowhere and the test waited out, whenever the system
+      happened to give the monitor one of those ports.
+
     - **It keeps only the last collection request** on the connection: a
       second request replaces the first, so a monitor that asks for two
       collections is only ever served the second.
@@ -565,7 +572,9 @@ class FakeConsole:
         self.server.bind(("127.0.0.1", 0))
         self.server.listen(1)
         self.port = self.server.getsockname()[1]
-        self.received = bytearray()
+        self.received = bytearray()       # the bytes as they came
+        self.stream = bytearray()         # the same, unframed (`_unstuff`)
+        self._escaped = False             # the last byte in was an unread 0xdf
         self.conn: socket.socket | None = None
         self.clock = clock or time.monotonic
         self.timeout = timeout
@@ -603,16 +612,33 @@ class FakeConsole:
                 return
             with self.lock:
                 self.received.extend(data)
+                self._unstuff(data)
                 self._parse()
 
+    def _unstuff(self, data: bytes) -> None:
+        """The receive side of `metering._stuff`: 0xdf then 0xde is a
+        literal 0xdf, 0xdf then 0xd0-0xdd selects a channel, and 0xdf then
+        anything else is a 0xdf that did not need escaping."""
+        for byte in data:
+            if self._escaped:
+                self._escaped = False
+                if byte == 0xDE:
+                    self.stream.append(0xDF)
+                    continue
+                if 0xD0 <= byte <= 0xDD:
+                    continue
+                self.stream.append(0xDF)
+            if byte == 0xDF:
+                self._escaped = True
+            else:
+                self.stream.append(byte)
+
     def _parse(self) -> None:
-        buf = bytes(self.received)
+        buf = bytes(self.stream)
         i = self._pos
         while i < len(buf):
             tok = buf[i]
-            if tok == 0xDF:                       # channel select
-                i += 2
-            elif tok == 0xD3:
+            if tok == 0xD3:
                 if i + 3 > len(buf):
                     break
                 self.udp_port = struct.unpack(">H", buf[i + 1:i + 3])[0]
@@ -748,6 +774,24 @@ def test_the_fake_console_keeps_only_the_last_request_and_stops_on_an_unknown_re
         fake.close()
 
 
+@pytest.mark.parametrize("udp_port", [0xDFDB, 0x37DF, 0xDFDF, 0xDEDF, 0x3737])
+def test_the_fake_console_reads_a_port_the_framing_had_to_escape(udp_port):
+    """A port with a 0xdf byte may be sent escaped (`_stuff`); the fake
+    reads the port the monitor declared, as the desk does, whatever port
+    the system gave it. 0xdfdb was read as 0xdfde before it unframed."""
+    fake = FakeConsole()
+    try:
+        client = socket.create_connection(("127.0.0.1", fake.port))
+        declaration, ask, _ = requests(udp_port)
+        for byte in declaration + ask:            # one byte at a time: an escape split across reads
+            client.sendall(bytes([byte]))
+        assert fake.declared_udp_port() == udp_port
+        assert wait_for(lambda: fake.requests_seen == 1) and fake.serving[0] == REPORT_ID
+        client.close()
+    finally:
+        fake.close()
+
+
 def test_the_monitor_declares_a_port_asks_once_and_hears_a_clip_on_a_channel_and_a_bus(console):
     monitor = monitor_for(console)
     monitor.start()
@@ -778,8 +822,8 @@ def test_renewals_keep_the_desk_serving_and_a_clip_after_them_is_still_heard(con
     try:
         console.declared_udp_port()
         for step in range(1, 5):                  # 8 desk-seconds, renewed every 2
+            seen = console.requests_seen          # before the clock moves: the renewal can be quick
             clock[0] = step * 2.0
-            seen = console.requests_seen
             assert wait_for(lambda: console.requests_seen > seen), "no renewal sent"
             assert not console.stopped
         assert console.requests_seen == 5 and console.serving[0] == REPORT_ID
@@ -1033,3 +1077,21 @@ def test_a_strip_is_carrying_signal_above_minus_60_dBFS_for_five_seconds():
     assert monitor.live() == frozenset({"/ch/3"})
     now[0] += 0.2
     assert monitor.live() == frozenset()           # a packet came, and nothing is above the floor
+
+
+def test_a_clip_that_counts_up_is_an_update_and_the_seconds_alone_are_not():
+    """A strip that clips again while its finding stands
+    was silent on the console, since the finding never went away. A changed
+    count is an UPDATED line; the seconds-ago that move every pass are not."""
+    from atoo.watch import render_event
+
+    events = run_watch([
+        (0.0, None),
+        (5.0, lambda t: t.observe(2.0, {"/ch/3"})),     # new
+        (30.0, None),                                    # only the clock moved
+        (45.0, lambda t: t.observe(40.0, {"/ch/3"})),   # clips again: updated
+    ], {"/ch/3": "Kick"})
+    assert [[f.rule_id for f in e.updated_findings] for e in events] == [[], [], [], ["L003"]]
+    assert render_event(events[2]) is None
+    text = render_event(events[3])
+    assert "UPDATED" in text and "clipped 2 times" in text

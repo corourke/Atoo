@@ -394,12 +394,15 @@
     const isDetail = (f) => (SP.isBuildDetail ? SP.isBuildDetail(f) : false);
     const details = notes.filter(isDetail).length;
     const choices = notes.length - details;
+    // Where they are, not a count beside the dock's: the dock counts the
+    // whole show's notes by row, so "4 among Choices" beside "Choices 8"
+    // read as a disagreement.
     const folds = [];
-    if (choices) folds.push(choices + " among Choices");
-    if (details) folds.push(details + " among Build details");
+    if (choices) folds.push(choices + " under Choices");
+    if (details) folds.push(details + " under Build details");
     const words = document.createElement("span");
-    words.textContent = notes.length + " " + plural(notes.length, "note", "notes") +
-      " (" + folds.join(", ") + ") ";
+    words.textContent = "This pre-flight's " + notes.length + " " +
+      plural(notes.length, "note is", "notes are") + " in Findings: " + folds.join(", ") + " ";
     target.appendChild(words);
     const link = document.createElement("button");
     link.type = "button";
@@ -1619,7 +1622,9 @@
     return (drawn && drawn.tiles[key]) || { rows: [], changes: 0, same: 0, presets: [], links: [] };
   }
 
-  function selectTile(key) {
+  // `reveal`: the tile was chosen from elsewhere (a Detail link, ‹ ›), so
+  // it may be off screen; it is scrolled into view.
+  function selectTile(key, reveal) {
     detail.sel = key;
     if (!key) detail.unfolded = false;
     renderDetail();
@@ -1628,6 +1633,8 @@
       if (t && window.matchMedia("(max-width: 900px)").matches) {
         const inline = t.cell.closest(".desk-bank").querySelector(".desk-inline-detail");
         if (inline) inline.scrollIntoView({ block: "nearest" });
+      } else if (t && reveal) {
+        t.cell.scrollIntoView({ block: "center", behavior: "smooth" });
       }
     }
   }
@@ -1643,7 +1650,7 @@
       if (i < 0) i = changing.length;
       if (step > 0) i -= 1;
     }
-    selectTile(changing[(i + step + changing.length) % changing.length].key);
+    selectTile(changing[(i + step + changing.length) % changing.length].key, true);
   }
 
   function foldedWords() {
@@ -1761,7 +1768,7 @@
       d.links.forEach((l) => {
         const b = node("button", "btn btn-quiet", l.text + " →");
         b.type = "button";
-        b.addEventListener("click", () => selectTile(l.key));
+        b.addEventListener("click", () => selectTile(l.key, true));
         links.appendChild(b);
       });
       head.appendChild(links);

@@ -9,8 +9,11 @@ word the desk does not have: a split or a recording feed is a socket fed
 straight from an input socket, and a processed feed is a `USR` slot.
 
 The file has three columns, `output`, `source` and `notes`, and **one row
-per socket**: no ranges, since sockets fed in order are a coincidence, not a
-rule. The table in Build's step 04 shows a run of them compactly.
+per socket** on disk: sockets fed in order are a coincidence, not a rule.
+The table in Build's step 04 shows a run of them compactly, and a row may be
+typed as a run (`USB 1-16` from `AES50-A 1-16`, `AES50-A 7-8` from
+`Bus 4 L-R`, or from `AES50-A 1`, counting up): it is read as one row per
+socket (`expand_rows`), and a Save writes it so.
 
 It holds **every output socket the plan patches** (answer A):
 those fed straight from a source (`direct_outputs`) and those a bus, a Main
@@ -32,7 +35,9 @@ not lay that column on when the show has this file.
   (`overlay(..., complete=True)`).
 
 What cannot physically work is refused, naming the row, and nothing is
-written: a cell that is no socket or no source, a socket listed twice, and
+written: a cell that is no socket or no source, a run whose sockets and
+sources are not the same length or go past a group's end, a socket two rows
+both feed (a row that feeds a socket wins over one that took it `OFF`), and
 every new ERROR `verify_plan` finds in the edited plan about a socket (one
 the desk does not have, one something else the plan routes also claims, a
 source past its group's end).
@@ -62,12 +67,17 @@ _OBJECT_GROUPS = {"BUS": "Bus", "MAIN": "Main", "MTX": "Matrix"}
 _OBJECT_WORDS = {"bus": "BUS", "main": "MAIN", "matrix": "MTX", "mtx": "MTX", "mx": "MTX"}
 _OBJECT_CAPACITY = {"BUS": facts.CAPACITY["bus"], "MAIN": facts.CAPACITY["main"],
                     "MTX": facts.CAPACITY["mtx"]}
-_OBJECT_RE = re.compile(r"^\s*(?P<kind>bus|main|matrix|mtx|mx)\s*(?P<n>\d+)\s*(?P<side>[LR])\s*$",
+_OBJECT_RE = re.compile(r"^\s*(?P<kind>bus|main|matrix|mtx|mx)\s*(?P<n>\d+)\s*(?P<side>[LR])?\s*$",
                         re.IGNORECASE)
 #: Source groups an input list never names, written by their own token.
 _OWN_TOKEN = re.compile(r"^\s*(?P<group>MON|SEND|OSC|REC)\s*(?P<n>\d+)\s*$", re.IGNORECASE)
 #: The desk's word for no source.
 OFF = "OFF"
+#: A run as a cell: `USB 1-16`, `AES50-A 1-16`, an en dash too.
+_RUN_RE = re.compile(r"^\s*(?P<head>.*?\D)\s*(?P<first>\d+)\s*[-\u2013]\s*(?P<last>\d+)\s*$")
+#: A bus's, Main's or Matrix's two sides as one cell: `Bus 4 L-R`.
+_OBJECT_PAIR_RE = re.compile(
+    r"^\s*(?P<kind>bus|main|matrix|mtx|mx)\s*(?P<n>\d+)\s*L\s*[-\u2013]\s*R\s*$", re.IGNORECASE)
 
 
 def parse_output(text) -> "tuple[str, int] | None":
@@ -106,7 +116,9 @@ def parse_source(text) -> "tuple[tuple[str, int] | str | None, str | None]":
         if not 1 <= n <= _OBJECT_CAPACITY[group]:
             return None, (f"{raw!r}: the desk has {_OBJECT_GROUPS[group]} 1-"
                           f"{_OBJECT_CAPACITY[group]}")
-        return (group, 2 * n - (1 if m.group("side").upper() == "L" else 0)), None
+        # No side is a mono bus's one output, its L (`rows_from_plan`).
+        side = (m.group("side") or "L").upper()
+        return (group, 2 * n - (1 if side == "L" else 0)), None
     m = _OWN_TOKEN.match(raw)
     if m and m.group("group").upper() != "REC":
         return (m.group("group").upper(), int(m.group("n"))), None
@@ -118,10 +130,13 @@ def parse_source(text) -> "tuple[tuple[str, int] | str | None, str | None]":
                   "Main n R, Matrix n L, or OFF")
 
 
-def source_words(group: str, index: int) -> str:
+def source_words(group: str, index: int, mono: bool = False) -> str:
     """The desk's pair as the sheet writes it: `("A", 1)` -> `AES50-A 1`,
-    `("BUS", 17)` -> `Bus 9 L`, `("MON", 2)` -> `MON 2`."""
+    `("BUS", 17)` -> `Bus 9 L`, `("MON", 2)` -> `MON 2`. A mono bus's one
+    output is `Bus 1`, with no side."""
     if group in _OBJECT_GROUPS:
+        if mono and index % 2:
+            return f"{_OBJECT_GROUPS[group]} {(index + 1) // 2}"
         return f"{_OBJECT_GROUPS[group]} {(index + 1) // 2} {'L' if index % 2 else 'R'}"
     return format_socket(group, index)
 
@@ -187,7 +202,13 @@ def rows_from_plan(plan: dict) -> list[dict[str, str]]:
     """The sheet as the plan has it: one row per output socket it patches,
     in the desk's output order."""
     found = output_sources(plan)
-    return [{"output": format_output(group, n), "source": source_words(*found[(group, n)]),
+    mono = {key for key, (_s, _k, entry) in _objects(plan).items() if entry.get("mono") is True}
+
+    def words(source):
+        group, slot = source
+        return source_words(group, slot, (group, (slot + 1) // 2) in mono)
+
+    return [{"output": format_output(group, n), "source": words(found[(group, n)]),
              "notes": ""}
             for group, n in sorted(found, key=lambda key: socket_order(*key))]
 
@@ -309,6 +330,102 @@ def _entries(direct: dict) -> list[dict]:
                                           key=lambda item: socket_order(*item[0]))]
 
 
+def _source_end(group: str) -> int:
+    """The last number a source group has anywhere: a bus's, Main's or
+    Matrix's last slot, an input socket group's last socket, else the
+    routing's own limit. Whether this desk has it is verify's to say."""
+    if group in _OBJECT_CAPACITY:
+        return 2 * _OBJECT_CAPACITY[group]
+    return facts.INPUT_SOCKETS.get(group) or facts.OUTPUT_SOURCE_INDEX_MAX
+
+
+def _source_run(text: str) -> "tuple[tuple[str, int], int] | None":
+    """A `source` cell that is a run, as its first source and its length:
+    `AES50-A 1-16` -> `(("A", 1), 16)`, `Bus 4 L-R` -> `(("BUS", 7), 2)`.
+    None for anything else."""
+    m = _OBJECT_PAIR_RE.match(text)
+    if m:
+        first, _problem = parse_source(f"{m.group('kind')} {m.group('n')} L")
+        return (first, 2) if isinstance(first, tuple) else None
+    m = _RUN_RE.match(text)
+    if m:
+        first, _problem = parse_source(f"{m.group('head').strip()} {m.group('first')}")
+        last = int(m.group("last"))
+        if isinstance(first, tuple) and first[0] not in _OBJECT_GROUPS:
+            return first, last - first[1] + 1
+    return None
+
+
+def expand_rows(rows: list[dict]) -> "tuple[list[tuple[int, dict]], list[str], list[Refusal]]":
+    """The sheet's rows with every run typed as one row read as one row per
+    socket, each with its line in the file: `USB 1-16` from
+    `AES50-A 1-16` is `USB 1` from `AES50-A 1` ... `USB 16` from
+    `AES50-A 16`. A run's source may be a run of the same length, one source
+    (it counts up from there, said in a note), `Bus 4 L-R` (two sockets),
+    `OFF` or blank (every socket). What cannot work is refused, naming the
+    row: sockets and sources of different lengths, a run that goes past its
+    group's end, or one written backwards. A row that is no run is passed on
+    as it is, for `overlay` to read."""
+    out: list[tuple[int, dict]] = []
+    notes: list[str] = []
+    refusals: list[Refusal] = []
+    for n, row in enumerate(rows, start=2):
+        out_cell = (row.get("output") or "").strip()
+        src_cell = (row.get("source") or "").strip()
+        m = _RUN_RE.match(out_cell)
+        first = parse_output(f"{m.group('head').strip()} {m.group('first')}") if m else None
+        if first is None:
+            out.append((n, row))
+            continue
+        group, start = first
+        last = int(m.group("last"))
+        if last < start:
+            refusals.append(Refusal(OUTPUT_SHEET, out_cell, "output", out_cell,
+                                    f"runs backwards: write it {format_output(group, last)}-{start}"))
+            continue
+        count = last - start + 1
+        end = facts.OUTPUT_SOCKETS.get(group, 0)
+        if last > end:
+            refusals.append(Refusal(OUTPUT_SHEET, out_cell, "output", out_cell,
+                                    f"goes past {format_output(group, end)}, the last "
+                                    "output socket of its group"))
+            continue
+        sources: "list[str]"
+        if not src_cell or src_cell.upper() == OFF:
+            sources = [src_cell] * count
+        else:
+            run = _source_run(src_cell)
+            single, problem = (None, None) if run else parse_source(src_cell)
+            if run is None and problem:
+                refusals.append(Refusal(OUTPUT_SHEET, out_cell, "source", src_cell, problem))
+                continue
+            if run is not None:
+                (src_group, src_first), length = run
+                if length != count:
+                    refusals.append(Refusal(
+                        OUTPUT_SHEET, out_cell, "source", src_cell,
+                        f"is {length} source(s) for {count} socket(s): a run feeds one socket "
+                        "from each source, so the two must be the same length"))
+                    continue
+            else:
+                src_group, src_first = single
+            if src_first + count - 1 > _source_end(src_group):
+                refusals.append(Refusal(
+                    OUTPUT_SHEET, out_cell, "source", src_cell,
+                    f"counts past {source_words(src_group, _source_end(src_group))}, the last "
+                    f"of its group, for {count} socket(s)"))
+                continue
+            sources = [source_words(src_group, src_first + i) for i in range(count)]
+            if run is None and count > 1:
+                notes.append(f"{OUTPUT_SHEET}, {out_cell}: from {src_cell}, counting up: "
+                             f"{format_output(group, start)} from {sources[0]} to "
+                             f"{format_output(group, last)} from {sources[-1]}")
+        for i in range(count):
+            out.append((n, {**row, "output": format_output(group, start + i),
+                            "source": sources[i]}))
+    return out, notes, refusals
+
+
 def overlay(plan: dict, rows: list[dict], *, complete: bool,
             console_model: "str | None" = None) -> Result:
     """`rows` laid onto a copy of `plan`'s `direct_outputs`.
@@ -318,13 +435,21 @@ def overlay(plan: dict, rows: list[dict], *, complete: bool,
     filled `source` wins, `OFF` disconnects, and a socket the sheet does
     not name is left to the plan -- except one a bus, Main or Matrix the
     sheet names fed: that object feeds the sockets its rows give it and no
-    others. Every change is said in `changes`; what
-    cannot work is a refusal, and nothing is changed then."""
+    others. A run is read as one row per socket (`expand_rows`). A socket on
+    two rows takes the one that feeds it: a row that took it `OFF` (Build's
+    Remove row) or left it blank gives way; two rows that both feed it are
+    refused. Every change is said in `changes`; what cannot work is a
+    refusal, and nothing is changed then."""
     result = Result(plan=copy.deepcopy(plan))
     before = output_sources(plan)
     after = {} if complete else dict(before)
-    seen: dict[tuple[str, int], int] = {}
-    for n, row in enumerate(rows, start=2):
+    expanded, notes, refusals = expand_rows(rows)
+    result.notes.extend(notes)
+    result.refusals.extend(refusals)
+    #: Each socket's row, by what it says: one that feeds it, else OFF, else
+    #: blank, as `(line, source)`.
+    chosen: dict[tuple[str, int], tuple[int, object]] = {}
+    for n, row in expanded:
         out_cell = (row.get("output") or "").strip()
         src_cell = (row.get("source") or "").strip()
         if not out_cell and not src_cell:
@@ -335,29 +460,34 @@ def overlay(plan: dict, rows: list[dict], *, complete: bool,
             result.refusals.append(Refusal(
                 OUTPUT_SHEET, label, "output", out_cell,
                 "is not an output socket: write a group and a number, such as USB 5 or "
-                "AES50-B 3"))
+                "AES50-B 3, or a run of them, such as USB 1-16"))
             continue
         label = format_output(*socket)
-        if socket in seen:
-            result.refusals.append(Refusal(
-                OUTPUT_SHEET, label, "output", out_cell,
-                f"is listed twice (lines {seen[socket]} and {n}): one socket carries one source"))
-            continue
-        seen[socket] = n
         source, problem = parse_source(src_cell)
         if problem:
             result.refusals.append(Refusal(OUTPUT_SHEET, label, "source", src_cell, problem))
             continue
+        held = chosen.get(socket)
+        if held is not None and isinstance(held[1], tuple) and isinstance(source, tuple):
+            result.refusals.append(Refusal(
+                OUTPUT_SHEET, label, "output", out_cell,
+                f"is listed twice (lines {held[0]} and {n}): one socket carries one source"))
+            continue
+        rank = 2 if isinstance(source, tuple) else 1 if source == OFF else 0
+        if held is None or rank > (2 if isinstance(held[1], tuple) else 1 if held[1] == OFF
+                                   else 0):
+            chosen[socket] = (n, source)
+    if result.refusals:
+        return result
+    seen = {socket: n for socket, (n, _source) in chosen.items()}
+    for socket, (_n, source) in chosen.items():
         if source is None:
             if complete and socket in before:
                 after[socket] = before[socket]
-            continue
-        if source == OFF:
+        elif source == OFF:
             after.pop(socket, None)
         else:
             after[socket] = source
-    if result.refusals:
-        return result
     # A bus, Main or Matrix the sheet names feeds the sockets its rows give it
     # and no others: a row is where that object goes, so one it
     # fed before -- from the conventions, or the bus sheet -- that the sheet

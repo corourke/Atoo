@@ -465,19 +465,16 @@ def _check_patch(plan: dict, r: VerifyResult, console_model: str | None) -> None
                       f"{group} {sockets[0]}+{sockets[1]} cannot be a stereo pair -- {problem}. "
                       "The console's routing hardware forms a stereo pair only from consecutive "
                       "[odd, even] sockets, so this patch cannot be made as written",
-                      # The rule is right, but "cannot be made as
-                      # written" was the whole of what this finding said, and
-                      # a show whose two halves genuinely are not adjacent was
-                      # left with nowhere to go. The desk's own way round it
-                      # is the USR group; name it, and say exactly how far
-                      # Atoo has got with it.
+                      # The rule is right, and the desk's own way
+                      # round it is the USR group. Build takes it on its own
+                      # when the input list states the two sockets; a plan
+                      # edited by hand gets the way to write it.
                       fix="re-cable so the pair is consecutive and starts on an odd socket, or "
-                          "route it through the desk's USER SIGNAL / USER PATCH layer: two "
-                          "consecutive USR slots (odd first) can carry two totally disjoint "
-                          "sources, and the channel patches that pair. A plan can now state "
-                          "those slots in its `user_sources` section and `verify` checks them, "
-                          "but `apply` does not write them yet -- so for now they have to be "
-                          "set up on the console by hand")
+                          "route it through two USER PATCH slots: two consecutive USR slots "
+                          "from 25 to 56 (odd first), each taking one socket in the plan's "
+                          "`user_sources`, and the channel patched to that pair. Build does "
+                          "this itself when the input list states the two sockets, and "
+                          "`apply` writes the slots")
 
 
 # --------------------------------------------------------------------------
@@ -967,11 +964,11 @@ def _check_values(plan: dict, r: VerifyResult) -> None:
             # refused (`inferred.send_mode_fallback`, reported as an INFO
             # by `_check_inferred`). Only a mode that IS stated and is not
             # one this format can write is an error.
-            if mode is not None and mode not in facts.PLAN_SEND_MODES:
+            if mode is not None and mode not in facts.PLAN_STORED_SEND_MODES:
                 if str(mode).upper() in facts.SEND_MODES:
                     r.add(SEVERITY_ERROR, "value.send-mode-unrepresented", where,
                           f"send mode {mode!r} exists on the console but the plan schema models only "
-                          f"{facts.PLAN_SEND_MODES} -- apply would not know what to write")
+                          f"{facts.PLAN_STORED_SEND_MODES} -- apply would not know what to write")
                 else:
                     r.add(SEVERITY_ERROR, "value.send-mode-unknown", where,
                           f"send mode {mode!r} is not one of {facts.SEND_MODES}")
@@ -1081,7 +1078,12 @@ def _check_references(plan: dict, r: VerifyResult, console_model: str | None) ->
         # feeds something, even with no destination of its own.
         if not destinations and not (bus or {}).get("bus_sends") \
                 and not (bus or {}).get("matrix_sends"):
-            r.add(SEVERITY_ERROR, "bus.no-destination", where,
+            # A WARNING, not an ERROR: a bus with no
+            # output is a desk in working order, and one the engineer added
+            # or left so on a sheet is his instruction. The fix-up round
+            # still takes it (`generate.FIXUP_WARNING_CODES`), so a model
+            # that forgot a mix bus's destination is shown it.
+            r.add(SEVERITY_WARNING, "bus.no-destination", where,
                   "bus feeds nothing -- every channel sent to it would be inaudible")
         for i, dest in enumerate(destinations):
             dwhere = where if len(destinations) == 1 else f"{where}.destinations[{i}]"
@@ -1506,7 +1508,7 @@ def _check_channels_reach_an_output(plan: dict, r: VerifyResult) -> None:
     at -144 (festival's 'T Click/Guide') is routed, not lost. A send into
     a mix or FX bus counts when it is above -144 dB, or has no level
     (`null` is decided unity, `inferred.decide_send_level`). A bus that
-    itself feeds nothing is `bus.no-destination`'s ERROR already, so it
+    itself feeds nothing is `bus.no-destination`'s warning already, so it
     is not chased here."""
     from atoo.inferred import _is_monitor_bus
 
@@ -1625,9 +1627,12 @@ def _unpatched_if_available(ch: dict) -> bool:
 def _socket_holders(plan: dict, rows) -> dict[tuple[str, int], list[str]]:
     """Every input socket, to what holds it: the input list's stated
     sockets (by row) and every channel's patch (by strip). A channel
-    patched where its own row states is named once, by its row."""
+    patched where its own row states is named once, by its row. A
+    channel patched through user patch slots holds the jacks they take."""
+    from atoo.inferred import channel_jacks, user_patch_jacks
     from atoo.input_list import parse_socket_spec
 
+    user_jacks = user_patch_jacks(plan)
     held: dict[tuple[str, int], list[str]] = {}
     for row in rows or []:
         stated = parse_socket_spec(row.patch) if getattr(row, "patch", None) else None
@@ -1638,8 +1643,8 @@ def _socket_holders(plan: dict, rows) -> dict[tuple[str, int], list[str]]:
         if not isinstance(patch, dict):
             continue
         row = f"input list row {((ch.get('source') or {}).get('input'))!r}"
-        for n in patch.get("sockets") or []:
-            names = held.setdefault((patch.get("group"), n), [])
+        for jack in channel_jacks(ch, user_jacks):
+            names = held.setdefault(jack, [])
             if row not in names:
                 names.append(f"{ch.get('bank') or 'ch'} {ch.get('channel')} {ch.get('name')!r}")
     return held
@@ -1863,6 +1868,9 @@ def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,
     # builds a strip for an input
     # nobody will plug in, and the plan already reads Stale.
     skipped = {_norm(row.name) for row in getattr(rows, "skipped", None) or ()}
+    from atoo.inferred import channel_jacks, user_patch_jacks
+
+    user_jacks = user_patch_jacks(plan)
     claimed: dict[str, list[str]] = {}
     holders = _socket_holders(plan, rows)
 
@@ -1926,12 +1934,13 @@ def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,
             elif str(ch.get("name")) not in claimed.get(pair_key, []):
                 claimed.setdefault(pair_key, []).append(str(ch.get("name")))
             continue
-        group = patch.get("group")
+        # Through a user patch, each slot's own jack.
+        jacks = channel_jacks(ch, user_jacks)
         for row in rows:
             key = _norm(row.name)
             if key in claimed or not row.patch:
                 continue
-            if _parse_socket_spec(row.patch) in ((group, sockets[0]), (group, sockets[1])):
+            if _parse_socket_spec(row.patch) in jacks:
                 claimed.setdefault(key, []).append(str(ch.get("name")))
 
     # A bare name (every plan before 2026-09-29) or `{input, quote, from}`:
@@ -1989,25 +1998,41 @@ def _check_reconciliation(plan: dict, rows: list[InputRow], r: VerifyResult,
 def _check_stated_sockets(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:
     """An input list's `patch` column is a fact about this show -- which
     jack the cable is in. A plan is free to disagree only if it says so;
-    disagreeing silently means the plan points at the wrong XLR."""
+    disagreeing silently means the plan points at the wrong XLR.
+
+    A channel patched to USER PATCH slots (USR 25-56) is read through
+    them: the jack is the one each slot's `user_sources` entry takes
+    (`inferred.channel_jacks`)."""
+    from atoo.inferred import user_patch_jacks
+
+    user_jacks = user_patch_jacks(plan)
     by_norm = {_norm(row.name): row for row in rows}
     for ch in plan["channels"]:
         source = ch.get("source") or {}
-        row = by_norm.get(_norm(source.get("input") or ch.get("name") or ""))
-        if row is None or not row.patch:
-            continue
-        stated = _parse_socket_spec(row.patch)
-        if stated is None:
-            r.add(SEVERITY_WARNING, "patch.unparsable-stated-socket", f"input list[{row.name}]",
-                  f"patch {row.patch!r} could not be read as '<group> <number>' -- the plan's patch "
-                  "for this row could not be checked against it")
-            continue
-        group, n = stated
-        patch = ch.get("patch") or {}
-        if patch.get("group") != group or n not in (patch.get("sockets") or []):
-            r.add(SEVERITY_ERROR, "patch.contradicts-input-list", f"channels[{ch.get('name')}].patch",
-                  f"plan patches to {patch.get('group')} {patch.get('sockets')}, but the input list says "
-                  f"{row.name!r} is cabled into {group} {n}")
+        # A stereo pair's second row, named by `source.pair_input`, states
+        # a socket too.
+        for name in (source.get("input") or ch.get("name") or "", source.get("pair_input")):
+            row = by_norm.get(_norm(name)) if name else None
+            if row is not None and row.patch:
+                _check_stated_socket(ch, row, user_jacks, r)
+
+
+def _check_stated_socket(ch: dict, row: InputRow, user_jacks, r: VerifyResult) -> None:
+    """One row's stated socket against the jacks `ch` reaches."""
+    from atoo.inferred import channel_jacks
+
+    stated = _parse_socket_spec(row.patch)
+    if stated is None:
+        r.add(SEVERITY_WARNING, "patch.unparsable-stated-socket", f"input list[{row.name}]",
+              f"patch {row.patch!r} could not be read as '<group> <number>' -- the plan's patch "
+              "for this row could not be checked against it")
+        return
+    group, n = stated
+    patch = ch.get("patch") or {}
+    if (group, n) not in channel_jacks(ch, user_jacks):
+        r.add(SEVERITY_ERROR, "patch.contradicts-input-list", f"channels[{ch.get('name')}].patch",
+              f"plan patches to {patch.get('group')} {patch.get('sockets')}, but the input list says "
+              f"{row.name!r} is cabled into {group} {n}")
 
 
 def _check_stated_presets(plan: dict, rows: list[InputRow], r: VerifyResult) -> None:

@@ -90,7 +90,7 @@ import json
 import re
 
 from atoo import console_facts as facts
-from atoo import inferred, plan_compat, plan_schema
+from atoo import inferred, plan_compat, plan_schema, user_patch
 from atoo.diagnostics import Diagnostic, Severity
 from atoo.schema_check import validate as validate_schema
 
@@ -721,10 +721,93 @@ def _resolve_instructed(channel: dict, label: str, rows, layers, console_model,
             "sockets": [first, first + 1] if stereo else [first], "channel": number}
 
 
+_SIDE = re.compile(r"^(?P<stem>.*?\S)[\s_.-]*(?P<side>L|R|Left|Right)$", re.IGNORECASE)
+
+
+def _pair_split_rows(plan: dict, by_name: dict, findings) -> None:
+    """Two rows named as one L/R pair ("Keys L", "Keys R"), which the reply
+    left as two mono channels although their stated sockets are what kept
+    them apart, are one stereo channel: the pair is
+    code's decision, not the model's. A Compact sitting's first build had the
+    model refuse "Keys L" on LCL 4 and "Keys R" on LCL 5 ("must start odd"),
+    so the user-patch path (`_route_through_user_patch`) never ran. Only
+    sockets the desk cannot pair directly: two mono channels on a pair it
+    could form are the reply's own choice. In place, at INFO."""
+    from atoo.input_list import parse_socket_spec
+
+    channels = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
+    mono = {}
+    for channel in channels:
+        if not is_compact_channel(channel) or channel.get("pair") or channel.get("stereo"):
+            continue
+        row = by_name.get(_norm(channel.get("input")))
+        m = _SIDE.match(str(channel.get("input") or "").strip())
+        if row is None or m is None or not row.patch:
+            continue
+        side = "L" if m.group("side")[0].upper() == "L" else "R"
+        mono.setdefault(_norm(m.group("stem")), {})[side] = (channel, row)
+    dropped = []
+    for stem, sides in mono.items():
+        if set(sides) != {"L", "R"}:
+            continue
+        (left, left_row), (right, right_row) = sides["L"], sides["R"]
+        stated, pair_stated = parse_socket_spec(left_row.patch), parse_socket_spec(right_row.patch)
+        if not stated or not pair_stated or not _pair_problem(stated, pair_stated):
+            continue
+        name = _SIDE.match(left_row.name.strip()).group("stem").strip()
+        left["pair"] = right_row.name
+        if not left.get("name") or _norm(left.get("name")) == _norm(left_row.name):
+            left["name"] = name
+        dropped.append(right)
+        if findings is not None:
+            findings.append(_info(
+                "reply.pair-by-names", f"channels[{name}]",
+                f"{left_row.name!r} and {right_row.name!r} are one L/R pair by their names, "
+                f"so they are one stereo channel {name!r}: the reply left them as two mono "
+                "channels, though only their sockets kept them apart, and code pairs those "
+                "through user patch slots"))
+    if dropped:
+        plan["channels"] = [c for c in plan.get("channels") or [] if not any(c is d for d in dropped)]
+
+
+def _pair_problem(stated: tuple[str, int], pair_stated: tuple[str, int]) -> str | None:
+    """Why the two rows' stated sockets cannot be one stereo pair on the
+    desk as cabled, or None when they can (`user_patch`)."""
+    return user_patch.pair_problem(stated, pair_stated)
+
+
+def _route_through_user_patch(plan: dict, row, pair_row, stated, pair_stated, name: str,
+                              where: str, sockets: "_Sockets", reserved_user_slots,
+                              console_model: str | None, findings) -> dict | None:
+    """A stereo channel whose two rows state sockets the desk cannot pair
+    (LCL 4 and 5, B 2 and 3, A 16 and 17, or two groups) is patched through
+    two USER PATCH slots, odd first, one per socket: the slots
+    are the pair the desk forms, and each takes its row's socket. Adds the
+    two `user_sources` entries and returns the channel's patch, with an
+    INFO; or, when no pair of slots is free or a socket is one a user patch
+    cannot take, says so at INFO and returns None, and the caller builds
+    two monos. The choice and the words are `user_patch`'s, which the
+    intent path uses too."""
+    slot = None if user_patch.cannot_take(stated, pair_stated) else user_patch.free_pair(
+        user_patch.taken_slots(plan, reserved_user_slots, sockets.used.get("USR", ())))
+    if slot is None:
+        if findings is not None:
+            findings.append(_info("reply.pair-split", where,
+                                  user_patch.split_info(row.name, stated, pair_row.name, pair_stated)))
+        return None
+    plan.setdefault("user_sources", []).extend(user_patch.entries(slot, name, stated, pair_stated))
+    sockets.take("USR", slot, slot + 1)
+    if findings is not None:
+        findings.append(_info("reply.pair-through-user-patch", where,
+                              user_patch.routed_info(row.name, stated, pair_row.name, pair_stated, name, slot)))
+    return {"group": "USR", "sockets": [slot, slot + 1], "stated": True}
+
+
 def expand_mechanical(plan: dict, rows, *, console_model: str | None,
                       findings: list | None = None, pairs: dict | None = None,
                       layers: list | None = None, category_table=None,
-                      strips=None, built: dict | None = None) -> list[str]:
+                      strips=None, built: dict | None = None,
+                      reserved_user_slots=()) -> list[str]:
     """Every compact channel becomes a full one, in place, from the input
     list's rows. Returns repair notes; INFO findings go to `findings`.
     A full-format channel is left as it is. `pairs`, when given, is filled
@@ -745,7 +828,13 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
     (`instructed_channels.Strip`, 2026-10-01): their stated sockets and
     strip numbers are held before any row is counted, and code builds each
     one (`prepare_instructed_strips`, `build_instructed_strips`); `built`
-    is filled with `id(channel) -> strip` for `expand_sends`."""
+    is filled with `id(channel) -> strip` for `expand_sends`.
+
+    A stereo channel whose two rows state sockets the desk cannot pair
+    (LCL 4 and 5, B 2 and 3, A 16 and 17, or two groups) is patched
+    through the first free pair of USER PATCH slots, which take the two
+    sockets (`_route_through_user_patch`); `reserved_user_slots`
+    are slots it must leave alone."""
     from atoo.input_list import format_socket, parse_socket_spec
 
     channels = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
@@ -753,6 +842,8 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
         plan.pop("category_colors", None)
         return []
     by_name = _row_lookup(rows)
+    _pair_split_rows(plan, by_name, findings)
+    channels = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
     sockets = _Sockets(rows, console_model)
     # Sockets a channel names outright are taken before any is counted.
     for channel in channels:
@@ -837,7 +928,23 @@ def expand_mechanical(plan: dict, rows, *, console_model: str | None,
         explicit = channel.get("patch") if isinstance(channel.get("patch"), dict) else {}
         stated = parse_socket_spec(row.patch) if row.patch else None
         pair_stated = parse_socket_spec(pair_row.patch) if pair_row and pair_row.patch else None
-        if stated:
+        routed = None
+        if stated and pair_stated and _pair_problem(stated, pair_stated):
+            routed = _route_through_user_patch(plan, row, pair_row, stated, pair_stated, name,
+                                               where, sockets, reserved_user_slots,
+                                               console_model, findings)
+            if routed is None:
+                # No free pair of slots: two monos, the second row left
+                # for `build_left_out_rows` to build on its own socket.
+                pair_row, pair_stated = None, None
+                stereo = False
+        if routed is not None:
+            sockets.take(stated[0], stated[1])
+            sockets.take(pair_stated[0], pair_stated[1])
+            patch = routed
+            cite = (f"Input list patch column: {row.patch!r} and {pair_row.patch!r}, "
+                    f"through user patch USR {routed['sockets'][0]}-{routed['sockets'][1]}")
+        elif stated:
             group, first = stated
             if pair_stated and pair_stated[0] == group:
                 numbers = [first, pair_stated[1]]
@@ -1756,7 +1863,8 @@ def _category_colours(entries) -> dict[str, str]:
 
 def expand(reply: dict, *, input_csv: str | None = None, findings: list | None = None,
            console_model: str | None = None, layers: list | None = None,
-           category_table=None, strips=None) -> list[str]:
+           category_table=None, strips=None,
+           reserved_user_slots=()) -> list[str]:
     """The reply as a plan, in place. Returns the repair notes it made
     (`repair_reply`'s, and a stated socket the reply moved) and appends
     its INFO findings to `findings`.
@@ -1781,6 +1889,10 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
     (`instructed_channels.parse_strips`), or None: code builds each one
     the reply did not (`build_instructed_strips`), and writes the sends
     they state (`write_instructed_sends`).
+
+    `reserved_user_slots` are the USR slots the show's `user.csv` defines,
+    laid on the plan after it is built: a stereo pair routed through a
+    user patch never takes one of them.
     """
     repairs: list[str] = []
     pairs: dict = {}
@@ -1811,7 +1923,8 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
         repairs.extend(expand_mechanical(reply, rows, console_model=console_model,
                                          findings=findings, pairs=pairs, layers=layers,
                                          category_table=category_table, strips=strips,
-                                         built=built))
+                                         built=built,
+                                         reserved_user_slots=reserved_user_slots))
     else:
         reply.pop("category_colors", None)
         rows = None
@@ -1850,14 +1963,38 @@ def expand(reply: dict, *, input_csv: str | None = None, findings: list | None =
         apply_stated_columns(reply, rows, findings=findings, pairs=pairs)
     # Last, so every channel's socket is the one the plan will patch.
     expand_output_runs(reply, findings)
-    expand_processed_feeds(reply, findings)
+    expand_processed_feeds(reply, findings, console_model=console_model)
     return repairs
 
 
-def _strips_by_name(plan: dict) -> dict[str, tuple[str, int, bool]]:
+def _output_indices_to_come(plan: dict, console_model: str | None
+                            ) -> dict[str, tuple[str, int]]:
+    """The index each Main and Matrix with none yet will be given: a reply
+    leaves an output's number to code, and allocation runs after the reply
+    is expanded (`allocate.allocate_console_indices`, which is deterministic,
+    run here on a copy). Without it a processed feed of the Main by its own
+    name ("PA") found no strip."""
+    from atoo import allocate
+
+    unnumbered = [k for k, e in (plan.get("outputs") or {}).items()
+                  if isinstance(e, dict) and not isinstance(e.get("index"), int)]
+    if not unnumbered:
+        return {}
+    trial = copy.deepcopy({"outputs": plan.get("outputs") or {}})
+    try:
+        allocate.allocate_console_indices(trial, console_model=console_model)
+    except facts.UnknownConsoleModel:
+        return {}
+    return {k: (trial["outputs"][k].get("kind"), trial["outputs"][k]["index"])
+            for k in unnumbered if isinstance(trial["outputs"][k].get("index"), int)}
+
+
+def _strips_by_name(plan: dict, to_come: "dict[str, tuple[str, int]] | None" = None
+                    ) -> dict[str, tuple[str, int, bool]]:
     """Every strip a user signal can take, by its name folded to lower case:
     `(group, number, stereo)` -- a channel or an aux by its bank and number,
-    a bus, a Main or a Matrix by its index."""
+    a bus, a Main or a Matrix by its index (or, for a Main or Matrix not yet
+    numbered, the one `to_come` says it will have)."""
     found: dict[str, tuple[str, int, bool]] = {}
     stereo_bases: dict[str, tuple[str, int, bool]] = {}
     for ch in plan.get("channels") or []:
@@ -1876,10 +2013,13 @@ def _strips_by_name(plan: dict) -> dict[str, tuple[str, int, bool]]:
         if isinstance(entry, dict) and isinstance(entry.get("index"), int):
             found.setdefault(key.strip().lower(), ("BUS", entry["index"], entry.get("mono") is not True))
     for key, entry in (plan.get("outputs") or {}).items():
-        group = {"main": "MAIN", "matrix": "MTX"}.get(
-            entry.get("kind") if isinstance(entry, dict) else None)
-        if group and isinstance(entry.get("index"), int):
-            found.setdefault(key.strip().lower(), (group, entry["index"], entry.get("mono") is not True))
+        kind = entry.get("kind") if isinstance(entry, dict) else None
+        index = entry.get("index") if isinstance(entry, dict) else None
+        if not isinstance(index, int) and key in (to_come or {}):
+            kind, index = to_come[key]
+        group = {"main": "MAIN", "matrix": "MTX"}.get(kind)
+        if group and isinstance(index, int):
+            found.setdefault(key.strip().lower(), (group, index, entry.get("mono") is not True))
     for base, strip in stereo_bases.items():
         found.setdefault(base, strip)
     return found
@@ -1900,7 +2040,8 @@ def _user_signals_in_use(plan: dict) -> set[int]:
     return {n for n in used if isinstance(n, int) and low <= n <= high}
 
 
-def expand_processed_feeds(plan: dict, findings: list | None = None) -> int:
+def expand_processed_feeds(plan: dict, findings: list | None = None, *,
+                           console_model: str | None = None) -> int:
     """The reply's `processed_feeds` as the plan's user signals and output
     patches: a strip, by its name, at its tap (pre or post its
     fader), to an output socket. The desk carries a processed feed through a
@@ -1918,7 +2059,7 @@ def expand_processed_feeds(plan: dict, findings: list | None = None) -> int:
     feeds = plan.pop("processed_feeds", None) or []
     if not feeds:
         return 0
-    strips = _strips_by_name(plan)
+    strips = _strips_by_name(plan, _output_indices_to_come(plan, console_model))
     used = _user_signals_in_use(plan)
     low, high = facts.USER_SIGNAL_SLOTS
     written = 0
@@ -2222,6 +2363,45 @@ def _spot_label(bank: str, number) -> str:
     return f"{'Aux' if bank == 'aux' else 'CH'} {number}"
 
 
+#: A model's note that says an input-list column was not followed: "the
+#: input list's channel column '1' is not used", "dca/mute_group columns
+#: (...) were not used", "the dca column is ignored".
+_COLUMN_NOT_USED = re.compile(
+    r"\b(?P<cols>channel|dca|mute[_ ]group|dca/mute[_ ]group)s?\b[^.]*?\bcolumns?\b[^.]*?"
+    r"\b(?:not used|were not used|was not used|is not used|ignored|not followed|not applied)\b",
+    re.IGNORECASE)
+
+
+def _drop_overridden_column_notes(plan: dict, rows, findings: list | None) -> None:
+    """The model's notes that say it did not use the input list's `channel`,
+    `dca` or `mute_group` column, when the list has that column filled: code
+    carries the column out next (`apply_stated_columns`), so the note is no
+    longer true. Each one dropped is said at INFO,
+    quoting it, so nothing the model wrote vanishes unannounced."""
+    filled = {column for column in ("channel", "dca", "mute_group")
+              if any(getattr(row, column, None) for row in rows or ())}
+    if not filled:
+        return
+    kept = []
+    for note in plan.get("notes") or []:
+        text = note.get("text") if isinstance(note, dict) else note
+        source = note.get("source") if isinstance(note, dict) else "model"
+        m = _COLUMN_NOT_USED.search(str(text or "")) if source == "model" else None
+        named = {c for c in ("channel", "dca", "mute_group")
+                 if m and re.search(c.replace("_", "[_ ]"), m.group(0), re.IGNORECASE)}
+        if m and named and named <= filled:
+            if findings is not None:
+                findings.append(_info(
+                    "reply.note-carried-out", "notes",
+                    f"the reply's note {str(text)!r} is dropped: the input list's "
+                    f"{' and '.join(sorted(named))} column{'s are' if len(named) > 1 else ' is'} "
+                    "carried out by code, as every filled cell is"))
+            continue
+        kept.append(note)
+    if "notes" in plan:
+        plan["notes"] = kept
+
+
 def apply_stated_columns(plan: dict, rows, *, findings: list | None = None,
                          pairs: dict | None = None) -> None:
     """The input list's `channel`, `dca` and `mute_group` columns: a filled cell wins over the conventions and the reply, as the
@@ -2242,6 +2422,7 @@ def apply_stated_columns(plan: dict, rows, *, findings: list | None = None,
     """
     from atoo.input_list import rows_feeding
 
+    _drop_overridden_column_notes(plan, rows, findings)
     channels = [c for c in plan.get("channels") or [] if isinstance(c, dict)]
     # A group is named as the input list spells it, the first row's spelling
     # where rows differ only in case or spacing (`DRUMS` and `drums`): what

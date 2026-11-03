@@ -38,7 +38,7 @@ def _reply(main_patches: list | None = None, extra_runs: list | None = None) -> 
         main["patches"] = main_patches
     return json.dumps({
         "channels": [{"input": name, "main_routes": [{"index": 1}]} for name in INPUTS],
-        "busses": [],
+        "dcas": [], "mute_groups": [], "busses": [],
         "outputs": [main],
         "unassigned_inputs": [],
         "output_runs": [{

@@ -144,11 +144,19 @@ def prune_dir(directory: Path) -> list[Path]:
                               protect=_pointed_at(directory))
 
 
-def build_entry(*, meta: dict, build_log: dict, status: str, reason: str | None) -> dict:
+def build_entry(*, meta: dict, build_log: dict, status: str, reason: str | None,
+                intent_replies: list | None = None, intent_steps: dict | None = None) -> dict:
     """The payload `write` saves: this build's provenance (lifted
     straight out of `plan["meta"]` as `cli._build` assembles it, so the
     two never drift apart), the per-role notes/usage, and
-    the outcome. `status` is one of `DONE`/`FAILED`/`STOPPED`."""
+    the outcome. `status` is one of `DONE`/`FAILED`/`STOPPED`.
+
+    A build through the intent (`atoo build --intent`) also keeps the
+    model's replies, first try and repair, as `intent_replies`: a few
+    hundred tokens, and the only record of what the model left out when
+    a built show is thin. With `--intent-steps` it keeps `intent_steps`
+    too: one record per call (the step, first try or repair, seconds,
+    tokens in, cached and out) and the settings the calls were sent with."""
     return {
         "generated_at": meta.get("generated_at"),
         "console_model": meta.get("console_model"),
@@ -157,6 +165,8 @@ def build_entry(*, meta: dict, build_log: dict, status: str, reason: str | None)
         "effort": meta.get("effort"),
         "outcome": {"status": status, "reason": reason},
         "build_log": dict(build_log) if build_log else {},
+        **({"intent_replies": list(intent_replies)} if intent_replies else {}),
+        **({"intent_steps": intent_steps} if intent_steps else {}),
     }
 
 

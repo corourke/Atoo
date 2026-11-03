@@ -924,6 +924,10 @@ USER_SOURCE_SCHEMA = {
 PLAN_CHANNEL_SCHEMA = copy.deepcopy(CHANNEL_SCHEMA)
 PLAN_CHANNEL_SCHEMA["properties"]["processing"]["properties"]["preset_values"] = \
     _preset_values_schema()
+# A plan's send may hold the desk's GRP mode, as "group", which a capture
+# found there; a reply never writes it.
+PLAN_CHANNEL_SCHEMA["properties"]["bus_sends"]["items"]["properties"]["mode"]["enum"] = \
+    [*facts.PLAN_STORED_SEND_MODES, None]
 
 # Where a captured plan found an object's name on the desk --
 # `socket` (the strip shows its source's name), `strip` (its own) or `none`
@@ -944,7 +948,7 @@ def _sends_schema(target: str) -> dict:
         "type": "object",
         "properties": {
             target: {"type": "string", "minLength": 1},
-            "mode": {"type": ["string", "null"], "enum": [*facts.PLAN_SEND_MODES, None]},
+            "mode": {"type": ["string", "null"], "enum": [*facts.PLAN_STORED_SEND_MODES, None]},
             "level_db": _DB,
         },
         "required": [target],
@@ -1008,6 +1012,12 @@ PLAN_BUS_SCHEMA["properties"]["matrix_sends"] = _sends_schema("matrix")
 PLAN_OUTPUT_SCHEMA = copy.deepcopy(OUTPUT_SCHEMA)
 PLAN_OUTPUT_SCHEMA["properties"]["name_on"] = NAME_ON
 PLAN_OUTPUT_SCHEMA["properties"]["matrix_sends"] = _sends_schema("matrix")
+# The desk's own name for a bus, Main or Matrix whose plan key
+# had to differ from it -- two objects the desk names alike are keyed apart
+# ("Drums (Bus 5)"). What Apply writes to the desk and the sheets show.
+DESK_NAME = {"type": "string"}
+PLAN_BUS_SCHEMA["properties"]["desk_name"] = DESK_NAME
+PLAN_OUTPUT_SCHEMA["properties"]["desk_name"] = DESK_NAME
 
 # The bus sheet's `role`: what a bus, Main or Matrix is FOR, in
 # the engineer's words from a fixed list, so a rule can rely on it. Written
@@ -1460,7 +1470,7 @@ REPLY_SCHEMA = {
         "notes": PLAN_SCHEMA["properties"]["notes"],
         "conventions_audit": PLAN_SCHEMA["properties"]["conventions_audit"],
     },
-    "required": ["channels", "busses", "outputs", "unassigned_inputs", "notes"],
+    "required": ["channels", "dcas", "mute_groups", "busses", "outputs", "unassigned_inputs", "notes"],
     "additionalProperties": False,
 }
 

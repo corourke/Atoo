@@ -123,6 +123,21 @@ def rows_from_plan(plan: dict) -> list[dict[str, str]]:
     return rows
 
 
+def rows_written(rows: list[dict], plan: dict) -> list[dict[str, str]]:
+    """`user.csv` as a Save writes it: the plan's slots (`rows_from_plan`), and
+    a row for each slot a row took OFF (its Remove row button), which stays so
+    a rebuild leaves that slot out over the conventions. By slot."""
+    held = rows_from_plan(plan)
+    have = {parse_slot(r["slot"]) for r in held}
+    for row in rows:
+        slot = parse_slot((row.get("slot") or "").strip())
+        if (slot is not None and slot not in have
+                and (row.get("source") or "").strip().upper() == OFF):
+            held.append({"slot": slot_words(slot), "source": OFF, "tap": "", "leg": "", "name": ""})
+            have.add(slot)
+    return sorted(held, key=lambda r: parse_slot(r["slot"]) or 0)
+
+
 def readers(plan: dict) -> dict[int, list[str]]:
     """What reads each slot: `{3: ["USB 29", "CH 27"]}` -- the output sockets
     fed from it and the channels patched from it, in the desk's words. Set in
@@ -252,7 +267,14 @@ def overlay(plan: dict, rows: list[dict], *, complete: bool,
         if was == now:
             continue
         if now is None:
-            result.changes.append(f"{slot_words(slot)} taken out (was {_said(was)})")
+            # Taken out is carried out, never refused: what still reads the
+            # slot is named, and carries nothing until it is patched elsewhere.
+            still = readers(plan).get(slot) or []
+            result.changes.append(
+                f"{slot_words(slot)} taken out (was {_said(was)})"
+                + (f"; {', '.join(still)} still "
+                   + ("reads it, so it carries" if len(still) == 1 else "read it, so they carry")
+                   + " nothing until patched from something else" if still else ""))
         elif was is None:
             result.changes.append(f"{slot_words(slot)} takes {_said(now)}")
         else:

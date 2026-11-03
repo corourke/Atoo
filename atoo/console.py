@@ -244,6 +244,17 @@ class OscReply:
             floats = [a for a in self.args if isinstance(a, float)]
             return (floats[-1] if floats else None), (None if floats else "no_float_in_reply")
         if value_type == "i":
+            # An effect parameter's own text, when it is a whole number, is
+            # what the desk holds: GATED's `dens`
+            # answers ['22', 0.4286, 21], its int rounded down from the float,
+            # while the desk and its screen hold 22. Effect leaves only: a
+            # connector's text and int differ by its 1-based index too, and
+            # `facts.correct_readback_index` corrects the int. A
+            # text that is not a whole number ("ON") leaves the int.
+            if str(self.address).startswith("/fx/"):
+                for arg in reversed(self.args):
+                    if isinstance(arg, str) and re.fullmatch(r"\s*-?\d+\s*", arg):
+                        return int(arg), None
             ints = [a for a in self.args if isinstance(a, int)]
             return (ints[-1] if ints else None), (None if ints else "no_int_in_reply")
         return None, f"unknown_value_type: {value_type!r}"

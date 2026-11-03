@@ -871,6 +871,9 @@ class ModelCallProgress:
             # the provider reports no cache counts.
             "cache_write": usage.get("cache_creation_input_tokens"),
             "cache_read": usage.get("cache_read_input_tokens"),
+            # How long Ollama took to read the prompt, in ms (`ai_provider.ollama_usage`); None
+            # elsewhere.
+            "prompt_eval_ms": usage.get("prompt_eval_ms"),
             "output": usage.get("output_tokens"),
             "reasoning_tokens_as_reported": reported,
             "thinking": thinking,

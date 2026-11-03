@@ -67,7 +67,7 @@ def _reply(**send_groups) -> dict:
             bus["sends"] = send_groups[bus["name"]]
     return {"channels": [{"input": "Kick", "patch": {"group": "LCL"}},
                          {"input": "Vox", "patch": {"group": "LCL"}}],
-            "busses": busses,
+            "dcas": [], "mute_groups": [], "busses": busses,
             "outputs": [{"name": "Main", "kind": "main", "patch": {"group": "LCL", "sockets": [7, 8]}}],
             "unassigned_inputs": [], "notes": []}
 
