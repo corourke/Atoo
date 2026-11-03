@@ -64,39 +64,17 @@ Type in a cell and press **Save**: it writes the file and updates the plan strai
 
 ### Let the model say less: `--intent`
 
-`atoo build --intent` asks the model for a short **intent** instead of the plan's
-reply. Atoo's own code writes one channel for every input-list row, in the list's
-order, with what the list says of it (source type, microphone, phantom power,
-category, preset, and the socket it states). The model writes only what the list
-cannot say: a stereo pair, a strip your conventions name differently, the DCAs, mute
-groups, buses and outputs your conventions ask for (each with its members, by
-category or by name), the order of the strips by category, and the settings each
-category gets. Atoo works out the strips, a socket for every row that names none,
-the group and bus numbers and every range, and says each choice at INFO. It does
-not need the separate rewrite of your conventions (`atoo resolve`).
+`atoo build --intent` asks the model for a short **intent** instead of the plan's reply. Atoo's own code writes one channel for every input-list row, in the list's order, with what the list says of it (source type, microphone, phantom power, category, preset, and the socket it states). The model writes only what the list cannot say: a stereo pair, a strip your conventions name differently, the DCAs, mute groups, buses and outputs your conventions ask for (each with its members, by category or by name), the order of the strips by category, and the settings each category gets. Atoo works out the strips, a socket for every row that names none, the group and bus numbers and every range, and says each choice at INFO. It does not need the separate rewrite of your conventions (`atoo resolve`).
 
-A row is left out only when your conventions, the instructions or the row's own
-notes say so in words the model can quote; otherwise the row is built, and the INFO
-says so. The result is the same kind of plan, verified and written like any other
-build.
+A row is left out only when your conventions, the instructions or the row's own notes say so in words the model can quote; otherwise the row is built, and the INFO says so. The result is the same kind of plan, verified and written like any other build.
 
 ```bash
 atoo build --show touringband --intent
 ```
 
-It is new and sits beside the default form until it does as well; the
-[patch page](patch.md#let-the-model-say-less---intent) explains the idea. It is
-the way to build with a local model: [Which
-model](ai-provider.md#which-model) says which one to use.
+It is new and sits beside the default form until it does as well; the [patch page](patch.md#let-the-model-say-less---intent) explains the idea. It is the way to build with a local model: [Which model](ai-provider.md#which-model) says which one to use.
 
-`--intent-steps` asks for the same intent in three shorter calls instead of one:
-first the categories and the exceptions, then the buses, then the DCAs, mute groups and
-outputs. Each call writes only its own part and is checked against what the calls before it
-built. It implies `--intent`. With a local model it is the default, because there the three
-calls build more of the show than one: Ollama, or the `api` provider when `ATOO_AI_BASE_URL` is
-on this machine or your network (`localhost`, a `.local` name, a private address).
-`--no-intent-steps` asks in one call. Claude, and the `api` provider on a remote host, ask in one
-call unless you give `--intent-steps`. The build says which at INFO.
+`--intent-steps` asks for the same intent in three shorter calls instead of one: first the categories and the exceptions, then the buses, then the DCAs, mute groups and outputs. Each call writes only its own part and is checked against what the calls before it built. It implies `--intent`. With a local model it is the default, because there the three calls build more of the show than one: Ollama, or the `api` provider when `ATOO_AI_BASE_URL` is on this machine or your network (`localhost`, a `.local` name, a private address). `--no-intent-steps` asks in one call. Claude, and the `api` provider on a remote host, ask in one call unless you give `--intent-steps`. The build says which at INFO.
 
 ## 6. Read the findings
 
