@@ -123,7 +123,7 @@ APPLICABLE: notes only -- choices made where the conventions were silent.
 
 The `[info]` lines are **notes, not problems**: what the plan carries, a choice made where the conventions were silent, or something built because `instructions.md` asked for it. Notes never block. The same thing said about many objects is printed once, naming them all (`ch 1-22 (22 channels): ...`).
 
-**Routing is checked here, by code.** A channel whose audio reaches no output (`routing.channel-reaches-nothing`), or reaches no Main, directly or through a bus (`routing.channel-misses-main`), is a warning. A click, guide or talkback strip is meant to stay off Main and is not reported. Both are warnings, not errors: the desk works, and a strip kept off the PA can be deliberate.
+**Routing is checked here, by code.** A channel whose audio reaches no output (`routing.channel-reaches-nothing`), or reaches no Main, directly or through a bus (`routing.channel-misses-main`), is a warning. A channel sent straight to a Matrix that reaches an output socket (an aux fed to the PA's Matrices) is in the house sound, and is not reported. A click, guide or talkback strip is meant to stay off Main and is not reported. Both are warnings, not errors: the desk works, and a strip kept off the PA can be deliberate.
 
 **This is the stage that stops an apply.** `apply` runs the same checks itself before it contacts the desk, and on any **error** it prints the report and stops, exiting `2`:
 

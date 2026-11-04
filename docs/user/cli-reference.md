@@ -993,6 +993,7 @@ over the same engine the commands use, not a separate implementation.
   atoo ui
   atoo ui --port 9000
   atoo ui --show my-show
+  atoo ui --show my-show --console 192.0.2.16
   atoo ui --no-browser
 
 The page opens in your default browser once the server answers, and its address is
@@ -1072,6 +1073,7 @@ The page is at /. /app redirects there.
 | `--host` | Interface to bind (default: 127.0.0.1, loopback only). On a network address a second machine may Watch; opening files and every write from the page (apply, patch, undo, build, saving a file) still answer this machine only |
 | `--port` `VALUE` | Port to serve on (default: 8420). If an Atoo UI is already serving there, that one is opened instead |
 | `--no-browser` | Do not open the page in a browser; only print its address. By default the page opens in the default browser once the server answers |
+| `--console` `ADDRESS` | The console's IP address or hostname: the page opens pointed at that desk, as `--console` does for the other commands. It beats ATOO_CONSOLE and ~/.atoo.config's [console] section. Its port is still ATOO_CONSOLE_PORT's or the config's (--port here is the web page's). The bundle bar's Change… changes it later |
 | `--plan` | A plan.json to show at startup on Build step 04 -- the same shape `atoo build` produces. Optional; a plan can also be loaded (or replaced) later from the browser without restarting. |
 | `--watch-conditions` | A watch-conditions JSON file to load at startup into Watch conditions, on the Watch screen -- the same file `atoo watch --watch-conditions` accepts. Optional; falls back to ~/.atoo.config's [watch_conditions] default when omitted (see `atoo watch --help`), and can also be loaded (or replaced) later from the browser without restarting. |
 | `--presets` `DIR` | Atoo's preset library (a directory of .chn exports): the names Build step 02's Preset column offers, and the library a build started from the page is given. Defaults to [presets] default in ~/.atoo.config; with neither, the column still takes a name as free text. |

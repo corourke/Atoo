@@ -101,7 +101,7 @@ The console would accept these patches and read them back unchanged -- it does n
 
 It exits `2` and nothing is written. `--skip-verify` does not turn this off. Only the desk answering `NONE` stops the run: a bay that does not answer, or names a card Atoo does not know, counts as fitted. An empty bay the plan does not use is not a problem.
 
-Offline, `atoo verify` cannot know what is in a slot, so it warns instead (`patch.expansion-bay-not-checked`).
+Offline, `atoo verify` reads what a capture recorded in the plan: a card the desk reported is checked and nothing is said, and a bay it read as `NONE` that the plan uses is a WARNING (`patch.expansion-bay-empty`). With no reading, verify cannot know what is in a slot, so it says at INFO that the apply preview checks it (`patch.expansion-bay-not-checked`).
 
 ## Stage boxes: a socket past the end of the box
 
@@ -113,6 +113,15 @@ This plan patches 1 socket(s) that do not exist on the stage box 192.0.2.16 repo
 ```
 
 It exits `2` and nothing is written; `--skip-verify` does not turn it off. A box Atoo has no size recorded for (only the S16's is) is reported with a WARNING and its sockets are not checked. A plan that patches no AES50 socket never asks. [Patch](patch.md) holds a change to the same rule.
+
+**In the browser, a preview refused this way puts each socket in Findings as an error** (`patch.past-stage-box`), naming what uses it, and the pre-flight's verdict counts them, so the screen no longer reads *APPLICABLE* above a preview that refused. A plan [captured](capture.md#what-stays-out-of-the-sheets) from the desk records what was on each port, so `atoo verify` gives the same errors with no desk:
+
+```
+  [error] channels[Vox].patch: channel 'Vox' is patched from AES50-A 21, which the S16 on AES50-A does not have (it has 16 inputs), so it hears nothing  (patch.past-stage-box)
+  [error] direct_outputs[AES50-A 41]: AES50-A 41 is patched as an output, and the S16 on AES50-A does not have it (it has 8 outputs), so nothing comes out of it  (patch.past-stage-box)
+```
+
+A capture leaves such sockets out to begin with, so a captured show's own preview is not refused.
 
 ## Names go on the source socket
 

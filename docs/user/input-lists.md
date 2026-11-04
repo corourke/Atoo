@@ -26,7 +26,7 @@ AES50-A 5,FLOOR,drums,Mic,,FALSE,
 | Column | Required | What it is |
 |---|---|---|
 | `order` | no | The **band's own** number for this input. It does not set the desk channel. `-` **skips** the row. See [The `order` column](#the-order-column-band-numbers-and-skipping-a-row). |
-| `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`. A column headed `socket`, like the one above, is read the same. Blank is legitimate. See [The `patch` column](#the-patch-column). |
+| `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`, or `OFF` for none. A column headed `socket`, like the one above, is read the same. Blank is legitimate. See [The `patch` column](#the-patch-column). |
 | `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". |
 | `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
 | `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary, there for your conventions to match against, with one exception: a channel of type `Line` on a head amp does not keep a mic's gain (below the table). |
@@ -219,6 +219,22 @@ Legitimate, and common early in the week when the cabling is not settled. A row 
 ```
 
 Which is the whole point of the distinction: a socket you stated can be checked against the stage box, and one that was chosen for you has to be.
+
+### `OFF`: a channel patched from nothing
+
+`OFF` in the patch cell keeps the channel but patches it from nothing. A blank cell means "leave it to the plan" (a build chooses a socket), so it can't say this. With `OFF`:
+
+- **A Save** in Build updates the plan: the channel has no patch. **Clearing a patch cell that held a socket** in Build's tables saves as `OFF` for you, so the cell reads `OFF` afterwards. On a captured show, clearing CH 17's `LCL 17` and pressing **Save input.csv** says *The plan is updated: CH 17 unpatched (was LCL 17).*
+- **A build** leaves the channel unpatched, whatever the conventions or the model would choose, and says so at INFO (`reply.unpatched-by-list`).
+- **`atoo verify`** says it at INFO, not as a missing patch. On that captured show, a warning that CH 17 shared LCL 17 with another strip goes, and this note comes in:
+
+```
+  [info] channels[T.Sax SM57].patch: ch 17 'T.Sax SM57' is patched from nothing: input.csv says OFF, so Apply sets its input to OFF  (patch.off)
+```
+
+- **Apply** sets the strip's input to `OFF`, so it hears nothing.
+
+To patch it again, type a socket over `OFF`.
 
 ## The `order` column: band numbers, and skipping a row
 

@@ -30,8 +30,8 @@ BLOCKED: do not apply.
 $ atoo verify --show unpatched-show
 0 error(s), 2 warning(s), 4 note(s)
 
-  [warning] outputs[Main]: nothing is patched from this output to a physical socket -- apply sets it up (its feed, level and processing) but routes it to no output socket  (output.no-patch)
-  [warning] outputs[Matrix 1]: nothing is patched from this output to a physical socket -- apply sets it up (its feed, level and processing) but routes it to no output socket -- right when the Matrix is used inside the desk, for example as the phones or monitor source  (output.no-patch)
+  [warning] outputs[Main]: never reaches an output: the Main is patched to no physical socket, and it feeds no Matrix that reaches one. Apply still sets its level and processing  (output.no-patch)
+  [warning] outputs[Matrix 1]: never reaches an output: the Matrix is patched to no physical socket, and a Matrix feeds nothing else, so what it carries is heard nowhere -- right only when the desk uses it inside, for example as the phones or monitor source. Apply still sets its feed, level and processing  (output.no-patch)
 
   [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
@@ -50,7 +50,7 @@ Apply sets each of them up -- the Matrix's feed from Main 1, both faders and any
 |---|---|---|
 | severity | `[warning]` | errors block; warnings and notes do not |
 | where | `outputs[Matrix 1]` | the object in the plan, addressable by hand |
-| message | `nothing is patched from this output ...` | usually names the fix |
+| message | `never reaches an output: ...` | usually names the fix |
 | code | `(output.no-patch)` | **stable across rewordings** — quote this in a bug report, and the browser UI filters on it. |
 
 **`apply` obeys the verdict without re-deciding it**, and refuses before it opens a socket, so a blocked plan never reaches hardware:
