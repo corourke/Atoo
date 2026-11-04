@@ -16,9 +16,9 @@ Patch shares Apply's four numbered steps: **What will be written**, **Preview**,
    > trumpet, sax and trombone on A 21-23, in the Horns DCA, sent to MON2
 
    Leave a socket out and one is chosen for you, and the review says which.
-3. Press **Preview**, in step 2. Until a change is typed it is locked, and **Locked:** beside it says what it is waiting for.
+3. Press **Preview the change**, under the box (or Ctrl+Enter, ⌘+Enter on a Mac). Until a change is typed it is locked, and **Locked:** beside it says what it is waiting for. In Patch mode, step 2 has no button of its own: it is where the preview shows.
 
-![Apply in Patch mode: the change box in step 1, Preview in step 2](img/patch-screen.png)
+![Apply in Patch mode: the change box in step 1, with its own Preview the change button](img/patch-screen.png)
 
 It reads which strips on the desk are free, and each strip's name and color (a few seconds), sends your words, the plan on the desk and your conventions to the model, and shows progress while it works. It writes nothing.
 
@@ -33,13 +33,15 @@ Under the drawing, **Will be written** lists every change in groups:
 | **Added** | a new channel, going into a free strip |
 | **Returned to free** | a dropped channel's strip, cleared back to unused |
 | **Moved down by the insert** | a running channel that an *insert* ("insert HiHat after Snare and renumber the channels after it") moves to the next strip down: one line for every strip that moves, each rewritten whole on its new number. Undo puts them all back. Without those words, *"add HiHat after Snare"* moves nothing, and a note gives the words that would. See [Inserting a channel](patch.md#inserting-a-channel-and-renumbering-the-strips-after-it) |
-| **Edited: named fields only** | something already running, changed only in the fields you named (*"HPF 100 on the vocals"*), listed old → new |
+| **Edited: named fields only** | something already running, changed only in the fields you named (*"HPF 100 on the vocals"*), one line each, in words, old → new. Where it goes out is said whole, with what goes off named: *output 'Matrix 1': out on LCL 7-8, AES50-A 1-2 -> LCL 7-8 (AES50-A 1-2 off)* |
 | **Modified, not written** | something running that the change did not name field by field, or a fader it did not name; left alone |
 | **Refused** | a change that names something not on the desk, or has no free strip, or patches a socket past the end of the stage box on an AES50 port (`A 17` on an S16: the pre-flight panel names the box and its size) |
 
 A new channel or bus that your conventions give a preset takes it from the preset library the show was built with, so the horns arrive with their presets and a new Horns bus with its compressor; the notes under the review say which library was used and which preset went where. A "sax" with no kind named takes the alto sax preset, and the notes say so. If no library can be found at all, the first line of the notes is a WARNING naming the presets that will be written without their values.
 
-Then a count of what will be written and what will **not** be. If it is not what you meant, change the words and press **Preview** again. Until you do, step 2 says the preview is out of date and the write stays locked. While the preview still matches your words, the button reads **Preview again**.
+Then a count of what will be written and what will **not** be. If it is not what you meant, change the words and press **Preview the change** again. Until you do, step 2 says the preview is out of date and the write stays locked. While the preview still matches your words, the button reads **Preview again**.
+
+Taking something away is written too: *"remove all the AES50-A outputs"* switches those output sockets off on the desk, and a change typed only as a removal never adds a socket the object did not have ([Editing what is already running](patch.md#editing-what-is-already-running)).
 
 ## 3. Write it
 

@@ -79,7 +79,7 @@ A locked button has no color and a dashed edge. **Locked:** beside it says why, 
 - **Writing is switched off in the Demo show.** The Demo is read-only, on a simulated desk: Preview works, writing and Undo never do. Choosing a console address in the bar (**Change…**, then **Address**) leaves the Demo; then open or create a show of your own.
 - **No console address**, or **No show bundle open**: set the one it names in the bar.
 - **Nothing to undo on this desk**: History has no write standing on the console in the bar.
-- **Preview first**, or **Step 1 or the console changed since the preview**: press **Preview** in step 2 again.
+- **Preview first**, or **Step 1 or the console changed since the preview**: press **Preview** in step 2 again (in Patch mode, **Preview the change**, under the change box).
 - **The pre-flight verify has N error(s)**: fix the plan on **Build** and rebuild, or, if you know why, tick **Skip the pre-flight verify** under **Options** in step 1.
 - **Tick Arm first**: the **Arm** checkbox in step 3. It clears itself after each write, and Undo needs it too.
 - **Preview the undo first**, or **Preview the undo again**: Undo is only offered for an undo you have just previewed. Press **Preview undo** on the newest row of History; do it again if a write, an undo, the console or the newest row has changed since.

@@ -40,6 +40,16 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/horns.
 
 Change: Add Trumpet, Sax and Trombone on LCL 21-23
   INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+
+What this change does on the desk:
+  added channel 'Trumpet' -> ch:14
+  added channel 'Sax' -> ch:15
+  added channel 'Trombone' -> ch:16
+  added bus 'Horns' -> bus:8
+
+379 address(es) will be written.
+
+Details:
 48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
 
@@ -67,6 +77,8 @@ Change: Add Trumpet, Sax and Trombone on LCL 21-23
 Pre-flight verify of the changed plan against the WING Compact the plan is for (reviewed offline: no desk was asked): no findings.
   ...
 ```
+
+The review leads with **What this change does on the desk**: one line for each object the change adds, drops, moves or edits, in words, each object once. An output's or a bus's sockets are said whole, before and after, with what goes off named (*"output 'Matrix 1': out on LCL 7-8, AES50-A 1-2 -> LCL 7-8 (AES50-A 1-2 off)"*). Then how many addresses will be written, and, when the change moves audio on something already running, one `!!` line that says so. Everything else follows under **Details:**: what was read off the desk, each object's verdict, the fields old -> new, the notes, the addresses, and the pre-flight.
 
 The pre-flight reads the show's `input.csv`, so the check that every input became a channel, that phantom power is safe for the microphones and that the list's stated sockets and presets match runs on the changed plan, and the INFO line says what it was checked against. A change is not a rebuild, so it is held to the list differently from a full build: the channels it adds (and any that an earlier change added) are not on the list and are not called invented, a row the plan has no channel for is not called dropped, and a socket the change states for a channel stands over the one the list states. A show with no `input.csv` still gets the `reconcile.not-checked` warning.
 
@@ -223,6 +235,23 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/clear-
 
 Change: Clear 5 and 6, add stereo IEM
   INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+
+What this change does on the desk:
+  returned to free bus 'Drums' -> bus:5
+  returned to free bus 'Vocals' -> bus:6
+  added bus 'IEM' -> bus:5
+  channel 'Kick': bus_sends: Drums removed
+  channel 'Snare': bus_sends: Drums removed
+  channel 'Rack Tom': bus_sends: Drums removed
+  channel 'Floor Tom': bus_sends: Drums removed
+  channel 'OH': bus_sends: Drums removed
+  channel 'Lead Vox': bus_sends: Vocals removed
+  channel 'BV Gtr': bus_sends: Vocals removed
+  channel 'BV Keys': bus_sends: Vocals removed
+
+342 address(es) will be written.
+
+Details:
 48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
   ...
@@ -240,7 +269,7 @@ The review's lines for the buses (the summary's first lines, then the INFOs that
   INFO bus 'IEM' is new, put on bus 5 as the change said -- the bus this change returns to free
 ```
 
-Below what is shown, eight `EDITED` lines name the channels whose send into bus 5 or 6 is taken away (`bus_sends: Drums removed`). Nothing here asks the model; whether a given model words *"clear bus 5"* as a drop is the model's part, and the review above is what it is checked against before anything is written.
+The summary at the top names the eight channels whose send into bus 5 or 6 is taken away (`bus_sends: Drums removed`). Nothing here asks the model; whether a given model words *"clear bus 5"* as a drop is the model's part, and the review above is what it is checked against before anything is written.
 
 ## Clearing a DCA, a mute group or an output
 
@@ -263,6 +292,16 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/clear-
 
 Change: Drop FX groups, add Horns DCA
   INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+
+What this change does on the desk:
+  returned to free dca 'FX' -> dca:5
+  returned to free mute group 'FX' -> mgrp:3
+  added dca 'Horns' -> dca:5
+  bus 'Vox Verb': dca FX -> none; mute_group FX -> none
+
+10 address(es) will be written.
+
+Details:
 48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
 
@@ -272,12 +311,12 @@ Change: Drop FX groups, add Horns DCA
   ADDED            dca 'Horns' -> dca:5: new dca
   EDITED           bus 'Vox Verb': only the field(s) the change names are written (dca, mute_group); nothing else on this bus is touched, and the rest of it is in the untouched proof
   fields changed on objects already on the desk (only these; nothing else on them is written):
-    bus 'Vox Verb': dca ["FX"] -> []
-    bus 'Vox Verb': mute_group ["FX"] -> []
+    bus 'Vox Verb': dca FX -> none
+    bus 'Vox Verb': mute_group FX -> none
   ...
 ```
 
-Below what is shown, the `EDITED` line names the Vox Verb bus, the one member of both FX groups, so it is the one strip edited: its tags go to none.
+The summary's last line, and the `EDITED` line under Details, name the Vox Verb bus, the one member of both FX groups, so it is the one strip edited: its tags go to none.
 
 ## Inserting a channel, and renumbering the strips after it
 
@@ -345,17 +384,21 @@ A change may also change something **already on the desk** — *"move the sax to
   ```
   REFUSED          channel 'Snare' -> ch:2: the change edits it, and 'Royer R-121' is a passive ribbon microphone and the change leaves it with phantom power on -- 48V destroys a ribbon element and switching it off again does not undo the damage; set source.phantom false in the same change -- refused rather than half-written
   ```
-- **The review shows old -> new for every field**, as an `EDITED` line, in the "fields changed" block of the summary, and at INFO: `ch:9: the change edits bus_sends: MON3 level -144 -> -10.0`.
+- **The review says each edited object once, in words**, at the top (`channel 'T.Sax SM57': bus_sends: MON3 level -144 -> -10.0`), and under Details each field old -> new, as an `EDITED` line and in the "fields changed" block.
 - **A fader moves only when the change says "fader"** (and a mute only when it says "mute" — "mute group" is a membership, not the mute). A fader the model set anyway is shown as `MODIFIED`, not written.
-- **A repatch of a running strip moves audio the moment it is written**, so it is said first, on its own (from Atoo's test desk and a stubbed model):
+- **A repatch of a running strip moves audio the moment it is written**, so it is said at the top, once, under the line that says what changes (from Atoo's test desk and a stubbed model):
 
   ```
-  !! 1 PATCH CHANGE(S) ON SOMETHING ALREADY RUNNING -- these move audio the moment they are written:
-  !!   MOVES AUDIO LIVE -- channel 'BassDI' on ch:7: patch A 6 -> A 30
+  What this change does on the desk:
+    channel 'BassDI': patch A 6 -> A 30
+
+  5 address(es) will be written.
+  !! It moves audio on channel 'BassDI', already running, the moment it is written: check what is plugged in where before you arm it.
   ```
 
   The new socket's own name, color, phantom and gain are written with it — unless another strip on the desk uses that socket, when they are that strip's and are left alone, with a note. The old socket keeps its name.
-- **Taking something away is written as off**: a send the change removes is switched off, a high-pass it removes is switched off, and a strip that leaves every DCA and mute group has those tags cleared (other tags kept).
+- **Taking something away is written as off**: a send the change removes is switched off, a high-pass it removes is switched off, and a strip that leaves every DCA and mute group has those tags cleared (other tags kept). An output socket taken off a bus, a Main or a Matrix (*"remove all the AES50-A outputs"*) is switched off on the desk, its source set to OFF (never back to a local output's factory feed from the Main); the object's other sockets stay as they are, and an object left with none stays, with no output.
+- **A change that only removes adds nothing.** Typed as a removal (*"remove"*, *"delete"*, *"clear"*, *"unpatch"*, *"disconnect"*, *"take off"*), with no word that puts something somewhere, it keeps no socket the object did not already have: one the model added is left off, and an INFO says which. An object that went out on two places keeps the other one: that is not a new socket.
 - **An edit that would rewrite another object is refused.** Patching a running strip onto a socket another running strip uses turns that other strip's source link off too — and that strip is not named, so the change is refused.
 - **Undo puts every edited field back**: the journal records each address's value before the write, as it does for every write.
 
@@ -372,6 +415,13 @@ atoo patch --show starter/demo-show --change-set docs/user/demo/demo-show/snare-
 
 Change: Snare Verb on the Vox Verb bus
   INFO preset library: starter/presets -- the library the plan on the desk was built with (its strips' preset values record it)
+
+What this change does on the desk:
+  bus 'Vox Verb': preset Vox Verb -> Snare Verb
+
+12 address(es) will be written.
+
+Details:
 48 strip(s) read over 206 address(es): 14 ours, 0 theirs, 34 free, 0 unknown
   this read asked each strip for its name, its link-to-source flag and its input patch, and asked every patched socket for ITS name -- which on a WING is where a name somebody typed actually lives. It did not ask what anything is routed to, so a strip that is routed somewhere but neither named nor patched reads as free here. `atoo audit` asks the rest.
 
@@ -385,7 +435,6 @@ Change: Snare Verb on the Vox Verb bus
   INFO bus 'Vox Verb': FX8 was judged free from the plan on the desk alone -- the occupancy read covers strips, not FX engines
   INFO bus 'Vox Verb': preset "Vox Verb" -> "Snare Verb" -- no console address carries it, so nothing is written to the desk for it; it is kept (in the plan the journal entry holds) only when the same change writes something else
   INFO bus 'Vox Verb': FX5 is no longer inserted on it; it keeps the old preset's effect and its values, inserted nowhere, as the desk has it
-  INFO bus 'Vox Verb': the change edits preset "Vox Verb" -> "Snare Verb"; preset_values {"preset": "Vox Verb", "file": "FX Vox Verb.bus", "library": "starter/presets", "sha256": "2e283e8906b0bd3a7723e450f4... -> {"preset": "Snare Verb", "file": "FX Snare Verb.bus", "library": "starter/presets", "sha256": "bf3c8a07f670470940c6ac...
 
 12 address(es) will be written; 1613 belonging to objects this amend does not own will NOT be.
   12 of them CHANGE A RUNNING OBJECT -- only the fields the change names:
