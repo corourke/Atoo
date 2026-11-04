@@ -2239,7 +2239,7 @@
       "path": "examples/touringband/input.csv",
       "absolute_path": "/home/user/Dev/atoo/examples/touringband/input.csv",
       "bundle_relative_path": "input.csv",
-      "sha256": "39146f0fff6658973a2464bf0ebf5b5d49a8f379a53d62c2dee4f015c66cb466"
+      "sha256": "b7c738fedf1deb7632e21122f31e6385b65004b93a156b59c3f55c1846883a7f"
     },
     "verify_at_generation": {
       "skipped": false,

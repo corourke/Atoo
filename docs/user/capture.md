@@ -22,7 +22,7 @@ A show folder in your Atoo folder (`~/Documents/Atoo/`, or `--dir`), named after
 
 | File | What's in it |
 |---|---|
-| `input.csv` | One row per input in use, in the [input list](input-lists.md)'s format, with three more columns: `channel`, `dca` and `mute_group`. A stereo source is two rows on one channel |
+| `input.csv` | One row per input in use, in the [input list](input-lists.md#the-columns)'s format and column order, less `order`, `preset` and `stagebox`, which a desk does not state. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name` (as the desk spells it, even when two of them share it; Apply writes it back as it was), its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
 | `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`. See [Every output socket](#every-output-socket-outputscsv) |
 | `user.csv` | Only when the desk uses one: one row per USR slot a channel or an output reads, saying what the slot takes. See [User signals and patches](#user-signals-and-patches-usercsv) |

@@ -1,4 +1,4 @@
-socket,name,category,type,model,phantom,notes
+patch,name,category,type,model,phantom,notes
 AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,
 AES50-A 2,Snare,drums,Mic,,FALSE,
 AES50-A 3,Tom1,drums,Mic,,FALSE,

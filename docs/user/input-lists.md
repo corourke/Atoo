@@ -15,7 +15,7 @@ head -6 docs/user/demo/touringband/input.csv
 ```
 
 ```
-socket,name,category,type,model,phantom,notes
+patch,name,category,type,model,phantom,notes
 AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,
 AES50-A 2,Snare,drums,Mic,,FALSE,
 AES50-A 3,Tom1,drums,Mic,,FALSE,
@@ -23,20 +23,25 @@ AES50-A 4,HH,drums,Mic,,FALSE,
 AES50-A 5,FLOOR,drums,Mic,,FALSE,
 ```
 
+Every column an input list may have, in the order Atoo writes them. Only the required ones must be there; a list has any of the others it uses.
+
 | Column | Required | What it is |
 |---|---|---|
 | `order` | no | The **band's own** number for this input. It does not set the desk channel. `-` **skips** the row. See [The `order` column](#the-order-column-band-numbers-and-skipping-a-row). |
-| `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`, or `OFF` for none. A column headed `socket`, like the one above, is read the same. Blank is legitimate. See [The `patch` column](#the-patch-column). |
+| `channel` | no | The desk channel: `9`, or `Aux 3`. A filled cell **wins** over the conventions and instructions, as `preset` does: a build places the channel there. See [below](#the-channel-dca-and-mute_group-columns). |
+| `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`, or `OFF` for none. Blank is legitimate. See [The `patch` column](#the-patch-column). |
 | `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". |
 | `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
 | `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary, there for your conventions to match against, with one exception: a channel of type `Line` on a head amp does not keep a mic's gain (below the table). |
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
 | `phantom` | **yes** | `TRUE` / `FALSE`. This is source data, not a policy — it drives the preamp directly. A stereo pair ("OH L"/"OH R") has [one 48V value for both rows](#a-stereo-pair-has-one-48v-value): the desk switches a pair's two sockets together, so it is on if either row says `TRUE`. A stereo source on a single row gets its value on both sockets, with a note saying so. |
 | `preset` | no | A preset from your [preset library](presets.md) — "Kick In". It **wins** over the conventions and instructions. Blank leaves it to the conventions. See [The `preset` column](#the-preset-column). |
-| `channel`, `dca`, `mute_group` | no | The desk channel (`9`, `Aux 3`), and the DCAs and mute groups the input is in (`BAND; ALL`). A filled cell **wins** over the conventions and instructions, as `preset` does: a build places the channel there and puts it in those DCAs and mute groups. [`atoo capture`](capture.md) writes them from a desk, and a Save in Build's step 04 carries them into the plan. See [below](#the-channel-dca-and-mute_group-columns). |
+| `dca` | no | The DCAs the input is in, by name, `;`-separated (`BAND; ALL`). A filled cell wins, as `channel` does. |
+| `mute_group` | no | The mute groups the input is in, the same way. |
 | `notes` | no | A place for the person holding the sheet. The build's model reads it like the rest of the row, so a note can ask for the row to be [left out](#one-row-per-physical-input); nothing else uses it. |
+| `stagebox` | no | Your own label for the stage-box input, as it is written on the box: `A 1`, `B 10`, `Pink 12`. Atoo carries it as written and never reads it as a socket: it has no effect on a build, `verify` or `apply`. The socket is `patch`. |
 
-**Column order does not matter**: every column is read by its header. Atoo writes `order` first when there is one, then `patch`, because it is what you check against the stage box, and `notes` last.
+**Column order does not matter**: every column is read by its header, so a list in any order loads the same, and a Save keeps a file's own order. A file Atoo writes ([`atoo capture`](capture.md), or a new one) uses the order above. [`atoo capture`](capture.md) leaves out `order`, `preset` and `stagebox`, which a desk does not state. A column a Save adds goes in its place in that order: `patch` before `name`, `preset` after `phantom`.
 
 ### A `Line` row on a head amp, when your conventions say no gain
 
@@ -154,12 +159,12 @@ A channel the desk does not have (`41`, `Aux 9`) is refused, naming the row.
 
 ## Columns you may not have
 
-A file carrying either of these is **refused, not ignored** — the file would otherwise load, the column would have no effect, and the plan would quietly contradict the sheet.
+A file carrying any of these is **refused, not ignored** — the file would otherwise load, the column would have no effect, and the plan would quietly contradict the sheet.
 
 **`ch` or `channel_number`.** The desk channel goes in the `channel` column, above.
 
 ```bash
-sed '1s/^socket,/ch,socket,/; 2,$s/^/1,/' docs/user/demo/touringband/input.csv > /tmp/with-ch.csv
+sed '1s/^patch,/ch,patch,/; 2,$s/^/1,/' docs/user/demo/touringband/input.csv > /tmp/with-ch.csv
 atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
 ```
 
@@ -167,11 +172,22 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-ch.csv
 couldn't read input list '/tmp/with-ch.csv': input list has column(s) it must not have: 'ch' -- the desk channel goes in the 'channel' column (1-40, or 'Aux 1'-'Aux 8')
 ```
 
+**`socket`.** The patch column was called `socket` until 2026-09-28. Rename the header to `patch`:
+
+```bash
+sed '1s/^patch,/socket,/' docs/user/demo/touringband/input.csv > /tmp/with-socket.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-socket.csv
+```
+
+```
+couldn't read input list '/tmp/with-socket.csv': input list has column(s) it must not have: 'socket' -- the column is called 'patch' now: rename the header 'patch'
+```
+
 **No `stereo` column.** Whether "Keys L" and "Keys R" become one strip is a decision, not a property of an input — and it is a decision your conventions already make, usually with an exception attached ("overheads stay mono, they get separate processing"). Stating it per row puts the answer in the one place that cannot see the rule.
 
 ## The `patch` column
 
-**A column headed `socket` is read as `patch`**, so a list headed either way loads the same. A new list Atoo writes is headed `patch`; saving an existing file keeps whichever header it already has.
+The column is headed `patch`. A list headed `socket`, its name until 2026-09-28, is [refused](#columns-you-may-not-have) until the header is renamed.
 
 A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognizes:
 
@@ -271,7 +287,7 @@ grep TRAX /tmp/festival.csv
 ```
 
 ```
-order,socket,name,category,type,model,phantom,notes
+order,patch,name,category,type,model,phantom,notes
 1,AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,
 2,AES50-A 2,Snare,drums,Mic,,FALSE,
 -,AES50-A 8,TRAX,tracks,Line,,FALSE,
@@ -333,7 +349,7 @@ atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/with-preset
 ```
 
 ```
-socket,name,category,type,model,phantom,notes,preset
+patch,name,category,type,model,phantom,notes,preset
 AES50-A 1,Kick,drums,Mic,Beta91A,TRUE,,kick in
 0 error(s), 1 warning(s), 15 note(s)
 

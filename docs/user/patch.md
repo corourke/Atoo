@@ -485,7 +485,7 @@ Promote change 1: Add Conga Hi and Conga Lo on A 21-22 into the show:
     | congas on A 21 and 22, in the Drums DCA and the Drums bus
 
   input.csv gains 2 row(s):
-    socket,name,category,type,model,phantom,notes
+    patch,name,category,type,model,phantom,notes
     AES50-A 21,Conga Hi,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
     AES50-A 22,Conga Lo,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
 
