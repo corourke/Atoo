@@ -76,6 +76,8 @@ The transcripts on this page run from the top of an Atoo checkout, on `docs/user
 
 **Every command that reads a show's files takes `--show`:** `build`, `verify`, `compare`, `apply`, `patch`, `amend`, `undo`, `audit`, `watch`, `ui` and `lessons`. (`ping` needs only an address, and `presets` reads your preset library, not a show.)
 
+**A show's name is enough, from any folder.** `--show touringband`, where there is no `touringband` folder, opens the one in your [working folder](configuration.md) (`~/Documents/Atoo/touringband` after `atoo init`) and says so on one line before anything else: *INFO --show touringband: not a folder here, so the one in the working folder (~/Documents/Atoo): …*. A `touringband` folder where you are wins, and a path (anything with a `/` in it) is never looked up. `lessons` takes the folder as given.
+
 `compare` takes the plan from the bundle and the snapshot from you:
 
 ```bash

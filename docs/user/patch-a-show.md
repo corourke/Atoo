@@ -26,20 +26,15 @@ It reads which strips on the desk are free, and each strip's name and color (a f
 
 Step 2 draws the desk as its scribble strips: every channel, aux, bus, main, matrix, DCA and mute group, in its color, with its name and number. Strips in use are drawn solid, free strips dashed, the strips this change adds have a green outline, the ones it edits a blue one, and the ones an insert moves a dashed blue one. A strip that never answered the read is hatched: it is treated as in use, never as free.
 
-Under the drawing, **Will be written** lists every change in groups:
+**Click a tile to see its Detail** in the side bar, as on a full preview ([Apply a plan](apply-to-desk.md)): what this change writes on that strip, now and after. A socket the change writes for a strip is listed under the strip, headed by the socket, so clicking MON1 after *"remove all the StageConnect outputs"* shows **SC 1, source group: BUS → OFF**. A strip the change does not touch says so.
 
-| Group | Means |
-|---|---|
-| **Added** | a new channel, going into a free strip |
-| **Returned to free** | a dropped channel's strip, cleared back to unused |
-| **Moved down by the insert** | a running channel that an *insert* ("insert HiHat after Snare and renumber the channels after it") moves to the next strip down: one line for every strip that moves, each rewritten whole on its new number. Undo puts them all back. Without those words, *"add HiHat after Snare"* moves nothing, and a note gives the words that would. See [Inserting a channel](patch.md#inserting-a-channel-and-renumbering-the-strips-after-it) |
-| **Edited: named fields only** | something already running, changed only in the fields you named (*"HPF 100 on the vocals"*), one line each, in words, old → new. Where it goes out is said whole, with what goes off named: *output 'Matrix 1': out on LCL 7-8, AES50-A 1-2 -> LCL 7-8 (AES50-A 1-2 off)* |
-| **Modified, not written** | something running that the change did not name field by field, or a fader it did not name; left alone |
-| **Refused** | a change that names something not on the desk, or has no free strip, or patches a socket past the end of the stage box on an AES50 port (`A 17` on an S16: the pre-flight panel names the box and its size) |
+Under the drawing, **Changes, old → new** says what the change does: one line for each object it adds, drops, moves or edits, in words. Where something goes out is said whole, with what goes off named: *output 'Matrix 1': out on LCL 7-8, AES50-A 1-2 -> LCL 7-8 (AES50-A 1-2 off)*. A change that cannot be written is listed first, headed **Refused** with why: it names something not on the desk, has no free strip, or patches a socket past the end of the stage box on an AES50 port (`A 17` on an S16: the pre-flight panel names the box and its size). Then the count of addresses that will be written. That is all step 2 shows; what the command printed in full (each strip's verdict, what is left alone, the untouched-strip proof) is folded under **Patch preview** at its foot.
 
-A new channel or bus that your conventions give a preset takes it from the preset library the show was built with, so the horns arrive with their presets and a new Horns bus with its compressor; the notes under the review say which library was used and which preset went where. A "sax" with no kind named takes the alto sax preset, and the notes say so. If no library can be found at all, the first line of the notes is a WARNING naming the presets that will be written without their values.
+The notes are in the **Findings** panel, each once: what was chosen where your words left it open (INFO), what to look at (WARNING), and what the pre-flight finds in the plan as the change leaves it, such as a bus that no longer goes anywhere. While the preview stands, the panel shows that state, and its subtitle says so: *What needs a look, first: the plan with the change '…' (Patch preview)*. The plan's own findings are set aside and come back when you choose **Full build**, leave Apply, or the change is refused or written.
 
-Then a count of what will be written and what will **not** be. If it is not what you meant, change the words and press **Preview the change** again. Until you do, step 2 says the preview is out of date and the write stays locked. While the preview still matches your words, the button reads **Preview again**.
+A new channel or bus that your conventions give a preset takes it from the preset library the show was built with, so the horns arrive with their presets and a new Horns bus with its compressor; a note in Findings says which library was used and which preset went where. A "sax" with no kind named takes the alto sax preset, and a note says so. If no library can be found at all, a WARNING names the presets that will be written without their values.
+
+If it is not what you meant, change the words and press **Preview the change** again. Until you do, step 2 says the preview is out of date and the write stays locked. While the preview still matches your words, the button reads **Preview again**.
 
 Taking something away is written too: *"remove all the AES50-A outputs"* switches those output sockets off on the desk, and a change typed only as a removal never adds a socket the object did not have ([Editing what is already running](patch.md#editing-what-is-already-running)).
 

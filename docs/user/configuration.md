@@ -172,7 +172,7 @@ Every section is optional; leave out what you do not use. `~` means your home di
 | `[presets]` | a folder of `.chn` [channel presets](presets.md) | `build`, `verify`, `apply`, `patch` (when the plan on the desk records no library it can find), `presets`, and `atoo ui` |
 | `[watch_conditions]` | a house watch-conditions file | `watch` and `atoo ui` |
 | `[console]` | the desk you normally use: address, and `port`/`timeout` if not the defaults | `ping`, `apply`, `patch`, `amend`, `undo`, `audit`, `watch`, and `atoo ui` (its bundle bar; `atoo ui --console ADDRESS` points it at another desk for that run) |
-| `[workspace]` | your working folder: where your shows live | `atoo ui` with no `--show`: its file browser, **Open…** and **New show…** start there |
+| `[workspace]` | your working folder: where your shows live | `atoo ui` with no `--show`: its file browser, **Open…** and **New show…** start there. And `--show NAME` on any command, when there is no folder `NAME` where you are ([show bundles](show-bundles.md)) |
 
 **A house conventions file is the one to set first.** It is house style, the same for every show, which is why it lives outside any show's own folder. With `[conventions] default` set, you can drop `--conventions` from `build`. A show's own `instructions.md` still layers on top of it ([show bundles](show-bundles.md)).
 
