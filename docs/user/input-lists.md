@@ -323,7 +323,7 @@ couldn't read input list '/tmp/bad-order.csv': row 21: column 'order' must be th
 
 A skipped row is still checked like any other — switching it back on should never turn up an error nobody saw — with one exception: it may share its name with a row that is on, so two bands' `Kick` rows can sit in one list with one of them skipped. A list with **every** row skipped has nothing to build, and is refused.
 
-In the browser, Build step 02's **Order** cell has a **Skip** box: tick it and the cell reads `-` and the row dims; untick it and the number comes back. On a read-only show a skipped row's Order cell reads **SKIP**.
+In the browser, type `-` in Build step 02's **Order** cell and the row dims; clear it, or type a number, and the row is built again. On a read-only show a skipped row's Order cell reads **SKIP**.
 
 ## The `preset` column
 

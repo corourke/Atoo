@@ -38,6 +38,10 @@ Each row is one thing plugged in, with the [input list's columns](input-lists.md
 
 The tile now reads **LOADED** and counts the rows: *20 input rows*. [Writing an input list](input-lists.md) covers the columns and stereo pairs.
 
+A `-` in a row's **Order** cell leaves it out of the next build: the row stays in the file, dimmed ([more](input-lists.md#the-order-column-band-numbers-and-skipping-a-row)).
+
+**Print**, beside **View source**, opens the list as a page to print or save as a PDF for the stage: the show's name and the date at the top, then one row per input with **Input** (the Order number), **Name**, **Stagebox**, **Type**, **Model**, **48V**, **Patch** and **Notes**. It is black on white in either theme, fits a Letter or an A4 page, and repeats the header row on every page. A skipped row is left out. It prints `input.csv` as saved, so the button is locked while there are unsaved changes: press **Save** first.
+
 ## 4. Tonight's exceptions: 03 Instructions (optional)
 
 Anything true of this show only: *"MON5 and MON6 are stereo in-ear mixes"*, *"no reverb on the speech mics"*. Press **New file** on the tile (or **Create instructions.md** in the step itself), type, and press **Save**. Where these and your house rules disagree, the instructions win. Without a file, the house rules apply in full. The tile counts the layers the build reads: *2 layers* is the house file, then these instructions on top.

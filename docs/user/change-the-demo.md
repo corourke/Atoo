@@ -62,7 +62,7 @@ A build is a call to an AI model, so this step needs one set up before `atoo ui`
 The input list already has the guest's microphone, switched off: its row is skipped, so the build leaves it out.
 
 1. Click the **02 Input list** tile. It reads **16 input rows · 1 skipped**.
-2. In the **Guest Vox** row, untick **Skip**, then press **Save**.
+2. In the **Guest Vox** row, clear the `-` in the **Order** cell, then press **Save**.
 
 The tile now reads **17 input rows**, and **04 Plan** reads **STALE**: the plan no longer matches its files.
 
