@@ -194,7 +194,7 @@ A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognizes
 | Written | What it is |
 |---|---|
 | `LCL` | the console's own local XLR inputs |
-| `AES50-A` `AES50-B` `AES50-C` | the AES50 stage-box ports — **spelled out**; a bare `A 1` is refused |
+| `AES50-A` `AES50-B` `AES50-C` | the AES50 stage-box ports. Written short, as on a stage box, they are read the same: `A1`, `A 20`, `B31`, `C 7`, `SB A 3`, `Stagebox A 3`, `Stage box B 12` ([below](#a-stage-box-socket-written-short)) |
 | `SC` | StageConnect |
 | `USB` | the USB interface |
 | `CRD` | the expansion **card** bay |
@@ -205,6 +205,27 @@ A socket, written `"<group> <number>"`, e.g. `LCL 3`. The groups Atoo recognizes
 | `PLAY` | the player |
 
 The long forms parse too — `Local 3`, `Card 1`, `Module 2`, `User 25`, `StageConnect 4` — and case and hyphens are not significant, so `aes50-a 12` and `AES50-A 12` are the same socket.
+
+### A stage-box socket written short
+
+A, B and C are the desk's three AES50 ports, so a patch cell of `A20`, `A 20`, `SB A 20` or `Stagebox A 20` is read as `AES50-A 20`, and `B31` as `AES50-B 31`. It is checked against the desk like any socket, so `B 49` on a desk with 48 is refused. A file keeps what you wrote; typed into Build's **Patch** cell, `SB A 20` is written out as `AES50-A 20`. The build reads the socket and says which rows it read this way, once, at INFO:
+
+```
+INFO 2 patch cell(s) read as AES50 stage-box sockets (A, B and C are the desk's AES50 ports): Kick 'SB A 1' as AES50-A 1; TRAX 'A8' as AES50-A 8
+```
+
+`verify` reads them the same way. Here the demo's Kick and TRAX rows are written short, and the plan still agrees with the list:
+
+```bash
+sed 's/^AES50-A 8,TRAX/A8,TRAX/; s/^AES50-A 1,Kick/SB A 1,Kick/' docs/user/demo/touringband/input.csv > /tmp/short.csv
+atoo verify --plan docs/user/demo/touringband/plan.json --input /tmp/short.csv
+```
+
+```
+0 error(s), 0 warning(s), 15 note(s)
+```
+
+(The first line; the notes are the demo's usual ones.) Everything Atoo writes spells the port out, `AES50-A 1`, and so does a watch condition's `patch`.
 
 Two spellings that look reasonable and are refused on purpose:
 
