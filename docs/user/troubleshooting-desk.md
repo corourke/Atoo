@@ -125,7 +125,7 @@ A bundle's `journals/` keeps only the newest **5** entries, so undo reaches back
 
 To go further back, put the desk where you want it another way: a full `atoo apply` of the plan you want replaces everything Atoo built, or `atoo patch` changes one thing. If a run must stay undoable for longer, copy its journal aside before five more writes go on the stack — `atoo undo <that copy>` still reads it, under the usual guards. See [How far back undo reaches](journals.md#how-far-back-undo-reaches-the-newest-5).
 
-The same limit gives two related refusals: `patch --promote` on a change whose journal was pruned (it quotes the change's text, to add to `instructions.md` by hand), and the redo of an undo whose run was pruned.
+The same limit gives two related refusals: `patch --promote` on a change whose journal was pruned (it quotes the change's text, to put into the sheets by hand), and the redo of an undo whose run was pruned.
 
 ## See also
 

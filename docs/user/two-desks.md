@@ -140,7 +140,7 @@ Please send that token in — `atoo ping` shows it too, and the journal keeps it
 
 ## Amending both desks
 
-`plan.json` is the last build, and nothing but a build writes it — so it says nothing about which changes are on which desk. `patch --show` and `amend --show` compare against **the plan the connected desk's own newest write left on it**: every apply, change and amend entry keeps a copy (`desk_plan` — the applied plan for an apply, the effective plan for a change or an amend), found by the desk's serial, so it is found after the desk has changed address too. Amend the primary, then the backup from the same rebuild, and the backup gets the channels (fake desks in the test harness; the occupancy lines are shortened):
+`plan.json` is the show, and no write to a desk changes it — so it says nothing about which changes are on which desk. `patch --show` and `amend --show` compare against **the plan the connected desk's own newest write left on it**: every apply, change and amend entry keeps a copy (`desk_plan` — the applied plan for an apply, the effective plan for a change or an amend), found by the desk's serial, so it is found after the desk has changed address too. Amend the primary, then the backup from the same rebuild, and the backup gets the channels (fake desks in the test harness; the occupancy lines are shortened):
 
 ```bash
 atoo amend --show touringband --amended-plan touringband/rebuilt.plan.json --console 198.51.100.9 --confirm
@@ -149,19 +149,19 @@ atoo amend --show touringband --amended-plan touringband/rebuilt.plan.json --con
 
 ```
 Console: WING,198.51.100.7,FOH-B,wing-compact,S2207B4,3.1-0-g9f314617:release
-  INFO applied plan: the one this desk's newest write left on it -- journals/20260928T211010.269845Z-apply-S2207B4.json (apply); plan.json says the same.
-48 strip(s) read over 212 address(es): 19 ours, 1 theirs, 20 free, 8 unknown
+  INFO applied plan: the one this desk's newest write left on it -- journals/20261105T003707.642838Z-apply-S2207B4.json (apply); plan.json says the same.
+48 strip(s) read over 211 address(es): 19 ours, 0 theirs, 21 free, 8 unknown
   ...
 
 3 added, 19 unchanged
-  ADDED            channel 'Trumpet' -> ch:21 (the rebuild asked for ch:20): new channel, placed on a free strip
-  ADDED            channel 'Trombone' -> ch:22 (the rebuild asked for ch:21): new channel, placed on a free strip
-  ADDED            channel 'T.Sax' -> ch:23 (the rebuild asked for ch:22): new channel, placed on a free strip
+  ADDED            channel 'Trumpet' -> ch:20: new channel, placed on a free strip
+  ADDED            channel 'Trombone' -> ch:21: new channel, placed on a free strip
+  ADDED            channel 'T.Sax' -> ch:22: new channel, placed on a free strip
   ...
-APPLIED: 66 address(es) evaluated, 39 written, 0 mismatch(es).
-plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
-Untouched-strip proof: 867 unrelated address(es) read before and after, 0 changed.
-Journal: touringband/journals/20260928T211010.406626Z-amend-S2207B4.json (scope: ch:21, ch:22, ch:23)
+APPLIED: 66 address(es) evaluated, 27 written, 0 mismatch(es).
+plan.json is unchanged: an amend writes the desk, not the show (build the show again to make the rebuild its plan.json). What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
+Untouched-strip proof: 1053 unrelated address(es) read before and after, 0 changed.
+Journal: touringband/journals/20261105T003708.047928Z-amend-S2207B4.json (scope: ch:20, ch:21, ch:22)
 ```
 
 Before per-desk plans the second run said *Nothing to add and nothing to return to free* and the backup never got the horns.

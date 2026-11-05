@@ -38,19 +38,21 @@ If it is not what you meant, change the words and press **Preview the change** a
 
 Taking something away is written too: *"remove all the AES50-A outputs"* switches those output sockets off on the desk, and a change typed only as a removal never adds a socket the object did not have ([Editing what is already running](patch.md#editing-what-is-already-running)).
 
+**Keep this in the show**, under the count, puts the change into the show's files without writing anything to the desk: `plan.json` and each sheet it touches (`input.csv`, `busses.csv`, `outputs.csv`, `user.csv`). It opens a preview of what each file gains or loses, and writes only when you press **Write it into plan.json and the sheets**. The next full Apply then writes the change with the rest of the show. See [Keep it in the show](#4-keep-it-in-the-show-or-take-it-off) below.
+
 ## 3. Write it
 
 1. In step 3, tick **Arm**.
 2. Press **Write changes to console**.
 
-What is written is exactly what you reviewed: the model is not asked again. Afterwards Atoo reads back every written value, and reads the strips it did not touch to prove they did not move. Step 3 says how many were written and confirmed, and names anything that did not land.
+What is written is exactly what you reviewed: the model is not asked again. Afterwards Atoo reads back every written value, and reads the strips it did not touch to prove they did not move. Step 3 says how many were written and confirmed, and names anything that did not land. Under that, **Keep this in the show** is offered again.
 
-## 4. Keep it, or take it off
+## 4. Keep it in the show, or take it off
 
 The change appears at the top of **History**, step 4, highlighted, under its short name and the words you typed.
 
 - **Preview undo** on its row, then **Undo newest write** in step 3 (armed by the same **Arm**), takes it off the desk again.
-- **Keep this in the show** writes it into the show's `input.csv` and `instructions.md`, so the next build includes it. Until you press it, the change is on the desk only and the show's files do not change.
+- **Keep this in the show** (here, in step 3 after the write, or in step 2 before it) puts the change into the show's files: `plan.json` and each sheet it touches. An input it added gets a row in `input.csv`, one it dropped loses its row, and a socket it took off loses its row in `outputs.csv`. A field no sheet holds, such as a high-pass, is kept in `plan.json` and said at INFO. `instructions.md` is never written. It previews what each file gains or loses, and writes only on **Write it into plan.json and the sheets**. Then a full Apply writes the change rather than replacing it, and a rebuild keeps it. Until you press it, the change is on the desk only and the show's files do not change. See [Keeping a change in the show](patch.md) for what each file gets.
 
 ## When the change cannot be compiled
 

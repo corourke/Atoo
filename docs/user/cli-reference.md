@@ -233,7 +233,7 @@ plan is verified against the desk's model (errors refuse, warnings do not;
 checked against the desk's panel. A socket the desk does not have (LCL 20 on a
 full-size WING) is REFUSED, --skip-verify or not.
 
-plan.json is NOT replaced: only a build writes it.
+plan.json is NOT replaced: an amend writes the desk, not the show.
 What is on the desk is recorded in that desk's journal entry, which the next
 amend or patch of the desk compares against -- so amending again from the same
 rebuild still finds nothing to add. `atoo undo` takes the amend off again.
@@ -776,10 +776,10 @@ unless a gain is stated for it, said at INFO. A socket past the end of a stage
 box on an AES50 port (A 17 on an S16) does not exist: the pre-flight REFUSES it,
 naming the box and its size.
 
-plan.json is never touched: only a build writes it, and a full apply warns
-before it replaces changes that are not in it. To keep a change for good,
---promote it: its text goes into instructions.md, the inputs it added into
-input.csv, and the next rebuild owns them.
+Writing a change does not touch plan.json, and a full apply warns before it
+replaces changes that are not in it. To keep a change for good, --promote it:
+plan.json and the sheets it touches come to say what it did, so the next apply
+writes it and a rebuild keeps it. instructions.md is never written.
 
 Each run prints how long it took: the desk read and the model call. A preview
 compiles the change; a --confirm run compiles it again unless given
@@ -802,7 +802,7 @@ holds. A name the desk does not hold either is REFUSED.
 | `--change-set` `FILE` | Use this compiled change set instead of calling the model -- one --save-change-set wrote, or a --review-json file. How a --confirm run writes exactly the change set a preview showed, and how a change is reviewed with no model at all. |
 | `--intent-file` `FILE` | Compile this intent (JSON) instead of calling the model: the intent a model wrote for `--intent`, or one written by hand. The change text is still needed (it is the request the intent answers). How an intent is tried with no model at all. |
 | `--save-change-set` `FILE` | Also save the compiled change set (with the change's text) to FILE, for --change-set to write later. |
-| `--promote` `CHANGE` | Keep a change already written in the show for good: append its text to the bundle's instructions.md, under a dated 'Promoted changes' heading, and a row to input.csv for each input it added that the list does not have. CHANGE is its number (3, or 'change 3'), its short name, or its journal entry. Needs --show; no console or model. A preview unless --confirm. plan.json is not touched: rebuild to put the change in it. A change that was undone is refused. |
+| `--promote` `CHANGE` | Keep a change already written in the show for good: plan.json and each sheet it touches (input.csv, busses.csv, outputs.csv, user.csv) come to say what it did -- an input it added gets a row, one it dropped loses its row, a socket it took off loses its row -- laid on and verified as a Save in Build's step 04 is. A field no sheet holds (a high-pass, a fader) is kept in plan.json, said at INFO. instructions.md is never written. CHANGE is its number (3, or 'change 3'), its short name, or its journal entry. Needs --show; no console or model. A preview, file by file, unless --confirm. A change that was undone is refused. |
 | `--conventions` `FILE` | The house conventions to compile the change with. Default: the file the show on the desk was built from (recorded in its plan), else the [conventions] default in ~/.atoo.config. The bundle's instructions.md layers on top, as for a build. |
 | `--presets` `DIR` | The preset library the change's new channels and busses take their presets from (.chn channel presets, .bus bus presets), expanded into the change as a build expands them into a plan. Not needed as a rule: without it, the library the plan on the desk was built with (or the packaged starter presets, when its files match them), else [presets] default in ~/.atoo.config; an INFO says which. With none, a change that names presets warns up front, as a WARNING, and its new strips are written without those presets' values. |
 | `--console-model` | Which WING this plan is for. Required unless the plan already states it in meta.console_model (a plan built by Atoo does). Socket counts differ between models, so an unstated model is an error rather than an assumption. |

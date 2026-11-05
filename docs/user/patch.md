@@ -17,7 +17,7 @@ On a WING, "patch" already means routing a socket to a channel, and Atoo's findi
 
 ## What it is for
 
-- A **permanent** change to the show means editing the input list, the conventions or `instructions.md`, and rebuilding. `plan.json` is the build's, and only a build writes it.
+- A **permanent** change to the show is in its files: the input list and the other sheets, the conventions or `instructions.md`. A change typed here becomes one when you **keep it in the show** (`--promote`, below), which writes it into `plan.json` and the sheets.
 - `patch` is for **ad-hoc** changes to what is on the board right now, typically at short notice: a horn section turning up, a vocalist leaving. It also works for **building a show up one change at a time** from an initialized board, dictating one piece at a time.
 
 ## How it works
@@ -166,7 +166,7 @@ Refusing to patch: nothing was written. The change asks for something the consol
 
 ## The rules
 
-- **`plan.json` is never touched.** Only a build writes it. What a change put on a desk is recorded in that desk's journal entry, which the next change (or amend) of the same desk reads as its starting point — so typing the same change twice finds the horns already there and writes nothing.
+- **Writing a change never touches `plan.json`.** What a change put on a desk is recorded in that desk's journal entry, which the next change (or amend) of the same desk reads as its starting point — so typing the same change twice finds the horns already there and writes nothing. Keeping the change in the show (below) is what puts it into `plan.json`, and the write's last lines say so: ``plan.json is unchanged: Keep this in the show (`atoo patch --show touringband --promote 1`) puts the change into it and the sheets.``
 - **Add, remove, and edit only what is named.** A change adds channels, busses, DCAs, mute groups and outputs, drops channels, busses, DCAs, mute groups and outputs, and sets the fields it names on anything already running — nothing else about a running strip moves. **An object you drop is cleared** (see [Clearing a bus](#clearing-a-bus) and [Clearing a DCA, a mute group or an output](#clearing-a-dca-a-mute-group-or-an-output)).
 - **A channel can move.** *"Move Playback to Aux 8"* builds the channel on its new strip and returns the old strip to free, leaving the input sockets alone. The review lists it twice, `ADDED` on the new strip and `RELEASED` on the old one, with an INFO saying it was moved. If the strip you name is not free, the channel goes on a free one instead, and the review says which.
 - **A channel you drop is dropped, even if the desk has changed.** *"Lose the MD vocal"* returns the strip to free whatever somebody has done to it since the build — renamed or repatched. The review gives a `WARNING`: what the strip holds now, and that it is not what the plan built. Undo puts it back. (A rebuild with `amend` that merely leaves a channel out never named it, so it still leaves a changed strip alone.)
@@ -194,18 +194,19 @@ Refusing to patch: nothing was written. The change asks for something the consol
   ```
   WARNING  plan.json: a full apply replaces 1 change(s) on this desk (FOH-A
            (wing-compact) serial S2203A1, at 198.51.100.9:2223) that are not in
-           plan.json: change 1: Add Trumpet, Trombone and T.Sax on A 21-23. The apply writes the plan as
-           built: a channel a change dropped comes back, and a channel a change
-           added stays on its strip but is no longer tracked -- the next patch
-           treats that strip as somebody else's.
-           Fix: to keep a change for good, `atoo patch --promote <change>`
-           puts it in instructions.md and input.csv -- then rebuild; to take an
-           added channel off the desk, undo that change before the apply; to
-           drop a channel again after the apply, patch the drop again.
+           plan.json: change 1: Add Trumpet, Trombone and T.Sax on A 21-23. The
+           apply writes the plan as built: a channel a change dropped comes
+           back, and a channel a change added stays on its strip but is no
+           longer tracked -- the next patch treats that strip as somebody
+           else's.
+           Fix: to keep a change for good, `atoo patch --promote <change>` (Keep
+           this in the show, on the page) puts it into plan.json and the sheets;
+           to take an added channel off the desk, undo that change before the
+           apply; to drop a channel again after the apply, patch the drop again.
            (apply.replaces-changes)
   ```
 
-  Do not "patch it back on" after an apply: the added channel is still on its strip, and a second patch would place a second copy of it. A change already promoted is still listed until the rebuilt show is applied, marked `(promoted)`.
+  Do not "patch it back on" after an apply: the added channel is still on its strip, and a second patch would place a second copy of it. A change you have kept in the show is not listed: it is in `plan.json`, so the apply writes it.
 - **A bus, DCA, mute group, Main or Matrix the plan does not know is read off the desk.** On a desk Atoo did not set up, or one set up by hand since, a change that names one — *"clear bus Drums"*, *"put the sax in the Horns DCA"* — reads just that object's name from the desk (never a sweep of it), and for a drop also which strips send into the bus or belong to the group. It is then carried out against what the desk holds, and an `INFO` says it was found there (*"bus 'Drums' is not in the plan on the desk, but the desk holds it as bus 5"*). A strip that sends into it or belongs to it but is not in the plan has that taken away too, from what the desk read: its send switched off, or the group's tag taken out of its tags (its other tags stay). An `INFO` names those strips, and Undo puts them back. A name the desk does not hold either is still refused.
 
   A Main or Matrix the plan does not know is read the same way, by the name the desk gives it or by its number (*"drop Matrix 1"*). Dropping a Matrix switches off every send into it the desk reads as on, from a strip, a bus or a Main, whether or not the plan holds it. Dropping a Main leaves the strips routed to it as they are. Either way the output sockets it feeds were not read, so they stay patched as the desk has them, and an `INFO` says so. Undo puts it all back.
@@ -362,7 +363,7 @@ What an insert does and does not do:
 - **Where the move stops.** The run of channels from the insertion point moves down until the first free strip; strips after that gap stay where they are. If the strip the last channel would land on is not free (somebody else's, or past the end of the desk), nothing moves and the change is blocked, naming it.
 - **Faders and mutes the plan does not state are not carried.** A moved strip's fader goes to -inf and it is unmuted, as an untouched strip reads: raise it again. One that the plan states is written as stated.
 - **An insert, an edit and a drop can share a change.** An edit of a strip the insert moves is written with the move (the strip is rewritten whole on its new number, with an INFO); an edit of the channel the change inserts (*"insert HiHat after Snare, HPF 200 on it"*) is set on it and written with it; a drop beside an insert is carried out, and a strip the dropped channel leaves that a moved channel lands on is written once, by the channel that lands. A move or a renumber can share the change too. Each address is written once, and Undo puts every one back.
-- **The input list is not edited.** `--promote` appends the new input at the end of `input.csv`; put the row where it belongs by hand before the next rebuild, or the rebuilt numbering will not match the desk.
+- **The input list is not edited** until you keep the change in the show (`--promote`, below). Keeping it adds the new input's row at the end of `input.csv` and writes each moved row's `channel` cell, so a rebuild puts every input on the strip the desk has it on.
 
 ## Editing what is already running
 
@@ -460,53 +461,49 @@ The *Snare Verb* preset was saved with its GATED in FX8, which nothing on the pl
 
 When every engine that can hold the effect is already inserted somewhere, the change is refused, naming them: *"the bus preset 'Snare Verb' inserts GATED on its pre-insert, and every FX engine that can hold it (FX1-8) is already in use on the desk"*. Take an effect off another bus first, to free one.
 
-## Keeping a change for good: `--promote`
+## Keeping a change in the show: `--promote`
 
-A change is ad hoc: `plan.json` does not have it, and a full apply replaces it. When the horns turn out to be permanent, **promote** the change instead of retyping it into your files:
+A change is ad hoc: `plan.json` does not have it, and a full apply replaces it. When the horns turn out to be permanent, **keep** the change in the show instead of retyping it into your files. `plan.json` and each sheet the change touches come to say what it did:
 
 ```bash
 atoo patch --show touringband --promote 1
 ```
 
-`1` is the change's number (`change 1` works too), or give its short name or its journal entry. The run below is Atoo's own test desk and a stubbed model standing in for the WING and the change compile — the change was *"congas on A 21 and 22, in the Drums DCA and the Drums bus"*, written to that desk first:
+`1` is the change's number (`change 1` works too), or give its short name or its journal entry. The run below is Atoo's own test desk and a stubbed model standing in for the WING and the change compile. The change was *"congas on A 21 and 22, in the Drums DCA and the Drums bus"*, written to that desk first:
 
 ```
-Promote change 1: Add Conga Hi and Conga Lo on A 21-22 into the show:
+Keep change 1: Add Conga Hi and Conga Lo on A 21-22 in the show:
 
-  instructions.md gains:
-    | ## Promoted changes
-    |
-    | Changes typed at the desk with `atoo patch` and kept in the show with `--promote`. Each is an instruction for every rebuild from now on.
-    |
-    | ### 2026-09-28: change 1: Add Conga Hi and Conga Lo on A 21-22
-    |
-    | <!-- atoo: promoted 20260928T215445.655174Z-patch-192.0.2.16.json -->
-    |
-    | congas on A 21 and 22, in the Drums DCA and the Drums bus
+  input.csv:
+    row 'Conga Hi' added, on channel 21 from AES50-A 21
+    row 'Conga Lo' added, on channel 22 from AES50-A 22
 
-  input.csv gains 2 row(s):
-    patch,name,category,type,model,phantom,notes
-    AES50-A 21,Conga Hi,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
-    AES50-A 22,Conga Lo,drums,Mic,,FALSE,promoted from change 1: Add Conga Hi and Conga Lo on A 21-22
+  plan.json:
+    CH 21 'Conga Hi' added
+    CH 22 'Conga Lo' added
 
-  plan.json is not touched -- rebuild the show to put the change in it (only a build writes plan.json).
+  instructions.md is not touched.
   INFO 'Conga Hi': category 'drums' -- the category of 'Kick', which shares its DCA 'Drums'
   INFO 'Conga Lo': category 'drums' -- the category of 'Kick', which shares its DCA 'Drums'
 
 Nothing was written -- this was a preview. Re-run with --confirm to keep change 1: Add Conga Hi and Conga Lo on A 21-22 in the show.
 ```
 
-`--confirm` writes both files, and then **a normal rebuild owns the change**:
+`--confirm` writes the files it listed:
 
 ```
-Written: instructions.md, input.csv. change 1: Add Conga Hi and Conga Lo on A 21-22 is in the show now: rebuild (`atoo build --show touringband`) and the next plan.json carries it.
+Written: input.csv, plan.json. change 1: Add Conga Hi and Conga Lo on A 21-22 is in the show now: plan.json says it, and so do the sheets, so a rebuild keeps it.
 ```
 
-- **The change's words go into `instructions.md` as you typed them.** Edit the instruction afterwards if the words describe a one-off rather than a permanent show.
-- **Each input the change added gets a row in `input.csv`**, at the socket it is on now, keeping the file's own header and column order. A stereo channel is two rows. Its category and type are inferred and said at INFO; correct the row if the guess is wrong.
-- **A change that dropped or edited something is promoted as text only.** No input-list row is removed: a source that has gone for good is yours to delete from the list.
-- **Refused**: a change that was **undone** (it is not on the desk, so there is nothing to keep), one that aborted partway, and an amend from a rebuilt plan (it has no typed text). Promoting the same change twice writes nothing the second time.
-- **`plan.json` is never touched**, as for every change. In the browser, each change on the Patch screen has a **Keep this in the show** button that does the same.
+What it writes, file by file:
+
+- **`input.csv`**: a row for each input the change added, on the strip it went to (its `channel` cell) and from the socket it is on, after the rows already there. Its category and type are inferred and said at INFO; a stereo channel is two rows. An input the change dropped loses its row. A running input the change renamed, repatched (`OFF` when it unpatched it), moved, or put in another DCA or mute group has those cells changed. A column the list does not have yet (`channel`, `dca`) is added, blank on the other rows. Every row the change did not touch keeps its exact text.
+- **`busses.csv`, `outputs.csv` and `user.csv`**, where the show has them: a bus, Main or Matrix the change touched has its filled cells say what it is now (a blank cell means "the plan's" and stays blank), one it added gains a row, and one it took out reads `OFF`. A socket the change took off loses its `outputs.csv` row.
+- **`plan.json`**: the sheets laid on by the same code a Save in Build's step 04 uses, and checked the same way. What cannot physically work is refused, naming the cell, and nothing is written. **A field no sheet holds**, such as a high-pass or a fader, is written into `plan.json` and marked *(in plan.json only)*, with an INFO: a rebuild works it out again from the input list and conventions.
+- **`instructions.md` is never written.** The change is kept as what it did, not as the words you typed.
+- **Refused**: a change that was **undone** (it is not on the desk, so there is nothing to keep), one that aborted partway, and an amend from a rebuilt plan. Keeping the same change twice writes nothing the second time: *already in the show*.
+
+In the browser, **Keep this in the show** does the same: under a standing Patch preview (before anything is written to the desk), in step 3 after the change is written, and on each change in **History** ([Patch a show](patch-a-show.md)).
 
 ## Write exactly the change you reviewed
 

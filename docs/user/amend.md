@@ -176,30 +176,31 @@ One thing this does *not* do: anything about state on the desk your plan never m
 
 ## After a confirmed amend or change, `plan.json` is unchanged
 
-**Only a build writes `plan.json`**, because it is made from the input list, the conventions and the instructions, and an amend changes none of them. A confirmed amend, like a confirmed [change](patch.md), records what it put on the desk in **that desk's journal entry** — the effective plan, each new channel on the strip it was actually placed on — and leaves `plan.json` as the last build made it.
+**An amend never writes `plan.json`**: the show's plan is made from the input list, the conventions and the instructions, and an amend changes none of them. Build the show again to make the rebuild its `plan.json`. (A typed change is different: [Keep this in the show](patch.md) puts it into `plan.json` and the sheets.) A confirmed amend, like a confirmed [change](patch.md), records what it put on the desk in **that desk's journal entry** — the effective plan, each new channel on the strip it was actually placed on — and leaves `plan.json` as the last build made it.
 
 This is still what makes a second amend from the same rebuild safe. The next amend of the same desk compares against the plan that desk's newest entry left on it, not against `plan.json`. On a copy of the touring-band show against the test suite's simulated desk (answering `/?` as serial S2203A1), the first run ends:
 
 ```
-APPLIED: 66 address(es) evaluated, 39 written, 0 mismatch(es).
-plan.json is unchanged -- only a build writes it. What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
-Untouched-strip proof: 867 unrelated address(es) read before and after, 0 changed.
-Journal: touringband/journals/20260926T004554.758608Z-amend-S2203A1.json (scope: ch:21, ch:22, ch:23)
+APPLIED: 66 address(es) evaluated, 33 written, 0 mismatch(es).
+plan.json is unchanged: an amend writes the desk, not the show (build the show again to make the rebuild its plan.json). What is on this desk now is recorded in its journal entry, which the next patch or amend of this desk reads; a full `atoo apply --show touringband` would replace it, and warns before it does.
+Untouched-strip proof: 1053 unrelated address(es) read before and after, 0 changed.
+Journal: touringband/journals/20261105T003706.878829Z-amend-S2203A1.json (scope: ch:21, ch:22, ch:23)
 ```
 
 and the same command again finds nothing to do:
 
 ```
-  INFO applied plan: the one this desk's newest write left on it -- journals/20260926T004554.758608Z-amend-S2203A1.json (amend).
+  INFO applied plan: the one this desk's newest write left on it -- journals/20261105T003706.878829Z-amend-S2203A1.json (amend).
   INFO plan.json differs from it: plan.json is the bundle's last build, and the changes, amends and applies recorded since -- to this desk or another -- are in the journal, not in it.
 48 strip(s) read over 215 address(es): 22 ours, 1 theirs, 17 free, 8 unknown
 ...
+
 22 unchanged
   INFO channel 'Trumpet': the rebuild numbers it ch:20, and an earlier amend placed it on ch:21 -- it stays there
   INFO channel 'Trombone': the rebuild numbers it ch:21, and an earlier amend placed it on ch:22 -- it stays there
   INFO channel 'T.Sax': the rebuild numbers it ch:22, and an earlier amend placed it on ch:23 -- it stays there
 
-0 address(es) will be written; 933 belonging to objects this amend does not own will NOT be.
+0 address(es) will be written; 1119 belonging to objects this amend does not own will NOT be.
 
 Nothing to add and nothing to return to free. The console was not written to.
 ```

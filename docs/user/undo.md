@@ -43,7 +43,13 @@ It **pops**: having reversed the amend, the next undo reverses the apply underne
 
 ## Undoing a change or an amend leaves `plan.json` alone
 
-A change or an amend never writes `plan.json`, so undoing one has nothing to put back: it reverses the desk and says `plan.json left as it is: only a build writes it, and that patch did not.`
+A change or an amend never writes `plan.json`, so undoing one has nothing to put back: it reverses the desk and says so. After a change:
+
+```
+  plan.json left as it is: undo takes the change off the desk only. If it was kept in the show (`patch --promote`), plan.json and the sheets still have it.
+```
+
+After an amend: `plan.json left as it is: that amend did not write it.`
 
 ## Undoing an apply an amend was built on top of
 
