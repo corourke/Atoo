@@ -45,7 +45,7 @@ Every column an input list may have, in the order Atoo writes them. Only the req
 
 ### A `Line` row on a head amp, when your conventions say no gain
 
-If your conventions and instructions state **no** head-amp gain anywhere, a model sometimes still puts a mic's 20 dB on a row of type `Line` (a laptop, a playback feed) patched to a head amp, where it would clip the preamp. The build then gives that channel 0 dB, with an INFO (`reply.line-gain`):
+If your conventions and instructions state **no** head-amp gain anywhere, a model sometimes still puts a mic's 20 dB on a row of type `Line` (a laptop, a playback feed) patched to a head amp, where it would clip the preamp. The build then gives that channel 0 dB, with a NOTE (`reply.line-gain`):
 
 ```
 channel 'Playback': a Line source on A 16, a head amp, so its gain is 0 dB, not the 20 dB the plan had -- that is a mic's gain, and a line-level feed with it would clip the preamp. Chosen from the source type, because no gain is stated in your conventions or instructions. Say a gain for 'Playback' (say, 'gain 6 dB') if you want another.
@@ -73,16 +73,16 @@ Whether those two become one linked stereo strip or two mono ones is decided by 
    Every L/R pair of inputs becomes one stereo channel.
    ```
 
-   Every such pair on the list becomes one stereo channel, named for what the two rows share (`Keys`), whatever the model wrote; where it had written the pair otherwise, an INFO line says it was paired.
+   Every such pair on the list becomes one stereo channel, named for what the two rows share (`Keys`), whatever the model wrote; where it had written the pair otherwise, a NOTE line says it was paired.
 3. **For a pair that stays two mono channels, name it in a sentence of its own**, for example overheads you process separately:
 
    ```
    Keep OH L and OH R as two mono channels.
    ```
 
-   A sentence that names the pair and says *mono channels* keeps it apart, also said at INFO.
+   A sentence that names the pair and says *mono channels* keeps it apart, also said in a NOTE.
 
-Without a sentence that plain (*"stereo-paired inputs become one stereo channel"* does not say which inputs), pairing is left to the model, and the build says at INFO that it chose. The rule and its exceptions are covered in [Writing conventions](conventions.md#stereo-pairs-are-a-conventions-decision).
+Without a sentence that plain (*"stereo-paired inputs become one stereo channel"* does not say which inputs), pairing is left to the model, and the build says in a NOTE that it chose. The rule and its exceptions are covered in [Writing conventions](conventions.md#stereo-pairs-are-a-conventions-decision).
 
 The two rows need not state a socket. When they do not, the build pairs them on the next free odd-even pair.
 
@@ -109,11 +109,11 @@ atoo verify --plan /tmp/plan-ribbon.json --input /tmp/ribbon.csv
 ```
 
 ```
-1 error(s), 0 warning(s), 15 note(s)
+1 error(s), 0 warning(s), 1 info, 14 note(s)
 
   [error] channels[Keys L]: 'Royer R-121' (Keys R, the pair's second socket) is a passive ribbon microphone and the plan sends it phantom power -- a stereo channel's two sockets switch 48V together, so the pair takes it if either row wants it -- 48V destroys a ribbon element and undoing the setting does not undo the damage. Split the pair into two mono channels, or set the other row to a source that takes no 48V (phantom FALSE)  (safety.phantom-on-passive-ribbon)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): ...
+  [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it ...
 ```
 
 (The first lines; the rest are the demo's usual notes, and the last line is `BLOCKED: do not apply.`)
@@ -208,10 +208,10 @@ The long forms parse too — `Local 3`, `Card 1`, `Module 2`, `User 25`, `StageC
 
 ### A stage-box socket written short
 
-A, B and C are the desk's three AES50 ports, so a patch cell of `A20`, `A 20`, `SB A 20` or `Stagebox A 20` is read as `AES50-A 20`, and `B31` as `AES50-B 31`. It is checked against the desk like any socket, so `B 49` on a desk with 48 is refused. A file keeps what you wrote; typed into Build's **Patch** cell, `SB A 20` is written out as `AES50-A 20`. The build reads the socket and says which rows it read this way, once, at INFO:
+A, B and C are the desk's three AES50 ports, so a patch cell of `A20`, `A 20`, `SB A 20` or `Stagebox A 20` is read as `AES50-A 20`, and `B31` as `AES50-B 31`. It is checked against the desk like any socket, so `B 49` on a desk with 48 is refused. A file keeps what you wrote; typed into Build's **Patch** cell, `SB A 20` is written out as `AES50-A 20`. The build reads the socket and says which rows it read this way, once, in a NOTE:
 
 ```
-INFO 2 patch cell(s) read as AES50 stage-box sockets (A, B and C are the desk's AES50 ports): Kick 'SB A 1' as AES50-A 1; TRAX 'A8' as AES50-A 8
+NOTE 2 patch cell(s) read as AES50 stage-box sockets (A, B and C are the desk's AES50 ports): Kick 'SB A 1' as AES50-A 1; TRAX 'A8' as AES50-A 8
 ```
 
 `verify` reads them the same way. Here the demo's Kick and TRAX rows are written short, and the plan still agrees with the list:
@@ -262,11 +262,11 @@ Which is the whole point of the distinction: a socket you stated can be checked 
 `OFF` in the patch cell keeps the channel but patches it from nothing. A blank cell means "leave it to the plan" (a build chooses a socket), so it can't say this. With `OFF`:
 
 - **A Save** in Build updates the plan: the channel has no patch. **Clearing a patch cell that held a socket** in Build's tables saves as `OFF` for you, so the cell reads `OFF` afterwards. On a captured show, clearing CH 17's `LCL 17` and pressing **Save input.csv** says *The plan is updated: CH 17 unpatched (was LCL 17).*
-- **A build** leaves the channel unpatched, whatever the conventions or the model would choose, and says so at INFO (`reply.unpatched-by-list`).
-- **`atoo verify`** says it at INFO, not as a missing patch. On that captured show, a warning that CH 17 shared LCL 17 with another strip goes, and this note comes in:
+- **A build** leaves the channel unpatched, whatever the conventions or the model would choose, and says so in a NOTE (`reply.unpatched-by-list`).
+- **`atoo verify`** says it in a NOTE (`patch.off`), not as a missing patch. On that captured show, a warning that CH 17 shared LCL 17 with another strip goes, and this note comes in:
 
 ```
-  [info] channels[T.Sax SM57].patch: ch 17 'T.Sax SM57' is patched from nothing: input.csv says OFF, so Apply sets its input to OFF  (patch.off)
+  [note] channels[T.Sax SM57].patch: ch 17 'T.Sax SM57' is patched from nothing: input.csv says OFF, so Apply sets its input to OFF  (patch.off)
 ```
 
 - **Apply** sets the strip's input to `OFF`, so it hears nothing.
@@ -287,7 +287,7 @@ Anything else is refused, naming the row.
 
 **The number does not set the desk channel.** Which strip a source lands on is still your conventions' to compute. The number goes to the model with its row, as data, so your instructions can use it — *"Patch the inputs according to the band's channel order numbers."* Without such a sentence it changes nothing.
 
-**A skipped row is left out of the build entirely.** It is not sent to the model, nothing is built for it, and `verify` does not count it as a missing input. The build says once, at INFO, which rows it left out (`input-list.skipped`). That is what makes it useful for a festival list: keep every band's full list, and switch rows off and on between sets rather than deleting and retyping them.
+**A skipped row is left out of the build entirely.** It is not sent to the model, nothing is built for it, and `verify` does not count it as a missing input. The build says once, in a NOTE, which rows it left out (`input-list.skipped`). That is what makes it useful for a festival list: keep every band's full list, and switch rows off and on between sets rather than deleting and retyping them.
 
 Here is the touring band's list with an `order` column, and its TRAX row skipped:
 
@@ -348,7 +348,7 @@ In the browser, type `-` in Build step 02's **Order** cell and the row dims; cle
 
 ## The `preset` column
 
-Optional. A value names a preset in your [preset library](presets.md), matched as a name in your conventions is ([how forgiving that is](presets.md#naming-one-and-how-forgiving-the-match-is)), so `kick in` finds **Kick In**. Like a stated patch, **the list wins** over the conventions, and the build notes it at INFO when it replaces a different preset. A name the library has not got is a `preset.unknown` warning, and the strip is built without it.
+Optional. A value names a preset in your [preset library](presets.md), matched as a name in your conventions is ([how forgiving that is](presets.md#naming-one-and-how-forgiving-the-match-is)), so `kick in` finds **Kick In**. Like a stated patch, **the list wins** over the conventions, and the build says it in a NOTE when it replaces a different preset. A name the library has not got is a `preset.unknown` warning, and the strip is built without it.
 
 Of a stereo pair's two rows, one naming the preset is enough. If they name different ones, the **first** row's wins (the row the channel is named from), and `verify` warns `preset.input-list-pair-disagrees`.
 
@@ -422,17 +422,17 @@ Exit code 2. That plan was edited by hand. A **build** from the same list does n
 
 The two halves land on `LCL 4` and `LCL 5`, or on different stage boxes, or on two playback tracks 32 apart on one card. The desk's own way round this is a **user patch**: two consecutive slots of its `USR` group, from USR 25 to USR 56 and odd first, each taking one input socket as it is. The channel is patched to the two slots as an ordinary pair.
 
-**The build does this for you.** When the two rows of a pair state sockets the desk cannot pair, the build makes one stereo channel, patched to the first free pair of user patch slots, each slot taking its row's socket. It says so at INFO:
+**The build does this for you.** When the two rows of a pair state sockets the desk cannot pair, the build makes one stereo channel, patched to the first free pair of user patch slots, each slot taking its row's socket. It says so in a NOTE:
 
 *'Keys L' (LCL 4) and 'Keys R' (LCL 5) can't be one stereo pair as cabled -- the pair starts on 4, an even socket (a pair always starts on an odd one) -- so 'Keys' is patched through user patch USR 25-26, which take LCL 4 and LCL 5*
 
-- **Two rows named as one pair are one pair**, `Keys L` and `Keys R` (or `Left` and `Right`), even when the model built them as two mono channels because of their sockets. The build joins them into one stereo channel named `Keys` and says so at INFO: *'Keys L' and 'Keys R' are one L/R pair by their names, so they are one stereo channel 'Keys': the reply left them as two mono channels, though only their sockets kept them apart, and code pairs those through user patch slots.* Two such rows on sockets the desk can pair directly are left as the model built them.
+- **Two rows named as one pair are one pair**, `Keys L` and `Keys R` (or `Left` and `Right`), even when the model built them as two mono channels because of their sockets. The build joins them into one stereo channel named `Keys` and says so in a NOTE: *'Keys L' and 'Keys R' are one L/R pair by their names, so they are one stereo channel 'Keys': the reply left them as two mono channels, though only their sockets kept them apart, and code pairs those through user patch slots.* Two such rows on sockets the desk can pair directly are left as the model built them.
 - **`atoo build` prints these notes** under *Stereo pairs*, as well as keeping them in the plan.
 - **The build summary** shows the patch as `USR 25-26 (LCL 4 + LCL 5)`.
 - **Phantom power and gain** are set on the two sockets, `LCL 4` and `LCL 5`, not on the slots.
 - **The slots your `user.csv` names** are left alone ([User signals and patches](capture.md#user-signals-and-patches-usercsv)).
 - **A pair the desk can form directly** (`LCL 3` and `LCL 4`) stays a direct patch.
-- **With no pair of slots free**, the two rows are built as two mono channels, with an INFO saying why.
+- **With no pair of slots free**, the two rows are built as two mono channels, with a NOTE saying why.
 
 A plan can also state slots by hand, in its top-level `user_sources` section. `verify` checks them, including the odd-first rule, which is not bypassed anywhere, and checks each row's stated socket against the socket its slot takes.
 

@@ -46,14 +46,14 @@ Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/c
   captures/church-full-2026-10-24.snap
 
 What the desk does not state, decided or left out (10):
-  [INFO] Monitor 1 (the phones) listens to Matrix 4 'Main PFl': an outputs.csv row.
-  [INFO] Monitor 2 (the monitor speakers) listens to Main 1 'Main': an outputs.csv row.
-  [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
-  [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
-  [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
-  [INFO] 6 channel(s) insert effects, which no input.csv column holds: Acoustic: BODY (FX15), C5-CMB (FX8); Pastor: GEQ (FX9); ...
-  [INFO] role 'fx' for BUS 11 'Reverb' (BPLATE and VSS3, 100% wet), BUS 12 'CHORUS' (DIMCRS, 100% wet), ...
-  [INFO] CH 17, CH 18, CH 24 and CH 28 to BUS 10 'Speakers': sent in the desk's GRP mode (the bus fed as a subgroup, after the channel's fader), which is kept: written 'group' in the plan and the sheets, so Apply writes GRP back, and read as post-fader wherever a check asks pre or post.
+  [NOTE] Monitor 1 (the phones) listens to Matrix 4 'Main PFl': an outputs.csv row.
+  [NOTE] Monitor 2 (the monitor speakers) listens to Main 1 'Main': an outputs.csv row.
+  [NOTE] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
+  [NOTE] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
+  [NOTE] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
+  [NOTE] 6 channel(s) insert effects, which no input.csv column holds: Acoustic: BODY (FX15), C5-CMB (FX8); Pastor: GEQ (FX9); ...
+  [NOTE] role 'fx' for BUS 11 'Reverb' (BPLATE and VSS3, 100% wet), BUS 12 'CHORUS' (DIMCRS, 100% wet), ...
+  [NOTE] CH 17, CH 18, CH 24 and CH 28 to BUS 10 'Speakers': sent in the desk's GRP mode (the bus fed as a subgroup, after the channel's fader), which is kept: written 'group' in the plan and the sheets, so Apply writes GRP back, and read as post-fader wherever a check asks pre or post.
   ...
 
 Nothing was written to the desk. Watch it with this show:
@@ -77,7 +77,7 @@ Matrix 6,DRUMS IEM,,stereo,DR PAD;Kick;Snare;Snare Btm;Tom;Floor;OH A;OH B;High 
 
 ## What it decides, and says
 
-The desk does not state everything a sheet has a column for. What it leaves open, `capture` decides and says, at INFO, so you can correct it:
+The desk does not state everything a sheet has a column for. What it leaves open, `capture` decides and says, in a NOTE, so you can correct it:
 
 - **Every name is written in.** A channel with no name of its own takes its source's ("CH 20 takes 'MIC2' from LCL 4"). An input list's names must be unique, so a name the desk uses twice is written as `Acoustic (CH 7)` on the second row; the plan keeps the desk's name.
 - **`category`** is the channel's first DCA's name, or `other`.
@@ -106,9 +106,9 @@ Bus 11,Reverb,fx,stereo,MIC1 Lead;MIC2;MIC3;MIC4;MIC5,post,,BPLATE; VSS3,,AllBan
 
 A channel's effects are in `plan.json` only, and the capture's report names them: *6 channel(s) insert effects, which no input.csv column holds: Acoustic: BODY (FX15), C5-CMB (FX8); Pastor: GEQ (FX9); ...* Save, Patch and Keep leave them as they are, and Apply writes them back. [Rebuild Plan](#changing-a-captured-show) does not keep them: on the desk, a channel's effects belong to its preset. To keep one through a rebuild, save a preset on the desk that carries it, and name that preset in the row's `preset` column.
 
-`atoo apply` loads each effect back into its engine with those settings and switches its insert on. Applied to the desk it came from, that changes nothing; applied to another desk, or after someone changed the effects, it puts them back. Watch checks them too: an insert switched off, pointing at another engine, or an engine holding another effect is a warning, `CV015 Effect Insert Contradicts Plan`.
+`atoo apply` loads each effect back into its engine with those settings and switches its insert on. Applied to the desk it came from, that changes nothing; applied to another desk, or after someone changed the effects, it puts them back. Watch checks them too: an insert switched off, pointing at another engine, or an engine holding another effect is an INFO, `CV015 Effect Insert Contradicts Plan`.
 
-From a live desk, the effects' settings are one more short read after the desk's: one request for each engine a strip inserts, counted in the capture's summary (*plan.json the desk as it is: ..., effects; 16 effect(s), their parameters read in 16 more request(s) after the desk's read*). An engine that does not answer keeps its effect only, at INFO: `atoo apply` loads the effect and leaves its settings as the desk has them.
+From a live desk, the effects' settings are one more short read after the desk's: one request for each engine a strip inserts, counted in the capture's summary (*plan.json the desk as it is: ..., effects; 16 effect(s), their parameters read in 16 more request(s) after the desk's read*). An engine that does not answer keeps its effect only, said in a NOTE: `atoo apply` loads the effect and leaves its settings as the desk has them.
 
 To change a bus's, Main's or Matrix's effects, edit its `fx` cell in Build's step 04 (or the file), with the effects' names as the desk shows them, `;`-separated:
 
@@ -146,7 +146,7 @@ You can type a run of sockets as one row, in a spreadsheet or in the [Outputs ta
 
 It is read one row per socket, and a Save writes it that way. A run is refused, naming the row, only when it cannot work: its sockets and sources are not the same length (*source "AES50-A 1-8": is 8 source(s) for 16 socket(s): a run feeds one socket from each source, so the two must be the same length*), or it goes past the last socket or source of its group.
 
-A socket that carries an object's R without its L on the socket before it (Bus 3's R alone on a USB socket, say) is recorded as that socket's own source, as the desk has it, and the capture says so at INFO; `busses.csv`'s cell leaves it out, since a cell's sockets go L then R.
+A socket that carries an object's R without its L on the socket before it (Bus 3's R alone on a USB socket, say) is recorded as that socket's own source, as the desk has it, and the capture says so in a NOTE; `busses.csv`'s cell leaves it out, since a cell's sockets go L then R.
 
 ### What the monitors listen to
 
@@ -163,7 +163,7 @@ Monitor 2,Main 1,
 
 The source can be any Main, Matrix, Bus or Aux the desk has (`Matrix 4`, `Main 1`, `Bus 12`, `Aux 3`), or `OFF`. A side (`Main 1 L`) is read as the whole Main, said in a note, since a monitor listens to both.
 
-- **A build** lays each row on, as it does a socket's, and says so at INFO: *outputs.csv wins over the conventions: Monitor 1 (the phones) listens to Matrix 4.* A monitor with no row, or a blank source, is left to your conventions.
+- **A build** lays each row on, as it does a socket's, and says so in a NOTE: *outputs.csv wins over the conventions: Monitor 1 (the phones) listens to Matrix 4.* A monitor with no row, or a blank source, is left to your conventions.
 - **A Save** of the [Outputs table](#the-outputs-table) sets each monitor its row names. A monitor whose row you remove, or whose source you leave blank, is left alone: the plan stops saying, so Apply leaves the desk's monitor as it is, and the Save says so. Changing Monitor 1 to Matrix 5 and removing Monitor 2's row gives *Saved church-full-2026-10-24/outputs.csv. The plan is updated: Monitor 1 (the phones) listens to Matrix 5 (was Matrix 4); Monitor 2 (the monitor speakers): no row, so Apply leaves it as the desk has it (was Main 1).*
 - **`atoo apply`** sets each monitor a row names to its source, and leaves the other alone.
 
@@ -171,10 +171,10 @@ A row that cannot work is refused, naming it, and nothing is written: *outputs.c
 
 ### Splits and recording feeds
 
-An output socket the desk feeds straight from a source, not from a bus, a Main or a Matrix, is a split: the Dante module's outputs to a recording machine, the WING-LIVE card one to one, a USB recording feed, an AES50 split to a monitor desk. The plan records them (`direct_outputs`), and the capture says which, at INFO:
+An output socket the desk feeds straight from a source, not from a bus, a Main or a Matrix, is a split: the Dante module's outputs to a recording machine, the WING-LIVE card one to one, a USB recording feed, an AES50 split to a monitor desk. The plan records them (`direct_outputs`), and the capture says which, in a NOTE:
 
 ```
-  [INFO] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are in outputs.csv, one row each, with every other patched socket; Apply writes them and Watch says only if one changes.
+  [NOTE] 123 output socket(s) carry an input or a monitor feed directly, not a bus, Main or Matrix (recording and Dante splits): AES50-A 33-40; AUX 3; AUX 7-8; AES50-B 25-32; CRD 1-14; CRD 17-24; CRD 29-30; MOD 3-35; MOD 40-42; MOD 46-48; USB 1-28; USB 30-40; USB 45-46. They are in outputs.csv, one row each, with every other patched socket; Apply writes them and Watch says only if one changes.
 ```
 
 A `source` is written as the desk lists it:
@@ -185,7 +185,7 @@ A `source` is written as the desk lists it:
 - a send or the monitor by the desk's own number: `SEND 19`, `MON 1`;
 - `OFF` for nothing.
 
-There is no "channel, pre-fader" source, because the desk has none. A split carries the input before the channel strip. A processed or post-fader feed goes through a user signal, and its row says `USR n`. What the slot takes (a channel at its pre or post tap, say) is the plan's: a capture records every USR slot a channel or an output reads, in [`user.csv`](#user-signals-and-patches-usercsv) and the plan, and Apply writes it back; a slot assigned on the desk that nothing reads is left as it is, said at INFO.
+There is no "channel, pre-fader" source, because the desk has none. A split carries the input before the channel strip. A processed or post-fader feed goes through a user signal, and its row says `USR n`. What the slot takes (a channel at its pre or post tap, say) is the plan's: a capture records every USR slot a channel or an output reads, in [`user.csv`](#user-signals-and-patches-usercsv) and the plan, and Apply writes it back; a slot assigned on the desk that nothing reads is left as it is, said in a NOTE.
 
 `atoo apply` writes each one's source, as it writes a bus's output patch, so the show puts its splits back on any desk; applied to the desk it came from, they are already there and nothing changes. In Apply's Preview they are on their output group's tile. Watch counts them as part of the show, so it says only if one changes. `atoo verify` refuses a split on a socket a bus, a Main or a Matrix also patches, naming both, and one fed from a source the desk does not have.
 
@@ -195,7 +195,7 @@ There is no "channel, pre-fader" source, because the desk has none. A split carr
 - `OFF` disconnects that socket;
 - a socket the file doesn't list is left to the conventions.
 
-Each change is an INFO (`build.outputs-sheet`), for example *outputs.csv wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).* Where the file takes sockets off a bus, a Main or a Matrix that a line of your instructions or conventions asks for in so many words, the build says so as a WARNING, quoting the line, for example *outputs.csv decides Main 1's sockets (LCL 1-2), so the instructions' 'Video Feed: Send the main mix to USB 18-19' is not carried out: USB 18-19 are not patched from Main 1. Add USB 18-19 to outputs.csv, or edit them in Build 04's Outputs table, to carry it out.*
+Each change is a NOTE (`build.outputs-sheet`), for example *outputs.csv wins over the conventions: LCL 1 from AES50-A 1 (was Main 1 L).* Where the file takes sockets off a bus, a Main or a Matrix that a line of your instructions or conventions asks for in so many words, the build says so as a WARNING, quoting the line, for example *outputs.csv decides Main 1's sockets (LCL 1-2), so the instructions' 'Video Feed: Send the main mix to USB 18-19' is not carried out: USB 18-19 are not patched from Main 1. Add USB 18-19 to outputs.csv, or edit them in Build 04's Outputs table, to carry it out.*
 
 When the show has `outputs.csv`, a build does not read `busses.csv`'s Outputs column. In Build's step 04 that column is read-only: you move a bus in the [Outputs table](#the-outputs-table), and its Save rewrites the bus's `busses.csv` cell to match. A cell edited in another program that disagrees with `outputs.csv` is not used, and the build says so, for example *busses.csv says Bus 9 goes to AUX 1-2, outputs.csv says LCL 1-2: outputs.csv is where each socket's source is kept, so it wins, and busses.csv's Outputs column follows it.* A row that cannot work stops the build, naming it: a socket the desk does not have, a socket two rows both feed, a run whose sockets and sources are not the same length, a source past its group's end. A row that takes a socket `OFF` gives way to a row that feeds it.
 
@@ -226,15 +226,15 @@ and the summary line
 | `leg` | a user signal's `L+R`, `L` or `R`; empty for a user patch |
 | `name` | the slot's name on the desk |
 
-A slot assigned on the desk that nothing reads gets no row; the capture says so at INFO. A desk that uses no slot gets no `user.csv`.
+A slot assigned on the desk that nothing reads gets no row; the capture says so in a NOTE. A desk that uses no slot gets no `user.csv`.
 
-**A build lays it on** after `busses.csv` and `outputs.csv`: a row wins for its slot over what the conventions made, a blank `tap`, `leg` or `name` keeps the plan's, `OFF` takes the slot out, and a slot the file doesn't name is left to the conventions. Each change is an INFO (`build.user-sheet`), for example *user.csv wins over the conventions: USR 3 takes CH 11 PRE L+R (Lead post) (was CH 10 POST L+R (Lead post)).* A row that cannot work stops the build, naming it: a slot past USR 56, a user patch given a strip or a tap, a user signal given a socket, a strip the desk does not have, a slot listed twice. A slot nothing reads yet is kept, so you can define a feed before you patch it; verify says so at INFO, in case the slot number was mistyped. The plan records the file's fingerprint, so editing it in another program makes the plan **Stale** until you rebuild or save it in Build.
+**A build lays it on** after `busses.csv` and `outputs.csv`: a row wins for its slot over what the conventions made, a blank `tap`, `leg` or `name` keeps the plan's, `OFF` takes the slot out, and a slot the file doesn't name is left to the conventions. Each change is a NOTE (`build.user-sheet`), for example *user.csv wins over the conventions: USR 3 takes CH 11 PRE L+R (Lead post) (was CH 10 POST L+R (Lead post)).* A row that cannot work stops the build, naming it: a slot past USR 56, a user patch given a strip or a tap, a user signal given a socket, a strip the desk does not have, a slot listed twice. A slot nothing reads yet is kept, so you can define a feed before you patch it; verify says so at INFO, in case the slot number was mistyped. The plan records the file's fingerprint, so editing it in another program makes the plan **Stale** until you rebuild or save it in Build.
 
 **Build's step 04 shows it** as its **User signals and patches** table, under Mains and Matrix: a row per slot, with what reads it (the outputs and channels fed from it) in **Read by**. **Add a slot** takes the lowest user signal the table does not have, at POST on both legs. A slot typed as a user patch drops its tap and leg. **✕** takes a slot out ([Removing a row](#removing-a-row)). **Save** writes `user.csv` in the desk's words and updates the plan, with no model; a cell that cannot work locks it, with the reason under the row. What reads a slot is set in Outputs or Channels, not here.
 
 ## What stays out of the sheets
 
-Nothing is dropped silently. Each of these is one INFO line, naming what it is about, and the snapshot in `captures/` keeps the whole desk:
+Nothing is dropped silently. Each of these is one NOTE line, naming what it is about, and the snapshot in `captures/` keeps the whole desk:
 
 - **A channel on the oscillator** is left out.
 - **An output socket the console does not have** is left out of `outputs.csv`, `busses.csv`'s Outputs cells and the plan. A WING Compact has no AUX outputs, but its desk can still list a patch for them, and one kept would stop the show's own preview. The church snapshot captured as a Compact, for example, says *Left out of the sheets and the plan: AUX 3; AUX 5-8, which the desk lists a patch for but the WING Compact does not have as output sockets, so nothing can come out of them.*
@@ -328,7 +328,7 @@ A row can be a run: type `USB 1-16` with `AES50-A 1-16` (see [above](#every-outp
 
 ### While Watch runs
 
-**Edit sheets** on the Watch page brings you to this step, and Watch keeps running; **Back to Watch** returns to it. It reads the plan on its next pass after a Save, with no restart. A role changes what it says (a split through a `parallel` bus is *Parallel bus asked for*, quoting the cell); anything the desk would change for is a WARNING, **Sheet differs from desk**, until you apply it, with **Open in Apply** beside it ([Edit the sheets while it runs](watch-a-show.md#edit-the-sheets-while-it-runs)).
+**Edit sheets** on the Watch page brings you to this step, and Watch keeps running; **Back to Watch** returns to it. It reads the plan on its next pass after a Save, with no restart. A role changes what it says (a split through a `parallel` bus is *Parallel bus asked for*, quoting the cell); anything the desk would change for is an INFO, **Sheet differs from desk**, until you apply it, with **Open in Apply** beside it ([Edit the sheets while it runs](watch-a-show.md#edit-the-sheets-while-it-runs)).
 
 ## Applying it back
 

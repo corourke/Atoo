@@ -57,9 +57,9 @@ atoo amend --plan docs/user/demo/amend-demo/applied.plan.json --amended-plan doc
   ADDED            channel 'T.Sax' -> ch:13 (the rebuild asked for ch:12): new channel, placed on a free strip
   ADDED            dca 'Horns' -> dca:7: new dca
   writes to: ch:12, ch:13
-  INFO channel 'Trumpet': the rebuild proposed ch:11, which is not free -- placed on ch:12 instead, and nothing already on the desk moved
-  INFO channel 'T.Sax': the rebuild proposed ch:12, which is not free -- placed on ch:13 instead, and nothing already on the desk moved
-  INFO dca 'Horns' (index 7) was judged free from the applied plan alone -- the occupancy read covers strips, not groups
+  NOTE channel 'Trumpet': the rebuild proposed ch:11, which is not free -- placed on ch:12 instead, and nothing already on the desk moved
+  NOTE channel 'T.Sax': the rebuild proposed ch:12, which is not free -- placed on ch:13 instead, and nothing already on the desk moved
+  NOTE dca 'Horns' (index 7) was judged free from the applied plan alone -- the occupancy read covers strips, not groups
 
 57 address(es) will be written; 532 belonging to objects this amend does not own will NOT be.
 
@@ -84,7 +84,7 @@ Before its preview is offered for arming, and again before a `--confirm` run wri
 
 1. **The verify gate**, over the *effective* plan — the rebuild with this amend's placements in it, which is what `plan.json` becomes after a confirmed bundle amend — against the model the desk states on `/?`. Errors refuse the amend; warnings never do. It is apply's gate, with apply's escape: `--skip-verify`.
 2. **The socket check**, over the sockets this amend actually **writes**: each new strip's input patch and each output socket a new bus or output is given. A socket the desk does not have is refused, naming the socket and the channel, **with or without `--skip-verify`** — that flag is about the plan's findings, and this is about the hardware. Unlike apply's, it runs on the same model too, not only across models: with `--skip-verify` it is the only thing between a bad rebuild and the panel.
-3. **The stage-box check**, over the same sockets: the desk is asked what is on each AES50 port (`/$stat/A/dev`), and a socket written past the end of that box (`A 17` on an S16, which has 16 inputs and 8 outputs) is refused the same way, naming the box and its size. The desk lists 48 sockets on every port whatever is plugged in, so it would take the patch and the channel would be silent. A box Atoo has no size for is said at INFO and its sockets are not checked.
+3. **The stage-box check**, over the same sockets: the desk is asked what is on each AES50 port (`/$stat/A/dev`), and a socket written past the end of that box (`A 17` on an S16, which has 16 inputs and 8 outputs) is refused the same way, naming the box and its size. The desk lists 48 sockets on every port whatever is plugged in, so it would take the patch and the channel would be silent. A box Atoo has no size for is said in a NOTE and its sockets are not checked.
 
 The show is on a full-size WING — 8 local inputs — and the rebuild, made for the Compact, patches the new Trumpet to `LCL 20`. On a copy of the touring-band show against the test suite's simulated desk (`tests/test_amend_preflight.py`'s, answering `/?` as a full-size WING), the preview's review ends:
 
@@ -103,7 +103,7 @@ Pre-flight verify of the amended plan against the WING (full-size console) at 19
 
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [note] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
 
 BLOCKED: do not apply.
 
@@ -130,12 +130,12 @@ Refusing to write this change: A 17 (channel 'HiHat') does not exist on the S16 
 
 Exit `2`. A socket the change leaves to Atoo is chosen within the box in the first place.
 
-**A different model, every socket present: it proceeds, with apply's INFO.** The same rebuild, Trumpet on `A 21`, amending the Rack backup:
+**A different model, every socket present: it proceeds, with apply's NOTE.** The same rebuild, Trumpet on `A 21`, amending the Rack backup:
 
 ```
 Pre-flight verify of the amended plan against the WING Rack (19", 4U) at 198.51.100.6: no errors, 1 warning(s) (reconcile.not-checked) -- warnings do not block.
 
-INFO: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
+NOTE: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
 ```
 
 A desk whose model Atoo has never measured proceeds with apply's WARNING. A clean verify with only warnings is one line, since `build` already reported them. With `--state` the plan's own model stands in.
@@ -148,7 +148,7 @@ A verify **error** refuses the amend with `Refusing to amend: the amended plan d
 
 Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip to free**: unpatched (`OFF`), and its name, color, icon, DCA/mute-group tags, bus sends (switched off, and each level back to -oo, as an initialized strip reads) and **the processing your plan set** all cleared, and its direct Main routing back to the factory's (Main 1 on, the others off) — on the input socket as well as the strip, because with `clink` on that is where the name the desk shows actually lives. The end state is the reading an untouched strip gives, so the next person allocating a strip finds this one genuinely free rather than nearly free.
 
-**The patch goes `OFF`, exactly as a full apply leaves a strip your plan does not use.** A freed strip reads the same whichever way it was freed, so a change followed by a full apply ends with the same desk, and an INFO line says what was done. A strip an earlier run left blank on its factory socket still counts as free, so a clear that got partway is finished rather than refused.
+**The patch goes `OFF`, exactly as a full apply leaves a strip your plan does not use.** A freed strip reads the same whichever way it was freed, so a change followed by a full apply ends with the same desk, and a NOTE line says what was done. A strip an earlier run left blank on its factory socket still counts as free, so a clear that got partway is finished rather than refused.
 
 **The strip is muted while it is cleared, its fader goes to −∞, and it is left unmuted**, as an untouched strip reads. The fader comes down because the strip is routed to Main 1 again: left where your plan put it, it would pass whatever is plugged in there to the PA.
 
@@ -190,15 +190,15 @@ Journal: touringband/journals/20261105T003706.878829Z-amend-S2203A1.json (scope:
 and the same command again finds nothing to do:
 
 ```
-  INFO applied plan: the one this desk's newest write left on it -- journals/20261105T003706.878829Z-amend-S2203A1.json (amend).
-  INFO plan.json differs from it: plan.json is the bundle's last build, and the changes, amends and applies recorded since -- to this desk or another -- are in the journal, not in it.
+  NOTE applied plan: the one this desk's newest write left on it -- journals/20261105T003706.878829Z-amend-S2203A1.json (amend).
+  NOTE plan.json differs from it: plan.json is the bundle's last build, and the changes, amends and applies recorded since -- to this desk or another -- are in the journal, not in it.
 48 strip(s) read over 215 address(es): 22 ours, 1 theirs, 17 free, 8 unknown
 ...
 
 22 unchanged
-  INFO channel 'Trumpet': the rebuild numbers it ch:20, and an earlier amend placed it on ch:21 -- it stays there
-  INFO channel 'Trombone': the rebuild numbers it ch:21, and an earlier amend placed it on ch:22 -- it stays there
-  INFO channel 'T.Sax': the rebuild numbers it ch:22, and an earlier amend placed it on ch:23 -- it stays there
+  NOTE channel 'Trumpet': the rebuild numbers it ch:20, and an earlier amend placed it on ch:21 -- it stays there
+  NOTE channel 'Trombone': the rebuild numbers it ch:21, and an earlier amend placed it on ch:22 -- it stays there
+  NOTE channel 'T.Sax': the rebuild numbers it ch:22, and an earlier amend placed it on ch:23 -- it stays there
 
 0 address(es) will be written; 1119 belonging to objects this amend does not own will NOT be.
 

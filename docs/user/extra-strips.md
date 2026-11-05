@@ -7,7 +7,7 @@ The input list is what the band brings. Some channels are yours: a talkback mic,
 Talkback on channel 40, source LCL 12.
 ```
 
-The build makes that channel, patched from the socket you named (`LCL 12`, `AES50-A 40`, or `A 40`: a bare `A`/`B`/`C` in a sentence is read as that AES50 network). Whatever the sentence does not say is decided and said at INFO (`reply.from-instructions`). If the sentence names one channel (`channel 40`, `ch 40`), the strip goes on that channel, and the other strips are numbered around it. The source is a mic unless the sentence says DI or wireless. Phantom is off unless it says phantom or 48V. The color is a category the sentence or the name points at, else a talkback category or `misc`, if your conventions color one.
+The build makes that channel, patched from the socket you named (`LCL 12`, `AES50-A 40`, or `A 40`: a bare `A`/`B`/`C` in a sentence is read as that AES50 network). Whatever the sentence does not say is decided and said in a NOTE (`reply.from-instructions`). If the sentence names one channel (`channel 40`, `ch 40`), the strip goes on that channel, and the other strips are numbered around it. The source is a mic unless the sentence says DI or wireless. Phantom is off unless it says phantom or 48V. The color is a category the sentence or the name points at, else a talkback category or `misc`, if your conventions color one.
 
 `verify` reports every such channel, quoting you, so the one strip your list does not have is never a surprise. Asked for like this, in so many words and with its socket, it is a **note**: your own decision, said back to you. It is a **warning** instead when the quote could not be checked against your text, was found only in the [resolved conventions](conventions-reference.md#the-resolved-conventions) (the model's restatement, not your words), is a fragment shorter than four words, states its socket only elsewhere in the line, or the strip was built unpatched (*"if available"*, below):
 
@@ -18,7 +18,7 @@ atoo verify --show clubdate
 ```
 0 error(s), 0 warning(s), 1 note(s)
 
-  [info] channels[Talkback]: ch 40 'Talkback' is not on the input list; built because instructions.md says 'Talkback on channel 40, source LCL 12', on LCL 12 as it states  (reconcile.from-instructions)
+  [note] channels[Talkback]: ch 40 'Talkback' is not on the input list; built because instructions.md says 'Talkback on channel 40, source LCL 12', on LCL 12 as it states  (reconcile.from-instructions)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
@@ -53,7 +53,7 @@ A strip you want at **every** show, written in your house conventions, is built 
 Code checks each sentence is really in your conventions, as it checks every other quote, and lists the strips in the [resolved conventions](conventions-reference.md#the-resolved-conventions). Every build then makes those strips itself, on the strip and from the socket you named, with the preset you named. Their sockets and strip numbers are held first, so no other channel lands on them. A build lists them up front:
 
 ```
-INFO instructed strips: 2 in club.resolved.md -- code builds MUSIC (aux 1), TALKBACK (aux 8)
+NOTE instructed strips: 2 in club.resolved.md -- code builds MUSIC (aux 1), TALKBACK (aux 8)
 ```
 
 What it decided that you did not say is a note: MUSIC is stereo because it takes two sockets, and is taken as a line source. `verify` reports each one, as any strip that is not on your input list: a note when it went on the socket your sentence names, a warning when it did not.
@@ -69,8 +69,8 @@ atoo verify --plan plan.json --input input.csv
 
   [warning] channels[TALKBACK]: aux 8 'TALKBACK' is not on the input list; built because club.md says 'Setup TALKBACK on Aux 8, source LCL 22 if available'. Left unpatched (if available): LCL 22 is taken by input list row 'Lead Vox'  (reconcile.from-instructions)
 
-  [info] channels[MUSIC]: linked as a stereo pair -- no convention states it; decided by Atoo's fallback rule: two sockets (LCL 23-24) make one stereo strip  (inferred.channel-stereo)
-  [info] channels[MUSIC]: aux 1 'MUSIC' is not on the input list; built because club.md says 'Setup a MUSIC playback on Aux 1, source LCL 23-24', on LCL 23-24 as it states  (reconcile.from-instructions)
+  [note] channels[MUSIC]: linked as a stereo pair -- no convention states it; decided by Atoo's fallback rule: two sockets (LCL 23-24) make one stereo strip  (inferred.channel-stereo)
+  [note] channels[MUSIC]: aux 1 'MUSIC' is not on the input list; built because club.md says 'Setup a MUSIC playback on Aux 1, source LCL 23-24', on LCL 23-24 as it states  (reconcile.from-instructions)
 
 APPLICABLE: warnings only.
 ```

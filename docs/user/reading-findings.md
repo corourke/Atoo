@@ -2,17 +2,18 @@
 
 Every check Atoo runs reports in the same shape: a **finding**, with a severity, the thing it is about, what it found, and a code. This page says what each part means and what to do about it.
 
-## The three severities
+## The four severities
 
 | Severity | Means | What to do |
 |---|---|---|
-| **ERROR** | The desk cannot be put in that state: a socket the desk does not have, a stereo pair that starts on an even socket, a value out of range. | Fix it. A plan with an error is refused by `apply`. |
-| **WARNING** | It can be written, but it is probably not what you meant: the critic disagrees with the plan, a DCA is at the floor with live channels in it. | Read it, then decide. Warnings never stop anything. |
-| **INFO** | Something you should know but need not act on, most often a choice the plan made that your files did not state. | Skim. If a choice is wrong, state it next time. |
+| **ERROR** | A physical setting that cannot work: a socket the desk does not have, a stereo pair that starts on an even socket, a value out of range. | Fix it. A plan with an error is refused by `apply`. |
+| **WARNING** | A real problem on the desk now, or in the plan once it is applied: a bus that goes nowhere, 48V on an unpatched socket, a clip, a mix nobody can hear. The critic's second opinion is a warning too. | Read it, then decide. Warnings never stop anything. |
+| **INFO** | Something that might need to go back into the plan, or be checked: the desk differs from the plan (a send switched, a mute, a width), a send or route the plan does not have, a sheet saved and not yet applied, a DCA nobody joins. | Review it. If the desk is right, put it into the plan; if the plan is right, put the desk back. |
+| **NOTE** | A decision Atoo made and tells you about: every choice a build, a Save, a capture or a patch makes where your files were silent, the presets it expanded, what a full apply resets. And other low-priority context, such as what was not read. A note never asks for anything. | Skim. If a choice is wrong, state it next time. |
 
-## INFO: a choice made, and said
+## NOTE: a choice made, and said
 
-Your conventions will not say everything. When they are silent, the plan still has to decide, because a desk cannot be left half-set: a bus is mono or stereo, a Matrix has a number. Atoo makes the usual choice, and **tells you** at INFO, with what it was decided from:
+Your conventions will not say everything. When they are silent, the plan still has to decide, because a desk cannot be left half-set: a bus is mono or stereo, a Matrix has a number. Atoo makes the usual choice, and **tells you** in a NOTE, with what it was decided from:
 
 > busses[MON5, MON6, Drums, ...] (11 busses): width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes ... / Mix busses conventionally stereo / FX busses conventionally stereo (`inferred.bus-width`)
 
@@ -25,7 +26,8 @@ A wrong choice is visible at soundcheck and costs a moment. If it is wrong, add 
 | Verdict | Means |
 |---|---|
 | `VERIFIED: no findings. Plan is applicable.` | nothing to report |
-| `APPLICABLE: notes only -- choices made where the conventions were silent.` | INFO only |
+| `APPLICABLE: notes only -- choices made where the conventions were silent.` | NOTEs only |
+| `APPLICABLE: INFO to review, no warnings.` | INFOs, and perhaps NOTEs; no warnings or errors |
 | `APPLICABLE: warnings only.` | warnings, no errors |
 | `BLOCKED: do not apply.` | at least one error |
 
@@ -38,10 +40,10 @@ atoo verify --plan starter/demo-show/plan.json --input starter/demo-show/input.c
 ```
 0 error(s), 0 warning(s), 4 note(s)
 
-  [info] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (83), ch 2 Snare (83), ch 3 H Tom (83), ch 4 Fl Tom (83), ch 5 OH (83), ch 6 Bass (83), ch 7 E Gtr (83), ch 8 E Gtr (83), ch 9 Keys (83), ch 10 Vocal (80), ch 11 Vocal (80), ch 12 Vocal (80)  (preset.expanded)
-  [info] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: Drums: 'Mix Bus' (55), Vocals: 'Mix Bus' (55), Vox Verb: 'Vox Verb' (55)  (preset.bus-expanded)
-  [info] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
-  [info] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
+  [note] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (83), ch 2 Snare (83), ch 3 H Tom (83), ch 4 Fl Tom (83), ch 5 OH (83), ch 6 Bass (83), ch 7 E Gtr (83), ch 8 E Gtr (83), ch 9 Keys (83), ch 10 Vocal (80), ch 11 Vocal (80), ch 12 Vocal (80)  (preset.expanded)
+  [note] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: Drums: 'Mix Bus' (55), Vocals: 'Mix Bus' (55), Vox Verb: 'Vox Verb' (55)  (preset.bus-expanded)
+  [note] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
+  [note] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
@@ -66,17 +68,18 @@ A critic finding starts with a short claim, such as *Keys bus created, but there
 
 ## In the browser
 
-The **Findings** panel down the right of Build and Apply opens with a verdict, in a large tag: green **Ready to apply** when nothing is an error, red **Blocked** with the number of errors beside it, or gray **No plan yet** when there are findings but nothing has been built. Under it are three counts: the things to check, the critic's advice and the notes on choices the build made. A count that is not zero is in bold. If the plan is older than the files it was built from, the tag is a yellow **Stale** instead of **Ready to apply**: *The input list changed since the last build: rebuild before applying.* A **Rebuild** button sits beside it, and the build's and the critic's notes are about the plan as it was built. A plan with errors still reads **Blocked**, with the same note under it. Nothing stops you applying a stale plan, and the Apply screen says it beside the plan; it is the plan as it was built, without your edit.
+The **Findings** panel down the right of Build and Apply opens with a verdict, in a large tag: green **Ready to apply** when nothing is an error, red **Blocked** with the number of errors beside it, or gray **No plan yet** when there are findings but nothing has been built. Under it are four counts: the things to check, the critic's advice, the INFOs to review and the notes on choices the build made. A count that is not zero is in bold. If the plan is older than the files it was built from, the tag is a yellow **Stale** instead of **Ready to apply**: *The input list changed since the last build: rebuild before applying.* A **Rebuild** button sits beside it, and the build's and the critic's notes are about the plan as it was built. A plan with errors still reads **Blocked**, with the same note under it. Nothing stops you applying a stale plan, and the Apply screen says it beside the plan; it is the plan as it was built, without your edit.
 
 The number beside **Findings**, also on the panel's tab when it is folded away, counts the errors and warnings. It is gray at 0, yellow when there are only warnings, and red when any of them is an error.
 
-Below the verdict, each finding is one line: its severity tag (**ERROR**, **WARNING** or **INFO**), where it is, named the way the desk names it (`CH 23 Crowd`, `AUX 2 HOST`), and what it says. Click the line for the rest: the explanation, the fix, the code, which check found it, and links to the row, tile or line it is about. One finding about several strips is one line, such as *3 strips built from instructions.md, not on the input list*, with each strip listed inside.
+Below the verdict, each finding is one line: its severity tag (**ERROR**, **WARNING**, **INFO** or **NOTE**), where it is, named the way the desk names it (`CH 23 Crowd`, `AUX 2 HOST`), and what it says. Click the line for the rest: the explanation, the fix, the code, which check found it, and links to the row, tile or line it is about. One finding about several strips is one line, such as *3 strips built from instructions.md, not on the input list*, with each strip listed inside.
 
 - **To check**: errors, then warnings. Findings about strips come before findings about files. With warnings and no errors the verdict reads, for example, **Ready to apply · 1 to check**. After a rebuild, each strip that changed although nothing it is made from changed is one of these, `rebuild.unasked-change`: *Not asked for: gain 20 → 26 dB* on `CH 6 Bass DI`, with links to its row and to the step 04 list of changes ([What a rebuild changed](pipeline.md#what-a-rebuild-changed)).
 - **Advice**: the critic's warnings, marked with a dashed edge. They are a second opinion and never block an apply.
-- **▸ Choices**: the INFO notes that are choices, folded: what the build decided where your conventions were silent, and what a full apply does beyond the plan's own strips.
+- **To review**: every INFO, open: where the desk differs from the plan, or something to check. With INFOs and no warnings the verdict reads, for example, **Ready to apply · 2 to review**.
+- **▸ Choices**: the NOTEs that are choices, folded: what the build decided where your conventions were silent, and what a full apply does beyond the plan's own strips.
 - **▸ Build details**: notes on how the build read the model's draft, such as the order it numbered channels in, and notes that restate your conventions rather than choose for them: what the Category table filled in, which preset values the plan carries, an effect loaded and read back, and what a full apply resets first (`apply.init`). They are kept for debugging, and `verify` and `build` still print them (`build` prints verify's copy of one only as a count, since it has just printed its own). A warning or an error is never put here.
 
-![The Findings panel on a built show: the verdict and its counts, the critic's two advice rows, then Choices and Build details folded](img/build-findings.png)
+![The Findings panel on a built show: the verdict and its four counts, the critic's two advice rows, the INFOs under To review, then Choices folded](img/build-findings.png)
 
 Tick a finding's box once you have dealt with it, and it moves to the folded **Addressed** list at the foot of the panel, its tag gray, so a ticked error no longer reads as live. Watch has its own table instead ([Watch the desk during a show](watch-a-show.md)).

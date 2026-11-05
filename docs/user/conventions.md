@@ -61,7 +61,7 @@ A `<!--` inside a code block or a `` `code span` `` is ordinary text, not a comm
 **An unfinished comment does not swallow the rest of the file.** If a `<!--` never closes, the build does not throw away every rule after it. It reads the rest of the file as written and warns you, naming the file and line:
 
 ```
-Comments in the conventions -- 1 note(s):
+Comments in the conventions -- 1 warning(s):
 
 WARNING  house.md line 3: A comment opened here with <!-- never closes with
          -->. Rather than drop everything after it, the build reads the rest
@@ -82,14 +82,14 @@ The same warning appears in the browser's Findings panel. A stray `-->` with no 
 A value your conventions never mention goes one of two ways, and which way depends on whether the desk can work without it.
 
 - **Most values are left alone.** A high-pass, an EQ band, a fader, a color, a preset: unstated means the plan leaves the field empty and the desk keeps whatever it had. A board with last week's filter still passes audio, so nothing is filled in with something plausible.
-- **Four values are decided, and every decision is announced.** A bus's mono/stereo width, a send's pre/post, a mix or FX bus's route to the Main, and whether two sources become a stereo pair all decide how the show is *patched*, and a patch left to whatever the desk had may not work. So the build makes the reasonable choice — from your conventions first, then from what the bus is for and what things are called — and tells you in an [INFO note](reading-findings.md#info-a-choice-made-and-said) naming what it chose and why.
+- **Four values are decided, and every decision is announced.** A bus's mono/stereo width, a send's pre/post, a mix or FX bus's route to the Main, and whether two sources become a stereo pair all decide how the show is *patched*, and a patch left to whatever the desk had may not work. So the build makes the reasonable choice — from your conventions first, then from what the bus is for and what things are called — and tells you in a [NOTE](reading-findings.md#note-a-choice-made-and-said) naming what it chose and why.
 
 A **physical socket** is never decided that way: a socket is where a cable is, not a preference, so it is never guessed. An output whose patch nobody stated is still set up -- its feed, level and processing -- but routed to no socket, at WARNING (`output.no-patch`). A Matrix used inside the desk, as the phones or monitor source, needs no socket: say so (*"Matrix 4 is the headphone feed"*) and the plan records it, verify says it as a note instead, and Apply sets the monitor's source to it. If the output should reach a jack, state its patch.
 
 For example, a conventions file that names six monitor busses but never says how wide they are still gives an applicable plan. `verify` adds a note for each width it decided:
 
 ```
-  [info] busses[MON1]: width set to mono -- the conventions did not state it; decided by Atoo's fallback rule: it feeds a dedicated output on a single socket (A 21), and one jack carries one signal  (inferred.bus-width)
+  [note] busses[MON1]: width set to mono -- the conventions did not state it; decided by Atoo's fallback rule: it feeds a dedicated output on a single socket (A 21), and one jack carries one signal  (inferred.bus-width)
 ```
 
 A wedge on one socket is mono; an in-ear or a mix bus is stereo. If that is wrong for your show you will hear it at soundcheck, and one sentence settles it for every show after: *"these will all be MONO busses."* The plan, the Findings panel, `verify`, `apply` and `amend` all agree on the value that was chosen.
@@ -132,7 +132,7 @@ Every L/R pair of inputs becomes one stereo channel.
 Keep OH L and OH R as two mono channels.
 ```
 
-The first sentence makes every L/R pair on the list one stereo channel; the second keeps the overheads apart. A pair the model had written otherwise is paired and said at INFO, and a pair kept apart is listed at INFO. A vaguer sentence (*"stereo-paired inputs become one stereo channel"*) leaves pairing to the model, which says what it chose. [Stating a stereo pair](input-lists.md#stating-a-stereo-pair-the-recipe) has the naming that goes with it. A later version adds a sheet for busses and outputs where mono or stereo is a column of its own.
+The first sentence makes every L/R pair on the list one stereo channel; the second keeps the overheads apart. A pair the model had written otherwise is paired and said in a NOTE, and a pair kept apart is listed in a NOTE. A vaguer sentence (*"stereo-paired inputs become one stereo channel"*) leaves pairing to the model, which says what it chose. [Stating a stereo pair](input-lists.md#stating-a-stereo-pair-the-recipe) has the naming that goes with it. A later version adds a sheet for busses and outputs where mono or stereo is a column of its own.
 
 What a pair can be *patched to* is the desk's business, not yours — two adjacent sockets, odd first — and that constraint lives on the [input list page](input-lists.md#a-stereo-pair-needs-two-adjacent-sockets-odd-first), because the cabling is where it can still be fixed.
 
@@ -147,7 +147,7 @@ A plan carries an alternate **only when you state one**. Say it in the conventio
   LIVE track, CRD 1 upward in channel order.
 ```
 
-If you name the card and not the track numbers, they are counted for you: the next free `CRD` socket, in channel order, a stereo channel taking an odd/even pair, with an INFO note listing every one. Name the numbers ("Kick plays back from CRD 17") and they are used as written. A channel with no alternate stated keeps the one already on the desk, which breaks nothing: the strip works on its main input.
+If you name the card and not the track numbers, they are counted for you: the next free `CRD` socket, in channel order, a stereo channel taking an odd/even pair, with a NOTE listing every one. Name the numbers ("Kick plays back from CRD 17") and they are used as written. A channel with no alternate stated keeps the one already on the desk, which breaks nothing: the strip works on its main input.
 
 `verify` refuses an alternate the desk cannot take, such as a socket that does not exist or a stereo channel's alternate that is not an odd/even pair:
 
@@ -170,7 +170,7 @@ A split is an output socket fed straight from an input socket, not from a bus, a
 - Record AES50-A 1-12 one to one to CRD 1-12.
 ```
 
-"Every input" means every input socket your channels are patched from, in channel order, a stereo channel's two sockets in turn, one output socket each. A range you name is used as written. The plan holds one entry per output socket, each said at INFO with the line it came from, and the build says them under the plan it wrote; for twelve inputs split to AES50-B and recorded to USB:
+"Every input" means every input socket your channels are patched from, in channel order, a stereo channel's two sockets in turn, one output socket each. A range you name is used as written. The plan holds one entry per output socket, each said in a NOTE with the line it came from, and the build says them under the plan it wrote; for twelve inputs split to AES50-B and recorded to USB:
 
 ```
 Direct outputs: 24 socket(s) fed straight from a source (AES50-B 1-12, USB 1-12)
@@ -188,7 +188,7 @@ A split carries the input before the channel. A feed of a channel *after* its pr
 - Keys to the video desk: the keys pre-fader, on USB 14-15, processed but not following the keys fader.
 ```
 
-Pre-fader is after the channel's EQ and dynamics, before its fader; post-fader follows the fader as well. The build takes the next user signal the show does not already use, and one feed of the same strip at the same tap is shared by every socket that asks for it. A stereo channel takes two, its left and its right, on the socket you name and the next. It says each at INFO, for the lines above:
+Pre-fader is after the channel's EQ and dynamics, before its fader; post-fader follows the fader as well. The build takes the next user signal the show does not already use, and one feed of the same strip at the same tap is shared by every socket that asks for it. A stereo channel takes two, its left and its right, on the socket you name and the next. It says each in a NOTE, for the lines above:
 
 - *USB 13 carries Lead Vox after its fader (post), through USR 1, the next free user signal, as '- Stream recorder: the lead vocal, post-fader, on USB 13' asks*
 - *USB 14-15 carries Keys before its fader (pre), through USR 2, USR 3, the next free user signals, as '- Keys to the video desk: the keys pre-fader, on USB 14-15' asks*

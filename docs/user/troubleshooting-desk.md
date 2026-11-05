@@ -82,7 +82,7 @@ ERROR: This plan is for a WING Compact, but 198.51.100.10 is a WING (full-size c
 Refusing to apply: LCL 20 does not exist on the WING (full-size console) at 198.51.100.10. Rebuild for this desk (--console-model wing-full), or repatch to sockets it has.
 ```
 
-The plan was built for one WING model and the desk on the line is another, and the plan patches at least one jack this desk does not have. Nothing was written. The three models differ in their local and aux I/O: the full-size WING has 8 local inputs and 8 aux in and out; the Compact and Rack have 24 local inputs and no aux jacks. A different model on its own is not a refusal — a Compact plan applies to a Rack, with an INFO saying so — only a missing socket is.
+The plan was built for one WING model and the desk on the line is another, and the plan patches at least one jack this desk does not have. Nothing was written. The three models differ in their local and aux I/O: the full-size WING has 8 local inputs and 8 aux in and out; the Compact and Rack have 24 local inputs and no aux jacks. A different model on its own is not a refusal — a Compact plan applies to a Rack, with a NOTE saying so — only a missing socket is.
 
 Rebuild the plan for this desk (`atoo build --console-model wing-full ...`), or repatch the listed channels and outputs to sockets it has. `--skip-verify` does not get past this: it is about the plan's findings, and this is about the hardware. See [A plan built for a different model](two-desks.md#a-plan-built-for-a-different-model).
 
@@ -121,7 +121,7 @@ nothing more to undo on this desk: my-show/journals keeps only the newest 5 entr
 and the write beneath it was pruned (20261002T162704.453182Z-apply-198.51.100.7.json, apply). Undoing it would leave the desk holding a write no journal records, so amend and patch would compare against the wrong plan. Nothing was written. To change the desk from here, apply a plan (a full apply replaces everything) or patch it.
 ```
 
-A bundle's `journals/` keeps only the newest **5** entries, so undo reaches back at most five writes. The write beneath this one is still on the desk, but its journal — the values undo would put back — was pruned; the run that pruned it said so at INFO (`... were pruned ... Undo now reaches back no further than the oldest entry kept`). Undoing the last journalled write would leave the desk holding something no journal records, and the next `amend` or `patch` would compare against the wrong plan, so undo refuses and writes nothing (exit code 1).
+A bundle's `journals/` keeps only the newest **5** entries, so undo reaches back at most five writes. The write beneath this one is still on the desk, but its journal — the values undo would put back — was pruned; the run that pruned it said so in a NOTE (`... were pruned ... Undo now reaches back no further than the oldest entry kept`). Undoing the last journalled write would leave the desk holding something no journal records, and the next `amend` or `patch` would compare against the wrong plan, so undo refuses and writes nothing (exit code 1).
 
 To go further back, put the desk where you want it another way: a full `atoo apply` of the plan you want replaces everything Atoo built, or `atoo patch` changes one thing. If a run must stay undoable for longer, copy its journal aside before five more writes go on the stack — `atoo undo <that copy>` still reads it, under the usual guards. See [How far back undo reaches](journals.md#how-far-back-undo-reaches-the-newest-5).
 

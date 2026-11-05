@@ -31,7 +31,7 @@ Stage 0 runs inside `build` whenever its file is missing or out of date, and cos
 
 *An experiment.* Many questions about your conventions have the same answer in every show: which high-pass the drums get, which DCA the bass joins, whether "gain on each channel" includes a USB track. So before the first build, one model call restates your conventions, together with Atoo's audio domain knowledge, as explicit rules, and writes them beside your file: `house.md` gives `house.resolved.md`. Every later build reads that file in place of the two. Your show's `instructions.md` is still read as written, on top, and still wins.
 
-From the rules, code writes each category's settings (color, high-pass, DCA, gain and so on) on every channel the model left them off, and builds the strips your conventions ask for that are on no input list, such as "Setup TALKBACK on Aux 8". Code also checks that every quote in the file really is in your text, and that every line of your conventions is used or listed as having no effect. A quote that is not in your text is a WARNING; a line no rule cites is a note, and the generator is given that line as you wrote it.
+From the rules, code writes each category's settings (color, high-pass, DCA, gain and so on) on every channel the model left them off, and builds the strips your conventions ask for that are on no input list, such as "Setup TALKBACK on Aux 8". Code also checks that every quote in the file really is in your text, and that every line of your conventions is used or listed as having no effect. A quote that is not in your text is a WARNING; a line no rule cites is an INFO, and the generator is given that line as you wrote it.
 
 The file is made again when your conventions, the domain knowledge or the prompt change, and `atoo resolve --conventions house.md` makes it again on purpose. `atoo build --no-resolve` builds without it. **Read it**: [The resolved conventions](conventions-reference.md#the-resolved-conventions) says how, and what to do when a rule in it is not what you meant.
 
@@ -41,15 +41,15 @@ The file is made again when your conventions, the domain knowledge or the prompt
 
 It needs to know which desk the plan is for (`--console-model wing-compact`; a rebuild of a show that has a plan takes it from that plan), and a model provider ([Setting up an AI provider](ai-provider.md)). This is the one stage that uses a language model. Everything after it is ordinary code and runs with no model at all.
 
-The model writes a short reply, saying what it decided, and code expands it into the plan: it numbers the channels, copies each row's details off the input list, picks the next free socket where a row states none, and applies your colors. Each thing code chose is recorded in the plan as an INFO note (in the browser, under **Build details**), so it is never mistaken for what the model or your conventions did.
+The model writes a short reply, saying what it decided, and code expands it into the plan: it numbers the channels, copies each row's details off the input list, picks the next free socket where a row states none, and applies your colors. Each thing code chose is recorded in the plan as a NOTE (in the browser, under **Build details**), so it is never mistaken for what the model or your conventions did.
 
-**Every input-list row becomes a channel, unless your own words say to leave it out.** The model may leave a row off only by quoting a line from your conventions, your instructions or that row's own notes (*"not patched for this event"*), and code checks the quote is really there, word for word. A row left out without one is built anyway, by code, and said at INFO (`reply.row-built`). A channel that is not built is a dead microphone at soundcheck; one built that nobody wanted is a strip you mute.
+**Every input-list row becomes a channel, unless your own words say to leave it out.** The model may leave a row off only by quoting a line from your conventions, your instructions or that row's own notes (*"not patched for this event"*), and code checks the quote is really there, word for word. A row left out without one is built anyway, by code, and said in a NOTE (`reply.row-built`). A channel that is not built is a dead microphone at soundcheck; one built that nobody wanted is a strip you mute.
 
-**Where your conventions are silent** about something the desk cannot be left without (a bus's mono or stereo, a send's pre or post, a stereo pairing), the build decides it and `verify` reports each decision as an `inferred.*` note. Where your conventions and instructions **contradict each other**, or declare something this show never uses, the build adds a note that quotes the lines (`conventions.conflict`, `conventions.unused`).
+**Where your conventions are silent** about something the desk cannot be left without (a bus's mono or stereo, a send's pre or post, a stereo pairing), the build decides it and `verify` reports each decision as an `inferred.*` note. Where your conventions and instructions **contradict each other**, or declare something this show never uses, the build adds an INFO that quotes the lines (`conventions.conflict`, `conventions.unused`).
 
 **One fix-up round.** When the plan fails `verify` with errors, or a strip's audio reaches no output, the build sends the model its reply and the exact messages once, and asks for a corrected reply. If that passes, it is the plan, and the build says what was fixed (`build.fixup`). If not, the plan is still written but apply will refuse it: the build shows both rounds' errors and exits 2 (`build.fixup-unresolved`). There is one round, never a loop.
 
-With the critic on (below), it reads the first plan before this round. When it finds a line of your instructions or conventions the plan did not carry out, and quotes that line exactly, the line goes back in the same round, alongside verify's errors, or on its own. The corrected plan is kept only if `verify` finds it no worse: no more errors, and, with as many, no more strips that reach no output. Otherwise the first plan stands, and the build says what is still open (`build.fixup-rejected`). Each line sent back is a note quoting it (`build.critic-repair`): carried out, where code can see the sockets it names, or else to be confirmed in the plan. The critic's other findings were about the first plan, so once it is replaced each starts *On the first plan:*.
+With the critic on (below), it reads the first plan before this round. When it finds a line of your instructions or conventions the plan did not carry out, and quotes that line exactly, the line goes back in the same round, alongside verify's errors, or on its own. The corrected plan is kept only if `verify` finds it no worse: no more errors, and, with as many, no more strips that reach no output. Otherwise the first plan stands, and the build says what is still open (`build.fixup-rejected`). Each line sent back is said quoting it (`build.critic-repair`): carried out, in a NOTE, where code can see the sockets it names, or else to be confirmed in the plan, in an INFO. The critic's other findings were about the first plan, so once it is replaced each starts *On the first plan:*.
 
 **It is the slow stage**: minutes on a hosted model. Each model call shows where it is while it runs (waiting, thinking or writing, and for how long), and a build can be stopped at any time with Ctrl-C or Build's **Stop**, writing nothing. See [A build seems stuck](troubleshooting-build.md#a-build-seems-stuck).
 
@@ -78,9 +78,9 @@ $ atoo build --show starter/demo-show --conventions starter/conventions.md --con
 Changed since the last build -- 3 strips against plan.previous.json: 1 added, 1 changed, 1 moved; 1 not asked for
   WARNING  CH 6 Bass DI: gain 20 -> 26 dB -- nothing in the input list or the conventions about it
            changed
-  INFO     CH 13 Guest Vox: added
-  INFO     CH 14 Playback: moved from CH 13
-  INFO     graded by what each strip is made from: a change is asked for when an input-list row it
+  NOTE     CH 13 Guest Vox: added
+  NOTE     CH 14 Playback: moved from CH 13
+  NOTE     graded by what each strip is made from: a change is asked for when an input-list row it
            is made from changed, or a conventions line naming it, its category, or a bus, DCA or
            mute group it is on -- read from the words, so a line that calls a strip something else
            is not seen
@@ -111,19 +111,19 @@ atoo verify --plan starter/demo-show/plan.json --input starter/demo-show/input.c
 ```
 0 error(s), 0 warning(s), 4 note(s)
 
-  [info] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (83), ch 2 Snare (83), ch 3 H Tom (83), ch 4 Fl Tom (83), ch 5 OH (83), ch 6 Bass (83), ch 7 E Gtr (83), ch 8 E Gtr (83), ch 9 Keys (83), ch 10 Vocal (80), ch 11 Vocal (80), ch 12 Vocal (80)  (preset.expanded)
-  [info] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: Drums: 'Mix Bus' (55), Vocals: 'Mix Bus' (55), Vox Verb: 'Vox Verb' (55)  (preset.bus-expanded)
-  [info] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
-  [info] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
+  [note] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (83), ch 2 Snare (83), ch 3 H Tom (83), ch 4 Fl Tom (83), ch 5 OH (83), ch 6 Bass (83), ch 7 E Gtr (83), ch 8 E Gtr (83), ch 9 Keys (83), ch 10 Vocal (80), ch 11 Vocal (80), ch 12 Vocal (80)  (preset.expanded)
+  [note] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: Drums: 'Mix Bus' (55), Vocals: 'Mix Bus' (55), Vox Verb: 'Vox Verb' (55)  (preset.bus-expanded)
+  [note] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
+  [note] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```
 
 (`starter/demo-show/` is the Demo show, in an Atoo checkout. The test suite re-runs this transcript, so it stays what the command prints.)
 
-The `[info]` lines are **notes, not problems**: what the plan carries, a choice made where the conventions were silent, or something built because `instructions.md` asked for it. Notes never block. The same thing said about many objects is printed once, naming them all (`ch 1-22 (22 channels): ...`).
+The `[note]` lines are **notes, not problems**: what the plan carries, a choice made where the conventions were silent, or something built because `instructions.md` asked for it. Notes never block. The same thing said about many objects is printed once, naming them all (`ch 1-22 (22 channels): ...`).
 
-**Routing is checked here, by code.** A channel whose audio reaches no output (`routing.channel-reaches-nothing`), or reaches no Main, directly or through a bus (`routing.channel-misses-main`), is a warning. A channel sent straight to a Matrix that reaches an output socket (an aux fed to the PA's Matrices) is in the house sound, and is not reported. A click, guide or talkback strip is meant to stay off Main and is not reported. A channel sent only to a bus named for a broadcast, stream or recording mix (*Broadcast Mix*, *Livestream*, *Record*, *Video*) that reaches an output socket is meant for that feed: it is a note (`routing.broadcast-only`), not a warning. Both are warnings, not errors: the desk works, and a strip kept off the PA can be deliberate.
+**Routing is checked here, by code.** A channel whose audio reaches no output (`routing.channel-reaches-nothing`), or reaches no Main, directly or through a bus (`routing.channel-misses-main`), is a warning. A channel sent straight to a Matrix that reaches an output socket (an aux fed to the PA's Matrices) is in the house sound, and is not reported. A click, guide or talkback strip is meant to stay off Main and is not reported. A channel sent only to a bus named for a broadcast, stream or recording mix (*Broadcast Mix*, *Livestream*, *Record*, *Video*) that reaches an output socket is meant for that feed: it is an INFO (`routing.broadcast-only`), not a warning. Both are warnings, not errors: the desk works, and a strip kept off the PA can be deliberate.
 
 **This is the stage that stops an apply.** `apply` runs the same checks itself before it contacts the desk, and on any **error** it prints the report and stops, exiting `2`:
 
@@ -153,7 +153,7 @@ atoo audit --state ~/Documents/Atoo/audit-demo/audit_demo_state.json --plan ~/Do
 ```
 
 ```
-Audit findings: 5 warning, 3 info.
+Audit findings: 3 warning, 4 info, 1 note.
 
 [WARNING] C001 Phantom Power On Unpatched Socket
   48V is on for LCL 9 but nothing is patched to it -- no channel, no aux and no user patch.
@@ -169,15 +169,16 @@ Audit findings: 5 warning, 3 info.
 
 ## Severity, across all five stages
 
-Every stage produces the same kind of finding, with the same three severities:
+Every stage produces the same kind of finding, with the same four severities:
 
 | | what it means | consequence |
 |---|---|---|
 | `ERROR` | this cannot work | `verify` and `apply` refuse (exit 2); `audit`/`watch` exit 1 |
-| `WARNING` | this probably is not what you meant | reported, never blocking |
-| `INFO` | a choice was made for you, and here it is | reported, never blocking |
+| `WARNING` | a real problem on the desk now, or in the plan once it is applied | reported, never blocking |
+| `INFO` | something to review: the desk differs from the plan, or something that might belong in it | reported, never blocking |
+| `NOTE` | a choice was made for you, and here it is | reported, never blocking |
 
-**`INFO` is load-bearing.** Where your conventions and the input list imply an answer but do not state one — whether a monitor bus is mono or stereo, how a long name is abbreviated — Atoo makes the reasonable choice and tells you at `INFO` what it chose and what it read that from. It does not refuse, and it does not leave the field empty, because the desk has to end up in working order. If the choice does not suit the show, the conventions did not say so clearly enough, and that is a one-line fix for next time.
+**`NOTE` is load-bearing.** Where your conventions and the input list imply an answer but do not state one — whether a monitor bus is mono or stereo, how a long name is abbreviated — Atoo makes the reasonable choice and tells you in a `NOTE` what it chose and what it read that from. It does not refuse, and it does not leave the field empty, because the desk has to end up in working order. If the choice does not suit the show, the conventions did not say so clearly enough, and that is a one-line fix for next time.
 
 There is no `CRITICAL`: `ERROR` already refuses everything.
 

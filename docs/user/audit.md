@@ -67,7 +67,7 @@ No findings -- every rule in this audit passed.
 
 **Every finding cites the rule it broke**, by an ID that does not change when the wording does: `CH002` above. Quote it in a bug report. No rule guesses what a channel is from its name: every rule works from the desk's routing, patch, mute and fader values.
 
-**`audit` exits `0` on warnings and info, and `1` on an error**, or when it could not run at all (a missing `--state` file, a desk that did not answer). Stdout tells them apart: a run that found errors prints its `Audit findings:` line there, and one that could not start prints only to stderr. This is not the `2` that `build`, `verify` and `apply` use; see the [exit-code table](cli-reference.md#exit-codes).
+**`audit` exits `0` on warnings, info and notes, and `1` on an error**, or when it could not run at all (a missing `--state` file, a desk that did not answer). Stdout tells them apart: a run that found errors prints its `Audit findings:` line there, and one that could not start prints only to stderr. This is not the `2` that `build`, `verify` and `apply` use; see the [exit-code table](cli-reference.md#exit-codes).
 
 ## How long a live read takes, and what it prints while it works
 
@@ -75,7 +75,7 @@ A read of a live WING takes **a few seconds**: some 6,000 values, fetched a whol
 
 - **If the line sits still,** that address is not being answered. Each one costs 3 seconds (three tries at the `--timeout`); `--timeout 0.3` cuts that without changing anything on a desk that answers.
 - **"went unanswered" is not "off" or "empty".** Those values are not in the report at all. On a healthy desk the count is zero; hundreds means something is wrong. `--raw-log FILE` records every request and reply.
-- **A kind of address that goes silent is cut short**, with an `INFO: stopped asking for ...` line. See [`audit` or `watch` looks like it has hung](troubleshooting-audit.md#audit-or-watch-looks-like-it-has-hung).
+- **A kind of address that goes silent is cut short**, with a `NOTE: stopped asking for ...` line. See [`audit` or `watch` looks like it has hung](troubleshooting-audit.md#audit-or-watch-looks-like-it-has-hung).
 
 ## Reading by object, and `--per-leaf`
 
@@ -179,20 +179,20 @@ atoo audit --state audit_demo_state.json --plan audit_demo_plan.json
 ```
 
 ```
-Audit findings: 5 warning, 3 info.
+Audit findings: 3 warning, 4 info, 1 note.
 ```
 
 **Fewer than the ten you got without it, not more.** `--plan` both adds and subtracts, and the subtraction is covered further down. Two findings go on top of the structural ones, and the first is the reason to do this at all:
 
 ```
-[WARNING] CV006 Bus Send Contradicts Plan
+[INFO] CV006 Bus Send Contradicts Plan
   CH 1 "Kick": plan says send to Drums is -6dB, live console reads 0dB (tolerance 0.5dB). (plan provenance: Busses: Drums (post, -6dB))
 ```
 
 It quotes **the plan's own provenance** — the line of your conventions that asked for `-6dB` — rather than just two numbers. That is what a diff against a plan buys you over a diff against nothing.
 
 ```
-[WARNING] CV009 Undeclared Physical Output Patch
+[INFO] CV009 Undeclared Physical Output Patch
   LCL 1 is patched to MAIN 1 on the live console, but no bus or output in the plan routes anywhere to this socket -- likely leftover from an earlier apply, a different show, or manual patching.
 ```
 
@@ -211,7 +211,7 @@ So when you give it a plan, it stops commenting on strips, busses and sockets th
 And it never does it quietly. Whatever it held back is counted, named and explained at the end of the report:
 
 ```
-[INFO] S001 Findings Withheld From This Report
+[NOTE] S001 Findings Withheld From This Report
   5 finding(s) are not listed above because a plan was supplied: 1 C002 (1 about an object the plan never mentions); 1 L001 (1 about an object the plan never mentions); 1 N001 (1 about an object the plan never mentions); 2 R002 (2 about an object the plan never mentions). Re-run the same audit with no plan to see every finding the rules produced.
 ```
 

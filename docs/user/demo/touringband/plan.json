@@ -2246,8 +2246,9 @@
       "ok": true,
       "error_count": 0,
       "warning_count": 0,
-      "note_count": 15,
-      "summary": "OK"
+      "note_count": 14,
+      "summary": "OK",
+      "info_count": 1
     },
     "critic_findings": [
       {
@@ -2270,7 +2271,7 @@
         "severity": "info",
         "code": "critic.conventions",
         "message": "The Speech mute group is declared unconditionally in the conventions but no speech-category channel exists in this show, so it is declared but unused. -- quoting \"Speech: All speech channels\"",
-        "where": "conventions \u00a7 Mute Groups",
+        "where": "conventions § Mute Groups",
         "category": "Mute Groups",
         "source": "critic",
         "line": "Speech: All speech channels"
@@ -2290,21 +2291,23 @@
       "info": [
         {
           "severity": "info",
+          "code": "group.empty",
+          "message": "mute group 'Speech' is declared but no channel or bus joins it -- it does nothing",
+          "where": "plan.mute_groups[Speech]",
+          "source": "verify",
+          "fix": "drop it from the conventions for shows like this one, or give it members"
+        }
+      ],
+      "note": [
+        {
+          "severity": "note",
           "code": "strip.colour-alias",
           "message": "'Magenta' is the desk's Pink (11): EG 1. The desk has no colour called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word",
           "where": "plan",
           "source": "verify"
         },
         {
-          "severity": "info",
-          "code": "group.empty",
-          "message": "mute group 'Speech' is declared but no channel or bus joins it -- it does nothing",
-          "where": "plan.mute_groups[Speech]",
-          "source": "verify",
-          "fix": "drop it from the conventions for shows like this one, or give it members"
-        },
-        {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs",
           "where": "busses[MON5]",
@@ -2312,7 +2315,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs",
           "where": "busses[MON6]",
@@ -2320,7 +2323,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Mix busses conventionally stereo",
           "where": "busses[Drums]",
@@ -2328,7 +2331,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Mix busses conventionally stereo",
           "where": "busses[Drums Comp]",
@@ -2336,7 +2339,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Mix busses conventionally stereo",
           "where": "busses[Vocals]",
@@ -2344,7 +2347,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Mix busses conventionally stereo",
           "where": "busses[Keys]",
@@ -2352,7 +2355,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: Mix busses conventionally stereo",
           "where": "busses[Horns]",
@@ -2360,7 +2363,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: FX busses conventionally stereo",
           "where": "busses[VOX Reverb]",
@@ -2368,7 +2371,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: FX busses conventionally stereo",
           "where": "busses[VOX Delay]",
@@ -2376,7 +2379,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: FX busses conventionally stereo",
           "where": "busses[Snare Verb]",
@@ -2384,7 +2387,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.bus-width",
           "message": "width set to stereo -- the conventions did not state it; decided by the generator: FX busses conventionally stereo",
           "where": "busses[INST Reverb]",
@@ -2392,7 +2395,7 @@
           "fix": "if that is not what you want, say so in your conventions or this show's instructions and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.output-index",
           "message": "Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1",
           "where": "outputs[Matrix 1]",
@@ -2400,7 +2403,7 @@
           "fix": "if that is the wrong strip, number it in the conventions (\"Main 2\", \"Matrix 3\") and rebuild"
         },
         {
-          "severity": "info",
+          "severity": "note",
           "code": "inferred.channel-stereo",
           "message": "linked as a stereo pair -- no convention states it; decided by the generator: Input list designates Keys L/R as left/right pair on consecutive AES50-A sockets 15+16; stereo pairing conventional for DI sources",
           "where": "channels[Keys L]",
@@ -2411,77 +2414,77 @@
     },
     "build_findings": [
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.channels-numbered",
         "message": "channels numbered in the order the reply listed them: ch 1-19",
         "where": "plan",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.colours-applied",
         "message": "colour applied from the reply's category map by each input-list row's category: drums -> Red (6: Kick, Snare, HH, Tom1, FLOOR, OH); bass -> Blue (1: BassDI); guitars -> Magenta (1: EG 1); keys -> Cyan (1: Keys L); horns -> Orange (3: T.Sax SM57, T.Bone SM57, Trumpet SM57); vocals -> Green (6: F VOX 1, MLD VOX, F VOX 2, KBD VOX, GTR VOX, DRM VOX); tracks -> Yellow (1: TRAX)",
         "where": "plan",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Drums (input-list category 'drums'): 6 channel(s), Kick, Snare, HH, Tom1, FLOOR, OH. Written by code where the reply left the field out: HPF 40 Hz (all); DCA Drums (all); mute group Band (all); gain 20 dB (all); trim 0 dB (all); fader fully down (-144 dB) (all); Main only through its busses (all)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Bass (input-list category 'bass'): 1 channel(s), BassDI. Written by code where the reply left the field out: HPF 80 Hz (all); DCA Band (all); mute group Band (all); trim 0 dB (all); straight to Main 1 (all). The reply's own, different value kept: gain (BassDI)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Guitars (input-list category 'guitars'): 1 channel(s), EG 1. Written by code where the reply left the field out: HPF 80 Hz (all); DCA Guitars (all); mute group Band (all); gain 20 dB (all); trim 0 dB (all); fader fully down (-144 dB) (all); straight to Main 1 (all)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Keyboards (input-list category 'keys'): 1 channel(s), Keys L. Written by code where the reply left the field out: HPF 80 Hz (all); DCA Keys (all); mute group Band (all); trim 0 dB (all). The reply's own, different value kept: gain (Keys L)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Horns (input-list category 'horns'): 3 channel(s), T.Sax SM57, T.Bone SM57, Trumpet SM57. Written by code where the reply left the field out: HPF 100 Hz (all); DCA Horns (all); mute group Band (all); gain 20 dB (all); trim 0 dB (all); fader fully down (-144 dB) (all)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Vocals (input-list category 'vocals'): 6 channel(s), F VOX 1, MLD VOX, F VOX 2, KBD VOX, GTR VOX, DRM VOX. Written by code where the reply left the field out: DCA Vocals (all); mute group Vocals (all); gain 20 dB (all); trim 0 dB (all); fader fully down (-144 dB) (all); Main only through its busses (all). The reply's own, different value kept: HPF (F VOX 1, MLD VOX, F VOX 2, KBD VOX, GTR VOX, DRM VOX)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.category-rule",
         "message": "Tracks (input-list category 'tracks'): 1 channel(s), TRAX. Written by code where the reply left the field out: DCA Tracks (all); trim 0 dB (all); fader fully down (-144 dB) (all); straight to Main 1 (all)",
         "where": "category table",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "reply.sends-expanded",
         "message": "each channel's bus_sends written from the busses' sender lists (155 sends): MON1 <- 19 of 19 (every channel); MON2 <- 19 of 19 (every channel); MON3 <- 19 of 19 (every channel); MON4 <- 19 of 19 (every channel); MON5 <- 19 of 19 (every channel); MON6 <- 19 of 19 (every channel); Drums <- 6 of 19; Drums Comp <- 6 of 19; Vocals <- 6 of 19; Keys <- 1 of 19; Horns <- 3 of 19; VOX Reverb <- 6 of 19; VOX Delay <- 6 of 19; Snare Verb <- 1 of 19; INST Reverb <- 6 of 19",
         "where": "plan",
         "source": "build"
       },
       {
-        "severity": "info",
+        "severity": "note",
         "code": "build.fixup",
         "message": "the format check refused the first reply with 1 error(s); one fix-up round sent them back to claude-haiku-4-5, and the corrected reply passes. Fixed: busses[Keys].sends[0] names 'Keys R', which is no channel of this plan -- a send from a strip that does not exist. Channels: BassDI, DRM VOX, EG 1, F VOX 1, F VOX 2, FLOOR, GTR VOX, HH, KBD VOX, Keys L, Kick, MLD VOX, OH, Snare, T.Bone SM57, T.Sax SM57, TRAX, Tom1, Trumpet SM57",
         "where": "build",

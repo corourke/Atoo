@@ -1264,7 +1264,7 @@ to a Matrix, or a bus's route to a Main, that is on and the plan does not have
 (CV018), a channel, bus, DCA, Main or Matrix muted that the plan leaves unmuted
 (CV017), 48V that is on where the plan has none or off where it has it (CV019), a bus that
 is mono or stereo where the plan states the other (CV020), talkback that reaches
-some destinations but not a monitor mix the plan builds (CV021; CV022 is the INFO
+some destinations but not a monitor mix the plan builds (CV021; CV022 is the NOTE
 naming the busses it took for monitor mixes), and an
 effect the plan inserts bypassed or changed (CV015). The plan's output
 sockets are read too. With or without a plan, so are the outputs of any AES50
@@ -1342,4 +1342,4 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 | `--findings-log` `FILE` | Save what the watch finds to FILE as it runs (appended, flushed every pass, so Ctrl-C or a crash loses nothing): a header (atoo version and where it runs from, the console address and what the desk answered, the plan, the conditions, the start time), one JSON line per pass (findings standing, what appeared and what cleared, the meters, anything the desk did not answer) and a footer on a clean stop. Read-only: nothing is written to the desk, and no key is ever in it. |
 | `--record-meters` `FILE` | With --console: write every meter packet the console sends to FILE as it comes, with its time (JSON lines), so the clips a watch reported can be replayed and checked later exactly as the desk sent them. Read-only, like the rest of watch. |
 | `--watch-conditions` | Path to a JSON file of operator-authored watch conditions -- alerts on top of the built-in structural rules, e.g. "the crowd mic must never be unmuted." Optional; without it, only the built-in rules run. See the watch subcommand's own --help text for the file's shape. |
-| `--virtual-soundcheck` | Say that a virtual soundcheck is under way, so channels on their alternate input (C004) and the global alternate switch (C005) are reported at INFO instead of as warnings. Every strip on its alternate is still named, and an INFO (W003) says the switch is on. It is for this run only; the next `atoo watch` starts with it off, and with it off a channel still on its alternate is a warning. |
+| `--virtual-soundcheck` | Say that a virtual soundcheck is under way, so channels on their alternate input (C004) and the global alternate switch (C005) are reported at INFO instead of as warnings. Every strip on its alternate is still named, and an NOTE (W003) says the switch is on. It is for this run only; the next `atoo watch` starts with it off, and with it off a channel still on its alternate is a warning. |

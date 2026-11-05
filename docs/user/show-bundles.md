@@ -61,22 +61,23 @@ atoo verify --show docs/user/demo/touringband
 ```
 
 ```
-0 error(s), 0 warning(s), 15 note(s)
+0 error(s), 0 warning(s), 1 info, 14 note(s)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): EG 1. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] busses[MON5, MON6, Drums, Drums Comp, Vocals, Keys, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (11 busses): width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs / Mix busses conventionally stereo / FX busses conventionally stereo  (inferred.bus-width)
-  [info] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
-  [info] channels[Keys L]: linked as a stereo pair -- no convention states it; decided by the generator: Input list designates Keys L/R as left/right pair on consecutive AES50-A sockets 15+16; stereo pairing conventional for DI sources  (inferred.channel-stereo)
 
-APPLICABLE: notes only -- choices made where the conventions were silent.
+  [note] plan: 'Magenta' is the desk's Pink (11): EG 1. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [note] busses[MON5, MON6, Drums, Drums Comp, Vocals, Keys, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (11 busses): width set to stereo -- the conventions did not state it; decided by the generator: Instructions add MON5 and MON6 as stereo IEM mixes, patched to AES50-A socket pairs / Mix busses conventionally stereo / FX busses conventionally stereo  (inferred.bus-width)
+  [note] outputs[Matrix 1]: Matrix index set to 1 -- the plan left it out; decided by Atoo's fallback rule: its name, 'Matrix 1', states slot 1  (inferred.output-index)
+  [note] channels[Keys L]: linked as a stereo pair -- no convention states it; decided by the generator: Input list designates Keys L/R as left/right pair on consecutive AES50-A sockets 15+16; stereo pairing conventional for DI sources  (inferred.channel-stereo)
+
+APPLICABLE: INFO to review, no warnings.
 ```
 
 The transcripts on this page run from the top of an Atoo checkout, on `docs/user/demo/touringband`, a touring band's show frozen so that what is printed here stays true. On your own show it is `--show my-show`.
 
 **Every command that reads a show's files takes `--show`:** `build`, `verify`, `compare`, `apply`, `patch`, `amend`, `undo`, `audit`, `watch`, `ui` and `lessons`. (`ping` needs only an address, and `presets` reads your preset library, not a show.)
 
-**A show's name is enough, from any folder.** `--show touringband`, where there is no `touringband` folder, opens the one in your [working folder](configuration.md) (`~/Documents/Atoo/touringband` after `atoo init`) and says so on one line before anything else: *INFO --show touringband: not a folder here, so the one in the working folder (~/Documents/Atoo): …*. A `touringband` folder where you are wins, and a path (anything with a `/` in it) is never looked up. `lessons` takes the folder as given.
+**A show's name is enough, from any folder.** `--show touringband`, where there is no `touringband` folder, opens the one in your [working folder](configuration.md) (`~/Documents/Atoo/touringband` after `atoo init`) and says so on one line before anything else: *NOTE --show touringband: not a folder here, so the one in the working folder (~/Documents/Atoo): …*. A `touringband` folder where you are wins, and a path (anything with a `/` in it) is never looked up. `lessons` takes the folder as given.
 
 `compare` takes the plan from the bundle and the snapshot from you:
 
@@ -110,13 +111,13 @@ atoo watch --show docs/user/demo/touringband --state-sequence starter/audit-demo
 ```
 Watching 1 state file(s) in sequence every 2s (Ctrl-C to stop) -- read-only, nothing here writes to a console.
 
-[2026-10-03T07:22:45+00:00] baseline -- 17 finding(s) already present:
-Audit findings: 8 warning, 9 info.
+[2026-10-03T07:22:45+00:00] baseline -- 12 finding(s) already present:
+Audit findings: 8 warning, 3 info, 1 note.
 
-... the 17 findings
+... the 12 findings
 ```
 
-Drop `--show` and the same command reports **15**. The bundle adds two from its own `watch.json`, which nothing on the command line named: its `Kick` condition fires (`CH 1 "Kick" is not muted`), and its `main-fader-floor` condition adds a note that it read `Main` as `MAIN 1`. Its plan adds one more, an info, `CV018`: the capture has BUS 1 "Drums" routed to Main 1, and the rebuilt plan's bus 1 is a monitor bus with no Main route. It also takes one away: with the bundle's plan, L002 is quiet about CH 7's fader at the floor, because the plan puts that fader there. See [Watch conditions](watch-conditions.md) for what those findings mean.
+Drop `--show` and the same command reports **11**. The bundle adds two from its own `watch.json`, which nothing on the command line named: its `Kick` condition fires (`CH 1 "Kick" is not muted`), and its `main-fader-floor` condition adds a note that it read `Main` as `MAIN 1`. Its plan adds one more, an info, `CV018`: the capture has BUS 1 "Drums" routed to Main 1, and the rebuilt plan's bus 1 is a monitor bus with no Main route. It also takes two away: with the bundle's plan, L002 is quiet about CH 7's fader at the floor, because the plan puts that fader there, and Watch no longer says it is watching without a plan (W005). See [Watch conditions](watch-conditions.md) for what those findings mean.
 
 ## An explicit flag always beats the bundle
 
@@ -157,7 +158,7 @@ Point `build` at the directory and the plan lands *in* it, rather than beside wh
 atoo build --console-model wing-compact --show my-show --conventions conventions.md
 ```
 
-The flag is for the first build. Once the show has a `plan.json`, `atoo build --show my-show` takes the model from it, with an INFO.
+The flag is for the first build. Once the show has a `plan.json`, `atoo build --show my-show` takes the model from it, with a NOTE.
 
 After that the directory is one draggable thing holding the whole show. The build also leaves its own log in `builds/` — one file per build, kept even when the build fails or is stopped, the newest 5 at a time; see [the pipeline](pipeline.md).
 
@@ -165,7 +166,7 @@ A bundle build drafts `watch.json` too — a short list of things worth an alert
 
 **A build does not add a rule you already have**, however the draft spells it. Two conditions are the same when they cover the same strips (a name is looked up in the plan, so `MAIN PA` and `MAIN 1` are one strip, and a `DCA 1-5` covers `DCA Vocals`) and ask the same field, operator and value. The id, the wording and the severity do not matter. The build says which drafted condition it left out and which of yours already says the same. A different threshold on the same strip is not the same rule: it is added, and the build notes that the two overlap.
 
-Two things a watch-conditions draft will not do: fail your build (a plan that built and a draft that did not is a warning, not an error), and write anything it cannot validate. Each drafted condition is checked on its own: a key a condition does not have is dropped, a condition naming a field outside the vocabulary is left out, each with an `INFO watch-conditions draft:` line saying which, and the rest are kept. A draft with nothing usable in it writes nothing, and leaves any existing `watch.json` as it was.
+Two things a watch-conditions draft will not do: fail your build (a plan that built and a draft that did not is a warning, not an error), and write anything it cannot validate. Each drafted condition is checked on its own: a key a condition does not have is dropped, a condition naming a field outside the vocabulary is left out, each with a `NOTE watch-conditions draft:` line saying which, and the rest are kept. A draft with nothing usable in it writes nothing, and leaves any existing `watch.json` as it was.
 
 `apply --confirm` writes back too — a new, timestamped entry in `journals/`, which it never overwrites. The newest 5 entries are kept, so undo reaches back at most 5 writes ([the journal stack](journals.md#the-stack)); copy one aside if a particular run must outlive that.
 

@@ -24,10 +24,10 @@ atoo verify --show demo-show
 ```
 0 error(s), 0 warning(s), 4 note(s)
 
-  [info] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ...  (preset.expanded)
-  [info] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: ...  (preset.bus-expanded)
-  [info] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
-  [info] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
+  [note] plan: 12 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ...  (preset.expanded)
+  [note] plan: 3 bus(ses) carry a bus preset's processing, written at the processing stage and read back like every other write: ...  (preset.bus-expanded)
+  [note] plan: 1 FX insert(s) are loaded and switched on, each read back: Vox Verb: V-REV on FX5 (saved bypassed, switched on)  (fx.inserts)
+  [note] channels[Music]: aux 1 'Music' is not on the input list; built because instructions.md says 'Walk-in music ("Music") on Aux 1, stereo, source LCL 3-4. Fader at -20dB', on LCL 3-4 as it states  (reconcile.from-instructions)
 
 APPLICABLE: notes only -- choices made where the conventions were silent.
 ```

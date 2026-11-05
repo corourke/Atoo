@@ -30,10 +30,10 @@ One code path serves every OpenAI-compatible host; nothing in it knows a vendor'
 A host that does not know one of these fields answers 400 and names it. Atoo asks again **once per field, without it**, and prints:
 
 ```
-INFO the host at https://api.example.com refused `response_format` (Unknown field: response_format); asked again without it -- the reply is still checked against the full plan format here
+NOTE the host at https://api.example.com refused `response_format` (Unknown field: response_format); asked again without it -- the reply is still checked against the full plan format here
 ```
 
-The fields that are retried this way are `response_format`, `stream_options`, `temperature` (a model that reasons may refuse it), `reasoning_effort` and `max_completion_tokens`. A field the host refuses is remembered for the rest of the run (the INFO says "not sent again this run"), so later calls do not pay for a refused request; a model that rejects `reasoning_effort` (`grok-build-0.1` does) costs one refused request, not one per call. Any other 400, and any other error, is shown as it came; nothing is retried that might spend twice.
+The fields that are retried this way are `response_format`, `stream_options`, `temperature` (a model that reasons may refuse it), `reasoning_effort` and `max_completion_tokens`. A field the host refuses is remembered for the rest of the run (the NOTE says "not sent again this run"), so later calls do not pay for a refused request; a model that rejects `reasoning_effort` (`grok-build-0.1` does) costs one refused request, not one per call. Any other 400, and any other error, is shown as it came; nothing is retried that might spend twice.
 
 | Variable | Does |
 |---|---|
@@ -42,9 +42,9 @@ The fields that are retried this way are `response_format`, `stream_options`, `t
 | `ATOO_AI_TIMEOUT` | seconds of silence before a call is given up on. **Atoo chose 600 for the `api` provider** (120 on Ollama): a reasoning model can think for minutes before its first token, and 120 s cut those calls off. Raise it for a slower model, lower it to fail faster |
 | `ATOO_AI_MAX_TOKENS` | sent as `max_completion_tokens`, which counts a reasoning model's hidden tokens too; unset sends none |
 
-**A reply that fails the format is sent back once.** When a change's reply does not match the change-set format (a field of the wrong type, a missing key), or the desk refuses what it proposed (a bus that is not there), Atoo sends the same request again with the reply and the exact message, and asks for the corrected change set. It is one extra call, never more; both calls print their usage line (the second is labeled `change-repair`) and the second is said at INFO. The Claude provider does not do this.
+**A reply that fails the format is sent back once.** When a change's reply does not match the change-set format (a field of the wrong type, a missing key), or the desk refuses what it proposed (a bus that is not there), Atoo sends the same request again with the reply and the exact message, and asks for the corrected change set. It is one extra call, never more; both calls print their usage line (the second is labeled `change-repair`) and the second is said in a NOTE. The Claude provider does not do this.
 
-A `null` in a place where the format lets a reply say nothing is not refused: it is read as left out, and an INFO names the fields. A `null` 48V (`source.phantom`) is read as off, and a `null` `patch.stated` as "chosen, not named"; both are said.
+A `null` in a place where the format lets a reply say nothing is not refused: it is read as left out, and a NOTE names the fields. A `null` 48V (`source.phantom`) is read as off, and a `null` `patch.stated` as "chosen, not named"; both are said.
 
 ## Pricing a host
 

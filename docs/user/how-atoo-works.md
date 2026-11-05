@@ -42,12 +42,12 @@ From those three files, Atoo builds a **plan**: every setting the desk will be g
 
 The sheets are your statement about the show: the input list, and the bus, outputs and user sheets where you write them. Step 04's tables are those sheets. `plan.json` is compiled from the sheets and your conventions, plus every value Atoo decided, and you never edit it by hand. It also says how it was made: built, or captured from a desk.
 
-A model drafts the plan. Code then checks the draft against what the desk can really do and against your conventions, before anything can be written. Where your files left something open, such as whether a bus is mono or stereo, Atoo makes the usual choice and tells you, in an INFO note with what it was decided from. If a choice is wrong, state it in your conventions and the next build follows it.
+A model drafts the plan. Code then checks the draft against what the desk can really do and against your conventions, before anything can be written. Where your files left something open, such as whether a bus is mono or stereo, Atoo makes the usual choice and tells you, in a NOTE with what it was decided from. If a choice is wrong, state it in your conventions and the next build follows it.
 
 ## From files to desk
 
 1. **Build.** A model drafts the plan from your three files, and code checks it.
-2. **Verify.** The checks end in a verdict. Only `BLOCKED: do not apply.` stops you; notes and warnings are for you to read ([Reading findings](reading-findings.md)).
+2. **Verify.** The checks end in a verdict. Only `BLOCKED: do not apply.` stops you. Warnings are problems to read and decide on, INFOs are things to review, and NOTEs are the choices made where your files were silent ([Reading findings](reading-findings.md)).
 3. **Apply.** A preview shows what would change on the desk. Then each setting is written and read back, and anything that didn't land is named. Every write is recorded, so you can undo it.
 4. **Watch.** Atoo re-reads the desk every couple of seconds, traces the signal path for every channel, and checks it against your plan and your own watch conditions. It catches the DCA pulled to the floor or the input that got repatched.
 

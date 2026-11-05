@@ -37,9 +37,9 @@ atoo verify --show docs/user/demo/touringband
 ```
 
 ```
-0 error(s), 0 warning(s), 15 note(s)
+0 error(s), 0 warning(s), 1 info, 14 note(s)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): EG 1. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
   ...
 ```
 
@@ -127,7 +127,7 @@ reads, in part:
 Five things to know when reading it:
 
 - **The brackets are the source.** Every rule ends with the words it came from, copied exactly: `[conventions: "..."]` is a line of your file, `[domain: "..."]` a sentence of Atoo's domain knowledge. Code checks every one is really there. They are for that check and for you: the build strips them before the generator reads the file, since they are over half of it and the generator needs only the rules.
-- **`Decided:` is a judgment made on your behalf**, in the spirit of the build's INFO notes: your conventions were silent or unclear, so a choice was made once, with its reason, and every show will follow it. If you disagree, say what you want in your conventions; the file is then out of date and the next build makes it again.
+- **`Decided:` is a judgment made on your behalf**, in the spirit of the build's NOTEs: your conventions were silent or unclear, so a choice was made once, with its reason, and every show will follow it. If you disagree, say what you want in your conventions; the file is then out of date and the next build makes it again.
 - **"Lines with no effect"** lists the lines of your file that produce no setting, with why. A line you meant as a rule showing up here is worth rewording.
 - **The Category table** at the end is the Categories section again, as data for code: per category, the input-list category words it covers (`aliases`) and its color, high-pass, DCA, mute group, gain, trim, starting fader and Main routing (`main_direct`: true is straight to Main, false only through its busses). A field it leaves out is one the rules do not settle for the whole category. [Below](#the-category-table).
 - **Instructed strips**, last, lists the strips your conventions ask for that are not on any input list (a talkback mic on Aux 8, say), as data code builds. `house.md` asks for none, so it is `[]`. [Strips your conventions ask for](extra-strips.md#strips-your-conventions-ask-for).
@@ -153,9 +153,9 @@ house.resolved.md: 11 of 11 citation(s) found; 7 of 8 conventions line(s) covere
 house.resolved.md: Category table valid, 3 categories
 house.resolved.md: Instructed strips valid, 0 built by code
 
-Resolved conventions -- 1 note(s):
+Resolved conventions -- 1 info:
 
-NOTE     house.md: the conventions line "- Leave all faders all the way down."
+INFO     house.md: the conventions line "- Leave all faders all the way down."
          is cited by no rule in house.resolved.md and not listed under "Lines
          with no effect" -- the generator is given it verbatim instead
          Your line: - Leave all faders all the way down.
@@ -165,16 +165,16 @@ NOTE     house.md: the conventions line "- Leave all faders all the way down."
          (resolve.line-not-covered)
 ```
 
-(It exits 0 when the file is fresh and clean, 2 when it is usable with warnings or stale, and 1 when there is no usable file.) A line no rule cites is a note, not a warning: the generator reads that line as you wrote it, so nothing is lost. A quote that is not in your file or the domain knowledge is a WARNING, `resolve.quote-not-found`: the rule citing it may be the resolver's own, not yours. Neither stops the file being used; a file that is empty or quotes nothing that can be found is not used at all, and the build reports it. A build prints these as one line each (how many, and this command to list them); every one is kept in the plan's `meta.build_findings`.
+(It exits 0 when the file is fresh and clean, 2 when it is usable with warnings or stale, and 1 when there is no usable file.) A line no rule cites is an INFO, not a warning: the generator reads that line as you wrote it, so nothing is lost. A quote that is not in your file or the domain knowledge is a WARNING, `resolve.quote-not-found`: the rule citing it may be the resolver's own, not yours. Neither stops the file being used; a file that is empty or quotes nothing that can be found is not used at all, and the build reports it. A build prints these as one line each (how many, and this command to list them); every one is kept in the plan's `meta.build_findings`.
 
 A quote counts as found however a model retypes it: double quotes as single ones (`'INST Reverb'` for your `"INST Reverb"`), several lines cited together as `"a" / "b"`, a middle left out as `...` (each part must be there, in order), a trailing full stop of its own, or a sentence quoted across the place your file wraps it -- including a wrap the model wrote out as the two characters `\n`.
 
 A line counts as covered when a quote of four words or more is found in it, or a shorter quote is the whole line. A list item's bullet is not a word: `- Snare: "Snare"` quoted with or without its `- ` covers that line. A line ending in a colon that introduces indented items under it (`- Default channel presets by source:`) is covered when any of its items is. A list line, such as `- Color coding: Drums-Red, Bass-Blue, ...`, also counts when at least half its items, and at least two, are each quoted whole: the resolved file cites a color list one category at a time.
 
-Your preset map is the exception: an item indented under a line that names presets (`- Default channel presets by source, from my preset library:`) that quotes a preset (`- Kick: "Kick In"`) or says `no preset` counts as covered whenever your preset library has every preset it names, whether the resolved file cites it or not. The build's preset choice reads that line, not a rule, and the generator still reads it as you wrote it. The library is the one the build uses (`--presets`, or `[presets] default` in `~/.atoo.config`; `resolve --check` reads the default; it says which library it used, as an `INFO preset library:` line, before anything else). An item naming a preset the library has not got is still a note, and says which. Here `house.md`'s map has `- Kick: "Kick In"`, which the starter library (here `[presets] default = "presets"`) has, and `- Snare: "Snare Top"`, which it has not; `resolve --check` lists only the second:
+Your preset map is the exception: an item indented under a line that names presets (`- Default channel presets by source, from my preset library:`) that quotes a preset (`- Kick: "Kick In"`) or says `no preset` counts as covered whenever your preset library has every preset it names, whether the resolved file cites it or not. The build's preset choice reads that line, not a rule, and the generator still reads it as you wrote it. The library is the one the build uses (`--presets`, or `[presets] default` in `~/.atoo.config`; `resolve --check` reads the default; it says which library it used, as a `NOTE preset library:` line, before anything else). An item naming a preset the library has not got is still an INFO, and says which. Here `house.md`'s map has `- Kick: "Kick In"`, which the starter library (here `[presets] default = "presets"`) has, and `- Snare: "Snare Top"`, which it has not; `resolve --check` lists only the second:
 
 ```
-NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
+INFO     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
          Top", which is not in the preset library (presets) -- a channel given
          it is built without its processing
          Your line: - Snare: "Snare Top"
@@ -186,14 +186,14 @@ NOTE     house.md: the preset map line "- Snare: "Snare Top"" names "Snare
 A few more things about the preset map:
 
 - **Bus presets count.** Which presets a map item is looked up among depends on the line it sits under. Under a line that says *bus* (`- Default bus presets:`), it is your bus presets (`.bus` files); under one that says *channel*, your channel presets (`.chn` files); under one that says both, or neither, either kind. So `- Drums: "Mix Bus"` is covered when `Mix Bus.bus` is in the library.
-- **A heading line is covered with its items.** The line that introduces the map (`- Default channel presets by source, ...:`) counts as covered as soon as any item under it does, so the notes do not depend on which lines the resolved file happened to cite.
-- **An item that states a rule is not covered by the library.** The preset choice reads only the preset's name, so `- Vocals go to the "Vox Verb" bus and get 3 dB more at 3k` is a note that quotes the part it does not carry out ("bus and get 3 dB more at 3k"): put the rule on a line of its own. A number, a processing word (a level, a filter, a compressor, `must`, `always`) or more than ten words of prose around a name is read as a rule; a few words saying which channel a name is for (`"H Tom" for the high (or only) rack tom`) are not. Names may be in double or single quotes.
-- **A library that cannot be read is said, not skipped.** If the library's files cannot be opened (the folder is gone, a preset file is damaged), no name can be checked, so every map item counts as covered, and one note, `resolve.preset-library-unreadable`, gives the reason.
+- **A heading line is covered with its items.** The line that introduces the map (`- Default channel presets by source, ...:`) counts as covered as soon as any item under it does, so the INFOs do not depend on which lines the resolved file happened to cite.
+- **An item that states a rule is not covered by the library.** The preset choice reads only the preset's name, so `- Vocals go to the "Vox Verb" bus and get 3 dB more at 3k` is an INFO that quotes the part it does not carry out ("bus and get 3 dB more at 3k"): put the rule on a line of its own. A number, a processing word (a level, a filter, a compressor, `must`, `always`) or more than ten words of prose around a name is read as a rule; a few words saying which channel a name is for (`"H Tom" for the high (or only) rack tom`) are not. Names may be in double or single quotes.
+- **A library that cannot be read is said, not skipped.** If the library's files cannot be opened (the folder is gone, a preset file is damaged), no name can be checked, so every map item counts as covered, and one INFO, `resolve.preset-library-unreadable`, gives the reason.
 
 For the Vocals line above, `resolve --check` says:
 
 ```
-NOTE     house.md: the preset map line "- Vocals go to the "Vox Verb" bus and
+INFO     house.md: the preset map line "- Vocals go to the "Vox Verb" bus and
          get 3 dB more at 3k" says more than a preset name ("bus and get 3 dB
          more at 3k"), and no rule in house.resolved.md cites it -- the preset
          choice reads only the name, so the rest reaches the generator
@@ -211,7 +211,7 @@ atoo resolve --conventions house.md
 ```
 
 ```
-INFO resolved conventions: house.resolved.md is missing (there is no resolved file yet) -- resolving now: one model call, role resolve
+NOTE resolved conventions: house.resolved.md is missing (there is no resolved file yet) -- resolving now: one model call, role resolve
   claude-sonnet-5-5 (resolve, effort medium): ... in, ... out -- $...
 resolve: wrote house.resolved.md
 resolve: checked house.resolved.md: 11 of 11 citation(s) found; 7 of 7 conventions line(s) covered
@@ -229,7 +229,7 @@ Commit it beside your conventions: it is the reading every show was built from. 
 
 Most of what your conventions say about a channel depends only on its category: every drum gets the same high-pass, DCA, mute group, gain and trim. So the build does not ask the model to write those thirty times. Code reads the table and, on every channel whose input-list row has one of a category's words in its `category` column, writes each of those settings **the model left out**. What the model writes itself wins: that is how a channel that differs from its category (one host who needs a lower cut) stays different. The model is told, for the categories on your input list, exactly what code will write.
 
-A few things code decides while doing it, each said in the note below: an aux strip gets no high-pass (it has none), a USB or card source gets no gain (it has no head amp), and a strip named as a click, guide or talkback never goes straight to Main from the table, since a "tracks" row might be the click. A channel the show's instructions ask for (a Talkback on channel 40) is not a row of your input list, so the table does not touch it. A strip your conventions ask for takes the values of the category its entry in the Instructed strips names: a HOST mic whose entry names Speech gets Speech's color, DCA and mute group. An entry that names no category takes the one its name is a word of (MUSIC is a Misc word), else the one for its kind of strip (`aux`), and the build's INFO line for the strip says which and why.
+A few things code decides while doing it, each said in the note below: an aux strip gets no high-pass (it has none), a USB or card source gets no gain (it has no head amp), and a strip named as a click, guide or talkback never goes straight to Main from the table, since a "tracks" row might be the click. A channel the show's instructions ask for (a Talkback on channel 40) is not a row of your input list, so the table does not touch it. A strip your conventions ask for takes the values of the category its entry in the Instructed strips names: a HOST mic whose entry names Speech gets Speech's color, DCA and mute group. An entry that names no category takes the one its name is a word of (MUSIC is a Misc word), else the one for its kind of strip (`aux`), and the build's NOTE line for the strip says which and why.
 
 Each setting code wrote is marked in the plan: the channel's provenance reads `category table: Drums`, and the build keeps one note per category in `meta.build_findings`. From the three-row show the transcripts here were built on (Kick, Lead Vox, Host), where the stand-in model wrote only the Host's high-pass:
 
@@ -246,4 +246,4 @@ Speech (input-list category 'speech'): 1 channel(s), Host. Written by code where
 
 - [Writing conventions](conventions.md) — the how-to this page backs up
 - [How a show gets built](pipeline.md) — where the resolved file is made and read
-- [Reading findings](reading-findings.md) — what an INFO note means
+- [Reading findings](reading-findings.md) — what INFO and NOTE mean

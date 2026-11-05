@@ -15,7 +15,7 @@ Every rule `atoo audit` and Watch can report, listed by its code. A finding ends
 
 Each rule says:
 
-- **Its severity.** An **Error** is a desk that cannot work as it stands, a **Warning** is probably not what you meant, and an **Info** is worth knowing but needs nothing done. [Reading findings](reading-findings.md) has more on each.
+- **Its severity.** An **Error** is a desk that cannot work as it stands. A **Warning** is a real problem on the desk now. An **Info** is something that might need to go back into the plan, or be checked: most rules that compare the desk with the plan are Info, since the desk differing from the plan is for you to judge. A **Note** is context and never asks for anything. [Reading findings](reading-findings.md) has more on each.
 - **When it runs.** *With or without a plan* means it reads the desk alone, in `atoo audit` and in Watch. *Needs the plan* means it compares the desk with the show's plan, so it runs only when you give it one: `atoo audit --plan`, and Watch started with the show. *Watch only* means it speaks during a live Watch.
 - **What to do about it**, where the [troubleshooting page](troubleshooting-audit.md) has a section for it.
 
@@ -73,7 +73,7 @@ A Matrix has an active send feeding it but is patched to no physical output.
 
 ### R007: Output Route Not Checked
 
-**Info** · with or without a plan
+**Note** · with or without a plan
 
 A bus, Main or Matrix reaches none of the output sockets read, and an AES50 port in use was not read, so the route could not be checked.
 
@@ -119,17 +119,17 @@ A strip in use reaches one Main or Matrix by two or more routes, every one on an
 
 ### R013: Signal Split Asked For
 
-**Info** · with or without a plan
+**Note** · with or without a plan
 
-A split R012 would report, said at INFO instead because the plan includes every one of its routes.
+A split R012 would report, said as a NOTE instead because the plan includes every one of its routes.
 
 [What to do about it](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)
 
 ### R014: Signal Split Through An Effect Send
 
-**Info** · with or without a plan
+**Note** · with or without a plan
 
-A split R012 would report, said at INFO instead because every route but one passes through a bus with a reverb, delay or modulation effect inserted on it: an effect send.
+A split R012 would report, said as a NOTE instead because every route but one passes through a bus with a reverb, delay or modulation effect inserted on it: an effect send.
 
 [What to do about it](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)
 
@@ -225,7 +225,7 @@ A strip's insert is switched on but names an FX slot with no effect loaded.
 
 ### E002: FX Loaded But Not Inserted
 
-**Info** · with or without a plan
+**Note** · with or without a plan
 
 An FX slot has an effect loaded that no strip's insert names.
 
@@ -251,7 +251,7 @@ Talkback is assigned to a strip, but neither TALK A nor TALK B is routed to any 
 
 ### T002: Talkback Strip Left Out Of Mix Checks
 
-**Info** · with or without a plan
+**Note** · with or without a plan
 
 The strip talkback is assigned to is in use; L002, R008, C006 and C007 skip it.
 
@@ -323,37 +323,37 @@ The desk against the show's plan: each rule here needs the plan, and speaks wher
 
 ### CV001: Mute Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 The plan mutes a channel or aux, and it is unmuted on the desk.
 
 ### CV002: Fader Level Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 A channel or aux fader is more than 0.5dB from the level the plan states.
 
 ### CV003: DCA Membership Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 The plan puts a channel or aux in a DCA, and the desk does not have it there.
 
 ### CV004: Mute Group Membership Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 The plan puts a channel or aux in a mute group, and the desk does not have it there.
 
 ### CV005: Patch Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 A channel or aux is patched from a different input socket than the plan states, or from none.
 
 ### CV006: Bus Send Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 A send the plan states, from a channel or aux to a bus or Matrix, is off on the desk, in the other pre/post mode, or (in `atoo audit --plan`) more than 0.5dB from the plan's level.
 
@@ -361,7 +361,7 @@ A send the plan states, from a channel or aux to a bus or Matrix, is off on the 
 
 ### CV007: Main Route Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 A channel's route to a Main is off where the plan routes it, or on where the plan has no such route.
 
@@ -369,7 +369,7 @@ A channel's route to a Main is off where the plan routes it, or on where the pla
 
 ### CV008: Processing Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 A channel's trim, balance, polarity, head-amp gain, high-pass, hi-cut, tilt or EQ is not what the plan states.
 
@@ -377,31 +377,31 @@ A channel's trim, balance, polarity, head-amp gain, high-pass, hi-cut, tilt or E
 
 ### CV009: Undeclared Physical Output Patch
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 An output socket carries a signal the plan does not put there: nothing in the plan routes to that socket, or the plan routes something else to it. Often left over from an earlier show or from patching by hand.
 
 ### CV010: Bus Mute Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 The plan mutes a bus, and it is unmuted on the desk.
 
 ### CV011: Bus Fader Level Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 A bus fader is more than 0.5dB from the level the plan states.
 
 ### CV012: DCA Mute Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 The plan mutes a DCA, and it is unmuted on the desk.
 
 ### CV013: DCA Fader Level Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan`
+**Info** · needs the plan · `atoo audit --plan`
 
 A DCA fader is more than 0.5dB from the level the plan states.
 
@@ -415,19 +415,19 @@ Talkback is assigned to channel 40 or aux 8, and the plan puts an ordinary input
 
 ### CV015: Effect Insert Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 An insert on a channel, bus, Main or Matrix is not what the plan sets: it names another FX slot or none, it is switched off, the slot holds another effect, or an insert the plan takes off is back on.
 
 ### CV016: Planned Routes All Off
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 Every send and route the plan gives a channel is off on the desk, so it reaches none of the places the plan sends it.
 
 ### CV017: Muted Against Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 A channel, aux, bus, DCA, Main or Matrix is muted on the desk, and the plan leaves it unmuted.
 
@@ -441,7 +441,7 @@ A send or route is on at the desk that the plan does not have, such as a channel
 
 ### CV019: Phantom Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 48V on a channel's input socket is not what the input list's phantom column says: on where it says FALSE, or off where it says TRUE.
 
@@ -449,7 +449,7 @@ A send or route is on at the desk that the plan does not have, such as a channel
 
 ### CV020: Bus Width Contradicts Plan
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 A bus is mono on the desk where the plan makes it stereo, or stereo where the plan makes it mono.
 
@@ -465,7 +465,7 @@ Talkback reaches some of the monitor mixes the plan builds but not this one, so 
 
 ### CV022: Monitor Mixes Talkback Was Checked Against
 
-**Info** · needs the plan · `atoo audit --plan` and Watch
+**Note** · needs the plan · `atoo audit --plan` and Watch
 
 Names the monitor mixes the talkback check counted, and how many talkback reaches, so a mix it did not count is plain to see.
 
@@ -477,7 +477,7 @@ Edits saved in Build's step 04 that the desk does not have yet.
 
 ### CV023: Sheet Differs From Desk
 
-**Warning** · needs the plan · `atoo audit --plan` and Watch
+**Info** · needs the plan · `atoo audit --plan` and Watch
 
 An edit saved in Build's step 04 is not on the desk yet. The finding quotes the cell, and clears once you apply the plan, undo the edit, or set the desk to match.
 
@@ -487,7 +487,7 @@ What a report with a plan leaves out, and why.
 
 ### S001: Findings Withheld From This Report
 
-**Info** · needs the plan · `atoo audit --plan` and Watch
+**Note** · needs the plan · `atoo audit --plan` and Watch
 
 With a plan, a finding about a strip the plan never mentions, or about a setting the plan states and a comparison with the plan already checks, is left out. This line counts what was left out and why, so a shorter report is never mistaken for a healthier desk.
 
@@ -497,19 +497,19 @@ Notes Watch gives about the session itself, not about the desk.
 
 ### W001: Names are refreshed, not read every pass
 
-**Info** · Watch only
+**Note** · Watch only
 
 Strip, bus, DCA, mute-group and input-socket names are read at Start and refreshed every few readings, so a rename shows up at the next refresh. `atoo watch --name-refresh 1` reads names every pass.
 
 ### W002: Clip detection is on, or off
 
-**Info** · Watch only
+**Note** · Watch only
 
 Whether Watch is listening to the console's meters for clips (L003), and if not, why: the connection could not be made, was lost, or no meter data arrives.
 
 ### W003: Virtual soundcheck is on
 
-**Info** · Watch only
+**Note** · Watch only
 
 While the desk's Virtual soundcheck switch is on, a channel on its alternate input (C004) and the global alternate switch (C005) are reported at INFO, not as warnings. Turn it off when soundcheck ends, and any still on its alternate becomes a warning at once.
 

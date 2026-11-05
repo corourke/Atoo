@@ -174,23 +174,23 @@ Audit findings: 1 info.
 ...
 ```
 
-Unmute the DCA on the desk if that was not the idea. It is a note, so `audit` exits `0`: pressing a DCA's mute is deliberate and the DCA's own button shows it lit, so this says what the press is silencing and does not call it a fault. (A mute group, `CH003`, is reported the same way.) A DCA that is muted and also pulled to the floor is two findings, `CH004` and `CH002`, because unmuting one does not bring the band back while the other holds. It says nothing for a DCA with no channel in use under it, and nothing when the DCA's mute was not read.
+Unmute the DCA on the desk if that was not the idea. It is an INFO, so `audit` exits `0`: pressing a DCA's mute is deliberate and the DCA's own button shows it lit, so this says what the press is silencing and does not call it a fault. (A mute group, `CH003`, is reported the same way.) A DCA that is muted and also pulled to the floor is two findings, `CH004` and `CH002`, because unmuting one does not bring the band back while the other holds. It says nothing for a DCA with no channel in use under it, and nothing when the DCA's mute was not read.
 
 With `--plan` (and in Watch, with a show), a DCA the plan lists is judged against the plan instead, so a mute is reported once:
 
 ```
 $ atoo audit --state dcamute.state.json --plan show.plan.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 info, 1 note.
 
-[WARNING] CV017 Muted Against Plan
+[INFO] CV017 Muted Against Plan
   DCA 2 "Band" is muted on the desk; the plan leaves it unmuted.
 
-[INFO] S001 Findings Withheld From This Report
+[NOTE] S001 Findings Withheld From This Report
   1 finding(s) are not listed above because a plan was supplied: 1 CH004 (1 about a parameter the plan states). Re-run the same audit with no plan to see every finding the rules produced.
 ...
 ```
 
-`CV017` is a warning because the plan said otherwise. A DCA the plan lists as muted is as you asked, and neither rule reports it. A DCA the plan does not mention is still `CH004`'s.
+`CV017` is an INFO too, because the desk differs from the plan: put the desk back, or put the mute into the plan. A DCA the plan lists as muted is as you asked, and neither rule reports it. A DCA the plan does not mention is still `CH004`'s.
 
 ## A condenser is silent, or 48V is on where it should not be: `CV019`
 
@@ -198,9 +198,9 @@ Phantom power is set per input socket, and the plan states it for every channel:
 
 ```
 $ atoo audit --state touched.state.json --plan show.plan.json
-Audit findings: 3 warning.
+Audit findings: 3 info.
 
-[WARNING] CV019 Phantom Contradicts Plan (3)
+[INFO] CV019 Phantom Contradicts Plan (3)
   CH 1 "Kick": the plan has 48V on at AES50-A 1; the desk has it off, so a condenser patched there is silent.
   CH 2 "Snare": the plan has no 48V at AES50-A 2; the desk has it on, which can damage a source that does not want it.
   CH 3 "OH": the plan has 48V on at AES50-A 6; the desk has it off, so a condenser patched there is silent.
@@ -210,7 +210,7 @@ Physical sockets read: in AES50-A 1-6; out LCL 1.
 
 The last is a stereo pair: each of its two sockets is its own source with its own 48V, so the plan can power one and not the other. Switch the 48V on or off on the desk's input page, or, if the desk is right, say so in your conventions or the input list and rebuild.
 
-It is a warning either way, so `audit` exits `0`. It says nothing about a channel the plan states no phantom for, a channel patched from a group that has no 48V (a card, a module, USB, StageConnect), a socket that was not read, or a channel that is not patched. In Watch it is one of the rules the show's plan adds ([Watching from the command line](watch.md)), and it clears when the desk is put back. A socket this rule judges is not also reported by `C001`.
+It is an INFO either way, so `audit` exits `0`. It says nothing about a channel the plan states no phantom for, a channel patched from a group that has no 48V (a card, a module, USB, StageConnect), a socket that was not read, or a channel that is not patched. In Watch it is one of the rules the show's plan adds ([Watching from the command line](watch.md)), and it clears when the desk is put back. A socket this rule judges is not also reported by `C001`.
 
 ## A channel reaches the same Main or Matrix by two routes: `R012`, `R013`, `R014`
 
@@ -228,13 +228,13 @@ Audit findings: 2 warning.
 
 **`R012` is a warning.** The desk works and the show can go on, so `audit` exits `0`, but the level is probably not what you meant. One finding per channel and per Main or Matrix, with the routes one hop at a time. Only a route that is switched on and above the floor counts: a send that is off, or pulled all the way down, is not a route. A **muted** bus, Main or channel on a route still is one: it is silent now, and the finding mentions it, because the copies add up the moment it is unmuted.
 
-**Two busses into one Main is how parallel compression is built** (a "Drums" bus and a "Drums Comp" bus), so the check stands down when the plan asked for it. With `--plan` it is quiet for a channel and Main when the plan includes **every route** of the split: the channel's sends and Main routes, and the busses' own Main destinations. To ask for it, state the purpose of the parallel bus in your conventions or instructions and rebuild. When the plan includes every route, `R013` notes it at INFO, so a rule that went quiet is never silent about it:
+**Two busses into one Main is how parallel compression is built** (a "Drums" bus and a "Drums Comp" bus), so the check stands down when the plan asked for it. With `--plan` it is quiet for a channel and Main when the plan includes **every route** of the split: the channel's sends and Main routes, and the busses' own Main destinations. To ask for it, state the purpose of the parallel bus in your conventions or instructions and rebuild. When the plan includes every route, `R013` says so in a NOTE, so a rule that went quiet is never silent about it:
 
 ```
 $ atoo audit --state parallel.state.json --plan show.plan.json
-Audit findings: 1 info.
+Audit findings: 1 note.
 
-[INFO] R013 Signal Split Asked For
+[NOTE] R013 Signal Split Asked For
   CH 1 "Kick", CH 2 "Snare" reach MAIN 1 by more than one route, and the plan includes every one of those routes, so it is read as asked for (parallel processing) and R012 is quiet about it.
 ...
 ```
@@ -242,7 +242,7 @@ Audit findings: 1 info.
 A bus whose `role` in `busses.csv` is `parallel` or `fx` (a [captured show](capture.md#editing-the-sheets) has one) is said by that role, one note per bus, quoting the cell: **Parallel Bus Asked For**, or **Read As Effect Sends** for an effect return. On the church desk's captured show:
 
 ```
-[INFO] R013 Read As Effect Sends (4)
+[NOTE] R013 Read As Effect Sends (4)
   "busses.csv, Bus 13 "Delay Long", role: fx." CH 1 "Piano1" reaches MAIN 1 by more than one route, one of them through BUS 13 "Delay Long", read as an effect return beside the dry signal; R012 is quiet about it.
   ...
 ```
@@ -250,16 +250,16 @@ A bus whose `role` in `busses.csv` is `parallel` or `fx` (a [captured show](capt
 If the plan includes some of those routes but not all (the plan has the two busses, and the conventions never gave the channel a direct Main route that is also on), `R012` still speaks and names the routes the plan does not include, for example `the plan does not include the route CH 2 "Snare" to BUS 2 "Drums Comp"`. With no plan, nothing can have been asked for, so every split is reported except an effect send (below), and the finding adds: *Atoo has no plan it could read for this show*. That is the message to expect if you ran `audit` without `--plan` or `--show`, or started Watch without opening the show (Watch also notes this once, in an INFO, `W005`): run it again with the show's plan. If you rebuilt the show while Watch was running, Watch is still using the plan it started with, and an INFO (`W004`) tells you, and the fix is to stop and start Watch. To make a split go away once the plan is in hand: switch one route off on the desk, or state the purpose of the parallel bus in your conventions or instructions and rebuild. In Watch both rules run on every pass and need nothing extra from the desk.
 
 
-**A reverb or delay bus is not a second copy (`R014`).** On a WING an effect is a bus that inserts it: a channel sent to a "Reverb" bus that runs a reverb, routed to Main 1, reaches Main 1 directly and through that bus, but the bus carries the reverb's return, not the dry channel again. So with or without a plan, a route through a bus with a reverb, delay, chorus, flanger, phaser or pitch shifter inserted on it (and switched on) is read as an effect send and left out of the split. `R014` notes it at INFO, naming the effect it went on:
+**A reverb or delay bus is not a second copy (`R014`).** On a WING an effect is a bus that inserts it: a channel sent to a "Reverb" bus that runs a reverb, routed to Main 1, reaches Main 1 directly and through that bus, but the bus carries the reverb's return, not the dry channel again. So with or without a plan, a route through a bus with a reverb, delay, chorus, flanger, phaser or pitch shifter inserted on it (and switched on) is read as an effect send and left out of the split. `R014` says so in a NOTE, naming the effect it went on:
 
 ```
 $ atoo audit --state verb.state.json
-Audit findings: 1 warning, 3 info.
+Audit findings: 1 warning, 2 info, 1 note.
 
 [WARNING] R012 Signal Splits And Recombines
   CH 1 "Kick" reaches MAIN 1 twice: directly, and through BUS 1 "Drums". The copies sum there, so level builds up, and if one route adds more latency than the other (an insert, a delay) they comb-filter. Atoo has no plan it could read for this show, so it cannot tell a parallel bus from a mistake: run it with the show's plan (open the show, or pass --show or --plan); if this is a mistake, switch one of the routes off.
 ...
-[INFO] R014 Signal Split Through An Effect Send
+[NOTE] R014 Signal Split Through An Effect Send
   CH 5 "Vox" reaches MAIN 1 through BUS 11 "Reverb" as well as by another route. Read as an effect send: BUS 11 "Reverb" runs VSS3 in FX4 (a reverb), so it carries the effect's return rather than a second dry copy, and R012 is quiet about it. If BUS 11 "Reverb" is meant to carry the dry signal too, set the effect fully wet or take it off.
 ...
 ```
@@ -282,21 +282,21 @@ Physical sockets read: in none; out LCL 1-4.
 
 **`R011` is a warning.** A stereo bus into one speaker is a one-sided mix, the kind you notice at soundcheck, so the audit reports it. It is a warning and not an error, because the desk works and the show can go on, and `audit` exits `0`. If one speaker is what you meant (a stage wedge on a stereo bus, or a mono PA on Main left), set the bus **mono** on the desk, so the jack carries the whole mix, and the warning goes away. If not, patch its **other side** to a second output. It speaks only for a bus, Main or Matrix that is in use, so a freshly reset desk, which patches the left side of its first six busses to the local outputs, says nothing. It says nothing for an object patched on both sides, patched nowhere (`R002`, `R005` and `R006` say that), or whose width was not read, and nothing at all when the output patch was not read (the ["could not be checked"](#audit-or-watch-says-rules-could-not-be-checked) note names it).
 
-**With the plan, `CV020` compares the width.** The plan decides every bus's width, mono or stereo, and `atoo apply` writes it. A bus the plan makes mono that the desk has as stereo is a warning of its own, and then `R011` stays quiet, because the plan says which jacks that bus is patched to.
+**With the plan, `CV020` compares the width.** The plan decides every bus's width, mono or stereo, and `atoo apply` writes it. A bus the plan makes mono that the desk has as stereo is an INFO of its own, and then `R011` stays quiet, because the plan says which jacks that bus is patched to.
 
 ```
 $ atoo audit --state stereo.state.json --plan show.plan.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 info, 1 note.
 
-[WARNING] CV020 Bus Width Contradicts Plan
+[INFO] CV020 Bus Width Contradicts Plan
   BUS 3 "Drummer": the plan has this bus mono; the desk has it stereo, so an output patched to its left side carries only the left of the mix and anything panned right is lost.
 
-[INFO] S001 Findings Withheld From This Report
+[NOTE] S001 Findings Withheld From This Report
   1 finding(s) are not listed above because a plan was supplied: 1 R011 (1 about a parameter the plan states). Re-run the same audit with no plan to see every finding the rules produced.
 ...
 ```
 
-Set the bus's width on the desk, or, if the desk is right, say so in your conventions and rebuild. The plan states a width for a bus and nothing else, so a Main's or a Matrix's is not compared. `CV020` is a warning, so `audit` exits `0`; in Watch it is one of the rules the show's plan adds ([Watching from the command line](watch.md)), and it clears when the desk is put back.
+Set the bus's width on the desk, or, if the desk is right, say so in your conventions and rebuild. The plan states a width for a bus and nothing else, so a Main's or a Matrix's is not compared. `CV020` is an INFO, so `audit` exits `0`; in Watch it is one of the rules the show's plan adds ([Watching from the command line](watch.md)), and it clears when the desk is put back.
 
 ## Trim, gain, a high-pass, hi-cut, tilt or EQ is not what the plan says: `CV008`
 
@@ -304,9 +304,9 @@ With `--plan`, `audit` compares the processing the plan states for a channel or 
 
 ```
 $ atoo audit --state filters.state.json --plan filters.plan.json
-Audit findings: 3 warning.
+Audit findings: 3 info.
 
-[WARNING] CV008 Processing Contradicts Plan (3)
+[INFO] CV008 Processing Contradicts Plan (3)
   CH 2 "Vox": plan says the high-pass is on at 120Hz; live console has it off. (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
   CH 2 "Vox": EQ band 2: plan says frequency 2500Hz but 1800Hz live (more than a step apart). (plan provenance: Processing: 'Vocals get a high-pass at 120Hz')
   CH 3 "Bass": plan says the high-pass is 40Hz, live console reads 80.2Hz (more than a step apart). (plan provenance: Processing: 'Bass gets a high-pass at 40Hz')
@@ -319,9 +319,9 @@ The trim and the balance are compared within 0.5dB. The head-amp gain is a coars
 
 ```
 $ atoo audit --state trim.state.json --plan trim.plan.json
-Audit findings: 2 warning, 2 info.
+Audit findings: 4 info.
 
-[WARNING] CV008 Processing Contradicts Plan (2)
+[INFO] CV008 Processing Contradicts Plan (2)
   CH 2 "Snare": plan says trim is 0dB, live console reads 4.5dB (tolerance 0.5dB).
   CH 2 "Snare": plan says head-amp gain on LCL 2 is 20dB, live console reads 9.5dB (tolerance 3dB).
 ...
@@ -333,16 +333,16 @@ An EQ band is one finding naming every value that differs (frequency, gain, Q, a
 
 ```
 $ atoo audit --state eq.state.json --plan eq.plan.json
-Audit findings: 3 warning.
+Audit findings: 3 info.
 
-[WARNING] CV008 Processing Contradicts Plan (3)
+[INFO] CV008 Processing Contradicts Plan (3)
   CH 1 "Kick": PreSend EQ band 1: plan says gain 3dB but 0dB live (more than a step apart).
   BUS 1 "Drums": EQ band 2: plan says frequency 2500Hz but 1800Hz live (more than a step apart).
   MAIN 1 "PA": EQ band high: plan says gain -3dB but 0dB live (more than a step apart).
 ...
 ```
 
-It says nothing for a value that was not read (a capture taken before this check has none of these values, and a live run with `--plan` reads exactly the ones the plan states, at no extra request), for an aux strip's filters (an aux has no filter node, and no PreSend EQ), or for what a plan does not state. These are warnings, so `audit` exits `0`. Watch does not run this one: a filter is set up, not something that moves during a show. The compressor is not compared.
+It says nothing for a value that was not read (a capture taken before this check has none of these values, and a live run with `--plan` reads exactly the ones the plan states, at no extra request), for an aux strip's filters (an aux has no filter node, and no PreSend EQ), or for what a plan does not state. These are INFO, so `audit` exits `0`. Watch does not run this one: a filter is set up, not something that moves during a show. The compressor is not compared.
 
 ## An effect is on the strip but you cannot hear it: `E001`, `E002`
 
@@ -350,12 +350,12 @@ A WING effect is heard only through an **insert**: the strip's pre- or post-inse
 
 ```
 $ atoo audit --state fx.state.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 warning, 1 note.
 
 [WARNING] E001 Insert On An Empty FX Slot
   CH 3 "Lead Vox"'s pre-insert is on and names FX4, which has no effect loaded. Nothing is processing this strip; load the effect into FX4 or point the insert at the slot that has it.
 
-[INFO] E002 FX Loaded But Not Inserted
+[NOTE] E002 FX Loaded But Not Inserted
   FX5 (DE-S2) has an effect loaded, but no channel, aux, bus, Main or Matrix inserts it, so nothing is heard through it.
 ...
 ```
@@ -364,7 +364,7 @@ Here the de-esser went into FX5 but the insert still names FX4. Point the insert
 
 A third rule, `E003`, reports an insert that names a loaded slot but is switched off, meaning the effect is bypassed. It is only INFO, since engineers bypass effects on purpose. A capture taken before these checks existed has no reading of the inserts, and all three rules then stay silent.
 
-**An effect your plan inserts** (an FX bus's from a bus preset, or one a capture found on any strip) is checked against the plan instead: `CV015 Effect Insert Contradicts Plan` is a WARNING when its insert is switched off, names another engine, or the engine holds another effect than the plan's ([Bus presets](bus-presets.md), [Capture a desk](capture.md)). `audit` runs it when given the plan, and Watch runs it from the open show's plan, and shows an `E003` about the same insert under its `CV015`, on the Watch page and in `atoo watch` alike, with more plan checks: a channel cut off from every planned route (CV016), a mute the plan does not have (CV017), 48V that is not what the plan states (CV019, [above](#a-condenser-is-silent-or-48v-is-on-where-it-should-not-be-cv019)), a bus whose width is not the plan's (CV020, [below](#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)), and the plan's sends and Main routes (CV006, CV007, CV018) ([Watching from the command line](watch.md); the last three are [below](#a-send-or-route-you-did-not-plan-cv018-cv006-cv007)). On that bus E001 and E003 then stay quiet in `audit`, so the problem is said once.
+**An effect your plan inserts** (an FX bus's from a bus preset, or one a capture found on any strip) is checked against the plan instead: `CV015 Effect Insert Contradicts Plan` is an INFO when its insert is switched off, names another engine, or the engine holds another effect than the plan's ([Bus presets](bus-presets.md), [Capture a desk](capture.md)). `audit` runs it when given the plan, and Watch runs it from the open show's plan, and shows an `E003` about the same insert under its `CV015`, on the Watch page and in `atoo watch` alike, with more plan checks: a channel cut off from every planned route (CV016), a mute the plan does not have (CV017), 48V that is not what the plan states (CV019, [above](#a-condenser-is-silent-or-48v-is-on-where-it-should-not-be-cv019)), a bus whose width is not the plan's (CV020, [below](#a-bus-is-heard-on-one-side-only-or-is-not-the-width-the-plan-says-r011-cv020)), and the plan's sends and Main routes (CV006, CV007, CV018) ([Watching from the command line](watch.md); the last three are [below](#a-send-or-route-you-did-not-plan-cv018-cv006-cv007)). On that bus E001 and E003 then stay quiet in `audit`, so the problem is said once.
 
 ## The band cannot hear talkback: `T001`
 
@@ -384,7 +384,7 @@ On the desk's talkback page, turn on the monitor busses TALK A should reach, and
 **The talk mic's own strip is left out of the mix checks.** A talk mic is normally kept out of the mix: fader down, in no DCA. So when talkback is assigned, `audit` does not report that strip as "fader at floor" (`L002`), "sends nowhere" (`R008`), "nothing patched" (`C006`) or "socket muted" (`C007`). It says once that it did this, so the exemption is never silent:
 
 ```
-[INFO] T002 Talkback Strip Left Out Of Mix Checks
+[NOTE] T002 Talkback Strip Left Out Of Mix Checks
   CH 40 "TALKBACK" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ```
 
@@ -394,12 +394,12 @@ On the desk's talkback page, turn on the monitor busses TALK A should reach, and
 
 ```
 $ atoo audit --state talk-monitors.state.json --plan plan.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 warning, 1 note.
 
 [WARNING] CV021 Talkback Misses A Monitor Mix
   Talkback is assigned to CH40 and reaches other mixes, but not BUS 2 "Gtr Wedge", a monitor mix the plan builds: neither TALK A nor TALK B is routed to it, so whoever listens to that mix cannot hear you. Switch B2 on in TALK A's (or TALK B's) destinations on the desk's talkback page.
 
-[INFO] CV022 Monitor Mixes Talkback Was Checked Against
+[NOTE] CV022 Monitor Mixes Talkback Was Checked Against
   Talkback reaches 2 of the 3 monitor mixes the plan builds: BUS 1 "Vox Wedge", BUS 2 "Gtr Wedge", BUS 3 "Drum IEM". A bus is taken for a monitor mix when the plan feeds it to an output socket and to no Main, and does not send into it post-fader only; a mix the plan builds another way is not checked.
 ...
 ```
@@ -418,36 +418,36 @@ With `--plan`, `audit` also checks that talkback's strip is free. When talkback 
 
 ```
 $ atoo audit --state tom3.state.json --plan plan.json
-Audit findings: 1 warning, 1 info.
+Audit findings: 1 warning, 1 note.
 
 [WARNING] CV014 Talkback Strip Holds A Plan Input
   Talkback is assigned to CH40, and the plan puts 'Tom 3' on ch 40, so the talk mic and that input share one strip. Move the input off ch 40, or set talkback's assign to OFF or the other strip on the desk's talkback page.
 
-[INFO] T002 Talkback Strip Left Out Of Mix Checks
+[NOTE] T002 Talkback Strip Left Out Of Mix Checks
   CH 40 "Tom 3" is the strip talkback is assigned to (CH40), so it is treated as the talk mic: 'fader at floor' (L002), 'sends nowhere' (R008), 'nothing patched' (C006) and 'socket muted' (C007) are not reported for it.
 ...
 ```
 
-The INFO is the exemption above, applied to a strip that is really a tom. It goes once channel 40 is empty again.
+The NOTE is the exemption above, applied to a strip that is really a tom. It goes once channel 40 is empty again.
 
 Move the input to another channel in the input list and rebuild, or change the assign on the desk. If channel 40 in the plan *is* the talk mic, name it so: an entry whose name or source starts with "talk" (`Talkback`, `Talk Mic`), or is `TB` or `T/B`, is taken as the talk mic and says nothing.
 
 ## A send or route you did not plan: `CV018`, `CV006`, `CV007`
 
-With the plan, `audit` and Watch also check the desk's sends and Main routes against what the plan built. Three rules, two WARNINGs and an INFO:
+With the plan, `audit` and Watch also check the desk's sends and Main routes against what the plan built. Three rules, all INFO: the desk differs from the plan, and either may be the one to change.
 
-- **`CV018 Send Or Route Not In Plan`**, the INFO, is a send or route that is *on* and that the plan does not have: a channel sending to any Matrix above the floor, or a bus routed to a Main its plan entry does not list. It is how a wedge summed into Main is caught. A channel sending to a bus the plan gave it no send to is not reported: adding a send is an ordinary act.
+- **`CV018 Send Or Route Not In Plan`** is a send or route that is *on* and that the plan does not have: a channel sending to any Matrix above the floor, or a bus routed to a Main its plan entry does not list. It is how a wedge summed into Main is caught. A channel sending to a bus the plan gave it no send to is not reported: adding a send is an ordinary act.
 - **`CV006 Bus Send Contradicts Plan`** is a send the plan states that is off, in the other pre/post mode, or (in `audit` only) at another level.
 - **`CV007 Main Route Contradicts Plan`** is a channel's route to a Main the plan lists but the desk has off, or one the plan does not list but the desk has on.
 
 ```
 $ atoo audit --state touched.state.json --plan show.plan.json
-Audit findings: 8 warning, 3 info.
+Audit findings: 6 warning, 5 info.
 
-[WARNING] CV006 Bus Send Contradicts Plan
+[INFO] CV006 Bus Send Contradicts Plan
   CH 2 "Snare": plan says send to Drum IEM mode is 'pre' (PRE), live console reads POST. (plan provenance: ...)
 
-[WARNING] CV007 Main Route Contradicts Plan
+[INFO] CV007 Main Route Contradicts Plan
   CH 3 "Rack Tom": plan lists no direct route from this channel to Main 1, live console reads on. (plan provenance: ...)
 
 [INFO] CV018 Send Or Route Not In Plan
@@ -459,7 +459,7 @@ Physical sockets read: in AES50-A 1-15, LCL 1-9; out AES50-A 1-8, LCL 1-2.
 ...
 ```
 
-A desk left exactly as `atoo apply` set it raises none of them. If the send or route is what you want, leave the row (a WARNING or an INFO, and `audit` exits `0`) or put it in your conventions and rebuild, so the plan has it. Two things to know:
+A desk left exactly as `atoo apply` set it raises none of them. If the send or route is what you want, leave the row (an INFO, and `audit` exits `0`) or put it in your conventions and rebuild, so the plan has it. Two things to know:
 
 - **Watch compares the switch and pre/post, not the send level.** A level is what you ride at soundcheck. `audit --plan` still reports a send more than 0.5 dB from the plan's.
 - **The plan cannot say that a channel feeds a Matrix.** A send from a strip to a Matrix therefore always reads as outside the plan, until you switch it off or take it to the floor.
@@ -505,16 +505,16 @@ Physical sockets read: in LCL 1-2; out LCL 1.
 
 ```
 $ atoo audit --state swapped.state.json --plan swapped.plan.json
-Audit findings: 2 warning.
+Audit findings: 2 info.
 
-[WARNING] CV005 Patch Contradicts Plan (2)
+[INFO] CV005 Patch Contradicts Plan (2)
   CH 1 "Kick": plan says patched to LCL 1, live console reads LCL 2. (plan provenance: Input list: LCL 1)
   CH 2 "Snare": plan says patched to LCL 2, live console reads LCL 1. (plan provenance: Input list: LCL 2)
 
 Physical sockets read: in LCL 1-2; out LCL 1.
 ```
 
-Both exit `0`, because a WARNING does not fail the run. Against a live desk the command is the same with `--console` in place of `--state`, or `atoo audit --show DIR` on a bundle, which picks up the bundle's `plan.json` by itself.
+Both exit `0`, because only an error fails the run. Against a live desk the command is the same with `--console` in place of `--state`, or `atoo audit --show DIR` on a bundle, which picks up the bundle's `plan.json` by itself.
 
 If a plan is already there and the finding still does not appear, check these, in this order:
 
@@ -560,7 +560,7 @@ One case that is deliberately *not* a collision: two strips fed from one socket,
 
 Those values are reported as unknown, never as defaults. `--raw-log FILE` records every request and reply, line by line, so it survives a read you stop with Ctrl-C. A `(node)` on an address means a whole-object request went unanswered; the read then falls back to that object's values one at a time, so nothing is lost but time.
 
-When three addresses of the same kind (`/fx/{n}/mdl`, say) go unanswered while the desk answers everything else, the read stops asking for the rest of that kind, with an `INFO: stopped asking for …` line. If that line names something your desk does have, such as a fader or a send level, the link is slow or lossy: run the read again, and report it in an issue.
+When three addresses of the same kind (`/fx/{n}/mdl`, say) go unanswered while the desk answers everything else, the read stops asking for the rest of that kind, with a `NOTE: stopped asking for …` line. If that line names something your desk does have, such as a fader or a send level, the link is slow or lossy: run the read again, and report it in an issue.
 
 Ways out, in this order:
 

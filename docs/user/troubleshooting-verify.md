@@ -6,36 +6,38 @@ The plan was built, but `verify` (or the pre-flight before `apply`) refuses it, 
 
 ```
 $ atoo verify --show demo-show
-2 error(s), 0 warning(s), 4 note(s)
+2 error(s), 0 warning(s), 1 info, 3 note(s)
 
   [error] outputs[Matrix 1]: LCL output 9 does not exist -- LCL outputs are 1..8 on a WING Compact (note LCL has 24 INPUTS but only 8 outputs)  (output.socket-out-of-range)
   [error] outputs[Matrix 1]: LCL output 10 does not exist -- LCL outputs are 1..8 on a WING Compact (note LCL has 24 INPUTS but only 8 outputs)  (output.socket-out-of-range)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+
+  [note] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [note] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 BLOCKED: do not apply.
 ```
 
 *(Made from a copy of the small band example, with `outputs["Matrix 1"].patch` set to LCL 9-10 -- the state a build leaves when the conventions name a jack the desk does not have: a WING Compact has eight local outputs.)*
 
-**`BLOCKED` is one sentence about the whole plan, and it is decided by severity alone**: one or more `[error]` findings. Warnings and notes never block, however many there are — the run above would have said `APPLICABLE: notes only -- choices made where the conventions were silent.` without the two errors.
+**`BLOCKED` is one sentence about the whole plan, and it is decided by severity alone**: one or more `[error]` findings. Warnings, INFOs and notes never block, however many there are — the run above would have said `APPLICABLE: notes only -- choices made where the conventions were silent.` without the two errors.
 
-**An error is a setting the desk cannot be left in**: a socket that does not exist, a pair that cannot be formed, a value out of range. Anything the desk can work with -- even if it may not be what you meant -- is a warning or a note, and is applied.
+**An error is a setting the desk cannot be left in**: a socket that does not exist, a pair that cannot be formed, a value out of range. Anything the desk can work with -- even if it may not be what you meant -- is a warning, an INFO or a note, and is applied.
 
 **An output with no patch at all is not blocked.** Set the same Matrix's `patch` to `null` instead -- the state a build leaves when the conventions never say where the Matrix physically lands -- and verify gives a WARNING:
 
 ```
 $ atoo verify --show unpatched-show
-0 error(s), 2 warning(s), 4 note(s)
+0 error(s), 2 warning(s), 1 info, 3 note(s)
 
   [warning] outputs[Main]: never reaches an output: the Main is patched to no physical socket, and it feeds no Matrix that reaches one. Apply still sets its level and processing  (output.no-patch)
   [warning] outputs[Matrix 1]: never reaches an output: the Matrix is patched to no physical socket, and a Matrix feeds nothing else, so what it carries is heard nowhere -- right only when the desk uses it inside, for example as the phones or monitor source. Apply still sets its feed, level and processing  (output.no-patch)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+
+  [note] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [note] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 APPLICABLE: warnings only.
 ```
@@ -45,18 +47,18 @@ Apply sets each of them up -- the Matrix's feed from Main 1, both faders and any
 **A Matrix the desk's phones or monitor speakers listen to needs no socket.** That is how a phones mix is built: the desk's monitor output takes the Matrix as its source. A capture records what each monitor listens to as a row of `outputs.csv` (`Monitor 1,Matrix 4`; see [What the monitors listen to](capture.md#what-the-monitors-listen-to)), Apply sets the monitor back to it, and verify says it as a note instead of the warning. A bus a monitor listens to is said the same way, instead of *bus feeds nothing*. On a captured church desk whose phones listen to Matrix 4:
 
 ```
-  [info] outputs[Main PFl]: Matrix 4 'Main PFl' is the source of the desk's monitor 1 (the phones), so it needs no socket  (output.monitor-source)
+  [note] outputs[Main PFl]: Matrix 4 'Main PFl' is the source of the desk's monitor 1 (the phones), so it needs no socket  (output.monitor-source)
 ```
 
 For a show you build, say it in the conventions or instructions (*"Matrix 4 is the headphone feed"*) and the build records it. A Matrix no monitor listens to still gets the warning.
 
-**Notes (`[info]`) are choices, not problems.** Where the conventions were silent about something the desk cannot be left without — a bus's width, a send's pre/post — the plan decides it and says what it decided and why. The last line above is that: the plan never said which Main or which Matrix slot its outputs take, so each is decided from the name and said -- once, naming both, because it is the same note twice. The other two are things worth knowing rather than choices: a color the desk calls by another word, and a mute group nothing joins. A note that says the same thing about several busses (or channels, or outputs) is printed once, naming them all; a built `plan.json` still holds one finding per object in its `meta`. If a choice is wrong for your show, say so in your conventions and rebuild. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).
+**Notes (`[note]`) are choices, not problems.** Where the conventions were silent about something the desk cannot be left without — a bus's width, a send's pre/post — the plan decides it and says what it decided and why. The last line above is that: the plan never said which Main or which Matrix slot its outputs take, so each is decided from the name and said -- once, naming both, because it is the same note twice. The other two are things worth knowing rather than choices: a color the desk calls by another word, a note too, and a mute group nothing joins, an INFO (`[info]`), since a group declared and never joined may be a slip worth checking. A note that says the same thing about several busses (or channels, or outputs) is printed once, naming them all; a built `plan.json` still holds one finding per object in its `meta`. If a choice is wrong for your show, say so in your conventions and rebuild. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).
 
 **Read the findings, not the verdict.** Each one has four parts and they are worth telling apart (the example is the second run above):
 
 | part | example above | what to do with it |
 |---|---|---|
-| severity | `[warning]` | errors block; warnings and notes do not |
+| severity | `[warning]` | errors block; warnings, INFOs and notes do not |
 | where | `outputs[Matrix 1]` | the object in the plan, addressable by hand |
 | message | `never reaches an output: ...` | usually names the fix |
 | code | `(output.no-patch)` | **stable across rewordings** — quote this in a bug report, and the browser UI filters on it. |
@@ -81,13 +83,14 @@ Both exit `2`.
 
 ```
 $ atoo verify --show demo-show
-1 error(s), 0 warning(s), 4 note(s)
+1 error(s), 0 warning(s), 1 info, 3 note(s)
 
   [error] busses[MON6]: LCL outputs 7 and 8 are claimed by 2 sources at once -- busses[MON6] and outputs[Matrix 1] -- and one physical socket carries one signal. Whichever of them apply writes last wins; the other is silently dead at the jack. LCL has 8 outputs on a WING Compact and all 8 are claimed, so there is no free LCL socket to move one of them to -- the AES50 groups (A, B, C) have 48 outputs each, which is where IEM and monitor sends usually live  (output.socket-collision)
 
-  [info] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
   [info] plan.mute_groups[Speech]: mute group 'Speech' is declared but no channel or bus joins it -- it does nothing  (group.empty)
-  [info] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
+
+  [note] plan: 'Magenta' is the desk's Pink (11): Elec Gtr. The desk has no color called 'Magenta'; Atoo used that name for 11 until the desk was asked, so it still resolves. Say 'Pink' to use the desk's own word  (strip.colour-alias)
+  [note] outputs[Main, Matrix 1] (2 outputs): index set to 1 -- the plan left it out; decided by Atoo's fallback rule: the plan has one Main, so it is Main 1 / its name, 'Matrix 1', states slot 1  (inferred.output-index)
 
 BLOCKED: do not apply.
 ```

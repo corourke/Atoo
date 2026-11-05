@@ -17,35 +17,35 @@ A setting the plan writes itself is not reset first: it is written once, as the 
 | Meter and RTA display (`/cfg/mtr`, `/cfg/rta`) | What the screen shows, not what the desk does. |
 | Monitor and solo listening (`/cfg/mon`, `/cfg/solo`) | Your headphones and monitor speakers, set for you and the room. The one exception: a plan that says what a monitor listens to (a `Monitor 1` or `Monitor 2` row of `outputs.csv`, which a capture writes, or your conventions stating *"Matrix 4 is the headphone feed"*) has that monitor's source set to it, with the plan's other writes. A monitor the plan says nothing about is left as it is. |
 
-One INFO line counts what was reset, by area. This is a preview of the Demo show against the Demo's simulated desk:
+One NOTE line counts what was reset, by area. This is a preview of the Demo show against the Demo's simulated desk:
 
 ```
-INFO reset to initialized (WING Compact capture) before the plan's writes: 11 setting(s) would change -- 11 channel; 19,318 already initialized; left alone: 1,648 the plan sets itself, 84 on the skip-list (monitor/solo listening), 26 on the skip-list (meter/RTA display), 18 under a selector the plan sets to another model, 12 on the skip-list (expansion cards), 3 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.2s (2,121 requests; the plan's own settings: 1,582 from the node dumps, 83 read one by one); writing would take about 0.4s at the rate measured on a WING Compact
+NOTE reset to initialized (WING Compact capture) before the plan's writes: 11 setting(s) would change -- 11 channel; 19,318 already initialized; left alone: 1,648 the plan sets itself, 84 on the skip-list (monitor/solo listening), 26 on the skip-list (meter/RTA display), 18 under a selector the plan sets to another model, 12 on the skip-list (expansion cards), 3 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.2s (2,121 requests; the plan's own settings: 1,582 from the node dumps, 83 read one by one); writing would take about 0.4s at the rate measured on a WING Compact
 ```
 
 The desk is read mostly by node dump, a few requests for hundreds of settings, and a dump prints the desk's *rounded* text (`144.7` for `144.6788`). So a value is judged already initialized from the desk's rounded readout: one edited by less than the readout's rounding may be left as it is. That was chosen over reading every number again by itself, which would add thousands of requests to every preview, for a value that is at worst a fraction of a percent off. The settings the reset will change are read exactly, though, because that is the value the journal records and [Undo](undo.md) puts back; the line says how many.
 
 The read takes a few seconds. A desk far from initialized can need a few thousand writes, at about 40 ms each.
 
-- **`--no-init`** skips the reset, for a desk you have initialized by hand. The run notes it at INFO.
+- **`--no-init`** skips the reset, for a desk you have initialized by hand. The run says so in a NOTE.
 - **A desk whose model Atoo cannot tell** (or has no capture for) gets a WARNING, and the plan is written without the reset. Initialize it by hand first. A Compact, a full-size WING and a Rack each have a capture, taken from a real desk of that model.
 
 ## Strips the plan does not build: unpatched from their sources
 
 A WING ships every channel and aux patched to its own local socket. A full apply **unpatches every channel and aux strip the plan does not build**: their source goes to `OFF`, across the whole desk (ch 1-40, aux 1-8). Only the source; the strip's name, fader, mute and everything else are left as they are.
 
-Without this, a plan that puts the playback on LCL 23-24 would leave ch 24 on its factory patch, LCL 24, listening to the playback. One INFO line says which strips:
+Without this, a plan that puts the playback on LCL 23-24 would leave ch 24 on its factory patch, LCL 24, listening to the playback. One NOTE line says which strips:
 
 ```
-INFO ch 24-40, aux 3-7: not in this plan, unpatched from their sources so none listens to a socket the plan uses
+NOTE ch 24-40, aux 3-7: not in this plan, unpatched from their sources so none listens to a socket the plan uses
 ```
 
 ## Output sockets the plan does not patch: disconnected
 
-A WING ships with its local outputs already patched (on a Compact, outputs 3-8 carry busses and the Mains), and an earlier show leaves its own patches behind. A full apply **disconnects every output socket on the desk's own panel that no bus, Main or Matrix of the plan is patched to, and that the plan does not record as a split**: the socket's group goes to `OFF`, and nothing else about it is touched. A socket the plan does patch keeps what the plan wrote, and one that already reads `OFF` is left as it is. One INFO line says which sockets:
+A WING ships with its local outputs already patched (on a Compact, outputs 3-8 carry busses and the Mains), and an earlier show leaves its own patches behind. A full apply **disconnects every output socket on the desk's own panel that no bus, Main or Matrix of the plan is patched to, and that the plan does not record as a split**: the socket's group goes to `OFF`, and nothing else about it is touched. A socket the plan does patch keeps what the plan wrote, and one that already reads `OFF` is left as it is. One NOTE line says which sockets:
 
 ```
-INFO output LCL 3-8: no bus or output in this plan is patched there, so each is disconnected rather than left on what the desk came with or an earlier show put there
+NOTE output LCL 3-8: no bus or output in this plan is patched there, so each is disconnected rather than left on what the desk came with or an earlier show put there
 ```
 
 Without it, the audit would call those patches leftovers, and a stereo bus the plan only feeds into a Main would show as patched on its left side only. This step covers the desk's own panel. The outputs beyond it (an AES50 stage box, StageCONNECT, a card, USB) are already disconnected by the [reset to initialized](#first-the-desk-is-reset-to-its-initialized-state) above, which sets every output group to its initialized state, so nothing needs to be told how many sockets each has. With `--no-init`, or on a Rack (no capture), [`--clean-output-sockets`](applying.md#flags-worth-knowing) reaches them. [Undo](undo.md) puts each socket back as it was.
@@ -69,7 +69,7 @@ A route that is on is written at unity, post-fader, as is a Matrix's feed: the c
 Setup -> Audio's talkback assign says which strip the desk's TALK buttons use, and the desk offers only **ch 40** or **aux 8**. When the plan builds a talkback strip on one of those (one named or reading as "Talkback", "Talk", "Talk Mic", "TB" or "T/B"), apply sets the assign to it:
 
 ```
-INFO talkback assign (Setup -> Audio) set to AUX8 (was 'OFF'): aux 8 'TALKBACK' is the plan's talkback strip
+NOTE talkback assign (Setup -> Audio) set to AUX8 (was 'OFF'): aux 8 'TALKBACK' is the plan's talkback strip
 ```
 
 A plan with no talkback strip there sets the assign to `OFF`. A talkback strip anywhere else cannot be assigned; `verify` warns about it (`talkback.unassignable`) and apply leaves the strip where the plan put it.
@@ -101,7 +101,7 @@ The console would accept these patches and read them back unchanged -- it does n
 
 It exits `2` and nothing is written. `--skip-verify` does not turn this off. Only the desk answering `NONE` stops the run: a bay that does not answer, or names a card Atoo does not know, counts as fitted. An empty bay the plan does not use is not a problem.
 
-Offline, `atoo verify` reads what a capture recorded in the plan: a card the desk reported is checked and nothing is said, and a bay it read as `NONE` that the plan uses is a WARNING (`patch.expansion-bay-empty`). With no reading, verify cannot know what is in a slot, so it says at INFO that the apply preview checks it (`patch.expansion-bay-not-checked`).
+Offline, `atoo verify` reads what a capture recorded in the plan: a card the desk reported is checked and nothing is said, and a bay it read as `NONE` that the plan uses is a WARNING (`patch.expansion-bay-empty`). With no reading, verify cannot know what is in a slot, so it says in a NOTE that the apply preview checks it (`patch.expansion-bay-not-checked`).
 
 ## Stage boxes: a socket past the end of the box
 
@@ -131,7 +131,7 @@ The desk's **Link Customization to Source** switch is on by default, and while i
 
 Some settings change what other settings mean. A delay is in meters or feet depending on the strip's delay mode; a compressor's threshold means something different under each model. So on each strip apply writes the **selectors first**, then the **values**, then the **on-switches**.
 
-When the run changes a selector, every value it governs is written and read back after it, even if the desk already held the plan's number: under the old selector that number meant something else. The report says how many at INFO, and the preview counts them the same way.
+When the run changes a selector, every value it governs is written and read back after it, even if the desk already held the plan's number: under the old selector that number meant something else. The report says how many in a NOTE, and the preview counts them the same way.
 
 | selector | governs, on the same strip |
 |---|---|

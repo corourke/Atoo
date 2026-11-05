@@ -74,7 +74,7 @@ Paste that line, then reword the descriptions to say what is wrong: the command 
 
 The last four are [sends and 48V](#sends-and-48v). Only the two levels, `fader_db` and `send_db`, have an ordering worth comparing, so only they take `<` and friends. `dca` and `mute_group` ask about membership in words: **`not in` alerts when the channel is not in the group, `in` when it is.** `"field": "dca", "operator": "not in", "value": "Drums"` fires when the channel is not in the Drums DCA. The rest take `==` and `!=`: `"field": "patch", "operator": "!=", "value": "LCL 5"` fires when the channel is patched anywhere but LCL 5.
 
-`severity` is one of `info`, `warning` or `error`, and it is yours to set — the condition fires at whatever level you said it mattered.
+`severity` is one of `note`, `info`, `warning` or `error`, and it is yours to set — the condition fires at whatever level you said it mattered.
 
 Four rules about names:
 
@@ -164,9 +164,9 @@ DCAs 2 to 4 are not in the fixture at all, so they say nothing: a strip that was
 
 Things to know:
 
-- **A position always wins.** Text that reads as a position, range or `ALL` form *is* that form, even if some channel happens to be named `CH 10`. When one is, each pass also reports an `info` finding saying the condition is watching the position, not that channel. A kind word followed by a name is a [kind and a name](#by-kind-and-name), and anything else is a name, as before.
+- **A position always wins.** Text that reads as a position, range or `ALL` form *is* that form, even if some channel happens to be named `CH 10`. When one is, each pass also reports a `note` finding saying the condition is watching the position, not that channel. A kind word followed by a name is a [kind and a name](#by-kind-and-name), and anything else is a name, as before.
 - **Which fields a kind takes.** Every field works on a channel or an aux. A bus, Main, Matrix or DCA takes `muted` and `fader_db` only: only channels and auxes have an input `patch`; a DCA cannot be in a DCA or a mute group; and a bus, Main or Matrix can be, but `watch` does not read their tags, so the condition could never fire.
-- **`Main` on its own means `MAIN 1`**, the main L/R. An `info` finding reads: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make it explicit*. The Watch screen's table rewrites the cell to `MAIN 1` and shows the same note under it, not in red. No other kind has a default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are refused.
+- **`Main` on its own means `MAIN 1`**, the main L/R. A `note` finding reads: *'Main' read as MAIN 1 (the main L/R) -- write MAIN 1 to make it explicit*. The Watch screen's table rewrites the cell to `MAIN 1` and shows the same note under it, not in red. No other kind has a default, so `BUS`, `AUX`, `CH`, `DCA` and `MTX` on their own are refused.
 - **What is refused when the file loads** -- each is a condition no console could ever make true: a malformed target (`CH`, `BUS -`, `DCA 3-`), a position the WING does not have (`CH 41`, `MAIN 5`, `DCA 17`), a backwards range (`DCA 16-10`), and a field the kind does not have.
 
 ```
@@ -269,7 +269,7 @@ A kind word followed by a name means **the one strip of that kind with that name
 
 The kind words are the ones positions use (`CH`/`CHN`/`CHAN`, `AUX`, `BUS`, `MAIN`, `MTX`/`MATRIX`, `DCA`). The kind word is written back in capitals (`bus drums` is saved as `BUS drums`). The name keeps your spelling and matches regardless of case.
 
-**The name is looked up once, when Watch starts.** Its position is what gets watched after that. Every pass checks `BUS 1`, not "whichever bus is called Drums now", so watching by name adds no reads to each pass. The baseline says what each name matched, as an `info` finding. If someone renames or moves the strip after Start, Watch carries on watching the position it found; stop and start Watch to look the name up again.
+**The name is looked up once, when Watch starts.** Its position is what gets watched after that. Every pass checks `BUS 1`, not "whichever bus is called Drums now", so watching by name adds no reads to each pass. The baseline says what each name matched, as a `note` finding. If someone renames or moves the strip after Start, Watch carries on watching the position it found; stop and start Watch to look the name up again.
 
 A Main's and a Matrix's names are not part of a normal pass, so a `MAIN` or `MTX` name makes Watch read those names once, at Start, and never again. A capture played with `--state-sequence` has none of them, so there a `MAIN` or `MTX` name gets a warning that no name could be read.
 
@@ -335,9 +335,9 @@ The fixture has a bus *and* a DCA named Drums, so each condition looks only at s
 
 Things to know:
 
-- **On the Watch screen these lines are not table rows.** The INFO resolutions and the not-watched warnings go on the **This watch** line under the table (*Resolved at Start: BUS Drums → BUS 1, DCA Drums → DCA 1*); the table keeps what is wrong on the desk.
+- **On the Watch screen these lines are not table rows.** The NOTE resolutions and the not-watched warnings go on the **This watch** line under the table (*Resolved at Start: BUS Drums → BUS 1, DCA Drums → DCA 1*); the table keeps what is wrong on the desk.
 - **A name that matches two strips of its kind is not watched.** It gets a warning naming every position it matched. Write the position you mean instead.
-- **The kind and name wins over a channel named the same.** If a channel is literally called `BUS Drums`, the condition still watches the bus named Drums, and an `info` finding notes it. To watch that channel, write `CH BUS Drums` or its position.
+- **The kind and name wins over a channel named the same.** If a channel is literally called `BUS Drums`, the condition still watches the bus named Drums, and a `note` finding says so. To watch that channel, write `CH BUS Drums` or its position.
 - **A channel whose name begins with a kind word** -- "Main Vox" -- is written `CH Main Vox`. Plain `Main Vox` means the Main named Vox.
 - **A digit after the kind word is a position**, so `BUS 2 Track` is refused rather than read as a bus named "2 Track":
 
@@ -535,9 +535,9 @@ atoo watch --state-sequence audit_demo_state.json --watch-conditions house.watch
 - **A channel that reaches no output** is `CV016`, with the plan. Without it, no built-in rule covers a channel that reaches nothing, so write `muted` `==` `true` on the channel that matters.
 - **A send switched off or flipped to post-fader, a Main route that is wrong, or a send or route that is on and not in the plan** are `CV006`, `CV007` and `CV018`, with the plan. They cover the plan's sends and Main routes, so a condition for them would say the same thing twice.
 - **A condenser with its 48V off, or 48V on where the plan has none** is `CV019`, with the plan. Without it, `C001` covers only 48V on a socket nothing is patched to, and a `phantom` condition is the way to say which channels must have it.
-- **Something muted that the plan leaves unmuted** is `CV017`, with the plan, at WARNING. If you always watch with the plan, write a mute condition only where the mute should be an ERROR, as the PA and the lead vocal are above; the table's WARNING mute rows, the FX bus and the wedge, are for watching without it.
+- **Something muted that the plan leaves unmuted** is `CV017`, with the plan, at INFO: the desk differs from the plan, which may be on purpose. Where a mute is a problem, write a mute condition at WARNING or ERROR, as the PA and the lead vocal are above.
 - **A DCA at -20 dB or lower with live strips in it** is `CH002`. A DCA fader condition still earns its place when you want your own threshold and severity. A send left on at -100 dB is `L001`.
-- **A DCA muted with live strips in it** is `CH004`, a note; with the plan, a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when you want it as a warning or an error.
+- **A DCA muted with live strips in it** is `CH004`, an INFO; with the plan, a DCA it lists is `CV017`'s. A condition on the DCA's `muted` is for when you want it as a warning or an error.
 - **48V on an empty socket, two strips with one name** are `C001` and `N001`. **An effect the plan inserts, bypassed** is `CV015`, with the plan.
 
 Where one of your conditions and a built-in rule both fire, Watch in the browser shows them as one row, yours ([Read the table](watch-a-show.md#2-read-the-table)). What the plan's rules catch is in [Watching from the command line](watch.md).

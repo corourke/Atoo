@@ -68,9 +68,9 @@ Type in a cell and press **Save**: it writes the file and updates the plan strai
 
 ### Let the model say less: `--intent`
 
-`atoo build --intent` asks the model for a short **intent** instead of the plan's reply. Atoo's own code writes one channel for every input-list row, in the list's order, with what the list says of it (source type, microphone, phantom power, category, preset, and the socket it states). The model writes only what the list cannot say: a stereo pair, a strip your conventions name differently, the DCAs, mute groups, buses and outputs your conventions ask for (each with its members, by category or by name), the order of the strips by category, and the settings each category gets. Atoo works out the strips, a socket for every row that names none, the group and bus numbers and every range, and says each choice at INFO. It does not need the separate rewrite of your conventions (`atoo resolve`).
+`atoo build --intent` asks the model for a short **intent** instead of the plan's reply. Atoo's own code writes one channel for every input-list row, in the list's order, with what the list says of it (source type, microphone, phantom power, category, preset, and the socket it states). The model writes only what the list cannot say: a stereo pair, a strip your conventions name differently, the DCAs, mute groups, buses and outputs your conventions ask for (each with its members, by category or by name), the order of the strips by category, and the settings each category gets. Atoo works out the strips, a socket for every row that names none, the group and bus numbers and every range, and says each choice in a NOTE. It does not need the separate rewrite of your conventions (`atoo resolve`).
 
-A row is left out only when your conventions, the instructions or the row's own notes say so in words the model can quote; otherwise the row is built, and the INFO says so. The result is the same kind of plan, verified and written like any other build.
+A row is left out only when your conventions, the instructions or the row's own notes say so in words the model can quote; otherwise the row is built, and a NOTE says so. The result is the same kind of plan, verified and written like any other build.
 
 ```bash
 atoo build --show touringband --intent
@@ -78,7 +78,7 @@ atoo build --show touringband --intent
 
 It is new and sits beside the default form until it does as well; the [patch page](patch.md#let-the-model-say-less---intent) explains the idea. It is the way to build with a local model: [Which model](ai-provider.md#which-model) says which one to use.
 
-`--intent-steps` asks for the same intent in three shorter calls instead of one: first the categories and the exceptions, then the buses, then the DCAs, mute groups and outputs. Each call writes only its own part and is checked against what the calls before it built. It implies `--intent`. With a local model it is the default, because there the three calls build more of the show than one: Ollama, or the `api` provider when `ATOO_AI_BASE_URL` is on this machine or your network (`localhost`, a `.local` name, a private address). `--no-intent-steps` asks in one call. Claude, and the `api` provider on a remote host, ask in one call unless you give `--intent-steps`. The build says which at INFO.
+`--intent-steps` asks for the same intent in three shorter calls instead of one: first the categories and the exceptions, then the buses, then the DCAs, mute groups and outputs. Each call writes only its own part and is checked against what the calls before it built. It implies `--intent`. With a local model it is the default, because there the three calls build more of the show than one: Ollama, or the `api` provider when `ATOO_AI_BASE_URL` is on this machine or your network (`localhost`, a `.local` name, a private address). `--no-intent-steps` asks in one call. Claude, and the `api` provider on a remote host, ask in one call unless you give `--intent-steps`. The build says which in a NOTE.
 
 ## 6. Read the findings
 
@@ -87,7 +87,8 @@ The **Findings** panel down the right starts with a verdict: **Ready to apply** 
 - **ERROR**: the plan cannot be written as it stands, and the verdict reads **Blocked**. Fix the file the finding points at and build again.
 - **WARNING**, under **To check**: it can be written, but look first. The verdict counts them: **Ready to apply · 1 to check**. A rebuild's change that nothing you edited asked for is one of these (`rebuild.unasked-change`), one per strip.
 - **Advice**: the critic's disagreements, a second model's opinion. Read them, but they never block an apply.
-- **INFO**, folded under **▸ Choices**: choices the plan made that your files did not state, each saying what it was decided from. If one is not what you meant, say so in your conventions or instructions. **▸ Build details** holds notes on how the build read the model's draft, and on what your conventions and presets put into the plan as asked (the preset values it carries, what the Category table filled in); you can leave it closed.
+- **INFO**, under **To review**: where the desk differs from the plan, or something to check, such as a DCA nobody joins. The verdict counts them: **Ready to apply · 2 to review**. If the desk is right, put it into the plan; if the plan is right, put the desk back.
+- **NOTE**, folded under **▸ Choices**: choices the plan made that your files did not state, each saying what it was decided from. If one is not what you meant, say so in your conventions or instructions. **▸ Build details** holds notes on how the build read the model's draft, and on what your conventions and presets put into the plan as asked (the preset values it carries, what the Category table filled in); you can leave it closed.
 
 [Reading findings](reading-findings.md) explains the codes and verdicts.
 

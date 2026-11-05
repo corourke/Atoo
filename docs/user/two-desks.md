@@ -31,7 +31,7 @@ atoo undo --show touringband --console 198.51.100.9 --confirm
 Console: WING,198.51.100.9,FOH-A,wing-compact,S2203A1,3.1-0-g9f314617:release
 Reversing the newest entry in touringband/journals on this desk:
   2026-09-29T00:18:25.753176+00:00  apply  APPLIED: 1082 address(es) evaluated, 759 written, 0 mismatch(es).  [on FOH-A (wing-compact) serial S2203A1, at 198.51.100.9:2223]
-  INFO 1 newer write(s) on this stack were recorded on a different desk, and are left alone:
+  NOTE 1 newer write(s) on this stack were recorded on a different desk, and are left alone:
     2026-09-29T00:18:25.822738+00:00  apply  APPLIED: 1082 address(es) evaluated, 759 written, 0 mismatch(es).  [on FOH-B (wing-compact) serial S2207B4, at 198.51.100.7:2223]
 UNDONE: 759 reversed.
   (323 journal record(s) were never written)
@@ -65,16 +65,16 @@ atoo undo --show touringband --console 203.0.113.40
 Console: WING,203.0.113.40,FOH-A,wing-compact,S2203A1,3.1-0-g9f314617:release
 Reversing the newest entry in touringband/journals on this desk:
   2026-09-29T00:18:32.185944+00:00  apply  APPLIED: 1082 address(es) evaluated, 759 written, 0 mismatch(es).  [on FOH-A (wing-compact) serial S2203A1, at 198.51.100.9:2223]
-  INFO 1 newer write(s) on this stack were recorded on a different desk, and are left alone:
+  NOTE 1 newer write(s) on this stack were recorded on a different desk, and are left alone:
     2026-09-29T00:18:32.246678+00:00  apply  APPLIED: 1082 address(es) evaluated, 759 written, 0 mismatch(es).  [on FOH-B (wing-compact) serial S2207B4, at 198.51.100.7:2223]
-  INFO this journal was written to serial S2203A1 at 198.51.100.9; the desk on the line states the same serial at 203.0.113.40. The serial is the desk, so it is the same one -- its address has changed since.
+  NOTE this journal was written to serial S2203A1 at 198.51.100.9; the desk on the line states the same serial at 203.0.113.40. The serial is the desk, so it is the same one -- its address has changed since.
 Undo of touringband/journals/20260929T001832.164202Z-apply-S2203A1.json
   RESTORE   /mtx/1/fdr: 0.0 -> -144.0   (output Matrix 1 (matrix 1): starting fader -> unity (0dB))
   RESTORE   /main/1/fdr: 0.0 -> -144.0   (output Main 1 (main 1): starting fader -> unity (0dB))
   ...
 ```
 
-**Entries recorded before desks were recorded** name no desk. They are taken to be the connected desk's — the single-desk assumption was true when they were written, there is nothing recorded to hold them to, and refusing them would strand the only undo those runs have — and undo notes this at INFO. Its per-address guard still applies. An offline `--state` preview contacts no desk, so it previews the newest entry on the whole stack and says a confirmed run may pick a different one.
+**Entries recorded before desks were recorded** name no desk. They are taken to be the connected desk's — the single-desk assumption was true when they were written, there is nothing recorded to hold them to, and refusing them would strand the only undo those runs have — and undo says so in a NOTE. Its per-address guard still applies. An offline `--state` preview contacts no desk, so it previews the newest entry on the whole stack and says a confirmed run may pick a different one.
 
 The Apply screen's **History** step (the journal stack) has a **Desk** column. A row written to another desk is drawn dimmed and tagged **Other desk**, and the newest row on the desk in the bundle bar is the one with **Preview undo** — the write **Undo newest write** reverses. Rows are matched to that desk by address until you **Ping** it; the ping reads its serial. (The Undo button itself always asks the desk, so it never depends on that.)
 
@@ -93,7 +93,7 @@ atoo apply --show touringband --console 198.51.100.6
 ```
 Console: WING,198.51.100.6,MON-RACK,wing-rack,S2301R7,3.1-0-g9f314617:release
 
-INFO: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
+NOTE: This plan is for a WING Compact, but 198.51.100.6 is a WING Rack (19", 4U). Every socket the plan patches exists on this desk, so it is applied as it stands, with the pre-flight verify re-run against wing-rack -- the desk being written to.
 DRY RUN: 1089 address(es) evaluated, 493 would change, nothing written.
   - INFO reset to initialized (WING Rack (19", 4U) capture) before the plan's writes: nothing would change; 19,905 already initialized; left alone: 1,089 the plan sets itself, 84 on the skip-list (monitor/solo listening), 26 on the skip-list (meter/RTA display), 12 on the skip-list (expansion cards), 4 a mono bus's width (the desk holds it at 0), 2 not settable (no address the desk takes); reading the desk took 0.5s (2,100 requests; the plan's own settings: 997 from the node dumps, 92 read one by one); writing: no measured request rate for the WING Rack (19", 4U)
   - INFO 19 strip(s) set to their main input (not their alternate) -- a show apply means stage inputs live
@@ -134,7 +134,7 @@ Please send that token in — `atoo ping` shows it too, and the journal keeps it
 
 **`--console-model`** is the explicit way to say which model the plan is to be checked for. `--console-model wing-rack` against a Rack verifies the plan against the Rack before the desk is even contacted, and the desk then agrees with it, so there is nothing more to say.
 
-**On the Apply screen** all of this is the same command, so it behaves the same: a Compact plan applies to a Rack from the browser, and the INFO — or the WARNING — lands in the Findings panel beside the journal. A refusal is in the run log, word for word.
+**On the Apply screen** all of this is the same command, so it behaves the same: a Compact plan applies to a Rack from the browser, and the NOTE — or the WARNING — lands in the Findings panel beside the journal. A refusal is in the run log, word for word.
 
 **`amend` asks the same questions** of the sockets it writes, in its preview as well as before a write — see [The pre-flight](amend.md#the-pre-flight-the-same-checks-as-apply).
 
@@ -149,7 +149,7 @@ atoo amend --show touringband --amended-plan touringband/rebuilt.plan.json --con
 
 ```
 Console: WING,198.51.100.7,FOH-B,wing-compact,S2207B4,3.1-0-g9f314617:release
-  INFO applied plan: the one this desk's newest write left on it -- journals/20261105T003707.642838Z-apply-S2207B4.json (apply); plan.json says the same.
+  NOTE applied plan: the one this desk's newest write left on it -- journals/20261105T003707.642838Z-apply-S2207B4.json (apply); plan.json says the same.
 48 strip(s) read over 211 address(es): 19 ours, 0 theirs, 21 free, 8 unknown
   ...
 
@@ -172,7 +172,7 @@ Because the plan is kept per entry, **undo keeps it in step**: undoing the backu
 
 ```
 Console: WING,198.51.100.11,SPARE,wing-compact,S2210C9,3.1-0-g9f314617:release
-  INFO no write to this desk (SPARE (wing-compact) serial S2210C9, at 198.51.100.11:2223) is standing in journals/, so the applied plan is plan.json -- the bundle's last build. If this desk was set up from a different plan, name it with --plan FILE.
+  NOTE no write to this desk (SPARE (wing-compact) serial S2210C9, at 198.51.100.11:2223) is standing in journals/, so the applied plan is plan.json -- the bundle's last build. If this desk was set up from a different plan, name it with --plan FILE.
 ```
 
 The same fallback, said the same way, happens when the desk's newest entry predates per-desk plans, and when `--state` means no desk was contacted. `--plan FILE` always reads the file you named.
@@ -183,7 +183,7 @@ The same fallback, said the same way, happens when the desk's newest entry preda
 WARNING: the applied plan claims 19 strip(s) as this show's that read EMPTY on this desk -- no name, nothing on the socket, factory patch: ch:1, ch:2, ch:3, ch:4, ch:5, ch:6, ch:7, ch:8 and 11 more. The plan may describe a different desk. They are still treated as ours, so nothing is placed on them; check that this is the desk the plan was applied to, or that it has not been reloaded since. A desk that never had the show is a full apply (`atoo apply --show DIR`), not an amend.
 ```
 
-It is a warning, not a refusal: the strips stay *ours*, so nothing is placed on them, and a strip cleared by hand is a legitimate reason for one. In the browser, the INFO lines and this warning are in the Patch screen's review with the rest.
+It is a warning, not a refusal: the strips stay *ours*, so nothing is placed on them, and a strip cleared by hand is a legitimate reason for one. In the browser, the NOTE lines and this warning are in the Patch screen's review with the rest.
 
 ## See also
 

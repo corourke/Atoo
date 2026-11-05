@@ -75,7 +75,7 @@ nothing more to undo on this desk: my-show/journals keeps only the newest 5 entr
 and the write beneath it was pruned (20261002T162704.453182Z-apply-198.51.100.7.json, apply). Undoing it would leave the desk holding a write no journal records, so amend and patch would compare against the wrong plan. Nothing was written. To change the desk from here, apply a plan (a full apply replaces everything) or patch it.
 ```
 
-The run that pruned it said so at the time, at INFO. A pruned patch can no longer be kept in the show with `patch --promote`; the refusal quotes its text so you can put it into the sheets in Build's step 04 yourself.
+The run that pruned it said so at the time, in a NOTE. A pruned patch can no longer be kept in the show with `patch --promote`; the refusal quotes its text so you can put it into the sheets in Build's step 04 yourself.
 
 Copy an entry somewhere else if a particular run must outlive the five. `index.json` is a cache for listing the stack; delete it and it is rebuilt from the journals, all but its list of pruned runs.
 

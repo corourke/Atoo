@@ -22,7 +22,7 @@ atoo verify --presets ~/atoo-presets ...
 atoo apply  --presets ~/atoo-presets ...
 ```
 
-`--presets` wins over the config file. `atoo patch` needs neither as a rule: a change takes its new strips' presets from the library the plan on the desk records (the one the show was built with, or the packaged starter presets when its files match them), and only then from `[presets] default`; an INFO line names the library and why ([Patching a running show](patch.md#try-it-with-no-console-and-no-model)).
+`--presets` wins over the config file. `atoo patch` needs neither as a rule: a change takes its new strips' presets from the library the plan on the desk records (the one the show was built with, or the packaged starter presets when its files match them), and only then from `[presets] default`; a NOTE line names the library and why ([Patching a running show](patch.md#try-it-with-no-console-and-no-model)).
 
 With no library named at all, a plan that names a preset gets one warning for the whole plan rather than one per strip:
 
@@ -150,7 +150,7 @@ Name the preset in your conventions, in the sentence you would say out loud:
 
 Matching is **case-insensitive**, and `-`, `_` and runs of whitespace all count as the same thing: `Kick In`, `kick_in` and `KICK-IN` are one name.
 
-Or name it in the input list's optional `preset` column, matched the same way; **the input list wins** over the conventions and instructions ([The `preset` column](input-lists.md#the-preset-column)). The build notes it at INFO (`reply.preset-from-input-list`) when it replaces a different preset. In the browser, Build step 02's Preset column offers this library's names.
+Or name it in the input list's optional `preset` column, matched the same way; **the input list wins** over the conventions and instructions ([The `preset` column](input-lists.md#the-preset-column)). The build says it in a NOTE (`reply.preset-from-input-list`) when it replaces a different preset. In the browser, Build step 02's Preset column offers this library's names.
 
 Matching stops there on purpose. Other punctuation is **not** stripped, because guessing further starts merging presets you meant to keep apart. `tests/fixtures/preset-test.plan.json` names six presets, each a deliberate case. It is a hand-made plan that has never been through `build`, so it names its presets without carrying their values yet -- which verify says, strip by strip:
 
@@ -169,12 +169,12 @@ atoo verify --plan tests/fixtures/preset-test.plan.json --presets starter/preset
   [warning] channels[MLD VOX]: names the preset 'vocal', which the library has (Vocal.chn), but the plan carries none of its values -- it was built before presets were expanded into the plan, or without a library -- so nothing from it will be written  (preset.not-expanded)
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [note] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
 
 APPLICABLE: warnings only.
 ```
 
-(Each `preset.unknown` line names up to five closest names in the library: `Kick (In)` finds `Kick In`. The `[info]` note is not about presets: this fixture plan leaves its bus widths unstated, so verify reports the width it will write, one line for all eight. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).)
+(Each `preset.unknown` line names up to five closest names in the library: `Kick (In)` finds `Kick In`. The `[note]` line is not about presets: this fixture plan leaves its bus widths unstated, so verify reports the width it will write, one line for all eight. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).)
 
 Read the six presets as a table:
 
@@ -227,8 +227,8 @@ atoo verify --plan /tmp/preset-test.expanded.json --presets starter/presets
   [warning] channels[HH]: names the preset 'Kick (In)', which is not in the library at starter/presets (20 presets) -- that strip will be built without it. Closest in the library: Kick In  (preset.unknown)
   [warning] plan: no input list was supplied, so nothing checked that every input became a channel, that no channel was invented, or that phantom power is safe for the microphones in use -- pass the input list to check those  (reconcile.not-checked)
 
-  [info] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
-  [info] plan: 4 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (81), ch 9 Keys (81), ch 10 Perc (81), ch 14 Vocal (78)  (preset.expanded)
+  [note] busses[Drums, Drums Comp, Vocals, Horns, VOX Reverb, VOX Delay, Snare Verb, INST Reverb] (8 busses): width set to stereo -- the conventions did not state it; decided by Atoo's fallback rule: no physical output socket depends on its width, so it keeps the WING's factory width, stereo  (inferred.bus-width)
+  [note] plan: 4 channel(s) carry a preset's values, written at the processing stage and read back like every other write: ch 1 Kick In (81), ch 9 Keys (81), ch 10 Perc (81), ch 14 Vocal (78)  (preset.expanded)
 
 APPLICABLE: warnings only.
 ```
@@ -260,14 +260,14 @@ Worth knowing:
 - **A sidechain pointed at another channel is dropped, with a warning.** A preset captured with its gate keyed off "CH.12" would silently key off whatever occupies channel 12 in *your* show. `SELF` is applied; a channel reference is not.
 - **Anything in the file that is on neither list becomes a named warning** on that preset, rather than being quietly applied or quietly skipped.
 - **An aux strip gets only what an aux strip has.** It has no filter, gate or PreSend EQ node, so those values are left out of the plan for an aux channel, with a note saying how many and which.
-- **An aux strip gets only the choices an aux strip offers.** A `.chn` is a channel's file, and some of a channel's list choices are not on an aux's list. Every preset in the starter library sets its dynamics sidechain tap to `IN`, a channel's tap; an aux's taps are `BUS`, `DYN`, `PFL`, `AFL`, `EQ` and `INS2`, and the desk turns an `IN` written to an aux into `BUS`. So `build` carries `IN` -- and a channel's `FILT`, since an aux has no filter -- onto an aux as `BUS`, the same point in the aux's signal, with an INFO (`preset.value-not-on-strip`). A choice with no equivalent on an aux (a dynamics model only a channel has, say) is left out, with the values set for it, and the note names each.
+- **An aux strip gets only the choices an aux strip offers.** A `.chn` is a channel's file, and some of a channel's list choices are not on an aux's list. Every preset in the starter library sets its dynamics sidechain tap to `IN`, a channel's tap; an aux's taps are `BUS`, `DYN`, `PFL`, `AFL`, `EQ` and `INS2`, and the desk turns an `IN` written to an aux into `BUS`. So `build` carries `IN` -- and a channel's `FILT`, since an aux has no filter -- onto an aux as `BUS`, the same point in the aux's signal, with a NOTE (`preset.value-not-on-strip`). A choice with no equivalent on an aux (a dynamics model only a channel has, say) is left out, with the values set for it, and the note names each.
 
 ## What verify says about presets
 
 | Finding | Severity | When |
 |---|---|---|
-| `preset.expanded` | info | the plan carries preset values -- one line for the whole plan, listing each strip and how many values |
-| `preset.overridden` | info | the plan's own processing wins at an address the preset also set |
+| `preset.expanded` | note | the plan carries preset values -- one line for the whole plan, listing each strip and how many values |
+| `preset.overridden` | note | the plan's own processing wins at an address the preset also set |
 | `preset.library-changed` | info | the library's copy of a preset changed since the plan was built. The plan's values are still what is written; rebuild or `--expand` to take the new ones |
 | `preset.not-expanded` | warning | a named preset the library has, but the plan carries none of its values -- nothing from it is written |
 | `preset.no-library` | warning | the plan names presets it does not carry, and no library is configured -- one finding for the whole plan |
