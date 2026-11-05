@@ -95,6 +95,26 @@ The **Findings** panel down the right starts with a verdict: **Ready to apply** 
 
 Save an edit to any of the three files and the **04 Plan** tile reads **STALE**. So does **Build output**, which lists which file changed. An edit made in step 04's tables is the exception: its Save updates the plan too, so it stays current, unless you changed a cell the plan has no place for (a category, a note, a preset), which only a rebuild reads. Press **Rebuild plan**. When the rebuild lands, **Changed since the last build** says what it changed, and **Apply the difference** takes you to the preview of it. A full build writes only the addresses where the desk differs from the plan, so applying the rebuilt plan sends just the change.
 
+### Backing out the last change to the plan
+
+Everything that writes `plan.json` keeps the plan it replaces as `plan.previous.json`, one generation: a rebuild, a Save in step 04's tables, **Keep this in the show** on Apply, and `atoo presets --expand`. Each says what it changed against it, strip by strip, so you see the spillover (a bus renumbered, and every send into it) before you decide. A Save says it in its note. Moving a bus's outputs from LCL 1-2 to AUX 1-2 in the Outputs table says *What this Save of outputs.csv changed in plan.json -- 1 strip against plan.previous.json: 1 changed: BUS 9 Presentr: destination.patch LCL 1+2 -> AUX 1+2; …*, then *Back out puts the plan from before this Save back (plan.previous.json).*
+
+While there is a `plan.previous.json`, step 04 has a line under the plan: *plan.previous.json holds the plan the last Save, Keep or build replaced*, with **Back out**. Press it, and it says what it will do; press **Back out: yes** to do it. `plan.json` becomes that plan again, and the note says what that changed. It goes one step back: the plan it replaces is not kept, so there is no second Back out until something writes `plan.json` again.
+
+**Back out leaves the sheets as they are.** A Save changed a sheet and the plan; backing out puts back the plan only, so that sheet now differs from it, and the note names it: *The sheets were not changed: busses.csv and outputs.csv now differ from plan.json. Save the sheet again, or rebuild, to bring the plan to it.* The **04 Plan** tile reads **STALE** for it. Save the sheet again, or rebuild, to bring the plan to it.
+
+The same, from a terminal:
+
+```bash
+atoo back-out --show ~/Documents/Atoo/my-show
+```
+
+With nothing to put back, it says so and changes nothing:
+
+```
+Nothing to back out: there is no plan.previous.json. Back out goes one step back, to the plan the last Save, Keep or build replaced, and that step has been taken or there was none.
+```
+
 ## When it does not work
 
 - **Build plan does nothing but say** *Choose the console model first -- a build refuses to guess it.* Choose one under **Console model**.

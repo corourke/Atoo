@@ -440,6 +440,26 @@ running without --plan shows everything the rules produced.
 | `--trace-from` | Signal-graph node to trace from, e.g. 'input:LCL:3' or 'strip:/ch/12'. |
 | `--trace-to` | Signal-graph node to trace to, e.g. 'output:LCL:1' or 'main:1'. |
 
+## `atoo back-out`
+
+<!-- preamble:start -->
+_Not written yet._
+<!-- preamble:end -->
+
+```
+Put plan.previous.json back as plan.json: the plan the last Save in Build's
+step 04, Keep this in the show, preset expansion or build replaced. One step:
+the plan it replaces is not kept, and a second back-out has nothing to
+restore and says so. The sheets are not touched: if a Save changed one, it
+now differs from the plan, and this says which.
+
+  atoo back-out --show ~/Documents/Atoo/my-show
+```
+
+| Option | What it does |
+|---|---|
+| `--show` `DIR` | The show bundle whose plan.json to put back. |
+
 ## `atoo build`
 
 <!-- preamble:start -->
@@ -1109,8 +1129,11 @@ record: a bundle with no journals/ has nothing to undo with --show.
 A journal file anywhere else -- <plan>.apply-journal.json, or one --journal
 wrote -- is undone by naming it, as in the third form.
 
-A change or an amend never writes plan.json -- only a build does -- so undoing
-one leaves it alone. An amend recorded by an older Atoo DID replace it; undoing
+A change or an amend writes the desk, not plan.json, so undoing one leaves
+plan.json alone. Keeping a change in the show (Apply's Keep this in the show)
+does write plan.json, as a build or a Save in Build's step 04 does, and keeps
+the plan it replaced as plan.previous.json: `atoo back-out --show DIR` puts
+that back, not undo. An amend recorded by an older Atoo DID replace it; undoing
 that one puts the old plan.json back, but only while plan.json is still the file
 the amend wrote (a sha256 it recorded), and the redo re-installs it the same way.
 
