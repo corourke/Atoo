@@ -45,7 +45,9 @@ Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/c
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
-What the desk does not state, decided or left out (7):
+What the desk does not state, decided or left out (9):
+  [INFO] MTX 4 'Main PFl' is the desk's monitor 1 source (the phones), recorded as its monitor_source.
+  [INFO] MAIN 1 'Main' is the desk's monitor 2 source (the monitor speakers), recorded as its monitor_source.
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
@@ -81,6 +83,7 @@ The desk does not state everything a sheet has a column for. What it leaves open
 - **`type`** is `Line` for a source on a Dante or SoundGrid module, USB, a card, the USB player or AES/EBU, and `Mic` for everything else.
 - **`role`** is left for you, except `fx`: a bus whose effects are all reverbs, delays, modulation or pitch effects, set fully wet, is an effect return. A bus with a doubler or a compressor on it (a vocal bus) carries the dry signal too, so it stays blank.
 - **`tap`** is the pre or post most of a row's sources use; a source that differs is marked in `sources` (`Crowd (pre)`). A send in the desk's **GRP** mode (the bus fed as a subgroup, after the channel's fader) says `group`, as Bus 10 does here: it is kept, so Apply writes GRP back, and a check that asks pre or post reads it as post.
+- **Which Main or Matrix each monitor listens to** is kept in the plan, not a sheet: *MTX 4 'Main PFl' is the desk's monitor 1 source (the phones)*. So verify does not warn that the phones Matrix reaches nothing (it has no socket, and needs none), and Apply puts the monitor back on it. No sheet has a column for it, so a rebuild keeps it only where your conventions or instructions say it (*"Matrix 4 is the headphone feed"*).
 
 ### The desk's colors
 

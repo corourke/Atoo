@@ -24,7 +24,7 @@ BLOCKED: do not apply.
 
 **An error is a setting the desk cannot be left in**: a socket that does not exist, a pair that cannot be formed, a value out of range. Anything the desk can work with -- even if it may not be what you meant -- is a warning or a note, and is applied.
 
-**An output with no patch at all is not blocked.** Set the same Matrix's `patch` to `null` instead -- the state a build leaves when the conventions never say where the Matrix physically lands, or a Matrix used only inside the desk, as the phones or monitor source -- and verify gives a WARNING:
+**An output with no patch at all is not blocked.** Set the same Matrix's `patch` to `null` instead -- the state a build leaves when the conventions never say where the Matrix physically lands -- and verify gives a WARNING:
 
 ```
 $ atoo verify --show unpatched-show
@@ -41,6 +41,14 @@ APPLICABLE: warnings only.
 ```
 
 Apply sets each of them up -- the Matrix's feed from Main 1, both faders and any processing -- and routes neither to an output socket. The socket is never guessed. Main has a warning too, because Matrix 1 was its only way out. If the Matrix should reach a jack, state a `patch` for it in the conventions.
+
+**A Matrix the desk's phones or monitor speakers listen to needs no socket.** That is how a phones mix is built: the desk's monitor output takes the Matrix as its source. A capture records which Main or Matrix each monitor listens to (`monitor_source` in the plan), Apply sets the monitor back to it, and verify says it as a note instead of the warning. On a captured church desk whose phones listen to Matrix 4:
+
+```
+  [info] outputs[Main PFl]: Matrix 4 'Main PFl' is the source of the desk's monitor 1 (the phones), so it needs no socket  (output.monitor-source)
+```
+
+For a show you build, say it in the conventions or instructions (*"Matrix 4 is the headphone feed"*) and the build records it. A Matrix no monitor listens to still gets the warning.
 
 **Notes (`[info]`) are choices, not problems.** Where the conventions were silent about something the desk cannot be left without — a bus's width, a send's pre/post — the plan decides it and says what it decided and why. The last line above is that: the plan never said which Main or which Matrix slot its outputs take, so each is decided from the name and said -- once, naming both, because it is the same note twice. The other two are things worth knowing rather than choices: a color the desk calls by another word, and a mute group nothing joins. A note that says the same thing about several busses (or channels, or outputs) is printed once, naming them all; a built `plan.json` still holds one finding per object in its `meta`. If a choice is wrong for your show, say so in your conventions and rebuild. See [Writing conventions](conventions.md#the-one-rule-worth-internalizing-state-it-or-it-is-decided-and-said).
 
