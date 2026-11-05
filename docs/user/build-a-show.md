@@ -93,7 +93,9 @@ The **Findings** panel down the right starts with a verdict: **Ready to apply** 
 
 ## When you change a file
 
-Save an edit to any of the three files and the **04 Plan** tile reads **STALE**. So does **Build output**, which lists which file changed. An edit made in step 04's tables is the exception: its Save updates the plan too, so it stays current, unless you changed a cell the plan has no place for (a category, a note, a preset), which only a rebuild reads. Press **Rebuild plan**. When the rebuild lands, **Changed since the last build** says what it changed, and **Apply the difference** takes you to the preview of it. A full build writes only the addresses where the desk differs from the plan, so applying the rebuilt plan sends just the change.
+Save an edit to any of the three files and the **04 Plan** tile reads **STALE**. So does **Build output**, which lists which file changed. An edit made in step 04's tables is the exception: its Save updates the plan too, so it stays current, unless you changed a cell the plan has no place for (a category, a note, a preset), which only a rebuild reads. Press **Rebuild Plan**. When the rebuild lands, **Changed since the last build** says what it changed, and **Apply the difference** takes you to the preview of it. A full build writes only the addresses where the desk differs from the plan, so applying the rebuilt plan sends just the change.
+
+Once the show has a plan, **Build plan** is named **Rebuild Plan**: it builds the plan again from scratch, and only what the sheets and your conventions state survives. A [Patch](patch-a-show.md) you did not keep with **Keep this in the show** is lost. A rebuilt plan says `made_from: built`. On a [captured show](capture.md#rebuild-plan-on-a-captured-show), Rebuild Plan is a secondary button and asks first, naming by strip what only the captured plan holds and the rebuild discards: a channel's inserted effects, the desk's colors, the DCA and mute-group numbers, and descriptions. It also says that the next full Apply resets the desk.
 
 ### Backing out the last change to the plan
 

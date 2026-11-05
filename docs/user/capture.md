@@ -45,12 +45,13 @@ Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/c
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
-What the desk does not state, decided or left out (9):
+What the desk does not state, decided or left out (10):
   [INFO] Monitor 1 (the phones) listens to Matrix 4 'Main PFl': an outputs.csv row.
   [INFO] Monitor 2 (the monitor speakers) listens to Main 1 'Main': an outputs.csv row.
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
+  [INFO] 6 channel(s) insert effects, which no input.csv column holds: Acoustic: BODY (FX15), C5-CMB (FX8); Pastor: GEQ (FX9); ...
   [INFO] role 'fx' for BUS 11 'Reverb' (BPLATE and VSS3, 100% wet), BUS 12 'CHORUS' (DIMCRS, 100% wet), ...
   [INFO] CH 17, CH 18, CH 24 and CH 28 to BUS 10 'Speakers': sent in the desk's GRP mode (the bus fed as a subgroup, after the channel's fader), which is kept: written 'group' in the plan and the sheets, so Apply writes GRP back, and read as post-fader wherever a check asks pre or post.
   ...
@@ -100,8 +101,10 @@ grep "^17," /tmp/shows/church-full-2026-10-24/input.csv
 
 ```
 Bus 11,Reverb,fx,stereo,MIC1 Lead;MIC2;MIC3;MIC4;MIC5,post,,BPLATE; VSS3,,AllBand;FX Vocals,BAND;VOCAL;ALL,,
-17,LCL 1,Pastor,Speaker,Mic,,FALSE,Speaker,SPEAKING;ALL,"Inserts: GEQ (FX9, preins)"
+17,LCL 1,Pastor,Speaker,Mic,,FALSE,Speaker,SPEAKING;ALL,"Inserts: GEQ (FX9, preins). A preset that carries them keeps them."
 ```
+
+A channel's effects are in `plan.json` only, and the capture's report names them: *6 channel(s) insert effects, which no input.csv column holds: Acoustic: BODY (FX15), C5-CMB (FX8); Pastor: GEQ (FX9); ...* Save, Patch and Keep leave them as they are, and Apply writes them back. [Rebuild Plan](#changing-a-captured-show) does not keep them: on the desk, a channel's effects belong to its preset. To keep one through a rebuild, save a preset on the desk that carries it, and name that preset in the row's `preset` column.
 
 `atoo apply` loads each effect back into its engine with those settings and switches its insert on. Applied to the desk it came from, that changes nothing; applied to another desk, or after someone changed the effects, it puts them back. Watch checks them too: an insert switched off, pointing at another engine, or an engine holding another effect is a warning, `CV015 Effect Insert Contradicts Plan`.
 
@@ -337,9 +340,46 @@ Its sends and its DCAs and mute groups are the whole list of them: a full apply 
 
 They are the [input list](input-lists.md#the-channel-dca-and-mute_group-columns)'s own optional columns, so you can also write them by hand. A Save in step 04 carries them into the plan, and a build places channels by them, so a filled cell wins over the conventions. Where a filled cell and the plan disagree (the sheet changed in a spreadsheet since), `atoo verify` warns (`input-list.column-not-followed`), so a cell that had no effect never looks honored. A captured show's plan agrees with its sheets.
 
-A build reads `busses.csv` too. On a captured show, **Build plan** asks first: *This plan was read from the desk. Build plan replaces it with a new plan from your conventions, using a model; your sheet edits still win.* **Continue** builds; **Cancel** (or Esc) leaves the plan as it is. Rebuild a captured show from your conventions and the bus sheet still wins wherever it has a filled cell: the names, roles, widths, sources, outputs and effects it gives are laid onto the new plan, each change a note in the build's report (in **Findings**, under **Choices**), with the engine each added effect was given. The sheet's names are yours, and they win over the model's:
+A build reads `busses.csv` too. On a captured show, **Rebuild Plan** asks first, and names what it would discard ([below](#rebuild-plan-on-a-captured-show)). Rebuild a captured show from your conventions and the bus sheet still wins wherever it has a filled cell: the names, roles, widths, sources, outputs and effects it gives are laid onto the new plan, each change a note in the build's report (in **Findings**, under **Choices**), with the engine each added effect was given. The sheet's names are yours, and they win over the model's:
 
 - **A name the build put on another number moves to the sheet's.** A bus or Matrix the build had on that number takes the old one, and the note names it. If the sheet names that old number as something else, the preset, effects and role the build chose for the bus it moved there are taken off, said in a note, so an empty cell on that row is the desk's and not the build's. For example: *busses.csv puts 'Reverb' on Bus 11, where the build had it on Bus 5: the sheet wins.*
 - **A name in a Sources cell is the sheet's bus, Main or Matrix**, even when the model gave a channel the same name.
 
 A cell that can never work on the desk stops the build before the model is asked, so nothing is spent and `plan.json` stays as it was: *build failed: busses.csv, Bus 4, outputs 'LCL 99': this console has no LCL 99 (its LCL outputs are 1-8). Nothing was sent to a model and nothing was changed: plan.json is as it was.* A cell that cannot work on the plan the model made (a source naming something it did not build) stops the build afterwards, naming the cell, as Save does in step 04.
+
+## Changing a captured show
+
+The sheets are your statement about the show, and `plan.json` is compiled from them. You never edit `plan.json` by hand. On a captured show, `plan.json` is also the only place some facts live, as the desk had them: the colors, the DCA and mute-group numbers, the descriptions and a channel's inserted effects. So three things change a captured show's plan and keep those facts:
+
+- **Save** in Build's step 04 lays the cells you changed onto the plan, with no model, and touches nothing else.
+- **Patch**, on the Apply page, writes a change you type to the desk ([Patch a show](patch-a-show.md)).
+- **Keep this in the show**, after a Patch, writes that change into the sheets and the plan.
+
+Each keeps the plan it replaced as `plan.previous.json`, and **Back out** in step 04 puts it back.
+
+`plan.json` says how it was made, in `meta.made_from`: `desk` or `snap` for a capture, `built` for a build. Atoo goes by it. A captured plan's Apply never resets the desk ([Applying it back](#applying-it-back)). Save, Patch and Keep leave a captured plan captured.
+
+### Rebuild Plan on a captured show
+
+**Rebuild Plan** (the Build button, once a show has a plan) builds the plan again from scratch, from the sheets and your conventions, with a model. Only what those two state survives. That turns a captured show into a built one. Do it when you are taking a desk over for good and want it to work like your other desks: blank the cells your conventions should decide, keep the ones the desk must keep, then rebuild.
+
+On a captured show the button is a secondary one, and it asks first:
+
+> **Rebuild this captured plan?** This plan was read from the desk. Rebuild Plan builds a new one from your sheets and conventions, with a model: only what they state survives. On this show, Save, Patch and Keep change the plan without a rebuild.
+>
+> It discards what only the plan holds, as the desk had it:
+>
+> - A channel's inserted effects: Ch 4 Acoustic: BODY (FX15), C5-CMB (FX8); Ch 17 Pastor: GEQ (FX9); Ch 18 Host: DE-S2 (FX16); Ch 19 MIC1 Lead: DEQ3 (FX11); Ch 20 MIC2: PCORR (FX10); Ch 21 MIC3: PCORR (FX14).
+> - The colors the desk had: Ch 9 Kick; Ch 10 Snare; Ch 11 Snare Btm; Ch 12 Tom; Ch 25 VIOLIN; Drums; Drums Comp; VOCALS; and 19 more.
+> - DCA numbers: Vocals 1; Bass/Keys/AG 2; Guitars 3; Drum Busses 4; Speaker 5; AllBand 6; Playback 7; Trax 8; and 3 more.
+> - Mute-group numbers: BAND 1; VOCAL 2; SPEAKING 3; ALL 8.
+>
+> The rebuilt plan is a built plan: its next full Apply resets the desk to initialized and sets all of it. The plan it replaces is kept as plan.previous.json, and Back out puts it back.
+
+**Rebuild Plan** builds. **Cancel** (or Esc) leaves the plan as it is. The rebuilt plan says `made_from: built`, and from then on its full Apply owns the whole desk. The capture in `captures/` stays the record of what the desk was.
+
+| | What it reads | Model | What it changes in `plan.json` | What it keeps |
+|---|---|---|---|---|
+| **Save** (step 04) | the sheets and the plan | no | only what the changed cells say | everything else: colors, effects, numbering, descriptions |
+| **Keep this in the show** | a Patch's before and after | no | what the Patch did, in the sheets and the plan | everything the Patch did not touch |
+| **Rebuild Plan** | the sheets, your conventions, `instructions.md` | yes | everything | only what the sheets and the conventions state |
