@@ -313,7 +313,7 @@ and in the notes:
 
 ### The Outputs table
 
-One row per output socket: the socket, what feeds it in the desk's words (`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up together, fed by sources that go up together, fold into one line of read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a bus's two sides. Press **▸** to open the run and edit its rows. A run holding an edited or refused row stays open.
+One row per output socket: the socket, what feeds it in the desk's words (`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up together, fed by sources that go up together, fold into one line of read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a bus's two sides. Press **▸** to open the run and edit its rows. A run holding an edited or refused row stays open. An edit that stops a row following on splits the run there: change the first row of `USB 1-9` to `USB 17` and it reads `USB 17` on its own and `USB 2-9`, never `USB 17-9`. The same goes for a source. After **Save** the table folds the file as saved.
 
 The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double gray for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted gray for a send, the monitor or the oscillator. The square beside the source is the desk's own color for it, as [the desk shows it](#the-desks-colors).
 
