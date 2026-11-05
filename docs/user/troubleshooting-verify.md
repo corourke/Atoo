@@ -42,7 +42,7 @@ APPLICABLE: warnings only.
 
 Apply sets each of them up -- the Matrix's feed from Main 1, both faders and any processing -- and routes neither to an output socket. The socket is never guessed. Main has a warning too, because Matrix 1 was its only way out. If the Matrix should reach a jack, state a `patch` for it in the conventions.
 
-**A Matrix the desk's phones or monitor speakers listen to needs no socket.** That is how a phones mix is built: the desk's monitor output takes the Matrix as its source. A capture records which Main or Matrix each monitor listens to (`monitor_source` in the plan), Apply sets the monitor back to it, and verify says it as a note instead of the warning. On a captured church desk whose phones listen to Matrix 4:
+**A Matrix the desk's phones or monitor speakers listen to needs no socket.** That is how a phones mix is built: the desk's monitor output takes the Matrix as its source. A capture records what each monitor listens to as a row of `outputs.csv` (`Monitor 1,Matrix 4`; see [What the monitors listen to](capture.md#what-the-monitors-listen-to)), Apply sets the monitor back to it, and verify says it as a note instead of the warning. A bus a monitor listens to is said the same way, instead of *bus feeds nothing*. On a captured church desk whose phones listen to Matrix 4:
 
 ```
   [info] outputs[Main PFl]: Matrix 4 'Main PFl' is the source of the desk's monitor 1 (the phones), so it needs no socket  (output.monitor-source)

@@ -24,7 +24,7 @@ A show folder in your Atoo folder (`~/Documents/Atoo/`, or `--dir`), named after
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md#the-columns)'s format and column order, less `order`, `preset` and `stagebox`, which a desk does not state. A stereo source is two rows on one channel |
 | `busses.csv` | One row per bus, Main and Matrix in use: its `name` (as the desk spells it, even when two of them share it; Apply writes it back as it was), its `role` (what it is for), `width`, what feeds it (`sources`, and whether `pre` or `post` in `tap`), the sockets it feeds (`outputs`), the effects inserted on it (`fx`), its DCAs and mute groups, a `label` and `notes` |
-| `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`. See [Every output socket](#every-output-socket-outputscsv) |
+| `outputs.csv` | One row per output socket the desk patches: the `output` socket, its `source` in the desk's own words (an input socket for a split or a recording feed, `Bus 9 L` for a bus's left side), and `notes`; then one row for each monitor, saying what it listens to (`Monitor 1,Matrix 4`). See [Every output socket](#every-output-socket-outputscsv) |
 | `user.csv` | Only when the desk uses one: one row per USR slot a channel or an output reads, saying what the slot takes. See [User signals and patches](#user-signals-and-patches-usercsv) |
 | `plan.json` | The desk as it is: patch, routing, membership, widths and effects. Not faders, mutes, send levels or EQ: they are the mix |
 | `watch.json` | Empty, ready for [watch conditions](watch-conditions.md) |
@@ -40,14 +40,14 @@ atoo capture --snap tests/fixtures/church-full-2026-10-24.snap --console-model w
 Captured the snapshot tests/fixtures/church-full-2026-10-24.snap to /tmp/shows/church-full-2026-10-24/
   input.csv    46 inputs on 40 channels
   busses.csv   15 buses, 1 Mains, 5 Matrices
-  outputs.csv  147 output sockets: 123 fed straight from a source, 24 by a bus, a Main or a Matrix
+  outputs.csv  147 output sockets: 123 fed straight from a source, 24 by a bus, a Main or a Matrix; what monitors 1 and 2 listen to
   plan.json    the desk as it is: patch, routing, membership, widths, effects
   watch.json   empty, ready for watch conditions
   captures/church-full-2026-10-24.snap
 
 What the desk does not state, decided or left out (9):
-  [INFO] MTX 4 'Main PFl' is the desk's monitor 1 source (the phones), recorded as its monitor_source.
-  [INFO] MAIN 1 'Main' is the desk's monitor 2 source (the monitor speakers), recorded as its monitor_source.
+  [INFO] Monitor 1 (the phones) listens to Matrix 4 'Main PFl': an outputs.csv row.
+  [INFO] Monitor 2 (the monitor speakers) listens to Main 1 'Main': an outputs.csv row.
   [INFO] 30 channel(s) have no name of their own, so the name of their source is written in: CH 2 takes 'Piano2' from AES50-A 2; ...
   [INFO] category from each channel's first DCA, or 'other' with none: 'other' for CH 1, CH 2, CH 16, CH 26, CH 28, CH 37, CH 38 and CH 40; ...
   [INFO] type 'Line' for a source on a module, USB, a card, the player or AES/EBU, 'Mic' for every other: Line on CH 26, CH 29, ...
@@ -83,7 +83,7 @@ The desk does not state everything a sheet has a column for. What it leaves open
 - **`type`** is `Line` for a source on a Dante or SoundGrid module, USB, a card, the USB player or AES/EBU, and `Mic` for everything else.
 - **`role`** is left for you, except `fx`: a bus whose effects are all reverbs, delays, modulation or pitch effects, set fully wet, is an effect return. A bus with a doubler or a compressor on it (a vocal bus) carries the dry signal too, so it stays blank.
 - **`tap`** is the pre or post most of a row's sources use; a source that differs is marked in `sources` (`Crowd (pre)`). A send in the desk's **GRP** mode (the bus fed as a subgroup, after the channel's fader) says `group`, as Bus 10 does here: it is kept, so Apply writes GRP back, and a check that asks pre or post reads it as post.
-- **Which Main or Matrix each monitor listens to** is kept in the plan, not a sheet: *MTX 4 'Main PFl' is the desk's monitor 1 source (the phones)*. So verify does not warn that the phones Matrix reaches nothing (it has no socket, and needs none), and Apply puts the monitor back on it. No sheet has a column for it, so a rebuild keeps it only where your conventions or instructions say it (*"Matrix 4 is the headphone feed"*).
+- **What each monitor listens to** is two rows of `outputs.csv`: *Monitor 1 (the phones) listens to Matrix 4 'Main PFl': an outputs.csv row.* So verify does not warn that the phones Matrix reaches nothing (it has no socket, and needs none), Apply puts each monitor back on its source, and a rebuild keeps them. See [What the monitors listen to](#what-the-monitors-listen-to).
 
 ### The desk's colors
 
@@ -144,6 +144,27 @@ You can type a run of sockets as one row, in a spreadsheet or in the [Outputs ta
 It is read one row per socket, and a Save writes it that way. A run is refused, naming the row, only when it cannot work: its sockets and sources are not the same length (*source "AES50-A 1-8": is 8 source(s) for 16 socket(s): a run feeds one socket from each source, so the two must be the same length*), or it goes past the last socket or source of its group.
 
 A socket that carries an object's R without its L on the socket before it (Bus 3's R alone on a USB socket, say) is recorded as that socket's own source, as the desk has it, and the capture says so at INFO; `busses.csv`'s cell leaves it out, since a cell's sockets go L then R.
+
+### What the monitors listen to
+
+The desk's two monitor outputs each listen to one source: **Monitor 1** is the phones, **Monitor 2** the monitor speakers. A capture writes what each listens to as the last two rows of `outputs.csv`, written like a socket:
+
+```bash
+tail -2 /tmp/shows/church-full-2026-10-24/outputs.csv
+```
+
+```
+Monitor 1,Matrix 4,
+Monitor 2,Main 1,
+```
+
+The source can be any Main, Matrix, Bus or Aux the desk has (`Matrix 4`, `Main 1`, `Bus 12`, `Aux 3`), or `OFF`. A side (`Main 1 L`) is read as the whole Main, said in a note, since a monitor listens to both.
+
+- **A build** lays each row on, as it does a socket's, and says so at INFO: *outputs.csv wins over the conventions: Monitor 1 (the phones) listens to Matrix 4.* A monitor with no row, or a blank source, is left to your conventions.
+- **A Save** of the [Outputs table](#the-outputs-table) sets each monitor its row names. A monitor whose row you remove, or whose source you leave blank, is left alone: the plan stops saying, so Apply leaves the desk's monitor as it is, and the Save says so. Changing Monitor 1 to Matrix 5 and removing Monitor 2's row gives *Saved church-full-2026-10-24/outputs.csv. The plan is updated: Monitor 1 (the phones) listens to Matrix 5 (was Matrix 4); Monitor 2 (the monitor speakers): no row, so Apply leaves it as the desk has it (was Main 1).*
+- **`atoo apply`** sets each monitor a row names to its source, and leaves the other alone.
+
+A row that cannot work is refused, naming it, and nothing is written: *outputs.csv, Monitor 3, output 'Monitor 3': the desk has two monitor outputs: Monitor 1 (the phones) and Monitor 2 (the monitor speakers)*, or *outputs.csv, Monitor 1, source 'Matrix 9': the desk has Matrix 1-8, so there is no Matrix 9*.
 
 ### Splits and recording feeds
 
@@ -295,6 +316,8 @@ and in the notes:
 One row per output socket: the socket, what feeds it in the desk's words (`Bus 9 L`, `AES50-A 5`, `USR 3`, `SEND 19`), and notes. Sockets that go up together, fed by sources that go up together, fold into one line of read-only badges: `USB 1-8 ← AES50-A 1-8`, or `LCL 1-2 ← Bus 9 L-R` for a bus's two sides. Press **▸** to open the run and edit its rows. A run holding an edited or refused row stays open.
 
 The row's left edge says what feeds it: solid blue for an input socket (a split or a recording feed), double gray for a bus, a Main or a Matrix, dashed brass for a user signal or patch, dotted gray for a send, the monitor or the oscillator. The square beside the source is the desk's own color for it, as [the desk shows it](#the-desks-colors).
+
+The last two rows say what each monitor listens to ([What the monitors listen to](#what-the-monitors-listen-to)): type another Main, Matrix, Bus or Aux in a monitor row's source to change it. Its swatch and name are that object's.
 
 To move a socket, change its output or its source; to disconnect one, type `OFF` as its source; **Add a socket**, under the table, adds a row there. Each cell is checked as you type, and one that cannot work turns red with the reason under its row. A run's line says its rows as they are now, so renumbering USB 21-25 to AES50-C 1-5 makes it read `AES50-C 1-5 ← LCL 3-7`.
 

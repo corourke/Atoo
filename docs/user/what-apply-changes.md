@@ -15,7 +15,7 @@ A setting the plan writes itself is not reset first: it is written once, as the 
 | The desk's system nodes (`$syscfg`, `$globals`, `$ctl`, and every read-only `$` status value) | IP address, network settings, clock, console name. A write here could cut Atoo's own connection or the desk's audio clock. |
 | Expansion cards (`/cards`) | Which card is fitted and how it is clocked. |
 | Meter and RTA display (`/cfg/mtr`, `/cfg/rta`) | What the screen shows, not what the desk does. |
-| Monitor and solo listening (`/cfg/mon`, `/cfg/solo`) | Your headphones and monitor speakers, set for you and the room. The one exception: a plan that says which Main or Matrix a monitor listens to (`monitor_source`, which a capture records, or your conventions state as *"Matrix 4 is the headphone feed"*) has that monitor's source set to it, with the plan's other writes. |
+| Monitor and solo listening (`/cfg/mon`, `/cfg/solo`) | Your headphones and monitor speakers, set for you and the room. The one exception: a plan that says what a monitor listens to (a `Monitor 1` or `Monitor 2` row of `outputs.csv`, which a capture writes, or your conventions stating *"Matrix 4 is the headphone feed"*) has that monitor's source set to it, with the plan's other writes. A monitor the plan says nothing about is left as it is. |
 
 One INFO line counts what was reset, by area. This is a preview of the Demo show against the Demo's simulated desk:
 
