@@ -78,17 +78,15 @@ To take a stopped run back off the desk, undo it like any other. This is the und
 
 ```
 Reversing the newest entry in demo-show/journals on this desk:
-  2026-11-07T16:31:05.535370+00:00  apply  ABORTED: lost the connection to the console (the desk answered none of the last 3 requests, nor a check of /io/in/A/14/g after them).  [on Demo (wing-compact) serial DEMO-SIMULATED, at 127.0.0.1:40814]
-Undo of demo-show/journals/20261107T163059.663971Z-apply-DEMO_SIMULATED.json
-  NO CHANGE /io/in/LCL/2/g: already back at 0.0
-  NO CHANGE /io/in/LCL/1/g: already back at 0.0
+  2026-11-07T20:15:05.945548+00:00  apply  ABORTED: lost the connection to the console (the desk stopped answering: no answer to the last 3 requests, nor to /? after them).  [on Demo (wing-compact) serial DEMO-SIMULATED, at 127.0.0.1:54842]
+Undo of demo-show/journals/20261107T201502.354872Z-apply-DEMO_SIMULATED.json
   NO CHANGE /io/in/A/15/g: already back at 0.0
 
-DRY RUN: 60 would be reversed, 3 already back.
+DRY RUN: 60 would be reversed, 1 already back.
   (175 journal record(s) were never written)
 ```
 
-The three **already back** are the writes the desk never took. Or run the apply again instead: it finishes the job, skipping everything that landed.
+The one **already back** is the write the desk never took. Or run the apply again instead: it finishes the job, skipping everything that landed.
 
 ## How far back undo reaches: the newest 5
 

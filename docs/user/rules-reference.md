@@ -519,6 +519,12 @@ While the desk's Virtual soundcheck switch is on, a channel on its alternate inp
 
 The show's plan changed after Watch started (a rebuild or an apply), and Watch is still judging the desk against the plan as it was at Start. Stop Watch and start it again to use the new plan.
 
+### W006: The desk is not answering
+
+**Error** · Watch only
+
+A pass read nothing from the desk: it stopped answering (power, a cable, the network), or the network refused the requests. The pass reports this in place of any findings and clears none; the last pass that reached the desk stands until it answers again, and the pass after that says what changed.
+
 ### W005: Watching without a plan
 
 **Info** · Watch only

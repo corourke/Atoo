@@ -163,6 +163,24 @@ Physical sockets read: in LCL 1-9; out LCL 1-2.
 
 A run watching a live desk only ends when you stop it or `--count` runs out, so this matters most for the `--count` form — a scheduled "check the desk N times and tell me" job.
 
+## When the desk stops answering
+
+A desk that is switched off, rebooting or unplugged, or a laptop that has dropped off the desk's network, does not read as a clean desk. After three requests in a row with no answer, Watch asks the desk who it is (`/?`, which a WING always answers); if that goes unanswered too, the desk is not answering, and the pass says so as an ERROR, `W006`, in place of any findings. It clears nothing: what the last pass that reached the desk found still stands. A desk that never answers a few addresses, such as a graphic EQ's bands, answers that question, and Watch goes on.
+
+A pass over a desk that is not there ends in moments, and Watch keeps asking every pass. When the desk answers again, `W006` clears, and the pass is compared with the last one that reached it, so you see what changed while it was away, and nothing else.
+
+This is a watch of the Demo's simulated desk, which went quiet after the baseline and came back two passes later (the baseline is left out):
+
+```
+[2026-11-07T20:31:51+00:00] change detected:
+  NEW     [ERROR] W006 The desk is not answering: Nothing on the desk was read this pass (the desk stopped answering: no answer to the last 32 requests, nor to /? after them), so this is not a reading of it. What the last pass that reached it found still stands until it answers again. Check the desk's power and its network: the cable, the switch, and that this computer is on the desk's network.
+[2026-11-07T20:31:55+00:00] pass 2: no change.
+[2026-11-07T20:32:01+00:00] change detected:
+  CLEARED [ERROR] W006 The desk is not answering: Nothing on the desk was read this pass (the desk stopped answering: no answer to the last 32 requests, nor to /? after them), so this is not a reading of it. What the last pass that reached it found still stands until it answers again. Check the desk's power and its network: the cable, the switch, and that this computer is on the desk's network.
+```
+
+The 32 are the first batch of a pass's requests, sent eight at a time. A desk the network refuses outright (`No route to host`) is the same `W006`, with that reason. A Watch that cannot reach the desk when it starts does not start: it says why, as the command line does.
+
 ## Picking an interval
 
 `watch` re-reads the whole desk on every pass and compares. **One read of a Compact takes about five seconds** at most ([timed one request at a time](audit.md#how-long-a-live-read-takes-and-what-it-prints-while-it-works)), longer if addresses go unanswered, with the same progress line [`audit` prints](audit.md#how-long-a-live-read-takes-and-what-it-prints-while-it-works). `--interval` is the gap *between* reads, not their period, so at the default 2 seconds a new pass starts roughly every seven; `--count` counts reads, so `--count 8` is about a minute. `watch` prints its own estimate before the first read. For `atoo watch --console 192.0.2.16 --count 8` on a Compact:

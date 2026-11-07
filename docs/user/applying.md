@@ -140,7 +140,7 @@ Every address ends in one of five states:
 
 ## If the desk stops answering, or you stop it
 
-A desk that goes quiet partway (power, a cable, Wi-Fi) stops the run. Three requests in a row with no answer, then one more look at the last address the desk did answer: if that goes unanswered too, the run stops there, and nothing after it is sent. A desk that simply never answers a few addresses, such as a graphic EQ's bands, answers that look, and the run goes on.
+A desk that goes quiet partway (power, a cable, Wi-Fi) stops the run. After three requests in a row with no answer, Atoo asks the desk who it is (`/?`, which a WING always answers); if that goes unanswered too, the run stops there, and nothing after it is sent. A desk that simply never answers a few addresses, such as a graphic EQ's bands, answers that question, and the run goes on. [Watch](watch.md#when-the-desk-stops-answering) uses the same test.
 
 Ctrl-C stops a run the same way, at once, and so does **Stop writing** on the Apply page. Either way the journal is already on disk: it is saved as the run goes, and the stop files it with every write that was sent. It goes on the bundle's stack like any other write, marked as a run that stopped partway.
 
@@ -148,14 +148,12 @@ This is an apply against a test desk that went quiet after 60 writes. The verify
 
 ```
 Console: WING,127.0.0.1,Demo,wing-compact,DEMO-SIMULATED,3.1-0:demo
-ABORTED: lost the connection to the console (the desk answered none of the last 3 requests, nor a check of /io/in/A/14/g after them).
-63 write(s) were sent before it stopped, the last to /io/in/LCL/2/g; nothing further was attempted. The journal records each one.
+ABORTED: lost the connection to the console (the desk stopped answering: no answer to the last 3 requests, nor to /? after them).
+61 write(s) were sent before it stopped, the last to /io/in/A/15/g; nothing further was attempted. The journal records each one.
   UNREADABLE /io/in/A/14/g: written, and the desk did not answer its readback
   UNREADABLE /io/in/A/15/g: written, and the desk did not answer its readback
-  UNREADABLE /io/in/LCL/1/g: written, and the desk did not answer its readback
-  UNREADABLE /io/in/LCL/2/g: written, and the desk did not answer its readback
-Journal: demo-show/journals/20261107T163059.663971Z-apply-DEMO_SIMULATED.json
-The desk holds 63 write(s) of this run and none after them. To take them back off: atoo undo --show demo-show --console 127.0.0.1 --confirm (preview it first without --confirm). Or run the apply again to finish it: it skips every setting already at the plan's value.
+Journal: demo-show/journals/20261107T201502.354872Z-apply-DEMO_SIMULATED.json
+The desk holds 61 write(s) of this run and none after them. To take them back off: atoo undo --show demo-show --console 127.0.0.1 --confirm (preview it first without --confirm). Or run the apply again to finish it: it skips every setting already at the plan's value.
 ```
 
 The desk now holds the plan up to that point and its old settings after it. Two ways on, once it answers again:

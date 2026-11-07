@@ -76,6 +76,7 @@ A read of a live WING takes **a few seconds**: some 6,000 values, fetched a whol
 - **If the line sits still,** that address is not being answered. Each one costs 3 seconds (three tries at the `--timeout`); `--timeout 0.3` cuts that without changing anything on a desk that answers.
 - **"went unanswered" is not "off" or "empty".** Those values are not in the report at all. On a healthy desk the count is zero; hundreds means something is wrong. `--raw-log FILE` records every request and reply.
 - **A kind of address that goes silent is cut short**, with a `NOTE: stopped asking for ...` line. See [`audit` or `watch` looks like it has hung](troubleshooting-audit.md#audit-or-watch-looks-like-it-has-hung).
+- **A desk that stops answering stops the read.** After three requests in a row with no answer, Atoo asks the desk who it is (`/?`); if that goes unanswered too, nothing on the desk is reported, no `--dump-state` file is written, and `audit` says `couldn't read <address>: the desk stopped answering ...` and exits `1`. A reading of nothing is not a clean desk. [Watch says the same](watch.md#when-the-desk-stops-answering) as `W006`.
 
 ## Reading by object, and `--per-leaf`
 
