@@ -138,6 +138,33 @@ Every address ends in one of five states:
 
 [The journal](journals.md) records every one of these, with the value the desk held before, and explains how a late answer from the desk is settled.
 
+## If the desk stops answering, or you stop it
+
+A desk that goes quiet partway (power, a cable, Wi-Fi) stops the run. Three requests in a row with no answer, then one more look at the last address the desk did answer: if that goes unanswered too, the run stops there, and nothing after it is sent. A desk that simply never answers a few addresses, such as a graphic EQ's bands, answers that look, and the run goes on.
+
+Ctrl-C stops a run the same way, at once, and so does **Stop writing** on the Apply page. Either way the journal is already on disk: it is saved as the run goes, and the stop files it with every write that was sent. It goes on the bundle's stack like any other write, marked as a run that stopped partway.
+
+This is an apply against a test desk that went quiet after 60 writes. The verify block and the NOTE lines before the last one are left out:
+
+```
+Console: WING,127.0.0.1,Demo,wing-compact,DEMO-SIMULATED,3.1-0:demo
+ABORTED: lost the connection to the console (the desk answered none of the last 3 requests, nor a check of /io/in/A/14/g after them).
+63 write(s) were sent before it stopped, the last to /io/in/LCL/2/g; nothing further was attempted. The journal records each one.
+  UNREADABLE /io/in/A/14/g: written, and the desk did not answer its readback
+  UNREADABLE /io/in/A/15/g: written, and the desk did not answer its readback
+  UNREADABLE /io/in/LCL/1/g: written, and the desk did not answer its readback
+  UNREADABLE /io/in/LCL/2/g: written, and the desk did not answer its readback
+Journal: demo-show/journals/20261107T163059.663971Z-apply-DEMO_SIMULATED.json
+The desk holds 63 write(s) of this run and none after them. To take them back off: atoo undo --show demo-show --console 127.0.0.1 --confirm (preview it first without --confirm). Or run the apply again to finish it: it skips every setting already at the plan's value.
+```
+
+The desk now holds the plan up to that point and its old settings after it. Two ways on, once it answers again:
+
+- **Finish it:** run the same apply again. Everything that landed reads as already set and is skipped, so it writes only the rest.
+- **Take it back off:** `atoo undo --show DIR`, which reverses exactly the writes the journal records. A write the desk never took is **already back** and left alone. See [The journal](journals.md#a-run-that-stopped-partway).
+
+A Ctrl-C stop starts `STOPPED: interrupted (Ctrl-C).` and exits `130`. A desk that went quiet exits `1`.
+
 ## The journal stack
 
 Every confirmed write in a bundle is filed in its `journals/` directory, and the newest 5 are kept, so `atoo undo` reaches back at most 5 writes. See [The journal](journals.md).
@@ -164,8 +191,9 @@ What it never skips is the hardware: a socket the plan patches that this desk do
 | code | meaning |
 |---|---|
 | `0` | applied, and everything read back as intended — or a preview that found no reason to stop |
-| `1` | an unreadable file, no `--plan` or `--show` given, the console could not be reached, or the connection dropped mid-run |
+| `1` | an unreadable file, no `--plan` or `--show` given, the console could not be reached, or the connection dropped or the desk stopped answering mid-run |
 | `2` | the run ran and found problems: **something did not land**, or it refused to proceed — because verification found errors, the plan patches a socket this desk's model does not have, or an expansion bay this plan uses is empty. Also a command line argparse rejected, or no console address at all |
+| `130` | you stopped it with Ctrl-C. What it wrote before the stop is in the journal, on the stack, and `atoo undo` takes it off |
 
 A preview exits `0` on a plan it would apply cleanly, so `atoo apply … && echo ok` is a usable pre-flight check in a script.
 

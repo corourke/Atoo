@@ -188,8 +188,11 @@ UNDONE: 41 reversed, 2 refused (changed since), 1 unreversible (no prior value).
 | code | meaning |
 |---|---|
 | `0` | everything that had an earlier value came back; an address the run wrote for the first time has none, so there is nothing to put back, and undo names those in a `NOTE` |
-| `1` | the command could not run: an unreadable or dry-run journal, a journal that is no longer the top of the stack (pass `--out-of-order` if you mean it), no console address, the connection dropped mid-run |
+| `1` | the command could not run: an unreadable or dry-run journal, a journal that is no longer the top of the stack (pass `--out-of-order` if you mean it), no console address, the connection dropped or the desk stopped answering mid-run |
 | `2` | it ran and the desk is not fully back — something was refused because it changed since, or a reversal did not read back |
+| `130` | you stopped it with Ctrl-C |
+
+An undo that stops partway, because the desk stopped answering or you stopped it (Ctrl-C, or **Stop undoing** on the Apply page), is journalled and filed like an [apply that stopped](journals.md#a-run-that-stopped-partway). It does not pop the run it was reversing: run `atoo undo --show DIR` again and it finishes the job, counting what already went back as **already back**.
 
 A reversal is a write like any other: it goes out on the same path, is **read back and proved**, and a reversal that did not land is reported as one.
 

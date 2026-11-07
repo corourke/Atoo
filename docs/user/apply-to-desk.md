@@ -56,7 +56,7 @@ Once the preview is current, the button reads **Preview again** and is no longer
 
 Until it can be pressed, **Write to console** has no color and a dashed edge, and **Locked:** beside it says why: **preview first**, or **tick Arm first**. Armed, it turns solid red.
 
-The command's own output runs under the button as it goes. A full write first puts the desk back to its initialized state, writing only what differs from it; on a WING Compact the read for that took about 35 seconds when reads went one request at a time, and should now be shorter. It reads the plan's settings from the desk up front, the way the preview does, then goes through the plan, writes only those that differ, and reads every value it wrote back, one at a time. The progress line counts the settings it looks at; when it ends it says how many it wrote.
+The command's own output runs under the button as it goes, and **Stop writing** sits beside the button while it does. Stop ends the write before its next setting: what was written up to then stays on the desk, the journal records each one, and Undo takes them back off (or write again to finish: it skips everything already set). **Stop undoing** does the same for an undo. A full write first puts the desk back to its initialized state, writing only what differs from it; on a WING Compact the read for that took about 35 seconds when reads went one request at a time, and should now be shorter. It reads the plan's settings from the desk up front, the way the preview does, then goes through the plan, writes only those that differ, and reads every value it wrote back, one at a time. The progress line counts the settings it looks at; when it ends it says how many it wrote.
 
 ## 5. Read the result
 
@@ -80,6 +80,7 @@ Undo puts back only the addresses that write changed, and only where nothing has
 ## When it does not work
 
 - **FULL BUILD FAILED, and** `apply.failed` **in the Findings panel**: the run log in step 3 is the command's own output, word for word, and its last line says why.
+- **The desk stopped answering part way, and** `apply.aborted` **in the Findings panel**: the desk went quiet (power, a cable, Wi-Fi) and the write stopped after three unanswered requests and one more look. The finding says how many writes reached the desk. Once the desk answers again, write again to finish, or **Undo** to take back what landed. The same finding, starting **You stopped it**, follows **Stop writing**.
 - **PREVIEW FAILED, and** `preview.failed`: the same, for a preview. Nothing was written. Usually the desk did not answer: check its address and that its OSC remote is on.
 - **The pre-flight shows an error about a socket**: the plan patches a socket this desk does not have, perhaps because it was built for a different WING. Choose the right **Console model** on Build step 04 and rebuild.
 

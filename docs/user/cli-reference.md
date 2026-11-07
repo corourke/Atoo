@@ -29,6 +29,7 @@ This is the canonical statement; everywhere else in the docs points here. Exit c
 | `0` | it ran, and there is nothing to report |
 | `1` | it could not run -- a file it could not read, a desk that did not answer, a connection that dropped mid-run. **Plus, for `audit` and `watch` only, "it ran and found errors"** |
 | `2` | it ran and found problems -- `build`, `verify`, `compare`, `apply`, `patch`, `amend`. **Also** any command line that was rejected before a command started |
+| `130` | you stopped it with Ctrl-C. A write (`apply`, `patch`, `amend`, `undo`) stopped this way has filed its journal first, so `atoo undo` takes back what landed |
 
 One more `1`, for every command: when whatever is reading the output stops early (`atoo --help | head`, or quitting `less`), the command stops quietly with `1` -- no traceback, since nothing went wrong but the cut.
 
