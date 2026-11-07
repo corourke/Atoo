@@ -621,6 +621,7 @@ New show... > From a desk does the same as this command.
 | `--console` | Console IP address. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--snap` `FILE` | Capture a .snap show file saved on the console instead of a live desk. Needs --console-model: a .snap does not say which WING wrote it. |
 | `--console-model` | Which WING the --snap came from. A live desk states its own model. |
+| `--serial` `SERIAL` | The serial the desk should state (`atoo ping` shows it). When the desk that answers states another, the capture says so and goes on. |
 | `--dir` `DIR` | The folder to make the show in (default: your Atoo folder, ~/Documents/Atoo unless ~/.atoo.config's [workspace] says otherwise). |
 | `--name` | The show folder's name (default: the .snap's name, or the desk's model and today's date). A name already taken gets -2, -3. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
@@ -1322,6 +1323,7 @@ If --watch-conditions is omitted, a settled house watch-conditions file named in
 | `--show` `DIR` | A show bundle: one directory holding everything for this show, under fixed filenames (input.csv, instructions.md, plan.json, watch.json, and a journals/ directory of every write in time order) with no manifest to maintain. Each command takes the pieces it needs from the directory instead of being handed them one flag at a time, and everything a run produces is written back into it. An explicit flag always wins over the bundle, so --show DIR --plan elsewhere.json reads that plan. A bare name that is not a folder here is the show of that name in your working folder (~/.atoo.config's [workspace]). More: https://docs.atoo.app/build/show-bundles/ |
 | `--console` | Console IP address -- poll its live state and audit each read. Falls back to $ATOO_CONSOLE, then to a [console] default in ~/.atoo.config -- a run that uses either prints where the address came from, on stderr. |
 | `--state-sequence` | Comma-separated JSON state files, played in order and then repeated -- an offline demo of an operator making changes between polls, with no console attached. Try ~/Documents/Atoo/audit-demo/audit_demo_state_before.json and audit_demo_state.json, which `atoo init` copies. |
+| `--serial` `SERIAL` | The serial the desk should state (`atoo ping` shows it). When the desk that answers states another, every pass says so (W007) and Watch goes on. Without it, a --show's journals name the desks expected. |
 | `--port` `VALUE` | Console OSC port (default: 2223) |
 | `--timeout` `VALUE` | Per-request timeout in seconds (default: 1.0) |
 | `--channels` `VALUE` | Channel strips to read (default: 40, WING Compact) |

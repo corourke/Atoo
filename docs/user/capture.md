@@ -14,6 +14,8 @@ atoo capture --snap CCC-20261024.snap --console-model wing-full
 
 A `.snap` does not say which WING saved it, and the three have different sockets, so a `.snap` needs `--console-model` (`wing-full`, `wing-compact` or `wing-rack`). A live desk states its own model.
 
+`--serial SERIAL` says which desk you mean to capture (`atoo ping` shows its serial). When the desk that answers states another, the capture says so in a WARNING and goes on, reading the desk that answered. Atoo takes an answer only from the address it asked, so another device on the network cannot answer in the desk's place.
+
 In the browser, press **New show…** in the bundle bar and choose **From a desk**: **The console** reads the console in the bar, and **A .snap file** asks for the file and which WING saved it. **Folder** is where the show goes, named as below; change it if you like. The dialog says what it does: *Captures the desk to input.csv, busses.csv and outputs.csv, which you can edit.* Press **Capture this desk**, and the new show opens on Build's step 04, where you edit it ([below](#editing-the-sheets)). On the Watch page with no show open, **Make a show from this desk** opens the same dialog on the console Watch is reading, and Watch keeps running ([Watch the desk](watch-a-show.md#with-no-show-make-a-show-from-this-desk)).
 
 ## What it makes

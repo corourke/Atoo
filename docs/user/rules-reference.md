@@ -525,6 +525,12 @@ The show's plan changed after Watch started (a rebuild or an apply), and Watch i
 
 A pass read nothing from the desk: it stopped answering (power, a cable, the network), or the network refused the requests. The pass reports this in place of any findings and clears none; the last pass that reached the desk stands until it answers again, and the pass after that says what changed.
 
+### W007: Not the desk expected
+
+**Warning** · Watch only
+
+The desk that answered states a different serial from the one Watch was told to expect (`atoo watch --serial`), or is none of the desks the open show's journals were written to. Watch goes on, reading the desk that answered: a show applied to a backup desk is a reason; a wrong address, or a device elsewhere on the network answering for the desk, is another.
+
 ### W005: Watching without a plan
 
 **Info** · Watch only

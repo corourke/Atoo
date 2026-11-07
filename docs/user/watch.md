@@ -163,6 +163,21 @@ Physical sockets read: in LCL 1-9; out LCL 1-2.
 
 A run watching a live desk only ends when you stop it or `--count` runs out, so this matters most for the `--count` form — a scheduled "check the desk N times and tell me" job.
 
+## Is it the desk you meant?
+
+Atoo takes an answer only from the address it asked: a device elsewhere on the network that answers in the desk's place is ignored. What it cannot know by itself is whether the desk at that address is the one you meant. `--serial` says which one (`atoo ping` shows a desk's serial); with `--show`, the desks the show's journals were written to are the ones expected. When the desk that answers is not one of them, every pass says so as a WARNING, `W007`, and Watch goes on reading it: a show applied to a backup desk is a good reason, a wrong address is not.
+
+A watch of the Demo's simulated desk told to expect serial `S2203A1` (the reading's other findings left out):
+
+```
+WARNING: The desk on the line is Demo (wing-compact) serial DEMO-SIMULATED, at 127.0.0.1:43716, but --serial names serial S2203A1. Watch goes on, reading and judging the desk on the line; if it is not the one you meant, stop and point it at the right address.
+...
+[WARNING] W007 Not the desk expected
+  The desk on the line is Demo (wing-compact) serial DEMO-SIMULATED, at 127.0.0.1:43716, but --serial names serial S2203A1. Watch goes on, reading and judging the desk on the line; if it is not the one you meant, stop and point it at the right address.
+```
+
+The Watch page does the same for the show it has open: the row is in the table, under the header's **WARNING**.
+
 ## When the desk stops answering
 
 A desk that is switched off, rebooting or unplugged, or a laptop that has dropped off the desk's network, does not read as a clean desk. After three requests in a row with no answer, Watch asks the desk who it is (`/?`, which a WING always answers); if that goes unanswered too, the desk is not answering, and the pass says so as an ERROR, `W006`, in place of any findings. It clears nothing: what the last pass that reached the desk found still stands. A desk that never answers a few addresses, such as a graphic EQ's bands, answers that question, and Watch goes on.

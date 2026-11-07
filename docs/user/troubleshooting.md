@@ -73,7 +73,7 @@ The packets went out and nothing came back. In order of likelihood:
 
 **`couldn't reach 192.0.2.16:2223 -- OSError: [Errno 65] No route to host`**
 
-The network refused to carry the packets at all, which is a different and usually simpler problem: wrong subnet, wrong address entirely, or the cable/Wi-Fi is not on the console's network. The message after the dash comes from the operating system -- `No route to host`, `Connection refused` and `Network is unreachable` each mean what they say.
+The network refused to carry the packets at all, which is a different and usually simpler problem: wrong subnet, wrong address entirely, or the cable/Wi-Fi is not on the console's network. The message after the dash comes from the operating system -- `No route to host`, `Connection refused` and `Network is unreachable` each mean what they say. `Connection refused` means something at that address answered that nothing is listening on that port: a computer rather than the desk, or a wrong `--port`.
 
 **If `ping` succeeds but another command fails**, the problem is not connectivity, and the rest of this page is where to look.
 
