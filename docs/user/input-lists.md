@@ -438,6 +438,22 @@ A plan can also state slots by hand, in its top-level `user_sources` section. `v
 
 `apply` writes each slot (what it takes, and its name) before the channel that patches it, and sets both slots of a stereo pair to stereo; Undo puts them back. How a pair set this way sounds at the strip has not yet been checked on a desk.
 
+## Quotes in a cell
+
+A quote in the middle of a cell is read as the character it is, so `12" snare` in a text editor is the cell `12" snare`, in Build's step 02 table and in a build alike. When step 02 writes that row back, it puts the cell in quotes, as a spreadsheet does: `"12"" snare"`.
+
+A cell that *starts* with a quote must end with one, because a spreadsheet reads everything up to the closing quote as one cell. When it does not, Atoo refuses the file and names the line rather than guess where the cell ends. A list with `"12" snare` in its third line:
+
+```bash
+atoo verify --plan p.json --input show/input.csv
+```
+
+```
+couldn't read input list 'show/input.csv': input list, line 3: a cell starts with a quote that does not end where the cell ends. Put the whole cell in quotes and double the quote inside it ("12"" snare"), or remove the quote at its start.
+```
+
+A **Save** in step 02 or step 04 refuses such a file the same way and writes nothing. A Save also never removes a row the page did not show: if the file has more rows than the page read, it refuses and asks you to reload.
+
 ## Checking a list before the desk exists
 
 There is no `atoo check-input-list`; the input list is checked wherever it is used. The two useful moments:
