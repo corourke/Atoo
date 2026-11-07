@@ -68,6 +68,8 @@ Below the table, two blocks fold to their title while a watch runs. Click a titl
 
 Both open again when you press **Stop**. Closing `atoo ui` stops the watch too.
 
+**Stop** answers at once, even in the middle of a reading of a large desk. The reading in progress finishes in the background and is thrown away. If you press **Start watching** straight after, the new watch starts reading when that one has finished, a few seconds at most, so the desk is never read twice at once.
+
 ### Virtual soundcheck
 
 A channel on its alternate input (`C004`) and the desk's global alternate switch (`C005`) are warnings, because a show never starts on them. During a virtual soundcheck they are the right setting, and warnings you learn to ignore are worse than none. The **Virtual soundcheck** switch in the header is for this. Turn it on (it reads **On**, and a **Virtual soundcheck** tag appears beside the connection) and those two rules are shown as info, not warnings: every channel on its alternate is still named, each row says *Virtual soundcheck is on, so this is expected*, and **This watch** says *Virtual soundcheck: on, alternate inputs at INFO*.
