@@ -30,7 +30,7 @@ Every column an input list may have, in the order Atoo writes them. Only the req
 | `order` | no | The **band's own** number for this input. It does not set the desk channel. `-` **skips** the row. See [The `order` column](#the-order-column-band-numbers-and-skipping-a-row). |
 | `channel` | no | The desk channel: `9`, or `Aux 3`. A filled cell **wins** over the conventions and instructions, as `preset` does: a build places the channel there. See [below](#the-channel-dca-and-mute_group-columns). |
 | `patch` | no | The socket this source is cabled into — `AES50-A 1`, `LCL 3`, `CRD 64`, or `OFF` for none. Blank is legitimate. See [The `patch` column](#the-patch-column). |
-| `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". |
+| `name` | **yes** | What it is called — "Kick", "OH L", "Lead Vox". This is what your conventions match on, so name the halves of a pair "Keys L"/"Keys R". The desk holds plain letters only, so a name with an accent or another alphabet is written with plain ones ("Café" as "Cafe", "Grüße" as "Grusse"), and the run says which in a NOTE; your list and the plan keep what you typed. |
 | `category` | **yes** | The group your conventions sort by: "drums", "band", "vocals", "horns"… Whatever words your own conventions file uses. |
 | `type` | **yes** | `Mic`, `DI`, `Instrument`, `Line`, `Wireless`… An open vocabulary, there for your conventions to match against, with one exception: a channel of type `Line` on a head amp does not keep a mic's gain (below the table). |
 | `model` | no | "SM58", "Beta 52", "CS2". Blank when it does not matter, which is most DI and line sources. |
