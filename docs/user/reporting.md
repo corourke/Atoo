@@ -50,4 +50,4 @@ If you built with no desk connected, skip this step.
 
 Attach the zip to your report: to the issue (drag it onto the comment box), to your email, or to the tester form if you were sent one.
 
-**What the zip holds.** Your show's files, the desk reading, `plan.json`, the build logs in `builds/`, and the journals of any writes.
+**What the zip holds.** Your show's files, the desk reading, `plan.json`, the build logs in `builds/`, and the journals of any writes. The desk reading carries no address or serial number, but the journals in `journals/` name the desk each write went to, by its address and serial number, and `plan.json` records where its files were on your computer, the path of your home folder included. A findings log you saved from Watch names the desk's address too. If the issue is public and that matters to you, email the zip instead, or leave `journals/` out.

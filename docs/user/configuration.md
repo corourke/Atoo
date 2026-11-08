@@ -164,7 +164,7 @@ timeout = 1.0
 default = "~/Documents/Atoo"
 ```
 
-Every section is optional; leave out what you do not use. `~` means your home directory. A path that does not exist is reported on one line and then ignored, as if it were not there. It does not stop the command.
+Every section is optional; leave out what you do not use. `~` means your home directory. A path that does not exist, or a `port` outside 1 to 65535, is reported on one line and then ignored, as if it were not there. It does not stop the command.
 
 | Section | What it names | What reads it |
 |---|---|---|
@@ -184,7 +184,7 @@ Working folder: ~/Documents/Atoo
 
 **`atoo init` never replaces a value you have set.** It reports the value it found and the one it would have set; `atoo init --force` replaces it. Like every write to this file, it changes only that line.
 
-`atoo ui` can write the `[conventions]` line for you. On Build step 01, **New file** has a checkbox that makes the new file the default, and **Replace the default** swaps it for another. Both change that one line and leave the rest of the file alone.
+`atoo ui` can write the `[conventions]` line for you. On Build step 01, **New file** has a checkbox that makes the new file the default, and **Replace the default** swaps it for another. Both change that one line and leave the rest of the file alone: a `# comment` after the old path stays after the new one, and if `~/.atoo.config` is a link to a file kept elsewhere, that file is the one changed.
 
 ---
 
