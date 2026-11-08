@@ -117,7 +117,7 @@ pass 2 [] ['N001']
 footer None [] []
 ```
 
-The file holds only what Watch read: nothing is written to the desk, and no key or password is in it. The console address is the one you typed, so look before you send it to someone. On the Watch page, **Save findings** under **This watch** downloads the same lines for the session so far.
+The file holds only what Watch read: nothing is written to the desk, and no key or password is in it. The console address is the one you typed, so look before you send it to someone. On the Watch page, **Save findings** under **This watch** downloads the same lines for the session so far: all of them for a session of up to about 11 hours at the default interval, and for a longer one the first pass and the last 20,000, with a line between saying how many were left out. `--findings-log` keeps every pass.
 
 ### Edit the sheets while it runs
 
