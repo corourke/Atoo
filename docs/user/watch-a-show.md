@@ -140,6 +140,18 @@ Read busses.csv at 01:49:03 PM, after its Save at 01:48:52 PM in Build 04: 1 cha
 
 With no show open, the header offers **Make a show from this desk**. It is **New show… → From a desk** on the console in the bar, the one Watch is reading ([Capturing a desk](capture.md)). Watch keeps running, and once the show is written, a line under the header confirms it, and Watch takes the new show's plan on its next pass: the *Watching without a plan* INFO goes, and a split the desk is built with, such as a reverb bus, is a note instead of a warning. A socket only the plan names is read once you stop and start.
 
+### Watching from a phone
+
+Start Atoo on the laptop with a network address, and open the page on a phone or tablet on the same network:
+
+```bash
+atoo ui --host 0.0.0.0 --show church
+```
+
+On the phone, open `http://` and the laptop's IP address, then `:8420` (for example `http://192.0.2.10:8420`). The laptop's name, such as `laptop.local`, is refused: use the IP address.
+
+The phone sees Watch only, read-only: the findings table, the live updates, the watch conditions, and **Save findings**. It says so under the Watch heading: *Watching from another machine, read-only.* Start, Stop, the console, ping, Build and Apply are not shown there; do them on the laptop.
+
 ## 3. Say what matters tonight: watch conditions
 
 The **Watch conditions** panel holds this show's own rules, saved in its `watch.json`. It is open when no watch is running; during one, click its line under the table to open it.
