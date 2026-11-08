@@ -52,7 +52,7 @@ The same message for several objects is one line naming them all, so a count can
 
 ## Codes
 
-The code at the end of each finding, such as `inferred.bus-width` or `patch.stereo-pair-not-odd-even`, stays the same from version to version. Search these pages for it, or quote it in a bug report. Its first word says which check found it:
+The code at the end of each finding, such as `inferred.bus-width` or `patch.stereo-pair-not-odd-even`, stays the same from version to version. [Finding codes](finding-codes.md) lists every one with what it means; search it for the code, or quote the code in a bug report. Its first word says which check found it:
 
 | Starts with | Found by |
 |---|---|

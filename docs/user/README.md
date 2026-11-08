@@ -69,6 +69,7 @@ In this order, the first time:
 | [Watching from the command line](watch.md) | `watch`: the same rules on a loop, reporting what changed |
 | [Command reference](cli-reference.md) | every command and flag (generated from the code) |
 | [Rules reference](rules-reference.md) | every rule `audit` and Watch can report (generated from the code) |
+| [Finding codes](finding-codes.md) | what each code at the end of a finding means, such as `patch.socket-out-of-range` (generated from the code) |
 | [AI provider reference](ai-provider-reference.md) | Prompt caching on Claude, and what an OpenAI-compatible host is sent |
 | [Reporting a problem](reporting.md) | what to send when something is wrong, and which files help |
 | [Installing from a checkout](install-from-checkout.md) | running Atoo from a clone of its repository, in a virtualenv |
