@@ -27,7 +27,7 @@ The desk is read mostly by node dump, a few requests for hundreds of settings, a
 
 The read takes a few seconds. A desk far from initialized can need a few thousand writes, at about 40 ms each.
 
-- **`--no-init`** skips the reset, for a desk you have initialized by hand. The run says so in a NOTE.
+- **`--no-init`** skips the reset, for a desk you have initialized by hand. The run gives a NOTE.
 - **A desk whose model Atoo cannot tell** (or has no capture for) gets a WARNING, and the plan is written without the reset. Initialize it by hand first. A Compact, a full-size WING and a Rack each have a capture, taken from a real desk of that model.
 
 ## Strips the plan does not build: unpatched from their sources

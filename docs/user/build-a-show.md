@@ -34,7 +34,7 @@ Either:
 - press **Change file** on the tile and choose the band's CSV. It is copied into the show as `input.csv`, and the bar shows the new file; or
 - click the tile, press **+ Add row**, and type each input.
 
-Each row is one thing plugged in, with the [input list's columns](input-lists.md#the-columns) in their order: **Order**, **Channel**, **Patch** (the socket, such as `AES50-A 1`), **Name**, **Category**, **Type**, **Model**, **Phantom**, **Preset**, **DCA**, **Mute group**, **Notes** and **Stagebox** (your own label for the box input, such as `Pink 12`; Atoo never reads it as a socket). Name, Category and Type are required: until they are filled in they read *required* and are outlined. Leave **Patch** blank and the build chooses a socket and tells you which. A stereo pair whose two rows state sockets the desk cannot pair, such as `LCL 4` and `LCL 5`, is still built as one stereo channel, through two of the desk's user patch slots, and the build says so ([how](input-lists.md#when-the-cabling-cannot-give-you-an-adjacent-pair)). A socket the desk does not have is refused as you type it. Once you change a cell, a yellow **UNSAVED CHANGES** tag comes up at the top of the step with **Discard changes** and **Save**, where steps 01 and 03 have theirs, and they stay there as the list scrolls. Press **Save**.
+Each row is one thing plugged in, with the [input list's columns](input-lists.md#the-columns) in their order: **Order**, **Channel**, **Patch** (the socket, such as `AES50-A 1`), **Name**, **Category**, **Type**, **Model**, **Phantom**, **Preset**, **DCA**, **Mute group**, **Notes** and **Stagebox** (your own label for the box input, such as `Pink 12`; Atoo never reads it as a socket). Name, Category and Type are required: until they are filled in they read *required* and are outlined. Leave **Patch** blank and the build chooses a socket and tells you which. A stereo pair whose two rows state sockets the desk cannot pair, such as `LCL 4` and `LCL 5`, is still built as one stereo channel, through two of the desk's user patch slots, and the build reports it ([how](input-lists.md#when-the-cabling-cannot-give-you-an-adjacent-pair)). A socket the desk does not have is refused as you type it. Once you change a cell, a yellow **UNSAVED CHANGES** tag comes up at the top of the step with **Discard changes** and **Save**, where steps 01 and 03 have theirs, and they stay there as the list scrolls. Press **Save**.
 
 The tile now reads **LOADED** and counts the rows: *20 input rows*. [Writing an input list](input-lists.md) covers the columns and stereo pairs.
 
@@ -70,7 +70,7 @@ Type in a cell and press **Save**: it writes the file and updates the plan strai
 
 `atoo build --intent` asks the model for a short **intent** instead of the plan's reply. Atoo's own code writes one channel for every input-list row, in the list's order, with what the list says of it (source type, microphone, phantom power, category, preset, and the socket it states). The model writes only what the list cannot say: a stereo pair, a strip your conventions name differently, the DCAs, mute groups, buses and outputs your conventions ask for (each with its members, by category or by name), the order of the strips by category, and the settings each category gets. Atoo works out the strips, a socket for every row that names none, the group and bus numbers and every range, and says each choice in a NOTE. It does not need the separate rewrite of your conventions (`atoo resolve`).
 
-A row is left out only when your conventions, the instructions or the row's own notes say so in words the model can quote; otherwise the row is built, and a NOTE says so. The result is the same kind of plan, verified and written like any other build.
+A row is left out only when your conventions, the instructions or the row's own notes ask for it in words the model can quote; otherwise the row is built, with a NOTE. The result is the same kind of plan, verified and written like any other build.
 
 ```bash
 atoo build --show touringband --intent
@@ -109,6 +109,7 @@ A Save in step 04's tables is instant and needs no model, so it does only what t
    - what your conventions add to each;
    - the spillover, every bus, DCA or mute group outside the rows that gains them;
    - what keeping it writes.
+
    Whatever a row's sheet states stays as it is. A blank cell stays blank: the plan holds the value your conventions chose, and a rebuild decides it again.
 4. Press **Keep in plan.json**. It writes `plan.json` and the sheet cells that must follow, such as a bus's filled **Sources** cell gaining the new channels. The rows lose their tag, and the plan reads current again when those rows were all you changed in the input list. If you changed other rows too, it stays **STALE**, and the note names them. Then press **Apply the difference** to write the desk, or **Back out** to put the plan back.
 
@@ -130,7 +131,7 @@ The same, from a terminal:
 atoo back-out --show ~/Documents/Atoo/my-show
 ```
 
-With nothing to put back, it says so and changes nothing:
+With nothing to put back, it changes nothing and prints:
 
 ```
 Nothing to back out: there is no plan.previous.json. Back out goes one step back, to the plan the last Save, Keep or build replaced, and that step has been taken or there was none.

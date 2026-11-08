@@ -73,7 +73,7 @@ A **Save** in Build's step 04 is not a rebuild. On the Watch page, Watch reads t
 
 ### Watching without a plan
 
-Watch judges the desk against the show's plan: it stops R012 from reporting a parallel bus the plan asked for, and it adds the checks that compare the desk with the plan. With no plan, it still runs, on the checks that need none. A channel sent to a reverb, delay or chorus bus is not reported even then: a bus with such an effect inserted on it is read from the desk as an effect send, and `R014` says so in a NOTE, naming the effect ([R012, R013, R014](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)). It tells you so, once, at INFO, as `W005`:
+Watch judges the desk against the show's plan: it stops R012 from reporting a parallel bus the plan asked for, and it adds the checks that compare the desk with the plan. With no plan, it still runs, on the checks that need none. A channel sent to a reverb, delay or chorus bus is not reported even then: a bus with such an effect inserted on it is read from the desk as an effect send, and `R014` gives a NOTE, naming the effect ([R012, R013, R014](troubleshooting-audit.md#a-channel-reaches-the-same-main-or-matrix-by-two-routes-r012-r013-r014)). It tells you so, once, at INFO, as `W005`:
 
 ```bash
 atoo watch --console 192.0.2.16
@@ -165,7 +165,7 @@ A run watching a live desk only ends when you stop it or `--count` runs out, so 
 
 ## Is it the desk you meant?
 
-Atoo takes an answer only from the address it asked: a device elsewhere on the network that answers in the desk's place is ignored. What it cannot know by itself is whether the desk at that address is the one you meant. `--serial` says which one (`atoo ping` shows a desk's serial); with `--show`, the desks the show's journals were written to are the ones expected. When the desk that answers is not one of them, every pass says so as a WARNING, `W007`, and Watch goes on reading it: a show applied to a backup desk is a good reason, a wrong address is not.
+Atoo takes an answer only from the address it asked: a device elsewhere on the network that answers in the desk's place is ignored. What it cannot know by itself is whether the desk at that address is the one you meant. `--serial` says which one (`atoo ping` shows a desk's serial); with `--show`, the desks the show's journals were written to are the ones expected. When the desk that answers is not one of them, every pass gives a WARNING, `W007`, and Watch goes on reading it: a show applied to a backup desk is a good reason, a wrong address is not.
 
 A watch of the Demo's simulated desk told to expect serial `S2203A1` (the reading's other findings left out):
 
@@ -180,7 +180,7 @@ The Watch page does the same for the show it has open: the row is in the table, 
 
 ## When the desk stops answering
 
-A desk that is switched off, rebooting or unplugged, or a laptop that has dropped off the desk's network, does not read as a clean desk. After three requests in a row with no answer, Watch asks the desk who it is (`/?`, which a WING always answers); if that goes unanswered too, the desk is not answering, and the pass says so as an ERROR, `W006`, in place of any findings. It clears nothing: what the last pass that reached the desk found still stands. A desk that never answers a few addresses, such as a graphic EQ's bands, answers that question, and Watch goes on.
+A desk that is switched off, rebooting or unplugged, or a laptop that has dropped off the desk's network, does not read as a clean desk. After three requests in a row with no answer, Watch asks the desk who it is (`/?`, which a WING always answers); if that goes unanswered too, the desk is not answering, and the pass gives an ERROR, `W006`, in place of any findings. It clears nothing: what the last pass that reached the desk found still stands. A desk that never answers a few addresses, such as a graphic EQ's bands, answers that question, and Watch goes on.
 
 A pass over a desk that is not there ends in moments, and Watch keeps asking every pass. When the desk answers again, `W006` clears, and the pass is compared with the last one that reached it, so you see what changed while it was away, and nothing else.
 

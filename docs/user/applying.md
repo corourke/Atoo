@@ -106,7 +106,7 @@ APPLICABLE: notes only -- choices made where the conventions were silent.
 couldn't reach 127.0.0.1:2223 -- ConnectionRefusedError: [Errno 111] Connection refused
 ```
 
-A plan with no findings prints nothing before the `couldn't reach` line. Nothing answers on that port here, and the computer itself refuses the request, so it says so at once; a desk that is switched off or off the network says `no reply from ...` after the timeout instead. With `--show`, the gate also warns when the plan is older than the bundle's inputs (`plan.older-than-inputs`), for instance when the conventions were edited after the last build.
+A plan with no findings prints nothing before the `couldn't reach` line. Nothing answers on that port here, and the computer itself refuses the request, so the `couldn't reach` line comes at once; a desk that is switched off or off the network says `no reply from ...` after the timeout instead. With `--show`, the gate also warns when the plan is older than the bundle's inputs (`plan.older-than-inputs`), for instance when the conventions were edited after the last build.
 
 A full apply also unpatches the strips the plan does not build, sets every direct Main route, the talkback assign and each strip's main input. [What a full apply changes on the desk](what-apply-changes.md) lists each one.
 

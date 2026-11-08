@@ -32,7 +32,7 @@ atoo audit --console 192.0.2.16 --show demo-show --dump-state demo-show/desk-rea
 
 On Windows, in PowerShell, the first line is `cd ~\Documents\Atoo`.
 
-It reads the desk and writes nothing to it. When the reading is saved it says so:
+It reads the desk and writes nothing to it. When the reading is saved it prints:
 
 ```
 Saved 6309 addresses to demo-show/desk-reading.state.json. The file does not record the model (wing-compact): replay it with --plan so the audit knows which desk it came from.

@@ -201,7 +201,7 @@ A strip is **active** when it is on the open show's sheets, or in use on the des
   - a DCA or mute group with a member;
   - a Main or Matrix that something sends or routes to, or that goes somewhere itself (a Main's send to a Matrix, or an output socket patched from it).
 
-With no show open, only the desk counts, and the "Watching without a plan" note says so. A strip that becomes active during the show is picked up at the next pass. The *i* beside the condition says it too: *Alerts as an error when any active BUS is muted. Active: on this show's sheets, or in use on the desk.*
+With no show open, only the desk counts, as the "Watching without a plan" note tells you. A strip that becomes active during the show is picked up at the next pass. The *i* beside the condition says it too: *Alerts as an error when any active BUS is muted. Active: on this show's sheets, or in use on the desk.*
 
 A desk where bus 1 is named, and busses 2 and 3 are not, all three muted, saved as `active.state.json`:
 
@@ -253,7 +253,7 @@ Started with a show whose plan has a bus on number 3 (`atoo watch --show DIR --s
 
 The built-in checks that ask whether a strip is in use (a fader at the floor, a bus with no inputs or no output, and the others the [Rules reference](rules-reference.md) lists) use the same "active", so a bus on the show's sheets is checked even before anything on the desk uses it. An `ACTIVE` condition does not replace them: both can fire on the same strip.
 
-`ACTIVE` is always read as the word, never as part of a name: `ACTIVE Kick` watches the channel named Kick while it is active, and the editor says so under the cell. A strip whose own name has the word Active in it is watched by its position.
+`ACTIVE` is always read as the word, never as part of a name: `ACTIVE Kick` watches the channel named Kick while it is active, and the editor confirms it under the cell. A strip whose own name has the word Active in it is watched by its position.
 
 ## By kind and name
 
@@ -337,7 +337,7 @@ Things to know:
 
 - **On the Watch screen these lines are not table rows.** The NOTE resolutions and the not-watched warnings go on the **This watch** line under the table (*Resolved at Start: BUS Drums → BUS 1, DCA Drums → DCA 1*); the table keeps what is wrong on the desk.
 - **A name that matches two strips of its kind is not watched.** It gets a warning naming every position it matched. Write the position you mean instead.
-- **The kind and name wins over a channel named the same.** If a channel is literally called `BUS Drums`, the condition still watches the bus named Drums, and a `note` finding says so. To watch that channel, write `CH BUS Drums` or its position.
+- **The kind and name wins over a channel named the same.** If a channel is literally called `BUS Drums`, the condition still watches the bus named Drums, with a `note` finding. To watch that channel, write `CH BUS Drums` or its position.
 - **A channel whose name begins with a kind word** -- "Main Vox" -- is written `CH Main Vox`. Plain `Main Vox` means the Main named Vox.
 - **A digit after the kind word is a position**, so `BUS 2 Track` is refused rather than read as a bus named "2 Track":
 

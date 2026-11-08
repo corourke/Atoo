@@ -74,7 +74,7 @@ Undo of touringband/journals/20260929T001832.164202Z-apply-S2203A1.json
   ...
 ```
 
-**Entries recorded before desks were recorded** name no desk. They are taken to be the connected desk's — the single-desk assumption was true when they were written, there is nothing recorded to hold them to, and refusing them would strand the only undo those runs have — and undo says so in a NOTE. Its per-address guard still applies. An offline `--state` preview contacts no desk, so it previews the newest entry on the whole stack and says a confirmed run may pick a different one.
+**Entries recorded before desks were recorded** name no desk. They are taken to be the connected desk's — the single-desk assumption was true when they were written, there is nothing recorded to hold them to, and refusing them would strand the only undo those runs have — and undo gives a NOTE. Its per-address guard still applies. An offline `--state` preview contacts no desk, so it previews the newest entry on the whole stack and says a confirmed run may pick a different one.
 
 The Apply screen's **History** step (the journal stack) has a **Desk** column. A row written to another desk is drawn dimmed and tagged **Other desk**, and the newest row on the desk in the bundle bar is the one with **Preview undo** — the write **Undo newest write** reverses. Rows are matched to that desk by address until you **Ping** it; the ping reads its serial. (The Undo button itself always asks the desk, so it never depends on that.)
 

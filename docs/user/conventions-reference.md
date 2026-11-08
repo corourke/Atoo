@@ -14,10 +14,10 @@ Starting levels can be stated in three places, each in its own natural phrasing:
 
 ## Bus colors
 
-A bus is colored when your conventions say so, and stays uncoloured when they do not -- a bus color is never picked for you. State it the way you state a channel's, by one of the desk's eighteen names, for one bus or for a whole kind of bus. Any of these works as a line under `## Busses`:
+A bus is colored when your conventions say so, and stays uncolored when they do not -- a bus color is never picked for you. State it the way you state a channel's, by one of the desk's eighteen names, for one bus or for a whole kind of bus. Any of these works as a line under `## Busses`:
 
 ```markdown
-- Monitor busses are White. Mix busses take their category's colour. FX busses are Purple.
+- Monitor busses are White. Mix busses take their category's color. FX busses are Purple.
 ```
 
 "Take their category's color" means the color your `Color coding:` line gives that category's channels -- a "Drums" bus is Red when drums are Red. A single bus can be named too (`"Drums Comp" is Rust`). The build writes the name into the bus's `color` in `plan.json`, `apply` writes the desk's matching color to the bus, and step 04 paints the bus's number chip in it. A bus with no stated color keeps whatever the desk already had.

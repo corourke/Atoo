@@ -150,7 +150,7 @@ atoo ui --host 0.0.0.0 --show church
 
 On the phone, open `http://` and the laptop's IP address, then `:8420` (for example `http://192.0.2.10:8420`). The laptop's name, such as `laptop.local`, is refused: use the IP address.
 
-The phone sees Watch only, read-only: the findings table, the live updates, the watch conditions, and **Save findings**. It says so under the Watch heading: *Watching from another machine, read-only.* Start, Stop, the console, ping, Build and Apply are not shown there; do them on the laptop.
+The phone sees Watch only, read-only: the findings table, the live updates, the watch conditions, and **Save findings**. A line under the Watch heading reads: *Watching from another machine, read-only.* Start, Stop, the console, ping, Build and Apply are not shown there; do them on the laptop.
 
 ## 3. Say what matters tonight: watch conditions
 

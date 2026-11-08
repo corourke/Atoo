@@ -43,7 +43,7 @@ It **pops**: having reversed the amend, the next undo reverses the apply underne
 
 ## Undoing a change or an amend leaves `plan.json` alone
 
-A change or an amend never writes `plan.json`, so undoing one has nothing to put back: it reverses the desk and says so. After a change:
+A change or an amend writes the desk, not `plan.json`, so undoing one takes it off the desk and leaves `plan.json` alone. A change kept in the show is in `plan.json` and the sheets, and `atoo back-out` puts the plan from before back, not undo. After a change:
 
 ```
   plan.json left as it is: undo takes the change off the desk only. If it was kept in the show (`patch --promote`), plan.json and the sheets still have it.

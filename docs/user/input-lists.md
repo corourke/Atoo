@@ -262,7 +262,7 @@ Which is the whole point of the distinction: a socket you stated can be checked 
 `OFF` in the patch cell keeps the channel but patches it from nothing. A blank cell means "leave it to the plan" (a build chooses a socket), so it can't say this. With `OFF`:
 
 - **A Save** in Build updates the plan: the channel has no patch. **Clearing a patch cell that held a socket** in Build's tables saves as `OFF` for you, so the cell reads `OFF` afterwards. On a captured show, clearing CH 17's `LCL 17` and pressing **Save input.csv** says *The plan is updated: CH 17 unpatched (was LCL 17).*
-- **A build** leaves the channel unpatched, whatever the conventions or the model would choose, and says so in a NOTE (`reply.unpatched-by-list`).
+- **A build** leaves the channel unpatched, whatever the conventions or the model would choose, and gives a NOTE (`reply.unpatched-by-list`).
 - **`atoo verify`** says it in a NOTE (`patch.off`), not as a missing patch. On that captured show, a warning that CH 17 shared LCL 17 with another strip goes, and this note comes in:
 
 ```
@@ -422,11 +422,11 @@ Exit code 2. That plan was edited by hand. A **build** from the same list does n
 
 The two halves land on `LCL 4` and `LCL 5`, or on different stage boxes, or on two playback tracks 32 apart on one card. The desk's own way round this is a **user patch**: two consecutive slots of its `USR` group, from USR 25 to USR 56 and odd first, each taking one input socket as it is. The channel is patched to the two slots as an ordinary pair.
 
-**The build does this for you.** When the two rows of a pair state sockets the desk cannot pair, the build makes one stereo channel, patched to the first free pair of user patch slots, each slot taking its row's socket. It says so in a NOTE:
+**The build does this for you.** When the two rows of a pair state sockets the desk cannot pair, the build makes one stereo channel, patched to the first free pair of user patch slots, each slot taking its row's socket, with a NOTE:
 
 *'Keys L' (LCL 4) and 'Keys R' (LCL 5) can't be one stereo pair as cabled -- the pair starts on 4, an even socket (a pair always starts on an odd one) -- so 'Keys' is patched through user patch USR 25-26, which take LCL 4 and LCL 5*
 
-- **Two rows named as one pair are one pair**, `Keys L` and `Keys R` (or `Left` and `Right`), even when the model built them as two mono channels because of their sockets. The build joins them into one stereo channel named `Keys` and says so in a NOTE: *'Keys L' and 'Keys R' are one L/R pair by their names, so they are one stereo channel 'Keys': the reply left them as two mono channels, though only their sockets kept them apart, and code pairs those through user patch slots.* Two such rows on sockets the desk can pair directly are left as the model built them.
+- **Two rows named as one pair are one pair**, `Keys L` and `Keys R` (or `Left` and `Right`), even when the model built them as two mono channels because of their sockets. The build joins them into one stereo channel named `Keys`, with a NOTE: *'Keys L' and 'Keys R' are one L/R pair by their names, so they are one stereo channel 'Keys': the reply left them as two mono channels, though only their sockets kept them apart, and code pairs those through user patch slots.* Two such rows on sockets the desk can pair directly are left as the model built them.
 - **`atoo build` prints these notes** under *Stereo pairs*, as well as keeping them in the plan.
 - **The build summary** shows the patch as `USR 25-26 (LCL 4 + LCL 5)`.
 - **Phantom power and gain** are set on the two sockets, `LCL 4` and `LCL 5`, not on the slots.
