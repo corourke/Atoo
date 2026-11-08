@@ -123,8 +123,8 @@ Notes on the text of your conventions and instructions.md, and the critic: a sec
 | `critic-expect.under-severity` | The critic review flagged an expected gap, but at a lower severity than the expectations file asks for. |
 | `critic.conventions` | The critic review found a problem in the conventions text itself: two lines that disagree, or something declared that nothing in the show uses. |
 | `critic.intent` | The critic review found a line of the conventions or instructions.md that the plan carried out wrongly, or a stated fact the plan left unset. |
-| `critic.omission` | The critic review found an input-list row missing from the plan, or a conventions line not carried out at all; a quoted line goes to the fix-up round. |
-| `critic.*` | A second model call, the critic, reviews the built plan and reports a concern, such as a row left out, an intent misread, something invented or a contradiction; it never blocks an apply. |
+| `critic.omission` | The critic review found an input-list row missing from the plan, or a conventions line not carried out at all; a quoted line goes to the fix-up round, and is a warning if the plan written still does not carry it out. |
+| `critic.*` | A second model call, the critic, reviews the built plan and reports a concern, such as a row left out, an intent misread, something invented or a contradiction; it is an INFO, listed under Advice, and never blocks an apply. |
 
 ## The plan against the desk and the input list
 

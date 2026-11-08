@@ -2252,7 +2252,7 @@
     },
     "critic_findings": [
       {
-        "severity": "warning",
+        "severity": "info",
         "code": "critic.intent",
         "message": "The conventions create a 'Keys' mix bus only 'if there are multiple keyboards', but this show has only one keyboard (the Keys L/R stereo pair is a single instrument); the plan created the Keys bus anyway and routed the Keys channel only to it instead of direct to Main.",
         "where": "Keys bus",
@@ -2260,7 +2260,7 @@
         "source": "critic"
       },
       {
-        "severity": "warning",
+        "severity": "info",
         "code": "critic.intent",
         "message": "TRAX is patched from a Line input on the AES50 stage box, which has a physical head-amp/gain stage (unlike USB/card/player sources); conventions say to set gain to 20dB on each channel unless overridden, and the DI-only override in instructions doesn't apply here, yet gain_db was left null.",
         "where": "TRAX channel",
