@@ -579,6 +579,42 @@ stable across rewordings; quote it in a bug report.
 | `--skip-verify` | Don't run the deterministic verifier over the finished plan. Verification checks the plan against the console's real limits, the input list it claims to cover, and equipment-safety rules. Skipping it is almost never what you want. |
 | `--pretty` | Also print a human-readable rendering, not just the raw JSON plan |
 
+## `atoo build-changes`
+
+<!-- preamble:start -->
+_Not written yet._
+<!-- preamble:end -->
+
+```
+Build the rows a Save placed or edited, and nothing else: Build's step 04
+Build Changes. A Save lays a sheet's cells onto plan.json with no model, so a
+new channel, bus, Main or Matrix is patched and named and nothing more, and an
+edited row keeps what an earlier build gave it. Each is saved, not built.
+This applies your conventions and instructions.md to those rows with one
+model call, through the same engine a typed change uses, and to nothing else.
+
+It previews first: the rows; what your conventions add to each; the spillover
+(every object outside the rows that gains a send or a member); and what
+keeping it writes. What a row's sheet states stays; a blank cell stays blank,
+and a rebuild decides it again. A change that would move or rewrite anything
+outside the rows (a DCA renumbered, a strip you did not save) is refused,
+whole, naming the way out. --confirm keeps it: the sheet cells that follow,
+then plan.json, the plan it replaces kept as plan.previous.json for
+`atoo back-out`. It never writes the desk: Apply does that afterwards.
+
+  atoo build-changes --show ~/Documents/Atoo/my-show
+  atoo build-changes --show ~/Documents/Atoo/my-show --confirm
+```
+
+| Option | What it does |
+|---|---|
+| `--show` `DIR` | The show bundle whose saved rows to build. |
+| `--conventions` `FILE` | The house conventions to build with (default: the file the plan was built from, else the config default). |
+| `--presets` `DIR` | The preset library a row's preset is expanded from (default: the plan's, else the config default). |
+| `--change-set` `FILE` | Build from this compiled change set (JSON) instead of asking the model -- the one a preview's --review-json recorded. |
+| `--review-json` `FILE` | Also write the preview as JSON, with the change set it was compiled to, for the page. |
+| `--confirm` | Keep it: write the sheet cells that follow and plan.json. Without it, nothing is written. |
+
 ## `atoo capture`
 
 <!-- preamble:start -->
