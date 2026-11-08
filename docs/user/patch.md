@@ -507,18 +507,29 @@ In the browser, **Keep this in the show** does the same: under a standing Patch 
 
 ## Write exactly the change you reviewed
 
-A preview compiles the change; a `--confirm` run compiles it **again**, and a model asked twice can answer differently. So save the one you read and write that:
+A model asked the same thing twice can answer differently, so a `--confirm` writes the change set your preview compiled, not a second answer. A preview keeps what it compiled in the show, in `previews/patch.json`, and says so. Run the same command again with `--confirm`:
+
+```bash
+atoo patch --show touringband --console 192.0.2.16 \
+    "trumpet, sax and trombone on LCL 21-23, Band DCA, send to MON2"
+# read the review, then the same words with --confirm:
+atoo patch --show touringband --console 192.0.2.16 \
+    "trumpet, sax and trombone on LCL 21-23, Band DCA, send to MON2" --confirm
+```
+
+The confirm says *NOTE writing the change set your preview compiled (2026-11-07 21:40), not asking the model again*, and its `Timing:` line reads *model call: none (the preview of ...)*. It does that only when nothing the preview depended on has changed: the same words, the same `plan.json`, no write to the desk since, and the same console, `--allow-strip`, console model and `--intent`/`--no-constrain`. Otherwise the confirm compiles the change itself and says why in a NOTE (*the last preview in this show was of another change*, or *was made on another plan, desk or flags*); what it writes is then the review it prints.
+
+To keep a change for later, or write it from another show or machine, save it and write that file. The saved file carries the change's text as well, so the journal records it:
 
 ```bash
 atoo patch --show touringband --console 192.0.2.16 \
     "trumpet, sax and trombone on LCL 21-23, Band DCA, send to MON2" \
     --save-change-set horns.json
-# read the review, then:
 atoo patch --show touringband --console 192.0.2.16 \
     --change-set horns.json --confirm
 ```
 
-The saved file carries the change's text as well, so the journal records it. A `--review-json` file works as a `--change-set` too. The Patch screen does this for you: its write is always the change set its preview showed.
+A `--review-json` file works as a `--change-set` too. The Patch screen does the same for you: its write is always the change set its preview showed.
 
 ## How long a change takes
 

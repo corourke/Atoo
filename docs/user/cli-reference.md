@@ -804,8 +804,11 @@ plan.json and the sheets it touches come to say what it did, so the next apply
 writes it and a rebuild keeps it. instructions.md is never written.
 
 Each run prints how long it took: the desk read and the model call. A preview
-compiles the change; a --confirm run compiles it again unless given
---change-set, so save the one you reviewed with --save-change-set. --state FILE
+compiles the change and keeps what it compiled in the show (previews/patch.json);
+a --confirm of the same change, on the same plan, desk and flags, writes exactly
+that, with no second model call. With no such preview, a --confirm compiles the
+change itself and says so. --change-set FILE writes a change set you saved
+(--save-change-set) whatever the last preview was. --state FILE
 reviews offline against a saved capture. Exit 2 means it ran and found
 problems: a refused change (a reference, field or value the plan cannot take),
 a channel with no free strip, a pre-flight refusal, a readback mismatch, or an
@@ -821,7 +824,7 @@ holds. A name the desk does not hold either is REFUSED.
 |---|---|
 | `--change-file` `FILE` | Read the change from FILE instead -- for a long one, or one written in an editor. |
 | `--amended-plan` `FILE` | Patch from a rebuilt plan instead of a typed change: the same show, built again (`atoo build --out FILE`) with the change in its inputs. This is what `atoo amend` does, and is recorded as an amend. |
-| `--change-set` `FILE` | Use this compiled change set instead of calling the model -- one --save-change-set wrote, or a --review-json file. How a --confirm run writes exactly the change set a preview showed, and how a change is reviewed with no model at all. |
+| `--change-set` `FILE` | Use this compiled change set instead of calling the model -- one --save-change-set wrote, or a --review-json file. A --confirm without it writes the change set the show's last preview of the same change compiled (previews/patch.json); this writes a saved one whatever the last preview was, and reviews a change with no model at all. |
 | `--intent-file` `FILE` | Compile this intent (JSON) instead of calling the model: the intent a model wrote for `--intent`, or one written by hand. The change text is still needed (it is the request the intent answers). How an intent is tried with no model at all. |
 | `--save-change-set` `FILE` | Also save the compiled change set (with the change's text) to FILE, for --change-set to write later. |
 | `--promote` `CHANGE` | Keep a change already written in the show for good: plan.json and each sheet it touches (input.csv, busses.csv, outputs.csv, user.csv) come to say what it did -- an input it added gets a row, one it dropped loses its row, a socket it took off loses its row -- laid on and verified as a Save in Build's step 04 is. A field no sheet holds (a high-pass, a fader) is kept in plan.json, said at INFO. instructions.md is never written. CHANGE is its number (3, or 'change 3'), its short name, or its journal entry. Needs --show; no console or model. A preview, file by file, unless --confirm. A change that was undone is refused. |

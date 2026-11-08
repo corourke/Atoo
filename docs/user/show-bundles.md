@@ -37,8 +37,9 @@ A show you build also grows the folders in the second half of the table below (`
 | `builds/` | a **directory**: one file per build — done, failed or stopped — holding what each model call noted and what it cost. The newest 5 are kept | `atoo build` (and the UI's Build) |
 | `logs/` | a **directory**: text transcripts of a build and its verify, `<UTC time>-build.txt` and `<UTC time>-verify.txt`, one pair per run. The newest 5 runs are kept | a rebuild script of your own, if you keep one |
 | `backups/` | a **directory**: the file a **Change file** copy replaced, as `<name>.bak` — one per file, the newest replacing the last | the UI's file picker |
+| `previews/patch.json` | the change set the last `atoo patch` preview compiled, kept so a `--confirm` of the same change writes exactly it ([Patch](patch.md#write-exactly-the-change-you-reviewed)). Each preview replaces it; not tracked by git (`.gitignore`) | `atoo patch` |
 
-**Only plan files and the files you write sit at the top level**: `input.csv`, `instructions.md`, `plan.json`, `watch.json`, and `plan.previous.json` / `plan.partial.json` while they exist. Everything else Atoo writes goes in one of the four folders, and the three that grow with every run — `journals/`, `builds/` and `logs/` — are pruned to their newest **5** entries straight after each write. For `logs/` an entry is one run, so the build and verify transcripts of a run are kept or removed together.
+**Only plan files and the files you write sit at the top level**: `input.csv`, `instructions.md`, `plan.json`, `watch.json`, and `plan.previous.json` / `plan.partial.json` while they exist. Everything else Atoo writes goes in one of its folders, and the three that grow with every run — `journals/`, `builds/` and `logs/` — are pruned to their newest **5** entries straight after each write. For `logs/` an entry is one run, so the build and verify transcripts of a run are kept or removed together.
 
 The listing above is not a one-to-one match for that table, and neither is wrong: the Demo show has never been built, applied or had a file replaced from this copy, so it has no `builds/`, `journals/` or `backups/`.
 
