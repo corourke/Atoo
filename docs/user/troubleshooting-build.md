@@ -93,6 +93,16 @@ The model ran out of room before it finished writing the plan. Nothing was writt
 
 The critic (`--critic`) and the watch-conditions draft can hit their own ceiling, but they do not fail the build: it carries on without them, saying `critic pass did not run: ...` or `watch-conditions draft did not run: ...` with the same sentence, which names their own effort setting (`ATOO_AI_CRITIC_EFFORT`, `ATOO_AI_WATCHLIST_EFFORT`). Those two run on `claude-sonnet-5-5` by default, whatever the generator runs on (`ATOO_AI_CRITIC_MODEL`, `ATOO_AI_WATCHLIST_MODEL`). Set one to a model with a lower output limit (Haiku's is `64000`) and that role is sent that limit, and the number in the sentence is the one that role was sent. Haiku takes no effort setting, so on it the effort variable named has no purchase; the model variable is the lever. In the browser the same sentence ends Build step 04 as **Failed** ([below](troubleshooting-ui.md#build-step-04-says-failed)).
 
+## The input list "is not UTF-8 text"
+
+Atoo reads an input list as UTF-8, which is what a spreadsheet writes when you save as **CSV UTF-8**. A list saved another way, such as Excel's "Unicode text" or a plain "CSV" from an older spreadsheet with an accent in a name, is refused, and nothing is built:
+
+```
+input list error in input.csv: the file is not UTF-8 text, so it cannot be read. In your spreadsheet, save it as "CSV UTF-8" and try again
+```
+
+`verify --input` says the same after `couldn't read input list`. In Excel, choose **File > Save As** and pick **CSV UTF-8 (Comma delimited)**. In Numbers or Google Sheets, export as CSV, which is already UTF-8.
+
 ## See also
 
 - [Troubleshooting](troubleshooting.md) — every symptom, and the page it is on
