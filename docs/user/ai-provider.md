@@ -127,6 +127,16 @@ The effort levels, token limits, thinking budget and timeouts are in the full ta
 
 ---
 
+## What leaves your laptop
+
+A model call sends text to the provider you set, and nothing else leaves the laptop. With Ollama on this machine, nothing leaves at all.
+
+- **A build** sends your conventions and the show's `instructions.md`, and the whole input list, its `notes` column included. Its review passes (the critic and the watch-condition draft) send the plan it built: every channel, bus and output, with their names and sockets, and which WING it is for.
+- **A Patch typed in words** sends what you typed, your conventions and `instructions.md`, and the plan on the desk: every channel, bus, output, DCA and mute group, by the names the desk shows.
+- **`atoo resolve`** sends your conventions.
+
+Never sent: the desk's address, the folders your files are in (a file goes by its name alone, such as `house.md`), the snapshots under `captures/`, the journal of writes, or anything Watch finds. Watch, Apply, `verify` and `audit` call no model.
+
 ## Next
 
 [Build your first show](change-the-demo.md): your own copy of the Demo show, changed, applied to your desk and watched.
