@@ -94,13 +94,31 @@ The **Findings** panel down the right starts with a verdict: **Ready to apply** 
 
 ## When you change a file
 
-Save an edit to any of the three files and the **04 Plan** tile reads **STALE**. So does **Build output**, which lists which file changed. An edit made in step 04's tables is the exception: its Save updates the plan too, so it stays current, unless you changed a cell the plan has no place for (a category, a note, a preset), which only a rebuild reads. Press **Rebuild Plan**. When the rebuild lands, **Changed since the last build** says what it changed, and **Apply the difference** takes you to the preview of it. A full build writes only the addresses where the desk differs from the plan, so applying the rebuilt plan sends just the change.
+Save an edit to any of the three files and the **04 Plan** tile reads **STALE**. So does **Build output**, which lists which file changed. An edit made in step 04's tables is the exception: its Save updates the plan too, so it stays current, and [Build Changes](#build-the-rows-you-saved) gives a row you added or changed what your conventions say for it. To build the whole plan again instead, press **Rebuild Plan**. When the rebuild lands, **Changed since the last build** says what it changed, and **Apply the difference** takes you to the preview of it. A full build writes only the addresses where the desk differs from the plan, so applying the rebuilt plan sends just the change.
 
 Once the show has a plan, **Build plan** is named **Rebuild Plan**: it builds the plan again from scratch, and only what the sheets and your conventions state survives. A [Patch](patch-a-show.md) you did not keep with **Keep this in the show** is lost. A rebuilt plan says `made_from: built`. On a [captured show](capture.md#rebuild-plan-on-a-captured-show), Rebuild Plan is a secondary button and asks first, naming by strip what only the captured plan holds and the rebuild discards: a channel's inserted effects, the desk's colors, the DCA and mute-group numbers, and descriptions. It also says that the next full Apply resets the desk.
 
+### Build the rows you saved
+
+A Save in step 04's tables is instant and needs no model, so it does only what the cells say. A channel you add is patched and named, with no preset, color, DCA or sends yet. A row whose category you change keeps what the last build gave it. Each such row is tinted in its table and tagged **SAVED, NOT BUILT**, and a line under **Compile** names them. You can Save at the desk with no API key and build these rows later with one.
+
+1. Under **Compile**, press **Build Changes**. Its button counts the rows.
+2. The model reads your conventions and `instructions.md` and works out what they give those rows, and nothing else. The panel above shows it running, with **Stop**.
+3. Read the preview. It has four parts:
+   - the rows;
+   - what your conventions add to each;
+   - the spillover, every bus, DCA or mute group outside the rows that gains them;
+   - what keeping it writes.
+   Whatever a row's sheet states stays as it is. A blank cell stays blank: the plan holds the value your conventions chose, and a rebuild decides it again.
+4. Press **Keep in plan.json**. It writes `plan.json` and the sheet cells that must follow, such as a bus's filled **Sources** cell gaining the new channels. The rows lose their tag, and the plan reads current again when those rows were all you changed in the input list. If you changed other rows too, it stays **STALE**, and the note names them. Then press **Apply the difference** to write the desk, or **Back out** to put the plan back.
+
+Nothing outside the rows you saved is rebuilt. If your conventions would move something you did not touch, such as a DCA renumbered with the strips on it, the whole change is refused and nothing is written. The refusal names what would move and the two ways out: fill the cell on your saved rows and Save, or use **Rebuild Plan**. On a captured show, Build Changes keeps the plan captured: only your rows and what they spill into change.
+
+From a terminal, `atoo build-changes --show DIR` prints the same preview, and `--confirm` keeps it.
+
 ### Backing out the last change to the plan
 
-Everything that writes `plan.json` keeps the plan it replaces as `plan.previous.json`, one generation: a rebuild, a Save in step 04's tables, **Keep this in the show** on Apply, and `atoo presets --expand`. Each says what it changed against it, strip by strip, so you see the spillover (a bus renumbered, and every send into it) before you decide. A Save says it in its note. Moving a bus's outputs from LCL 1-2 to AUX 1-2 in the Outputs table says *What this Save of outputs.csv changed in plan.json -- 1 strip against plan.previous.json: 1 changed: BUS 9 Presentr: destination.patch LCL 1+2 -> AUX 1+2; …*, then *Back out puts the plan from before this Save back (plan.previous.json).*
+Everything that writes `plan.json` keeps the plan it replaces as `plan.previous.json`, one generation: a rebuild, a Save in step 04's tables, **Build Changes**, **Keep this in the show** on Apply, and `atoo presets --expand`. Each says what it changed against it, strip by strip, so you see the spillover (a bus renumbered, and every send into it) before you decide. A Save says it in its note. Moving a bus's outputs from LCL 1-2 to AUX 1-2 in the Outputs table says *What this Save of outputs.csv changed in plan.json -- 1 strip against plan.previous.json: 1 changed: BUS 9 Presentr: destination.patch LCL 1+2 -> AUX 1+2; …*, then *Back out puts the plan from before this Save back (plan.previous.json).*
 
 While there is a `plan.previous.json`, step 04 has a line under the plan: *plan.previous.json holds the plan the last Save, Keep or build replaced*, with **Back out**. Press it, and it says what it will do; press **Back out: yes** to do it. `plan.json` becomes that plan again, and the note says what that changed. It goes one step back: the plan it replaces is not kept, so there is no second Back out until something writes `plan.json` again.
 

@@ -387,7 +387,7 @@ Each keeps the plan it replaced as `plan.previous.json`, and **Back out** in ste
 
 On a captured show the button is a secondary one, and it asks first:
 
-> **Rebuild this captured plan?** This plan was read from the desk. Rebuild Plan builds a new one from your sheets and conventions, with a model: only what they state survives. On this show, Save, Patch and Keep change the plan without a rebuild.
+> **Rebuild this captured plan?** This plan was read from the desk. Rebuild Plan builds a new one from your sheets and conventions, with a model: only what they state survives. On this show, Save, Build Changes, Patch and Keep change the plan without a rebuild.
 >
 > It discards what only the plan holds, as the desk had it:
 >
@@ -403,5 +403,6 @@ On a captured show the button is a secondary one, and it asks first:
 | | What it reads | Model | What it changes in `plan.json` | What it keeps |
 |---|---|---|---|---|
 | **Save** (step 04) | the sheets and the plan | no | only what the changed cells say | everything else: colors, effects, numbering, descriptions |
+| **Build Changes** (step 04) | the sheets, the plan, your conventions, `instructions.md` | yes | the rows a Save added or changed, with what your conventions give them | every row you did not save; the plan stays captured |
 | **Keep this in the show** | a Patch's before and after | no | what the Patch did, in the sheets and the plan | everything the Patch did not touch |
 | **Rebuild Plan** | the sheets, your conventions, `instructions.md` | yes | everything | only what the sheets and the conventions state |

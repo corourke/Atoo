@@ -54,11 +54,12 @@ A model drafts the plan. Code then checks the draft against what the desk can re
 ## Changing a show
 
 - **Save.** Edit the tables in Build's step 04 directly: a patch, a name, a DCA or a send. Saving writes the sheet and lays the change onto the plan, with no model, and touches nothing else.
+- **Build Changes.** A Save marks each row it added or changed *saved, not built*. Build Changes applies your conventions to those rows, with a model, and to nothing else: their preset, color, DCAs and sends. It shows every change first, and refuses one that would move anything you did not save ([Build the rows you saved](build-a-show.md#build-the-rows-you-saved)).
 - **Patch.** Once the show is on the desk, type the change in plain English, for example *"trumpet, sax and trombone on LCL 21-23, Band DCA"*. Atoo patches it on in free strips, and nothing already running moves ([Patch a show](patch-a-show.md)).
 - **Keep this in the show.** After a Patch, this writes the change into the sheets and the plan, so the next rebuild keeps it.
 - **Rebuild Plan.** Change a file and build again. Once a show has a plan, the Build button is named **Rebuild Plan**. It builds the plan from scratch, and only what the sheets and your conventions state survives. A Patch you did not keep is lost.
 
-Each of these keeps the plan it replaced as `plan.previous.json`, and **Back out** in step 04 puts it back. On a captured show, Save, Patch and Keep are the way to change it. Rebuild Plan asks first there, naming what only the captured plan holds and would be lost ([Rebuild Plan on a captured show](capture.md#rebuild-plan-on-a-captured-show)).
+Each of these keeps the plan it replaced as `plan.previous.json`, and **Back out** in step 04 puts it back. On a captured show, Save, Build Changes, Patch and Keep are the way to change it. Rebuild Plan asks first there, naming what only the captured plan holds and would be lost ([Rebuild Plan on a captured show](capture.md#rebuild-plan-on-a-captured-show)).
 
 ## Next
 
