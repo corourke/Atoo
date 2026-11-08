@@ -268,6 +268,8 @@ A cell left empty shows, in gray, what the plan has there. Type in a cell and th
 
 `sources` is the list of what feeds a row, separated by `;`: channel names, bus names, an input-list category, `*` for every channel, and on a Matrix, Main names. `Kick (pre)` sets that one source's tap. Take a name out and its send comes out of the plan; add one and it goes in, post-fader if nothing says pre, and the Save's message tells you which.
 
+Two strips the desk names alike, two `Acoustic` channels say, are told apart by their input names, as the input list has them: the sheet says `Acoustic;Acoustic (CH 2)`, and taking either out takes that strip's send out, not the other's. A channel can also be named by its strip, `CH 2` (or `Aux 1`). A name you type that two channels share, with no input name to pick one, means both, and the Save says so in a NOTE.
+
 A cell that cannot work on the desk turns red, with the reason under its row, before you press Save: a socket the desk does not have (`LCL output 9 does not exist -- LCL outputs are 1..8 on a WING (full-size console)`), a Main feeding a bus, a source nothing is called, two inputs on one channel. **Save** stays locked until it is fixed.
 
 Nothing goes to the desk until you apply the plan. A role, a label or a note changes nothing on the desk.
