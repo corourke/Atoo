@@ -118,6 +118,19 @@ With nothing to put back, it says so and changes nothing:
 Nothing to back out: there is no plan.previous.json. Back out goes one step back, to the plan the last Save, Keep or build replaced, and that step has been taken or there was none.
 ```
 
+**Back out puts back only a plan.** A `plan.previous.json` that is not a plan (an empty `{}`, say) is left where it is:
+
+```
+Nothing was backed out: plan.previous.json does not load as a plan, so plan.json was left as it is.
+```
+
+A plan records the folder its sheets were in. One made in another folder (the show folder was moved or renamed and then rebuilt, or another show's plan was copied in) is put back as asked, with a WARNING naming that folder, so you can tell if it is not the plan you meant:
+
+```
+Backed out: plan.json is the plan the last change replaced, from plan.previous.json. That was one step; there is nothing further to back out to.
+WARNING: plan.previous.json was made in …/festival, not this show's folder; restored all the same.
+```
+
 ## When it does not work
 
 - **Build plan does nothing but say** *Choose the console model first -- a build refuses to guess it.* Choose one under **Console model**.

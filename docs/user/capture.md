@@ -22,6 +22,8 @@ In the browser, press **New show…** in the bundle bar and choose **From a desk
 
 A show folder in your Atoo folder (`~/Documents/Atoo/`, or `--dir`), named after the `.snap`, or after the desk's model and the date for a live desk (`wing-full-2026-10-25`). A name already taken gets `-2`, `-3`; `--name` chooses your own. Rename the folder freely afterwards.
 
+The folder is made whole or not at all. Its files are written into a hidden folder beside it, which takes the show's name once every file is there. A capture that cannot finish (a full disk, say) removes it, says *nothing was left there*, and exits 1, so the next capture takes the same name.
+
 | File | What's in it |
 |---|---|
 | `input.csv` | One row per input in use, in the [input list](input-lists.md#the-columns)'s format and column order, less `order`, `preset` and `stagebox`, which a desk does not state. A stereo source is two rows on one channel |

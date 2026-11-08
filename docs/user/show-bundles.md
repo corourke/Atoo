@@ -171,6 +171,8 @@ Two things a watch-conditions draft will not do: fail your build (a plan that bu
 
 `apply --confirm` writes back too — a new, timestamped entry in `journals/`, which it never overwrites. The newest 5 entries are kept, so undo reaches back at most 5 writes ([the journal stack](journals.md#the-stack)); copy one aside if a particular run must outlive that.
 
+**Every file Atoo writes in a bundle is written whole.** `plan.json`, the sheets, `watch.json` and the journals are each written beside the old file and then put in its place, so a full disk or a crash part way leaves the file as it was, never half of it. A show always has its `plan.json`: the one being replaced is copied to `plan.previous.json` first, and the new one takes its place in one step.
+
 ## When a directory is not a bundle
 
 Each command names the slot it could not find:
