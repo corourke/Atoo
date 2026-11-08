@@ -1004,6 +1004,33 @@ warnings (or, with --check, stale); 1 it is missing, refused, or could not be ma
 | `--check` | Check the resolved file that is there -- its fingerprint, its citations and its coverage of your conventions -- and make no model call. |
 | `--prompt-dir` | Read the resolve prompt (conventions_resolve.md) from here instead of the packaged atoo/prompts. Equivalent to ATOO_PROMPT_DIR. |
 
+## `atoo save`
+
+<!-- preamble:start -->
+_Not written yet._
+<!-- preamble:end -->
+
+```
+Lay a show's sheets onto its plan.json, with no model: Build's step 04 Save,
+for a sheet you edited in a spreadsheet or a text editor. input.csv,
+busses.csv, outputs.csv and user.csv are laid on in that order, each that
+exists. A cell that cannot physically work on the desk is refused, naming
+it, and nothing is written. The plan it replaces is kept as
+plan.previous.json, so `atoo back-out` puts it back.
+
+The bus, outputs and user sheets are laid on whole, as a build lays them on.
+The input list is laid on by the rows that changed since the plan last took
+it in. Each sheet a Save or another sheet's change rewrites is said.
+
+  atoo save --show ~/Documents/Atoo/my-show
+  atoo save --show my-show --sheet busses.csv
+```
+
+| Option | What it does |
+|---|---|
+| `--show` `DIR` | The show bundle whose sheets to lay onto its plan.json. |
+| `--sheet` `FILE` | Only this sheet (input.csv, busses.csv, outputs.csv or user.csv); give it more than once for more. Default: every sheet the show has. |
+
 ## `atoo ui`
 
 <!-- preamble:start -->

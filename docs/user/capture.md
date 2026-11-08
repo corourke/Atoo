@@ -274,6 +274,22 @@ A cell that cannot work on the desk turns red, with the reason under its row, be
 
 Nothing goes to the desk until you apply the plan. A role, a label or a note changes nothing on the desk.
 
+### Saving a sheet you edited elsewhere
+
+A sheet edited in a spreadsheet or a text editor is laid onto the plan by `atoo save`, the same Save, with no model and no page. It lays on each sheet the show has, in order: `input.csv` by the rows that changed since the plan last took it in, and `busses.csv`, `outputs.csv` and `user.csv` whole, as a build does. `--sheet busses.csv` lays on just one. On the church show, with `Kick` taken out of Bus 1's `sources` in `busses.csv`:
+
+```bash
+atoo save --show /tmp/shows/church-full-2026-10-24
+```
+
+```
+Nothing to lay on -- church-full-2026-10-24/input.csv is as the plan last took it in.
+The plan is updated: Bus 1 fed no longer from Kick. What this Save of busses.csv changed in plan.json -- 1 strip against plan.previous.json: 1 changed: CH 9 Kick: send to Drums removed (post, (unset) dB). Back out puts the plan from before this Save back (plan.previous.json).
+Nothing to save -- church-full-2026-10-24/outputs.csv already says that, and the plan agrees.
+```
+
+A cell that cannot work is refused as on the page, naming it, with nothing written (exit 2). `atoo back-out --show DIR` puts the plan from before back.
+
 ### Adding a bus
 
 **Add a bus**, under the Busses table, adds a row on the lowest bus number no row and no bus of the plan has. The row comes up with the cursor in its **Name**, and reads *not in this plan: Save adds it* until you save. Give it a name, a width, its sources in **▸**, or nothing; **✕** drops it again, and so does **Discard**. A show with no bus yet still shows the Busses heading, so you can start one.
