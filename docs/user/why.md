@@ -46,7 +46,7 @@ With Atoo, a typed change goes through the same checks as a full build. It is pr
 
 - **Your conventions rule, show after show.** They are your house rules in plain English: *"Every vocal channel gets the VOX preset and a pre-fader send to that singer's in-ear monitor at -10dB"* once, and every show with vocals gets it, whether a four-piece tonight or a twelve-piece next week.
 - **Validated before it is written.** Code checks the draft against the desk's real limits and your conventions. A stereo pair that starts on an even socket, or a patch to a socket the desk does not have, is caught at your laptop, not at soundcheck.
-- **Checked against the input list.** Routings, mute groups, DCAs, phantom power, built in checks and your own watch rules are all done against the input list so there is no guesswork involved.
+- **Checked against the show's plan.** Routings, mute groups, DCAs, phantom power, built in checks and your own watch rules are all done against the show's plan so there is no guesswork involved.
 - **Written to the desk, then read back.** There is no show file to load over the top of your show. Each setting is written over the network and read back, and anything that did not land is named. Every write is journalled and can be undone.
 - **A late change moves nothing else.** Type *"trumpet, sax and trombone on LCL 21-23, Band DCA"* at 6pm, and those three channels go into free strips with their presets, sends and DCA. The strips around them are read before and after the write to prove nothing else moved.
 - **It watches the show against your rules.** It re-reads the desk every couple of seconds and checks the signal path for every channel. It catches the Band DCA pulled to the floor or the Aux channel that got repatched.
