@@ -39,7 +39,7 @@ The fields that are retried this way are `response_format`, `stream_options`, `t
 |---|---|
 | `ATOO_AI_STRUCTURED` | `0` stops sending the reply format as `response_format` |
 | `ATOO_AI_REASONING_EFFORT` | sent as `reasoning_effort` (the host's own words: `low`, `medium`, `high`) to a model that reasons; unset sends nothing. A long wait with little output is usually a reasoning model thinking, and a lower effort shortens it |
-| `ATOO_AI_TIMEOUT` | seconds of silence before a call is given up on. **Atoo chose 600 for the `api` provider** (120 on Ollama): a reasoning model can think for minutes before its first token, and 120 s cut those calls off. Raise it for a slower model, lower it to fail faster |
+| `ATOO_AI_TIMEOUT` | seconds of silence before a call is given up on, more than 0. It applies to every provider. **Atoo chose 600 for the `api` provider** and for Claude (120 on Ollama): a reasoning model can think for minutes before its first token, and 120 s cut those calls off. Raise it for a slower model, lower it to fail faster |
 | `ATOO_AI_MAX_TOKENS` | sent as `max_completion_tokens`, which counts a reasoning model's hidden tokens too; unset sends none |
 
 **A reply that fails the format is sent back once.** When a change's reply does not match the change-set format (a field of the wrong type, a missing key), or the desk refuses what it proposed (a bus that is not there), Atoo sends the same request again with the reply and the exact message, and asks for the corrected change set. It is one extra call, never more; both calls print their usage line (the second is labeled `change-repair`) and the second is said in a NOTE. The Claude provider does not do this.

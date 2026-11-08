@@ -156,7 +156,7 @@ Most configure the AI provider that `atoo build` uses to generate a plan, and th
 | `ATOO_AI_BASE_URL` | all | per provider |
 | `ATOO_AI_NUM_CTX` | ollama | unset = sized per prompt |
 | `ATOO_AI_NUM_PREDICT` | ollama | unset = unlimited (`-1`) |
-| `ATOO_AI_TIMEOUT` | ollama, api | `120` seconds on ollama, `600` on api (a reasoning model can think for minutes before its first token) |
+| `ATOO_AI_TIMEOUT` | all | `600` seconds on claude and api (a reasoning model can think for minutes before its first token), `120` on ollama; more than 0 |
 | `ATOO_AI_EFFORT` | claude | `medium` (`low`...`max`) -- the generator's |
 | `ATOO_AI_CRITIC_EFFORT` | claude | `medium` (`low`...`max`) -- the critic's (`--critic`) |
 | `ATOO_AI_WATCHLIST_EFFORT` | claude | `medium` (`low`...`max`) -- the watchlist draft's. None of the three is sent to Haiku 4.5, which takes no effort |
