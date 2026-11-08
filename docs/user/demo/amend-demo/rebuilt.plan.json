@@ -1041,7 +1041,7 @@
       "destination": {
         "type": "dedicated_output",
         "label": "MON1",
-        "socket": {
+        "patch": {
           "group": "LCL",
           "sockets": [
             1
@@ -1064,7 +1064,7 @@
       "destination": {
         "type": "dedicated_output",
         "label": "MON2",
-        "socket": {
+        "patch": {
           "group": "LCL",
           "sockets": [
             2
@@ -1087,7 +1087,7 @@
       "destination": {
         "type": "dedicated_output",
         "label": "MON3",
-        "socket": {
+        "patch": {
           "group": "LCL",
           "sockets": [
             3
@@ -1110,7 +1110,7 @@
       "destination": {
         "type": "dedicated_output",
         "label": "MON4",
-        "socket": {
+        "patch": {
           "group": "LCL",
           "sockets": [
             4
@@ -1261,7 +1261,7 @@
   "outputs": {
     "Main": {
       "kind": "main",
-      "socket": null,
+      "patch": null,
       "description": "Full band mix; EQ'd for recording quality per conventions.",
       "provenance": "Outputs: 'Main should be the full mix, EQed so it sounds good for a recording.' No physical output socket stated for Main itself.",
       "index": 1
@@ -1272,7 +1272,7 @@
         "type": "main",
         "index": 1
       },
-      "socket": {
+      "patch": {
         "group": "LCL",
         "sockets": [
           7,
