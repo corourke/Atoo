@@ -131,7 +131,7 @@ Four things to read in that. The DCA 2 rename is **refused**, and it is refused 
 
 ## The same preview, as data
 
-The browser's **Preview undo** draws this same list, in the Preview box (step 2 of Apply). `--result-json FILE` writes it as data, for a preview and for a confirmed run alike: one row per address, with the strip it belongs to, the value the journalled run wrote, the value on the desk now, the value an undo puts back, and whether it **goes back**, is **already back**, has **changed since** (it is left as it is) or has **no earlier value**.
+The browser's **Preview undo** draws this same list, in the Preview box (step 2 of Apply). `--result-json FILE` writes it as data, for a preview and for a confirmed run alike: one row per address, with the strip it belongs to, the value the journaled run wrote, the value on the desk now, the value an undo puts back, and whether it **goes back**, is **already back**, has **changed since** (it is left as it is) or has **no earlier value**.
 
 ```
 atoo undo docs/user/demo/undo-demo/apply-journal.json --state docs/user/demo/undo-demo/after-apply.json --result-json undo-preview.json
@@ -192,7 +192,7 @@ UNDONE: 41 reversed, 2 refused (changed since), 1 unreversible (no prior value).
 | `2` | it ran and the desk is not fully back — something was refused because it changed since, or a reversal did not read back |
 | `130` | you stopped it with Ctrl-C |
 
-An undo that stops partway, because the desk stopped answering or you stopped it (Ctrl-C, or **Stop undoing** on the Apply page), is journalled and filed like an [apply that stopped](journals.md#a-run-that-stopped-partway). It does not pop the run it was reversing: run `atoo undo --show DIR` again and it finishes the job, counting what already went back as **already back**.
+An undo that stops partway, because the desk stopped answering or you stopped it (Ctrl-C, or **Stop undoing** on the Apply page), is journaled and filed like an [apply that stopped](journals.md#a-run-that-stopped-partway). It does not pop the run it was reversing: run `atoo undo --show DIR` again and it finishes the job, counting what already went back as **already back**.
 
 A reversal is a write like any other: it goes out on the same path, is **read back and proved**, and a reversal that did not land is reported as one.
 

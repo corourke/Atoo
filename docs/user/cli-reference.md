@@ -281,7 +281,7 @@ The first form changes nothing: it reads the console's current value for every
 address the plan would touch and shows you the before/after. Writing requires
 --confirm. It reads every address again before its writes and sends only
 those that differ, so the number written is the number the preview said would
-change (unless the console moved in between); each is journalled with its prior
+change (unless the console moved in between); each is journaled with its prior
 value so it can be reversed.
 
 Every address written is read back afterwards -- remote console writes can fail
@@ -309,14 +309,14 @@ with the plan's. A different model whose panel has every socket the plan patches
 verify re-run against the desk's model. A socket the desk does not have (LCL 20 on
 a full-size WING) is REFUSED, each one named, --skip-verify or not. A desk whose
 model Atoo has never measured is applied with a WARNING, sockets checked
-against the plan's model only, and its token journalled as desk.model_token.
+against the plan's model only, and its token journaled as desk.model_token.
 --console-model states which model to check the plan for.
 
 THE WHOLE DESK. Every channel and aux strip the plan does not build is unpatched
 (its /in/conn/grp set to OFF, nothing else), so none listens to a socket the plan
 uses; a strip already OFF is not written. A talkback strip the plan builds on
 ch 40 or aux 8 sets Setup -> Audio's talkback assign (/cfg/talk/assign) to
-CH40/AUX8. One INFO line says each; both are journalled, so undo reverses them.
+CH40/AUX8. One INFO line says each; both are journaled, so undo reverses them.
 amend and patch never do either.
 
 INITIALIZED FIRST. Before the plan, a full apply puts the desk into
@@ -324,7 +324,7 @@ its initialized state: it reads the desk by node dump and writes back, from an
 initialized capture of the desk's model, every setting that differs -- except the
 ones the plan sets itself, and a skip-list (network, clock, expansion cards,
 meter/RTA display, monitor/solo listening). One INFO line counts it by area and
-says how long it took; every write is journalled, so undo reverses it. A desk whose
+says how long it took; every write is journaled, so undo reverses it. A desk whose
 model Atoo has no capture for gets a WARNING and the plan is applied without the
 reset. --no-init skips it, for a desk already initialized by hand.
 
@@ -810,7 +810,7 @@ no longer reads it as the strip the show built (said at WARNING, and Undo puts
 it back), the pre-flight verifies the result and checks every socket written
 against the desk, the review shows what will and will NOT be written, and only
 --confirm writes -- reading every unrelated address before and after to prove
-none moved, and journalling the run with the change's text and short name.
+none moved, and journaling the run with the change's text and short name.
 `atoo undo --show DIR` takes the newest write off again.
 
 A change may also EDIT something already running -- "move the sax to MON3 at
@@ -1239,7 +1239,7 @@ by the run and is being put back, when its recorded prior is written after the
 selector, at INFO. The journal of a dry run is refused outright rather than
 appearing to work. Reversals go out in reverse order -- except a strip's
 processing, restored selectors, then values, then switches -- are read back and
-proved like any other write, and are journalled themselves -- so `atoo undo`
+proved like any other write, and are journaled themselves -- so `atoo undo`
 on the undo's own journal is the redo, and there is no separate command for it.
 An undo's journal is kept (it is the only record of what the undo REFUSED to
 touch) but is never a step forward: it pops the entry it reversed rather than
@@ -1263,7 +1263,7 @@ for the first time) has nothing to put back; it is named at INFO and exits 0.
 | `--out-of-order` | Reverse a journal that is NOT the newest entry in the bundle's stack. Refused by default: undo's guard is per address and cannot see a later run, so reversing an apply that an amend was built on top of would pass every address and take the show off the desk under the amend. This says you know what is above it and want it reversed anyway. |
 | `--journal` `PATH` | Where to record this undo's own writes. Defaults to a new timestamped entry in the bundle's journals/ directory when reversing one of those, and to <JOURNAL stem>.undo.json beside the journal otherwise -- never over it, because overwriting the evidence destroys the only thing that could reverse the undo. It is an ordinary apply journal, so `atoo undo` on it is the redo. |
 | `--raw-log` | Append every raw OSC request/reply to this file, exactly as `apply --raw-log` does. |
-| `--result-json` `FILE` | Write the run as JSON to FILE, for a page to draw: one row per address (the strip, the value the journalled run wrote, the value on the desk now, the value an undo puts back, and whether it goes back, is already back, has changed since, or has no earlier value), the counts, and one word for the whole run. Written for a preview and for a confirmed run alike. |
+| `--result-json` `FILE` | Write the run as JSON to FILE, for a page to draw: one row per address (the strip, the value the journaled run wrote, the value on the desk now, the value an undo puts back, and whether it goes back, is already back, has changed since, or has no earlier value), the counts, and one word for the whole run. Written for a preview and for a confirmed run alike. |
 | `--no-progress` | Do not print what the run is doing while it reads and writes the console. Each long phase -- reading the desk (a preview reads the reset's settings and the plan's in one pass), writing (each setting is read back as it is written), reading back again what disagreed -- normally prints its name, how far it has got and the address in flight on stderr as it goes, and a line with its count and time when it ends. Without it a slow run looks like a hung one, so pass this only when something downstream is parsing stderr. |
 
 ## `atoo verify`

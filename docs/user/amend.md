@@ -166,7 +166,7 @@ Take the vocalist out of `input.csv`, rebuild, and `amend` **returns that strip 
 | already unpatched and blank | clears it — somebody started tidying and this finishes it |
 | blank, on the strip's factory patch | clears it — that is what a strip returned to free looks like, so an earlier run that got partway is finished rather than refused |
 
-A refusal names the strip and the reading behind it, and not one address of that strip is written. A clear is shown in the preview, read back and journalled like any other write, and counted on its own line: **`3 added, 1 returned to free`**.
+A refusal names the strip and the reading behind it, and not one address of that strip is written. A clear is shown in the preview, read back and journaled like any other write, and counted on its own line: **`3 added, 1 returned to free`**.
 
 One thing this does *not* do: anything about state on the desk your plan never mentioned. A channel from last week's show that your plan says nothing about is untracked, and untracked state is reported, never cleared.
 

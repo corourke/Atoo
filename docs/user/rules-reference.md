@@ -1,6 +1,6 @@
 <!-- GENERATED FILE -- edit the preamble block only.
 
-     Every rule below comes from the rule catalogue in the code, by a
+     Every rule below comes from the rule catalog in the code, by a
      script in the development repository. Editing a rule here by hand
      will be overwritten there.
 

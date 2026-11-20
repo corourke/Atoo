@@ -116,12 +116,12 @@ Please report the token (it is in the warning, in `atoo ping`'s output, and in t
 ## `undo` says "nothing more to undo on this desk"
 
 ```
-nothing more to undo on this desk: my-show/journals keeps only the newest 5 entries. This desk's last write still journalled is
+nothing more to undo on this desk: my-show/journals keeps only the newest 5 entries. This desk's last write still journaled is
   2026-09-23T00:00:00+00:00  apply  APPLIED: 1 address(es) evaluated, 1 written, 0 mismatch(es).  [on no serial, at 198.51.100.7]
 and the write beneath it was pruned (20261002T162704.453182Z-apply-198.51.100.7.json, apply). Undoing it would leave the desk holding a write no journal records, so amend and patch would compare against the wrong plan. Nothing was written. To change the desk from here, apply a plan (a full apply replaces everything) or patch it.
 ```
 
-A bundle's `journals/` keeps only the newest **5** entries, so undo reaches back at most five writes. The write beneath this one is still on the desk, but its journal — the values undo would put back — was pruned; the run that pruned it said so in a NOTE (`... were pruned ... Undo now reaches back no further than the oldest entry kept`). Undoing the last journalled write would leave the desk holding something no journal records, and the next `amend` or `patch` would compare against the wrong plan, so undo refuses and writes nothing (exit code 1).
+A bundle's `journals/` keeps only the newest **5** entries, so undo reaches back at most five writes. The write beneath this one is still on the desk, but its journal — the values undo would put back — was pruned; the run that pruned it said so in a NOTE (`... were pruned ... Undo now reaches back no further than the oldest entry kept`). Undoing the last journaled write would leave the desk holding something no journal records, and the next `amend` or `patch` would compare against the wrong plan, so undo refuses and writes nothing (exit code 1).
 
 To go further back, put the desk where you want it another way: a full `atoo apply` of the plan you want replaces everything Atoo built, or `atoo patch` changes one thing. If a run must stay undoable for longer, copy its journal aside before five more writes go on the stack — `atoo undo <that copy>` still reads it, under the usual guards. See [How far back undo reaches](journals.md#how-far-back-undo-reaches-the-newest-5).
 

@@ -2,7 +2,7 @@
 
 A full `atoo apply` makes the desk the plan, so nothing from last night's show is left behind to surprise you. That means it writes more than the values your plan lists: it resets the rest of the desk, unpatches the strips it does not build, and sets a few switches the plan implies. This page lists each of them, so none is a surprise either.
 
-Only a full apply (or the browser's **Apply**, which runs it) does any of this. `patch`, `amend` and `undo` touch only what their change owns. Neither does applying a show [captured from a desk](capture.md#applying-it-back): it writes only its own patch, routing, names, membership and widths. Every write below is read back and journalled with the value the desk held, so `atoo undo` reverses it with the rest of the apply.
+Only a full apply (or the browser's **Apply**, which runs it) does any of this. `patch`, `amend` and `undo` touch only what their change owns. Neither does applying a show [captured from a desk](capture.md#applying-it-back): it writes only its own patch, routing, names, membership and widths. Every write below is read back and journaled with the value the desk held, so `atoo undo` reverses it with the rest of the apply.
 
 ## First, the desk is reset to its initialized state
 

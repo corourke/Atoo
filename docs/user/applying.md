@@ -213,7 +213,7 @@ esac
 - **It does not mix.** It writes a fader or mute value only for a strip this plan builds, and only a value the plan itself states — or its documented default of unity and unmuted when the conventions said nothing at all. It never chooses a level.
 - **It touches a strip the plan does not mention only to unpatch it.** A channel from last week's show that this plan says nothing about keeps its name, fader, mute and processing; its source is set to `OFF`, so it listens to nothing (see [Strips the plan does not build](what-apply-changes.md#strips-the-plan-does-not-build-unpatched-from-their-sources)).
 - **It is not the mid-show tool.** A full build writes every address in the plan, including every fader of every strip already in use. Use [`atoo patch`](patch.md) for that.
-- **It cannot recall the desk's own scenes or presets.** Those cannot be reached over the network. Your channel presets are written as ordinary values instead, read back and journalled like the rest. See [Using channel presets](presets.md).
+- **It cannot recall the desk's own scenes or presets.** Those cannot be reached over the network. Your channel presets are written as ordinary values instead, read back and journaled like the rest. See [Using channel presets](presets.md).
 
 ## See also
 

@@ -95,7 +95,7 @@ The one **already back** is the write the desk never took. Or run the apply agai
 So **undo reaches back at most 5 writes.** When a write still on the desk has been pruned, `undo` stops at the entry above it, writes nothing and exits `1`:
 
 ```
-nothing more to undo on this desk: my-show/journals keeps only the newest 5 entries. This desk's last write still journalled is
+nothing more to undo on this desk: my-show/journals keeps only the newest 5 entries. This desk's last write still journaled is
   2026-09-23T00:00:00+00:00  apply  APPLIED: 1 address(es) evaluated, 1 written, 0 mismatch(es).  [on no serial, at 198.51.100.7]
 and the write beneath it was pruned (20261002T162704.453182Z-apply-198.51.100.7.json, apply). Undoing it would leave the desk holding a write no journal records, so amend and patch would compare against the wrong plan. Nothing was written. To change the desk from here, apply a plan (a full apply replaces everything) or patch it.
 ```

@@ -98,7 +98,7 @@ reads, in part:
 
 ````
 ### Drums
-- Colour: Red. [conventions: "Drums are red, vocals green, speech purple."]
+- Color: Red. [conventions: "Drums are red, vocals green, speech purple."]
 - HPF: 40 Hz. [conventions: "Drums get a high-pass at 40 Hz"]
 - Main routing: none direct -- through the Drums bus only. [conventions: "Send all channels to the Main L/R bus unless they are in a mix bus."]
 

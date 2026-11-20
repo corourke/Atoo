@@ -18,7 +18,7 @@ Five stages between the two files you write by hand and a desk you can trust, pl
         v
         |  4. APPLY                           atoo apply --confirm
         v
-      the desk                                written, read back, journalled
+      the desk                                written, read back, journaled
         |
         |  5. AUDIT                           atoo audit
         v
