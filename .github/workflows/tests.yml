@@ -1,10 +1,16 @@
-# Run Atoo's test suite on every push and pull request.
+# Run Atoo's test suite on every push and pull request that may change
+# the code.
 #
 # It installs the package with its test and browser-UI extras,
 # `pip install -e '.[test,ui]'`, then runs `pytest -q`, on Ubuntu, with the
 # oldest Python that pyproject.toml's `requires-python` allows and the
 # newest stable one. The oldest is read from pyproject.toml each run, so
 # the matrix follows the project's decision, not a copy of it here.
+#
+# A change that only touches docs/, README.md, or SECURITY.md runs
+# nothing: those files are published from atoo-dev and do not need this
+# suite. pytest-xdist is not in the test extra, so the suite is not run
+# with `-n auto`.
 #
 # The tests that call a real model ("live_model") skip, because no API key
 # is set. The browser tests skip too: they need a Chromium that the runner
@@ -15,10 +21,22 @@ name: tests
 
 on:
   push:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "SECURITY.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "SECURITY.md"
 
 permissions:
   contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   python-versions:
@@ -50,6 +68,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - name: Install
         run: python -m pip install -e '.[test,ui]'
       - name: Test
